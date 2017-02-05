@@ -245,7 +245,7 @@ void write_bam_file(
                 // Htslib says: "bam1_t::data -- all variable-length data, concatenated;
                 // structure: qname-cigar-seq-qual-aux, concatenated".
 
-                r->l_data = r->core.l_qname + r->core.n_cigar*sizeof(uint32_t) + seq.vsize() + seq.length() + l_aux;
+                r->l_data = r->core.l_qname + r->core.n_cigar*sizeof(uint32_t) + seq.nbytes() + seq.length() + l_aux;
                 r->m_data = r->l_data;
                 r->data = new uchar[r->m_data];
 
@@ -255,8 +255,8 @@ void write_bam_file(
                 *(uint32_t*)p = seq.length() <<BAM_CIGAR_SHIFT; // Barcodes have their length on the 24 high bits & op on the low 8 bits.
                 *(uint32_t*)p |= 4; // S, c.f. Spec.
                 p += r->core.n_cigar*sizeof(uint32_t);
-                memcpy(p, seq.vdata(), seq.vsize()); // n.b. `sizeof(DiNuc)==1`
-                p += seq.vsize();
+                memcpy(p, seq.vdata(), seq.nbytes());
+                p += seq.nbytes();
                 memset(p, 0xFF, seq.length());
                 p += seq.length();
                 memcpy(p, aux, l_aux);

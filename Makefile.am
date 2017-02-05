@@ -122,7 +122,7 @@ pstacks_pe_SOURCES = src/pstacks_pe.h src/pstacks_pe.cc src/pstacks_base.h src/p
 	src/models.h src/models.cc src/utils.h src/utils.cc src/log_utils.h src/log_utils.cc \
 	src/input.h src/input.cc src/Tsv.h src/BowtieI.h src/FastaI.h src/FastqI.h src/SamI.h \
 	src/BamI.h src/BamI.cc src/aln_utils.h src/aln_utils.cc \
-	src/sql_utilities.cc src/locus.cc
+	src/sql_utilities.cc src/locus.cc src/DNASeq4.cc
 
 tags2bam_SOURCES = src/tags2bam.cc src/log_utils.cc src/sql_utilities.cc src/input.cc src/locus.cc src/stacks.cc \
 	src/DNANSeq.cc src/utils.cc src/BamI.cc src/DNASeq4.cc
