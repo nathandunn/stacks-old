@@ -42,36 +42,6 @@
 int bam_find_start_bp(int, strand_type, const vector<pair<char, uint> > &);
 int bam_edit_gaps(vector<pair<char, uint> > &, char *);
 
-class BamRecord;
-
-class Bam: public Input {
-private:
-    htsFile   *bam_fh;
-    bam_hdr_t *bamh;
-    BamRecord rec;
-
-    map<uint, string> chrs;
-
-    int parse_header();
-    void parse_cigar(vector<pair<char, uint> > &);
-
-    bool next_record() {return sam_read1(bam_fh, bamh, rec.r()) >= 0;}
-
-public:
-    Bam(const char *path) : Input(), bam_fh(NULL), bamh(NULL), rec() {
-        this->path   = string(path);
-        bam_fh = hts_open(path, "r");
-
-        parse_header();
-    };
-    ~Bam() {
-        hts_close(bam_fh);
-        bam_hdr_destroy(bamh);
-    };
-    Seq *next_seq();
-    int  next_seq(Seq&);
-};
-
 class BamRecord {
     bam1_t* r_;
     bam1_core_t& c_; // r_->core
@@ -108,6 +78,34 @@ private:
     // anything, the point is just to be able to scan until field(s) of interest.
     // Returns `ptr`.
     static void skip_one_aux(const uint8_t* ptr);
+};
+
+class Bam: public Input {
+private:
+    htsFile   *bam_fh;
+    bam_hdr_t *bamh;
+    BamRecord rec;
+
+    map<uint, string> chrs;
+
+    int parse_header();
+    void parse_cigar(vector<pair<char, uint> > &);
+
+    bool next_record() {return sam_read1(bam_fh, bamh, rec.r()) >= 0;}
+
+public:
+    Bam(const char *path) : Input(), bam_fh(NULL), bamh(NULL), rec() {
+        this->path   = string(path);
+        bam_fh = hts_open(path, "r");
+
+        parse_header();
+    };
+    ~Bam() {
+        hts_close(bam_fh);
+        bam_hdr_destroy(bamh);
+    };
+    Seq *next_seq();
+    int  next_seq(Seq&);
 };
 
 //
@@ -193,7 +191,7 @@ Bam::next_seq(Seq& s)
     }
 
     if (!rec.is_mapped()) {
-        s = Seq(rec.qname(), seq.c_str(), qual.c_str());
+        s = Seq(rec.qname().c_str(), seq.c_str(), qual.c_str());
     } else {
         //
         // Check which strand this is aligned to:
@@ -226,7 +224,7 @@ Bam::next_seq(Seq& s)
                 clipped += op.second;
         double pct_clipped = (double) clipped / seq.length();
 
-        s = Seq(rec.qname(), seq.c_str(), qual.c_str(),
+        s = Seq(rec.qname().c_str(), seq.c_str(), qual.c_str(),
                 chrs[rec.chrom()].c_str(), bp, strand, rec.aln_type(), pct_clipped, rec.mapq());
 
         if (cigar.size() > 0)
