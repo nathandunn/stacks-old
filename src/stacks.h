@@ -302,11 +302,11 @@ public:
     }
 };
 
-struct TmpRead {
+struct Read {
     DNASeq4 s;
     std::string name;
 
-    TmpRead(DNASeq4&& s, std::string&& n)
+    Read(DNASeq4&& s, std::string&& n)
         : s(std::move(s)), name(std::move(n))
         {}
 };

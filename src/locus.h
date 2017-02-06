@@ -167,35 +167,31 @@ public:
 bool bp_compare(Locus *, Locus *);
 
 class CLocReadSet {
-public:
-    typedef TmpRead Read; // TMP xxx (Feb2017) Wait for the renaming of clean.h:Read
-    typedef MetaPopInfo::Sample Sample; // TMP xxx (Feb2017) Take Sample & Pop out of MetaPopInfo.
-    size_t index_of(const Sample& s) const { // TMP xxx (Feb2017) This should be a MetaPopInfo method.
-        return &s - &mpopi_.samples()[0];
-    }
-
-private:
     int id_;                                 // Catalog locus ID
     vector<Read> reads_;                     // All the reads. Order is arbitrary.
 
     const MetaPopInfo& mpopi_;
-    vector<const Sample*> read_samples_;     // Sample of each read. size() == reads_.size()
+    vector<size_t> read_samples_;     // Sample of each read. size() == reads_.size()
     vector<vector<Read*>> reads_per_sample_; // Reads of each sample. size() == mpopi_.samples().size()
 
 public:
-    CLocReadSet(int id, MetaPopInfo m)
-        : id_(id), reads_(), mpopi_(m), read_samples_(), reads_per_sample_(mpopi_.samples().size())
+    CLocReadSet(MetaPopInfo m)
+        : id_(-1), reads_(), mpopi_(m), read_samples_(), reads_per_sample_(mpopi_.samples().size())
         {}
 
-    void add(Read&& r, const Sample& s) {
-        reads_.push_back(std::move(r));
-        read_samples_.push_back(&s);
-        reads_per_sample_.at(index_of(s)).push_back(&reads_.back());
-    }
-
+    int id() const {return id_;}
     const vector<Read>& reads() const {return reads_;}
-    const vector<Read*>& reads_of(const Sample& s) const {return reads_per_sample_.at(index_of(s));}
-    const Sample& sample_of(const Read& r) const {return *read_samples_.at(&r - &reads_[0]);}
+    size_t sample_of(const Read& r) const {return read_samples_.at(index_of(r));}
+    const vector<Read*>& reads_of(size_t sample) const {return reads_per_sample_.at(sample);}
+    const MetaPopInfo& mpopi() const {return mpopi_;}
+
+    void id(int id) {id_ = id;}
+    void add(Read&& r, const size_t sample);
+
+    void clear();
+
+private:
+    size_t index_of(const Read& r) const {return &r - &reads_[0];}
 };
 
 #endif // __LOCUS_H__
