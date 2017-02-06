@@ -1,5 +1,5 @@
 bin_PROGRAMS = ustacks pstacks estacks cstacks sstacks rxstacks hstacks process_radtags process_shortreads \
-	kmer_filter clone_filter genotypes populations phasedstacks pstacks_pe tags2bam tags2bam_pe
+	kmer_filter clone_filter genotypes populations phasedstacks pstacks_pe tags2bam tags2bam_pe assemble_pe
 
 ustacks_SOURCES = src/ustacks.h src/ustacks.cc src/stacks.h src/stacks.cc src/constants.h src/constants.cc \
 	src/mstack.h src/mstack.cc src/mst.h src/mst.cc src/cmb.h src/cmb.cc \
@@ -130,6 +130,10 @@ tags2bam_SOURCES = src/tags2bam.cc src/log_utils.cc src/sql_utilities.cc src/inp
 tags2bam_pe_SOURCES = src/tags2bam_pe.cc src/log_utils.cc src/sql_utilities.cc src/input.cc src/locus.cc src/stacks.cc \
 	src/DNANSeq.cc src/utils.cc src/BamI.cc src/DNASeq4.cc
 
+assemble_pe_SOURCES = src/assemble_pe.cc \
+	src/utils.cc src/MetaPopInfo.cc src/locus.cc src/DNASeq4.cc \
+	src/DNANSeq.cc src/BamI.cc src/input.cc
+
 ustacks_CXXFLAGS  = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
 ustacks_LDFLAGS   = $(OPENMP_CFLAGS)
 pstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS) $(SPARSEHASH_CFLAGS)
@@ -163,8 +167,9 @@ phasedstacks_LDFLAGS  = $(OPENMP_CFLAGS)
 clone_filter_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS) $(BAM_CFLAGS)
 clone_filter_LDFLAGS  = $(OPENMP_CFLAGS)
 clone_filter_LDADD    = $(BAM_LIBS)
+
 pstacks_pe_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS) $(SPARSEHASH_CFLAGS)
-pstacks_pe_LDFLAGS   = $(OPENMP_CFLAGS)
+pstacks_pe_LDFLAGS   = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
 pstacks_pe_LDADD     = $(BAM_LIBS)
 tags2bam_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
 tags2bam_LDFLAGS   = $(OPENMP_CFLAGS)
@@ -172,6 +177,9 @@ tags2bam_LDADD     = $(BAM_LIBS)
 tags2bam_pe_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
 tags2bam_pe_LDFLAGS   = $(OPENMP_CFLAGS)
 tags2bam_pe_LDADD     = $(BAM_LIBS)
+assemble_pe_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
+assemble_pe_LDFLAGS   = $(OPENMP_CFLAGS)
+assemble_pe_LDADD     = $(BAM_LIBS)
 
 dist_bin_SCRIPTS = scripts/denovo_map.pl scripts/ref_map.pl scripts/export_sql.pl \
 	scripts/sort_read_pairs.pl scripts/exec_velvet.pl scripts/load_sequences.pl \
