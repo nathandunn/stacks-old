@@ -46,10 +46,14 @@ class BamRecord {
     bam1_t* r_;
     bam1_core_t& c_; // r_->core
 
+    BamRecord(BamRecord&) = delete;
+    BamRecord& operator= (BamRecord&) = delete;
+
 public:
     BamRecord() : r_(bam_init1()), c_(r_->core) {}
     ~BamRecord() {bam_destroy1(r_);}
-    bam1_t* r() {return r_;}
+
+    bam1_t*& r() {return r_;}
 
     string qname() const {return string(bam_get_qname(r_), c_.l_qname-1);}
     uint16_t flag() const {return c_.flag;}
@@ -80,33 +84,51 @@ private:
     static void skip_one_aux(const uint8_t* ptr);
 };
 
-class Bam: public Input {
-private:
-    htsFile   *bam_fh;
-    bam_hdr_t *bamh;
-    BamRecord rec;
+class BamHeader {
+    bam_hdr_t* h_;
 
-    bool next_record() {return sam_read1(bam_fh, bamh, rec.r()) >= 0;}
-    const char* chrom_str() {
-        if (rec.chrom() >= bamh->n_targets)
-            throw std::out_of_range("out_of_range in Bam::chrom_str");
-        return bamh->target_name[rec.chrom()];
-    }
+    BamHeader(BamHeader&) = delete;
+    BamHeader& operator= (BamHeader&) = delete;
 
 public:
-    Bam(const char *path) : Input(), bam_fh(NULL), bamh(bam_hdr_init()), rec() {
+    BamHeader() : h_(NULL) {}
+    ~BamHeader() {if (h_!=NULL) bam_hdr_destroy(h_);}
+
+    // n.b. sam_hdr_read() calls bam_hdr_init()
+    void init() {bam_hdr_init();}
+    void init(bam_hdr_t* h) {h_ = h;}
+
+    bam_hdr_t* h() {return h_;}
+
+    const char* chrom_str(int32_t index) const {
+        if (index >= h_->n_targets)
+            throw std::out_of_range("out_of_range in BamHeader::chrom_str");
+        return h_->target_name[index];
+    }
+};
+
+class Bam: public Input {
+    htsFile   *bam_fh;
+    BamHeader hdr;
+    BamRecord rec;
+
+public:
+    Bam(const char *path) : Input(), bam_fh(NULL), hdr(), rec() {
         this->path   = string(path);
         bam_fh = hts_open(path, "r");
         if (bam_fh == NULL) {
             cerr << "Error: Failed to open BAM file '" << path << "'.\n";
             throw std::exception();
         }
-        bamh = sam_hdr_read(bam_fh);
+        hdr.init(sam_hdr_read(bam_fh));
     };
-    ~Bam() {
-        hts_close(bam_fh);
-        bam_hdr_destroy(bamh);
-    };
+    ~Bam() {hts_close(bam_fh);};
+
+    const BamRecord& r() const {return rec;}
+    const BamHeader& h() const {return hdr;}
+
+    bool next_record() {return sam_read1(bam_fh, hdr.h(), rec.r()) >= 0;}
+
     Seq *next_seq();
     int  next_seq(Seq&);
 };
@@ -211,7 +233,8 @@ Bam::next_seq(Seq& s)
         double pct_clipped = (double) clipped / seq.length();
 
         s = Seq(rec.qname().c_str(), seq.c_str(), qual.c_str(),
-                chrom_str(), bp, strand, rec.aln_type(), pct_clipped, rec.mapq());
+                hdr.chrom_str(rec.chrom()), bp, strand,
+                rec.aln_type(), pct_clipped, rec.mapq());
 
         if (cigar.size() > 0)
             bam_edit_gaps(cigar, s.seq);
