@@ -97,6 +97,10 @@ public:
     Bam(const char *path) : Input(), bam_fh(NULL), bamh(bam_hdr_init()), rec() {
         this->path   = string(path);
         bam_fh = hts_open(path, "r");
+        if (bam_fh == NULL) {
+            cerr << "Error: Failed to open BAM file '" << path << "'.\n";
+            throw std::exception();
+        }
         bamh = sam_hdr_read(bam_fh);
     };
     ~Bam() {
