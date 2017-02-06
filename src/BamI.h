@@ -108,6 +108,9 @@ public:
             throw std::out_of_range("out_of_range in BamHeader::chrom_str");
         return h_->target_name[index];
     }
+
+    typedef map<string, map<string, string>> ReadGroups; // map of ( ID: (TAG: VALUE) )
+    ReadGroups read_groups() const;
 };
 
 class Bam: public Input {

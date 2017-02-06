@@ -132,7 +132,7 @@ tags2bam_pe_SOURCES = src/tags2bam_pe.cc src/log_utils.cc src/sql_utilities.cc s
 
 assemble_pe_SOURCES = src/assemble_pe.cc \
 	src/utils.cc src/MetaPopInfo.cc src/locus.cc src/DNASeq4.cc \
-	src/DNANSeq.cc src/BamI.cc src/input.cc
+	src/DNANSeq.cc src/BamI.cc src/input.cc src/log_utils.cc
 
 ustacks_CXXFLAGS  = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
 ustacks_LDFLAGS   = $(OPENMP_CFLAGS)
