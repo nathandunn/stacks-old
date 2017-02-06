@@ -1,5 +1,5 @@
 bin_PROGRAMS = ustacks pstacks estacks cstacks sstacks rxstacks hstacks process_radtags process_shortreads \
-	kmer_filter clone_filter genotypes populations phasedstacks
+	kmer_filter clone_filter genotypes populations phasedstacks pstacks_pe tags2bam tags2bam_pe
 
 ustacks_SOURCES = src/ustacks.h src/ustacks.cc src/stacks.h src/stacks.cc src/constants.h src/constants.cc \
 	src/mstack.h src/mstack.cc src/mst.h src/mst.cc src/cmb.h src/cmb.cc \
@@ -116,6 +116,20 @@ phasedstacks_SOURCES = src/phasedstacks.h src/phasedstacks.cc src/constants.h sr
 	src/log_utils.h src/log_utils.cc \
 	src/utils.h src/utils.cc src/catalog_utils.h src/catalog_utils.cc 
 
+pstacks_pe_SOURCES = src/pstacks_pe.h src/pstacks_pe.cc src/pstacks_base.h src/pstacks_base.cc \
+	src/stacks/h src/stacks.cc src/constants.h src/mstack.h src/mstack.cc \
+	src/DNANSeq.h src/DNANSeq.cc src/DNASeq.h src/DNASeq.cc \
+	src/models.h src/models.cc src/utils.h src/utils.cc src/log_utils.h src/log_utils.cc \
+	src/input.h src/input.cc src/Tsv.h src/BowtieI.h src/FastaI.h src/FastqI.h src/SamI.h \
+	src/BamI.h src/BamI.cc src/aln_utils.h src/aln_utils.cc \
+	src/sql_utilities.cc src/locus.cc
+
+tags2bam_SOURCES = src/tags2bam.cc src/log_utils.cc src/sql_utilities.cc src/input.cc src/locus.cc src/stacks.cc \
+	src/DNANSeq.cc src/utils.cc src/BamI.cc src/DNASeq4.cc
+
+tags2bam_pe_SOURCES = src/tags2bam_pe.cc src/log_utils.cc src/sql_utilities.cc src/input.cc src/locus.cc src/stacks.cc \
+	src/DNANSeq.cc src/utils.cc src/BamI.cc src/DNASeq4.cc
+
 ustacks_CXXFLAGS  = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
 ustacks_LDFLAGS   = $(OPENMP_CFLAGS)
 pstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS) $(SPARSEHASH_CFLAGS)
@@ -149,6 +163,15 @@ phasedstacks_LDFLAGS  = $(OPENMP_CFLAGS)
 clone_filter_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS) $(BAM_CFLAGS)
 clone_filter_LDFLAGS  = $(OPENMP_CFLAGS)
 clone_filter_LDADD    = $(BAM_LIBS)
+pstacks_pe_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS) $(SPARSEHASH_CFLAGS)
+pstacks_pe_LDFLAGS   = $(OPENMP_CFLAGS)
+pstacks_pe_LDADD     = $(BAM_LIBS)
+tags2bam_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
+tags2bam_LDFLAGS   = $(OPENMP_CFLAGS)
+tags2bam_LDADD     = $(BAM_LIBS)
+tags2bam_pe_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
+tags2bam_pe_LDFLAGS   = $(OPENMP_CFLAGS)
+tags2bam_pe_LDADD     = $(BAM_LIBS)
 
 dist_bin_SCRIPTS = scripts/denovo_map.pl scripts/ref_map.pl scripts/export_sql.pl \
 	scripts/sort_read_pairs.pl scripts/exec_velvet.pl scripts/load_sequences.pl \
