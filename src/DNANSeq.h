@@ -72,6 +72,8 @@ public:
     void seq(char* buf) const;
     std::string seq() const;
 
+    void extend(uint n_before, uint n_after);
+
     bool operator==(const DNANSeq& other) const;
     bool operator<(const DNANSeq& other) const;
     friend class std::hash<DNANSeq>;
