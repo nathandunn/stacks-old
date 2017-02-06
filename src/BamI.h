@@ -71,7 +71,7 @@ public:
     // (qual)
     // (aux)
 
-    bool is_mapped() const {return c_.flag & BAM_FUNMAP;}
+    bool is_unmapped() const {return c_.flag & BAM_FUNMAP;}
     bool is_rev_compl() const {return c_.flag & BAM_FREVERSE;}
     bool is_paired() const {return c_.flag & BAM_FPAIRED;}
     bool is_fw_read() const {return c_.flag & BAM_FREAD1;}
@@ -201,7 +201,7 @@ Bam::next_seq(Seq& s)
         qual += char(int(q[i]) + 33);
     }
 
-    if (!rec.is_mapped()) {
+    if (rec.is_unmapped()) {
         s = Seq(rec.qname().c_str(), seq.c_str(), qual.c_str());
     } else {
         //
