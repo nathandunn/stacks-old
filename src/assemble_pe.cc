@@ -54,12 +54,12 @@ int main(int argc, char** argv) {
 
         // Create the MetaPopInfo object
         vector<string> samples;
-        for (auto rg : read_groups)
+        for (auto& rg : read_groups)
             samples.push_back(rg.second.at("SM"));
         mpopi.init_names(samples);
 
         // Get the (read group : sample) map
-        for (auto rg : read_groups)
+        for (auto& rg : read_groups)
             rg_to_sample.insert({rg.first, mpopi.get_sample_index(rg.second.at("SM"))});
     }
 
