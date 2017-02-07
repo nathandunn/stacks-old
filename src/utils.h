@@ -34,6 +34,7 @@ using std::make_pair;
 
 #include <dirent.h>
 
+#include "constants.h"
 #include "stacks.h"
 
 char   reverse(char);

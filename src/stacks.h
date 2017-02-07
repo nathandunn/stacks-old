@@ -41,6 +41,7 @@ using std::cerr;
 using std::stringstream;
 
 #include "constants.h"
+#include "Seq.h"
 #include "DNASeq.h"
 #include "DNANSeq.h"
 
@@ -49,60 +50,7 @@ typedef string allele_type;
 
 enum snp_type    {snp_type_het, snp_type_hom, snp_type_unk};
 enum read_type   {primary, secondary};
-enum strand_type {strand_plus, strand_minus};
 enum searcht     {sequence, genomic_loc};
-
-class PhyLoc {
-public:
-    char       *chr;
-    uint        bp;
-    strand_type strand;
-
-    PhyLoc() {
-        chr    = NULL;
-        bp     = 0;
-        strand = strand_plus;
-    }
-    PhyLoc(const PhyLoc& other)
-        : chr(NULL), bp(other.bp), strand(other.strand) {
-        if (other.chr != NULL) {
-            chr = new char[strlen(other.chr)+1];
-            strcpy(chr, other.chr);
-        }
-    }
-    PhyLoc& operator=(const PhyLoc& other) {PhyLoc cp (other); swap(*this, cp); return *this;}
-    PhyLoc(const char *chr, uint bp) {
-        this->chr    = new char[strlen(chr)  + 1];
-        this->bp     = bp;
-        this->strand = strand_plus;
-        strcpy(this->chr,  chr);
-    }
-    PhyLoc(const char *chr, uint bp, strand_type strnd) {
-        this->chr    = new char[strlen(chr)  + 1];
-        this->bp     = bp;
-        this->strand = strnd;
-        strcpy(this->chr,  chr);
-    }
-
-    ~PhyLoc() {
-        if (chr != NULL)
-            delete [] chr;
-    }
-
-    void set(const char *ochr, uint obp, strand_type ostrand) {
-        if (chr != NULL)
-            delete[] chr;
-        chr    = new char[strlen(ochr)+1];
-        strcpy(chr,  ochr);
-        bp     = obp;
-        strand = ostrand;
-    }
-
-    void clear() {if(chr!=NULL) {delete[] chr; chr=NULL;} bp=0; strand=strand_plus;}
-    friend void swap(PhyLoc& p, PhyLoc& q);
-    bool operator==(const PhyLoc& other) const;
-    bool operator<(const PhyLoc& other) const;
-};
 
 class SNP {
  public:
