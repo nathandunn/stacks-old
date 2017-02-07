@@ -16,10 +16,9 @@ namespace nt4 {
 
 // Definitions for nucleotides coded on 4 bits.
 
-// These definitions are compatible with those of htslib. The differences are:
-// * htslib uses '=' to represent the null nucleotide 0x0 as a character, we use '\0'
-// * htslib support partially ambiguous nucleotides ('R', etc.) but we convert
-//   everything to 15 (0xF, 'N').
+// These definitions are compatible with those of htslib--htslib supports
+// partially ambiguous nucleotides ('R', etc.) but we convert everything to 15
+// (i.e. 0xF, 'N').
 
 // Trivial ASCII-like hash table giving the 4-bits value of a nucleotide letter.
 // Adapted from `htslib::seq_nt16_table` (hts.cc).
@@ -75,7 +74,7 @@ public:
     DNASeq4(const DNASeq4& other) : l_(other.l_), v_(other.v_) {}
     DNASeq4(DNASeq4&& other) : l_(other.l_), v_(std::move(other.v_)) {}
     DNASeq4(const char* s, size_t len);
-    DNASeq4(const uchar* arr, size_t n) : l_(n*2), v_(arr, arr+n) {if (v_.back().second()==0) --l_;}
+    DNASeq4(const uchar* arr, size_t len) : l_(len), v_(arr, arr+len/2+len%2) {} // `len` is the length of the sequence (not of the array)
     DNASeq4(const std::string& s) : DNASeq4(s.c_str(), s.size()) {}
     DNASeq4& operator= (const DNASeq4& other) {l_ = other.l_; v_ = other.v_; return *this;}
     DNASeq4& operator= (DNASeq4&& other) {l_ = other.l_; v_ = std::move(other.v_); return *this;}
