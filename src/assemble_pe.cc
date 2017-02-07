@@ -65,13 +65,25 @@ int main(int argc, char** argv) {
 
     // Process every locus
     CLocReadSet loc (mpopi);
+    bool eof;
     if (!bam_f->next_record()) {
         cerr << "Error: Failed to read records from BAM file '" << bam_path << "'.\n";
         throw exception();
     }
-    while (read_one_locus(loc, bam_f, rg_to_sample)) {
+    do {
+        eof = !read_one_locus(loc, bam_f, rg_to_sample);
+
+        cout << "Locus #" << loc.id() << "\n";
+        for (const Read& r : loc.reads()) {
+            cout << r.name << " (" << mpopi.samples()[loc.sample_of(r)].name << ") ";
+            for (auto nt = r.s.begin(); nt != r.s.end(); ++nt)
+                cout << nt4::u2c[*nt];
+            cout << "\n";
+        }
+
         // TODO Process the locus.
-    }
+
+    } while (!eof);
 
     return 0;
 }
