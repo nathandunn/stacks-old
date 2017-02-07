@@ -251,11 +251,11 @@ public:
 };
 
 struct Read {
-    DNASeq4 s;
+    DNASeq4 seq;
     std::string name;
 
     Read(DNASeq4&& s, std::string&& n)
-        : s(std::move(s)), name(std::move(n))
+        : seq(std::move(s)), name(std::move(n))
         {}
 };
 
