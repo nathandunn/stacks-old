@@ -97,6 +97,32 @@ int PStack::add_seq(const DNANSeq *seq) {
     return 0;
 }
 
+void PStack::extend(const PhyLoc& phyloc, int length) {
+    if (this->seq == NULL)
+        return;
+
+    assert(strcmp(phyloc.chr, loc.chr) == 0
+           && phyloc.strand == loc.strand);
+
+    if (loc.strand == strand_plus) {
+        assert(loc.bp >= phyloc.bp
+               && loc.bp + seq->size() <= phyloc.bp + length);
+        seq->extend(
+                loc.bp - phyloc.bp,
+                phyloc.bp + length - loc.bp - seq->size());
+    } else {
+        const int this_last = int(loc.bp) - int(seq->size()) + 1;
+        const int target_last = int(phyloc.bp) - int(length) + 1;
+        assert(loc.bp <= phyloc.bp
+               && this_last >= target_last);
+        seq->extend(
+                phyloc.bp - loc.bp,
+                this_last - target_last);
+    }
+
+    loc = phyloc;
+}
+
 int Stack::add_id(uint id) {
     this->map.push_back(id);
 
