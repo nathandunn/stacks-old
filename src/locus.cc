@@ -190,5 +190,6 @@ void CLocReadSet::clear() {
     id_ = -1;
     reads_.clear();
     read_samples_.clear();
-    reads_per_sample_.assign(mpopi_.samples().size(), vector<Read*>());
+    for (auto& v : reads_per_sample_)
+        v.clear();
 }
