@@ -4,7 +4,7 @@ const uchar nt4::c2u[256] = {
     0,n,n,n, n,n,n,n, n,n,n,n, n,n,n,n, // 0x
     n,n,n,n, n,n,n,n, n,n,n,n, n,n,n,n, // 1x
     n,n,n,n, n,n,n,n, n,n,n,n, n,n,n,n, // 2x
-    n,n,n,n, n,n,n,n, n,n,n,n, n,n,n,n, // 3x
+    n,n,n,n, n,n,n,n, n,n,n,n, n,0,n,n, // 3x rem. 0 for 0x3D ('=') because htslib does it...
     n,a,n,c, n,n,n,g, n,n,n,n, n,n,n,n, // 4x
     n,n,n,n, t,n,n,n, n,n,n,n, n,n,n,n, // 5x
     n,a,n,c, n,n,n,g, n,n,n,n, n,n,n,n, // 6x
@@ -27,7 +27,7 @@ const uchar nt4::t = 8;
 const uchar nt4::n = 15;
 
 const char nt4::u2c[16] {
-    '\0','A','C','?','G','?','?','?','T','?','?','?','?','?','?','N'
+    '=','A','C','?','G','?','?','?','T','?','?','?','?','?','?','N'
 };
 
 DNASeq4::DNASeq4(const char* s, size_t len) : l_(len), v_() {
