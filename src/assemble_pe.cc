@@ -26,8 +26,20 @@ LogAlterator* lg = NULL;
 // Function declarations.
 //
 bool read_one_locus(CLocReadSet& loc, Bam* bam_f, const map<string, size_t>& rg_to_sample);
+void process_one_locus(const CLocReadSet& loc);
+
 void parse_command_line(int argc, char* argv[]);
 void report_options(ostream& os);
+
+void print_loc(const CLocReadSet& loc) {
+    cout << "Locus #" << loc.id() << "\n";
+    for (const Read& r : loc.reads()) {
+        cout << r.name << "\t(" << loc.mpopi().samples()[loc.sample_of(r)].name << ")\t";
+        for (uchar nt : r.seq)
+            cout << nt4::u2c[nt];
+        cout << "\n";
+    }
+}
 
 int main(int argc, char** argv) {
 
@@ -48,7 +60,7 @@ int main(int argc, char** argv) {
 
     // Get the list of samples from the BAM header.
     MetaPopInfo mpopi;
-    map<string, size_t> rg_to_sample; // (Read group ID, sample index)
+    map<string, size_t> rg_to_sample; // (readgroup ID, sample index)
     {
         BamHeader::ReadGroups read_groups = bam_f->h().read_groups();
 
@@ -72,17 +84,8 @@ int main(int argc, char** argv) {
     }
     do {
         eof = !read_one_locus(loc, bam_f, rg_to_sample);
-
-        cout << "Locus #" << loc.id() << "\n";
-        for (const Read& r : loc.reads()) {
-            cout << r.name << " (" << mpopi.samples()[loc.sample_of(r)].name << ") ";
-            for (auto nt = r.s.begin(); nt != r.s.end(); ++nt)
-                cout << nt4::u2c[*nt];
-            cout << "\n";
-        }
-
-        // TODO Process the locus.
-
+        print_loc(loc);
+        process_one_locus(loc);
     } while (!eof);
 
     return 0;
@@ -107,6 +110,9 @@ bool read_one_locus(CLocReadSet& loc, Bam* bam_f, const map<string, size_t>& rg_
     return true;
 }
 
+void process_one_locus(const CLocReadSet& loc) {
+}
+
 const string help_string = string() +
         "assemble_pe " + VERSION  + "\n"
         "assemble_pe -b bam_file -O out_dir\n"
@@ -118,7 +124,7 @@ const string help_string = string() +
 
 void bad_args() {
     cerr << help_string;
-    exit(-1);
+    exit(13);
 }
 
 void parse_command_line(int argc, char* argv[]) {
