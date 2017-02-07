@@ -70,6 +70,10 @@ AC_FUNC_MALLOC
 AC_FUNC_REALLOC
 AC_CHECK_FUNCS([floor memset pow sqrt])
 
+# Checks for compiling libraries.
+AC_PROG_RANLIB
+m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
+
 # For test harness
 AC_PROG_AWK
 
