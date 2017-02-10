@@ -544,12 +544,12 @@ prune_mst_haplotypes(CSLocus *cloc, Datum *d, Locus *loc, unsigned long &pruned_
     // Create a minimum spanning tree in order to determine the minimum distance
     // between each node in the list.
     //
-    MinSpanTree *mst = new MinSpanTree;
+    mst::MinSpanTree *mst = new mst::MinSpanTree();
 
     map<string, int>::iterator it;
     vector<uint>   keys;
     vector<string> haps;
-    Node *n;
+    mst::Node *n;
 
     for (it = cloc->hap_cnts.begin(); it != cloc->hap_cnts.end(); it++) {
         n = mst->add_node(it->first);
@@ -561,7 +561,7 @@ prune_mst_haplotypes(CSLocus *cloc, Datum *d, Locus *loc, unsigned long &pruned_
     // We are going to connect nodes in the graph when a SNP occurs in one
     // of the positions of the haplotype.
     //
-    Node *n_1, *n_2;
+    mst::Node *n_1, *n_2;
 
     uint snp_pos = 0;
     for (uint i = 0; i < cloc->snps.size(); i++) {

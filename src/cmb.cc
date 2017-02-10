@@ -29,6 +29,8 @@
 //
 #include "cmb.h"
 
+using namespace mst;
+
 //
 // A cache to store combinations generated as (N choose k)
 // for all set sizes encountered

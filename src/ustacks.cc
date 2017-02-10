@@ -1337,7 +1337,7 @@ int deleverage(map<int, Stack *> &unique,
     // Create a minimum spanning tree in order to determine the minimum distance
     // between each node in the list.
     //
-    MinSpanTree *mst = new MinSpanTree;
+    mst::MinSpanTree *mst = new mst::MinSpanTree();
     vector<int>  keys;
 
     for (it = merge_list.begin(); it != merge_list.end(); it++) {
@@ -1352,7 +1352,7 @@ int deleverage(map<int, Stack *> &unique,
     // Measure the distance between each pair of nodes and add edges to our
     // minimum spanning tree.
     //
-    Node *n_1, *n_2;
+    mst::Node *n_1, *n_2;
     for (k = 0; k < keys.size(); k++) {
         tag_1 = merged[keys[k]];
         n_1   = mst->node(keys[k]);
@@ -1389,9 +1389,9 @@ int deleverage(map<int, Stack *> &unique,
 
     set<int> visited;
     set<int, int_increasing> dists;
-    queue<Node *> q;
+    queue<mst::Node *> q;
 
-    Node *n = mst->head();
+    mst::Node *n = mst->head();
     q.push(n);
 
     while (!q.empty()) {
