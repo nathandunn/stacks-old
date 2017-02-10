@@ -29,6 +29,8 @@
 //
 #include "mst.h"
 
+namespace mst {
+
 Edge *Node::add_edge(Node *n, int dist) {
     Edge *e = new Edge;
     e->child = n;
@@ -270,3 +272,5 @@ string MinSpanTree::vis(bool overlay) {
 
     return data.str();
 }
+
+}//namespace

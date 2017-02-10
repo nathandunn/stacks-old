@@ -39,7 +39,7 @@ using std::cerr;
 
 #include "constants.h"
 
-typedef unsigned int uint;
+namespace mst {
 
 class Node;
 
@@ -104,4 +104,5 @@ class MinSpanTree {
 
 bool min_span_tree_cmp(const Node *, const Node *);
 
+} // namespace mst
 #endif // __MST_H__

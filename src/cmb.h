@@ -69,13 +69,13 @@ class CombSet {
     int max_set_size;  // maximum set size, K, the largest subset we wish to select.
 
     map<int, int>           node_map;  // Convert non-contiguous IDs from the MST into array indexes for this->edges
-    list<Node *>            node_list;
+    list<mst::Node *>            node_list;
     vector<pair<int, int> > edge_list;
     int                   **edges;
 
     int            index;
     vector<Cmb **> compound_comb;
-    MinSpanTree   *mst;
+    mst::MinSpanTree   *mst;
 
     int      catalog_tree();
     int      partition_tree(uint);
@@ -85,7 +85,7 @@ class CombSet {
     void     destroy(Cmb **);
 
  public:
-    CombSet(int, int, MinSpanTree *);
+    CombSet(int, int, mst::MinSpanTree *);
     ~CombSet();
 
     Cmb **next(int map[] = NULL);
