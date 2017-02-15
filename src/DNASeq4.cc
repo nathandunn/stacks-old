@@ -1,6 +1,8 @@
 #include "DNASeq4.h"
 
-const uchar nt4::c2u[256] = {
+using namespace std;
+
+const size_t Nt4::ch_to_nt[256] = {
     0,n,n,n, n,n,n,n, n,n,n,n, n,n,n,n, // 0x
     n,n,n,n, n,n,n,n, n,n,n,n, n,n,n,n, // 1x
     n,n,n,n, n,n,n,n, n,n,n,n, n,n,n,n, // 2x
@@ -20,13 +22,7 @@ const uchar nt4::c2u[256] = {
     n,n,n,n, n,n,n,n, n,n,n,n, n,n,n,n
 };
 
-const uchar nt4::a = 1;
-const uchar nt4::c = 2;
-const uchar nt4::g = 4;
-const uchar nt4::t = 8;
-const uchar nt4::n = 15;
-
-const char nt4::u2c[16] {
+const char Nt4::nt_to_ch[16] {
     '=','A','C','?','G','?','?','?','T','?','?','?','?','?','?','N'
 };
 

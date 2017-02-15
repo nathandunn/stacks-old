@@ -9,34 +9,31 @@
 
 #include "constants.h"
 
-class DiNuc;
-class DNASeq4;
-
-namespace nt4 {
-
 // Definitions for nucleotides coded on 4 bits.
-
 // These definitions are compatible with those of htslib--htslib supports
 // partially ambiguous nucleotides ('R', etc.) but we convert everything to 15
 // (i.e. 0xF, 'N').
+struct Nt4 {
+    static const size_t nbits = 4;
 
-// Trivial ASCII-like hash table giving the 4-bits value of a nucleotide letter.
-// Adapted from `htslib::seq_nt16_table` (hts.cc).
-extern const uchar c2u[256];
+    static const size_t a = 1; //0001
+    static const size_t c = 2; //0010
+    static const size_t g = 4; //0100
+    static const size_t t = 8; //1000
+    static const size_t n = 15;//1111
 
-extern const uchar a;
-extern const uchar c;
-extern const uchar g;
-extern const uchar t;
-extern const uchar n;
+    // Trivial ASCII-like hash table giving the 4-bits value of a nucleotide letter.
+    // e.g. ch_to_nt [ (int)'G' ] == 4
+    // Adapted from `htslib::seq_nt16_table` (hts.cc).
+    static const size_t ch_to_nt[256];
 
-// Trivial hash table giving the nucleotide letter of a 4-bits value.
-extern const char u2c[16];
+    // Trivial hash table giving the nucleotide letter of a 4-bits value.
+    // e.g. nt_to_ch[4] == 'C'
+    static const char nt_to_ch[16];
+};
 
-} //namespace nt4
-
-// A dinucleotide, coded on one byte.
-// The first nucleotide uses the high bits.
+// A dinucleotide coded on one byte, where the first nucleotide uses the high bits.
+// This is compatible with BAM/HTSLIB.
 class DiNuc {
     uchar x_;
 
@@ -44,27 +41,29 @@ public:
     DiNuc() : x_(0) {}
     DiNuc(const DiNuc& other) : x_(other.x_) {}
     DiNuc(uchar x) : x_(x) {}
-    DiNuc(uchar u1, uchar u2) : x_(0) {set_first(u1); set_second(u2);}
-    DiNuc(char c1, char c2) : DiNuc(nt4::c2u[(int) c1], nt4::c2u[(int) c2]) {}
+    DiNuc(size_t u1, size_t u2) : x_(0) {set_first(u1); set_second(u2);}
+    DiNuc(char c1, char c2) : DiNuc(Nt4::ch_to_nt[(size_t) c1], Nt4::ch_to_nt[(size_t) c2]) {}
     DiNuc& operator= (const DiNuc& other) {x_ = other.x_; return *this;}
 
-    uchar first() const {return x_ >>4;}
-    uchar second() const {return x_ & 15;}
+    size_t first() const {return x_ >>4;}
+    size_t second() const {return x_ & 15;}
 
     bool operator== (const DiNuc& other) const {return x_ == other.x_;}
     bool operator<  (const DiNuc& other) const {return x_ < other.x_;}
 
 private:
-    void set_first(uchar u) {x_ |= u <<4;}
-    void set_second(uchar u) {x_ |= u;}
+    void set_first(size_t u) {x_ |= u <<4;}
+    void set_second(size_t u) {x_ |= u;}
 
     void clear_first() {x_ &= 15;}
     void clear_second() {x_ &= ~15;}
 
-    friend class std::hash<DNASeq4>;
+public:
+    uchar x() const {return x_;} // c.f. hash<DNASeq4>
 };
 
 // A sequence of 4-bits A, C, G, T and N.
+// Uses DiNuc and is thus compatible with BAM/HTSLIB.
 class DNASeq4 {
     size_t l_;
     std::vector<DiNuc> v_;
@@ -113,7 +112,7 @@ struct hash<DNASeq4> {
     size_t operator() (const DNASeq4& s) const {
         size_t x = static_cast<size_t>(14695981039346656037ULL);
         for (const DiNuc& d : s.v_) {
-            x ^= static_cast<size_t>(d.x_);
+            x ^= static_cast<size_t>(d.x());
             x *= static_cast<size_t>(1099511628211ULL);
         }
         return x;
