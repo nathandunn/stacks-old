@@ -47,6 +47,35 @@ struct Nt2 {
     static const size_t nt4_to_nt[16];
 };
 
+// A sequence of nucleotides on a uint64_t, where the first nucleotide uses the
+// low bits.
+template<class Nt>
+class NtArray {
+    uint64_t a_;
+
+public:
+    NtArray() : a_(0) {}
+    NtArray(const NtArray<Nt>& other) : a_(other.a_) {}
+    NtArray<Nt>& operator= (const NtArray<Nt>& other) {a_ = other.a_; return *this;}
+
+    void set(size_t i, size_t nt) {a_ |= nt << (i*Nt::nbits);}
+    void clear(size_t i) {a_ &= ~(lowbits << (i*Nt::nbits));}
+
+    size_t operator[] (size_t i) const {return (a_ >> (i*Nt::nbits)) & lowbits;}
+    bool operator== (const NtArray<Nt>& other) const {return a_ == other.a_;}
+    bool operator<  (const NtArray<Nt>& other) const {return a_ < other.a_;}
+    friend class std::hash<NtArray>;
+
+    // Methods for kmers
+    void push_front(size_t nt) {a_ <<= Nt::nbits; a_ |= nt;}
+    void pop_front() {a_ >>= Nt::nbits;}
+
+    static const size_t n_nts = sizeof a_ * 8 / Nt::nbits;
+
+private:
+    static const uint64_t lowbits = (1 << Nt::nbits) - 1;
+};
+
 // A dinucleotide coded on one byte, where the first nucleotide uses the high bits.
 // This is compatible with BAM/HTSLIB.
 class DiNuc {
@@ -120,6 +149,11 @@ public:
     size_t nbytes() const {return v_.size() * sizeof (DiNuc);}
     const uchar* vdata() const {return (uchar*) v_.data();}
 };
+
+namespace std { template<class Nt>
+struct hash<NtArray<Nt>> { size_t operator() (const NtArray<Nt>& a) const {
+    return hash<uint64_t>()(a.a_);
+}};}
 
 namespace std {
 template<>
