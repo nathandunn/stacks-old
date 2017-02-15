@@ -32,6 +32,21 @@ struct Nt4 {
     static const char nt_to_ch[16];
 };
 
+// Definitions for nucleotides coded on 2 bits.
+struct Nt2 {
+    static const size_t nbits = 2;
+
+    static const size_t a = 0;
+    static const size_t c = 1;
+    static const size_t g = 2;
+    static const size_t t = 3;
+
+    static const size_t ch_to_nt[256];
+    static const char nt_to_ch[4];
+
+    static const size_t nt4_to_nt[16];
+};
+
 // A dinucleotide coded on one byte, where the first nucleotide uses the high bits.
 // This is compatible with BAM/HTSLIB.
 class DiNuc {
