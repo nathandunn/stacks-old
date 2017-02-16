@@ -2,6 +2,7 @@
 #define DEBRUIJN_H
 
 #include <vector>
+#include <list>
 #include <unordered_map>
 
 #include "constants.h"
@@ -82,11 +83,11 @@ public:
 
     //
     // Code for simple paths ('sp')
-    // ----------
+    // A simple path is identified by its first node.
     //
 private:
-    Node* sp_first_; // First node of the path. Set for the last node of the simple path.
     Node* sp_last_;  // Last node of the path. Set for the first path of the simple path.
+    Node* sp_first_; // First node of the path. Set for the last node of the simple path.
 
 public:
     void sp_last(Node* n) {sp_last_ = n;}
@@ -116,9 +117,16 @@ class Graph {
     size_t km_len;
     std::unordered_map<Kmer, KmMapValue> map;
     std::vector<Node> nodes;
+    std::list<Node*> nodes_wo_preds;
 
 public:
     void create(const CLocReadSet& readset, size_t min_kmer_count);
+
+private:
+    mutable std::unordered_set<Node*> sp_visited;
+    void clear_visited() {sp_visited.erase(sp_visited.begin(), sp_visited.end());}
+
+    Node* build_simple_path(Node* n);
 };
 
 //
@@ -127,6 +135,7 @@ public:
 // ==================
 //
 
+inline
 void Graph::create(const CLocReadSet& readset, size_t min_kmer_count) {
 
     //
@@ -186,6 +195,21 @@ void Graph::create(const CLocReadSet& readset, size_t min_kmer_count) {
                 km->second.node->pred(nt2, &n);
             }
         }
+    }
+
+    //
+    // Record nodes that don't have predecessors.
+    //
+    for (Node& n : nodes)
+        if (n.n_pred() == 0)
+            nodes_wo_preds.push_back(&n);
+
+    //
+    // Build the simple paths.
+    //
+    clear_visited();
+    for (Node* n : nodes_wo_preds) {
+        Node* last = build_simple_path(n);
     }
 }
 
