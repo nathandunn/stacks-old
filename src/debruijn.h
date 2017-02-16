@@ -12,12 +12,30 @@ class Kmer {
     NtArray<Nt2> a_;
 
 public:
-    // Build a kmer from a sequence iterator. (No bounds checking, sequence must
-    // be long enough.)
-    Kmer(size_t km_len, DNASeq4::iterator si) : a_() {
-        for (size_t i=0; i<km_len; ++i) {
-            a_.set(i, Nt2::nt4_to_nt[si.nt()]);
-            ++si;
+    // Given a sequence iterator, builds the first valid kmer (i.e. skipping Ns).
+    // If no kmer can be found, an empty object is returned.
+    // After the call `first` points to the nucleotide immediately past the kmer.
+    Kmer(size_t km_len, DNASeq4::iterator& first, DNASeq4::iterator past) : a_() {
+        // Find a series of km_len good nucleotides.
+        DNASeq4::iterator km_start = first;
+        size_t n_good = 0;
+        while(first != past && n_good != km_len) {
+            if (first.nt() == Nt4::n) {
+                // start again
+                km_start = first;
+                n_good = 0;
+                ++first;
+            } else {
+                ++n_good;
+                ++first;
+            }
+        }
+        // Build the kmer.
+        if (n_good == km_len) {
+            for (size_t i=0; i<km_len; ++i) {
+                a_.set(i, Nt2::nt4_to_nt[km_start.nt()]);
+                ++km_start;
+            }
         }
     }
 
@@ -27,13 +45,15 @@ public:
     Kmer succ(size_t km_len, size_t nt) const
         {Kmer k (*this); k.a_.pop_front(); k.a_.set(km_len-1, nt); return k;}
 
+    bool empty() const {return a_ == NtArray<Nt2>();}
+
     bool operator==(const Kmer& other) const {return a_ == other.a_;}
     friend class std::hash<Kmer>;
 };
 
 namespace std { template<>
 struct hash<Kmer> { size_t operator() (const Kmer& km) const {
-    return hash()(km.a_);
+    return hash<NtArray<Nt2>>()(km.a_);
 }};}
 
 class Node {
@@ -68,7 +88,7 @@ class Graph {
     std::vector<Node> nodes;
 
 public:
-    void create(const CLocReadSet& reads);
+    void create(const CLocReadSet& readset);
 };
 
 //
@@ -76,5 +96,41 @@ public:
 // Inline definitions
 // ==================
 //
+
+void Graph::create(const CLocReadSet& readset) {
+
+    //
+    // Count all kmers.
+    //
+    for (const Read& r : readset.reads()) {
+
+        // Build the first kmer.
+        DNASeq4::iterator next_nt = r.seq.begin();
+        Kmer km = Kmer(km_len, next_nt, r.seq.end());
+        if (km.empty()) {
+            cerr << "Oops, no " << km_len << "-mers in " << r.seq.str() << "\n"; //
+            continue;
+        }
+
+        // Record it.
+        ++map[km];
+
+        // Walk the sequence.
+        while (next_nt != r.seq.end()) {
+            size_t nt4 = next_nt.nt();
+            if (nt4 == Nt4::n) {
+                km = Kmer(km_len, next_nt, r.seq.end());
+                if (km.empty())
+                    // Not enough sequence remaining to make another kmer.
+                    break;
+            } else {
+                km = km.succ(km_len, Nt2::nt4_to_nt[nt4]);
+            }
+            ++map[km];
+        }
+    }
+
+    // TODO Build the graph
+}
 
 #endif
