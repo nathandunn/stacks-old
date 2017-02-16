@@ -123,6 +123,7 @@ public:
     DNASeq4& operator= (DNASeq4&& other) {l_ = other.l_; v_ = std::move(other.v_); return *this;}
 
     size_t length() const {return l_;}
+    std::string str() const;
 
     size_t operator[] (size_t i) const {return i%2==0 ? v_[i/2].first() : v_[i/2].second();}
     bool  operator== (const DNASeq4& other) const {return l_ == other.l_ && v_ == other.v_;}

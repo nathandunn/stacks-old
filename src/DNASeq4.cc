@@ -59,3 +59,11 @@ DNASeq4::DNASeq4(const char* s, size_t len) : l_(len), v_() {
     for (size_t i=0; i<len; i+=2)
         v_.push_back(DiNuc(s[i], s[i+1])); //n.b. `s` is null-terminated
 }
+
+string DNASeq4::str() const {
+    string s;
+    s.reserve(l_);
+    for (auto nt=begin(); nt!=end(); ++nt)
+        s.push_back(*nt);
+    return s;
+}
