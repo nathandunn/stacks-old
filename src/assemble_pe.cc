@@ -108,6 +108,7 @@ bool read_one_locus(CLocReadSet& loc, Bam* bam_f, const map<string, size_t>& rg_
 }
 
 void process_one_locus(const CLocReadSet& loc) {
+    Graph graph;
 }
 
 const string help_string = string() +
