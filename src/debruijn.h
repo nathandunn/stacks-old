@@ -56,39 +56,62 @@ struct hash<Kmer> { size_t operator() (const Kmer& km) const {
     return hash<NtArray<Nt2>>()(km.a_);
 }};}
 
-class Node {
-    // NodeInfo info; // sequence of the kmer, etc.
+struct NodeData {
+    Kmer km;
+    size_t count;
 
-    std::array<size_t, 4> pred_; // predecessors, packed to the left
-    std::array<size_t, 4> succ_; // successors, packed to the left
+    NodeData(const Kmer& k, size_t c) : km(k), count(c) {}
+};
+
+class Node {
+    NodeData d_;
+    Node* pred_[4];
+    Node* succ_[4];
 
 public:
+    Node(const NodeData& d) : d_(d), pred_(), succ_(), sp_first(), sp_last() {}
+
     size_t n_pred() const;
     size_t n_succ() const;
-    size_t pred(size_t i) const;
-    size_t succ(size_t i) const;
+    Node& pred(size_t i) const;
+    Node& succ(size_t i) const;
+    void pred(size_t i, Node* n) {pred_[i] = n;}
+    void succ(size_t i, Node* n) {succ_[i] = n;}
+
+    // Data
+    const Kmer& km() const {return d_.km;}
+    size_t count() const {return d_.count;}
 
     //
     // Code for simple paths ('sp')
     // ----------
     //
 private:
-    size_t sp_first; // First node of the path
-    size_t sp_last;  // Last node of the path
+    Node* sp_first; // First node of the path
+    Node* sp_last;  // Last node of the path
 
+public:
     size_t sp_n_pred() const;
     size_t sp_n_succ() const;
-    size_t sp_pred(size_t i) const;
-    size_t sp_succ(size_t i) const;
+    Node& sp_pred(size_t i) const;
+    Node& sp_succ(size_t i) const;
+};
+
+struct KmMapValue {
+    union {
+        size_t count;
+        Node* node;
+    };
+    KmMapValue() : count(0) {}
 };
 
 class Graph {
     size_t km_len;
-    std::unordered_map<Kmer, size_t> map;
+    std::unordered_map<Kmer, KmMapValue> map;
     std::vector<Node> nodes;
 
 public:
-    void create(const CLocReadSet& readset);
+    void create(const CLocReadSet& readset, size_t min_kmer_count);
 };
 
 //
@@ -97,7 +120,7 @@ public:
 // ==================
 //
 
-void Graph::create(const CLocReadSet& readset) {
+void Graph::create(const CLocReadSet& readset, size_t min_kmer_count) {
 
     //
     // Count all kmers.
@@ -113,7 +136,7 @@ void Graph::create(const CLocReadSet& readset) {
         }
 
         // Record it.
-        ++map[km];
+        ++map[km].count;
 
         // Walk the sequence.
         while (next_nt != r.seq.end()) {
@@ -126,11 +149,37 @@ void Graph::create(const CLocReadSet& readset) {
             } else {
                 km = km.succ(km_len, Nt2::nt4_to_nt[nt4]);
             }
-            ++map[km];
+            ++map[km].count;
         }
     }
 
-    // TODO Build the graph
+    //
+    // Build the standalone nodes.
+    //
+    for(auto km=map.begin(); km!=map.end();) {
+        if (km->second.count < min_kmer_count) {
+            map.erase(km++);
+        } else {
+            nodes.push_back(Node(NodeData(km->first, km->second.count)));
+            // Replace the count of the kmer with a pointer to its node.
+            km->second.node = &nodes.back();
+            ++km;
+        }
+    }
+
+    //
+    // Build the edges.
+    //
+    for (Node& n : nodes) {
+        // Check each possible successor.
+        for (size_t nt2=0; nt2<4; ++nt2) {
+            auto km = map.find(n.km().succ(km_len, nt2));
+            if (km != map.end()) {
+                n.succ(nt2, km->second.node);
+                km->second.node->pred(nt2, &n);
+            }
+        }
+    }
 }
 
 #endif
