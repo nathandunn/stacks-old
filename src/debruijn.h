@@ -69,15 +69,15 @@ class Node {
     Node* succ_[4];
 
 public:
-    Node(const NodeData& d) : d_(d), pred_(), succ_(), sp_first_(), sp_last_() {}
+    Node(const NodeData& d) : d_(d), pred_(), succ_(), sp_last_(), sp_first_() {}
+    void set_pred(size_t nt2, Node* n) {pred_[nt2] = n;}
+    void set_succ(size_t nt2, Node* n) {succ_[nt2] = n;}
+
     size_t n_pred() const {return size_t(pred_[0]!=NULL) + size_t(pred_[1]!=NULL) + size_t(pred_[2]!=NULL) + size_t(pred_[3]!=NULL);}
     size_t n_succ() const {return size_t(succ_[0]!=NULL) + size_t(succ_[1]!=NULL) + size_t(succ_[2]!=NULL) + size_t(succ_[3]!=NULL);}
-    Node& pred(size_t nt2) {return *is_set(pred_[nt2]);}
-    Node& succ(size_t nt2) {return *is_set(succ_[nt2]);}
-    void pred(size_t nt2, Node* n) {pred_[nt2] = n;}
-    void succ(size_t nt2, Node* n) {succ_[nt2] = n;}
+    Node* pred(size_t nt2) {return pred_[nt2];}
+    Node* succ(size_t nt2) {return succ_[nt2];}
 
-    // Data
     const Kmer& km() const {return d_.km;}
     size_t count() const {return d_.count;}
 
@@ -90,19 +90,19 @@ private:
     Node* sp_first_; // First node of the path. Set for the last node of the simple path.
 
 public:
-    void sp_last(Node* n) {sp_last_ = n;}
-    void sp_first(Node* n) {sp_first_ = n;}
+    void set_sp_last(Node* n) {sp_last_ = n;}
+    void set_sp_first(Node* n) {sp_first_ = n;}
 
-    size_t sp_n_pred() const {is_spfirst(*this); return n_pred();}
-    size_t sp_n_succ() const {is_spfirst(*this); return sp_last_->n_succ();}
-    Node& sp_pred(size_t nt2) {is_spfirst(*this); is_splast(pred(nt2)); return *pred(nt2).sp_first_;}
-    Node& sp_succ(size_t nt2) {is_spfirst(*this); is_splast(*sp_last_); return sp_last_->succ(nt2);}
+    size_t sp_n_pred() const {is_spfirst(this); return n_pred();}
+    size_t sp_n_succ() const {is_spfirst(this); return sp_last_->n_succ();}
+    Node* sp_pred(size_t nt2) {is_spfirst(this); is_splast(pred(nt2)); return is_set(pred(nt2)->sp_first_);}
+    Node* sp_succ(size_t nt2) {is_spfirst(this); is_splast(sp_last_); return is_set(sp_last_->succ(nt2));}
 
 private:
     //xxx debug
     static Node* is_set(Node* n) {assert(n!=NULL); return n;}
-    static void is_spfirst(const Node& n) {assert(n.sp_last_!=NULL);}
-    static void is_splast(const Node& n) {assert(n.sp_first_!=NULL);}
+    static void is_spfirst(const Node* n) {assert(n->sp_last_!=NULL);}
+    static void is_splast(const Node* n) {assert(n->sp_first_!=NULL);}
 };
 
 struct KmMapValue {
@@ -191,8 +191,8 @@ void Graph::create(const CLocReadSet& readset, size_t min_kmer_count) {
         for (size_t nt2=0; nt2<4; ++nt2) {
             auto km = map.find(n.km().succ(km_len, nt2));
             if (km != map.end()) {
-                n.succ(nt2, km->second.node);
-                km->second.node->pred(nt2, &n);
+                n.set_succ(nt2, km->second.node);
+                km->second.node->set_pred(nt2, &n);
             }
         }
     }
