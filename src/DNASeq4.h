@@ -124,26 +124,27 @@ public:
 
     size_t length() const {return l_;}
 
-    uchar operator[] (size_t i) const {return i%2==0 ? v_[i/2].first() : v_[i/2].second();}
+    size_t operator[] (size_t i) const {return i%2==0 ? v_[i/2].first() : v_[i/2].second();}
     bool  operator== (const DNASeq4& other) const {return l_ == other.l_ && v_ == other.v_;}
     bool  operator<  (const DNASeq4& other) const {return l_ < other.l_ ? true : v_ < other.v_;}
     friend class std::hash<DNASeq4>;
 
     // Iterator.
-    class const_iterator {
+    class iterator {
         std::vector<DiNuc>::const_iterator vi_;
         bool first_;
 
     public:
-        const_iterator(std::vector<DiNuc>::const_iterator vi, bool f) : vi_(vi), first_(f) {}
-        bool operator!= (const_iterator other) {return ! (vi_ == other.vi_? first_ == other.first_ : false);}
-        const_iterator& operator++ () {if (first_) {first_ = false;} else {++vi_; first_ = true;} return *this; }
+        iterator(std::vector<DiNuc>::const_iterator vi, bool f) : vi_(vi), first_(f) {}
+        bool operator!= (iterator other) {return ! (vi_ == other.vi_? first_ == other.first_ : false);}
+        iterator& operator++ () {if (first_) {first_ = false;} else {++vi_; first_ = true;} return *this; }
 
         // Get the nucleotide.
-        uchar operator* () {return first_ ? vi_->first() : vi_->second();}
+        size_t nt() const {return first_ ? vi_->first() : vi_->second();}
+        char operator* () const {return Nt4::nt_to_ch[nt()];}
     };
-    const_iterator begin() const {return const_iterator(v_.begin(), true);}
-    const_iterator end()   const {return length()%2==0 ? const_iterator(v_.end(), true) : const_iterator(--v_.end(), false);}
+    iterator begin() const {return iterator(v_.begin(), true);}
+    iterator end()   const {return length()%2==0 ? iterator(v_.end(), true) : iterator(--v_.end(), false);}
 
     // Methods to allow to memcpy into a htslib bam1_t.
     size_t nbytes() const {return v_.size() * sizeof (DiNuc);}
