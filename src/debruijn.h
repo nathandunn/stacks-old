@@ -2,7 +2,6 @@
 #define DEBRUIJN_H
 
 #include <vector>
-#include <array>
 #include <unordered_map>
 
 #include "constants.h"
@@ -69,14 +68,13 @@ class Node {
     Node* succ_[4];
 
 public:
-    Node(const NodeData& d) : d_(d), pred_(), succ_(), sp_first(), sp_last() {}
-
-    size_t n_pred() const;
-    size_t n_succ() const;
-    Node& pred(size_t i) const;
-    Node& succ(size_t i) const;
-    void pred(size_t i, Node* n) {pred_[i] = n;}
-    void succ(size_t i, Node* n) {succ_[i] = n;}
+    Node(const NodeData& d) : d_(d), pred_(), succ_(), sp_first_(), sp_last_() {}
+    size_t n_pred() const {return size_t(pred_[0]!=NULL) + size_t(pred_[1]!=NULL) + size_t(pred_[2]!=NULL) + size_t(pred_[3]!=NULL);}
+    size_t n_succ() const {return size_t(succ_[0]!=NULL) + size_t(succ_[1]!=NULL) + size_t(succ_[2]!=NULL) + size_t(succ_[3]!=NULL);}
+    Node& pred(size_t nt2) {return *is_set(pred_[nt2]);}
+    Node& succ(size_t nt2) {return *is_set(succ_[nt2]);}
+    void pred(size_t nt2, Node* n) {pred_[nt2] = n;}
+    void succ(size_t nt2, Node* n) {succ_[nt2] = n;}
 
     // Data
     const Kmer& km() const {return d_.km;}
@@ -87,14 +85,23 @@ public:
     // ----------
     //
 private:
-    Node* sp_first; // First node of the path
-    Node* sp_last;  // Last node of the path
+    Node* sp_first_; // First node of the path. Set for the last node of the simple path.
+    Node* sp_last_;  // Last node of the path. Set for the first path of the simple path.
 
 public:
-    size_t sp_n_pred() const;
-    size_t sp_n_succ() const;
-    Node& sp_pred(size_t i) const;
-    Node& sp_succ(size_t i) const;
+    void sp_last(Node* n) {sp_last_ = n;}
+    void sp_first(Node* n) {sp_first_ = n;}
+
+    size_t sp_n_pred() const {is_spfirst(*this); return n_pred();}
+    size_t sp_n_succ() const {is_spfirst(*this); return sp_last_->n_succ();}
+    Node& sp_pred(size_t nt2) {is_spfirst(*this); is_splast(pred(nt2)); return *pred(nt2).sp_first_;}
+    Node& sp_succ(size_t nt2) {is_spfirst(*this); is_splast(*sp_last_); return sp_last_->succ(nt2);}
+
+private:
+    //xxx debug
+    static Node* is_set(Node* n) {assert(n!=NULL); return n;}
+    static void is_spfirst(const Node& n) {assert(n.sp_last_!=NULL);}
+    static void is_splast(const Node& n) {assert(n.sp_first_!=NULL);}
 };
 
 struct KmMapValue {
