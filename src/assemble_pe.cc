@@ -7,6 +7,7 @@
 #include "MetaPopInfo.h"
 #include "locus.h"
 #include "BamI.h"
+#include "debruijn.h"
 
 using namespace std;
 
