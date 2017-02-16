@@ -42,6 +42,9 @@
 int bam_find_start_bp(int, strand_type, const vector<pair<char, uint> > &);
 int bam_edit_gaps(vector<pair<char, uint> > &, char *);
 
+// Write a SAM-style text header to a BAM file.
+void write_bam_header(htsFile* bam_f, const std::string& header_text);
+
 class BamRecord {
     bam1_t* r_;
     bam1_core_t& c_; // r_->core
@@ -105,6 +108,9 @@ public:
             throw std::out_of_range("out_of_range in BamHeader::chrom_str");
         return h_->target_name[index];
     }
+
+    typedef map<string, map<string, string>> ReadGroups; // map of ( ID: (TAG: VALUE) )
+    ReadGroups read_groups() const;
 };
 
 class Bam: public Input {

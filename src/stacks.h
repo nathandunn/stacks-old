@@ -44,6 +44,7 @@ using std::stringstream;
 #include "Seq.h"
 #include "DNASeq.h"
 #include "DNANSeq.h"
+#include "DNASeq4.h"
 
 typedef unsigned int uint;
 typedef string allele_type;
@@ -135,6 +136,9 @@ class PStack {
         map.push_back(copy);
         ++count;
     }
+
+    // extend(): Extends the PStack to the desired span.
+    void extend(const PhyLoc& phyloc, int length);
 
     void clear();
     bool operator< (const PStack& other) const;
@@ -244,6 +248,15 @@ public:
             delete this->snps[i];
         this->snps.clear();
     }
+};
+
+struct Read {
+    DNASeq4 seq;
+    std::string name;
+
+    Read(DNASeq4&& s, std::string&& n)
+        : seq(std::move(s)), name(std::move(n))
+        {}
 };
 
 //

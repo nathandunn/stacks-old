@@ -35,6 +35,7 @@ using std::make_pair;
 
 #include "constants.h"
 #include "stacks.h"
+#include "MetaPopInfo.h"
 
 typedef struct match {
     uint        cat_id;
@@ -164,5 +165,33 @@ public:
 };
 
 bool bp_compare(Locus *, Locus *);
+
+class CLocReadSet {
+    int id_;                                 // Catalog locus ID
+    vector<Read> reads_;                     // All the reads. Order is arbitrary.
+
+    const MetaPopInfo& mpopi_;
+    vector<size_t> read_samples_;     // Sample of each read. size() == reads_.size()
+    vector<vector<Read*>> reads_per_sample_; // Reads of each sample. size() == mpopi_.samples().size()
+
+public:
+    CLocReadSet(MetaPopInfo m)
+        : id_(-1), reads_(), mpopi_(m), read_samples_(), reads_per_sample_(mpopi_.samples().size())
+        {}
+
+    int id() const {return id_;}
+    const vector<Read>& reads() const {return reads_;}
+    size_t sample_of(const Read& r) const {return read_samples_.at(index_of(r));}
+    const vector<Read*>& reads_of(size_t sample) const {return reads_per_sample_.at(sample);}
+    const MetaPopInfo& mpopi() const {return mpopi_;}
+
+    void id(int id) {id_ = id;}
+    void add(Read&& r, const size_t sample);
+
+    void clear();
+
+private:
+    size_t index_of(const Read& r) const {return &r - &reads_[0];}
+};
 
 #endif // __LOCUS_H__
