@@ -4,6 +4,7 @@
 #include <vector>
 #include <list>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "constants.h"
 #include "DNASeq4.h"
@@ -78,6 +79,8 @@ public:
     Node* pred(size_t nt2) {return pred_[nt2];}
     Node* succ(size_t nt2) {return succ_[nt2];}
 
+    Node* first_succ() {Node* s = succ_[0]; for (size_t nt2=1; nt2<4; ++nt2) { if (s != NULL) break; s = succ(nt2);} return s;}
+
     const Kmer& km() const {return d_.km;}
     size_t count() const {return d_.count;}
 
@@ -123,10 +126,11 @@ public:
     void create(const CLocReadSet& readset, size_t min_kmer_count);
 
 private:
-    mutable std::unordered_set<Node*> sp_visited;
-    void clear_visited() {sp_visited.erase(sp_visited.begin(), sp_visited.end());}
+    std::unordered_set<Node*> sp_visited;
+    void clear_sp_visited() {sp_visited.erase(sp_visited.begin(), sp_visited.end());}
 
-    Node* build_simple_path(Node* n);
+    // Recursively builds the simple paths, starting at `start`. Updates sp_visited.
+    void build_simple_paths(Node* first);
 };
 
 //
@@ -207,9 +211,45 @@ void Graph::create(const CLocReadSet& readset, size_t min_kmer_count) {
     //
     // Build the simple paths.
     //
-    clear_visited();
-    for (Node* n : nodes_wo_preds) {
-        Node* last = build_simple_path(n);
+    clear_sp_visited();
+    for (Node* n : nodes_wo_preds)
+        build_simple_paths(n);
+}
+
+inline
+void Graph::build_simple_paths(Node* first) {
+    if (sp_visited.count(first))
+        return;
+    sp_visited.insert(first);
+
+    Node* n = first;
+    Node* s = n->first_succ();
+    while (n->n_succ() == 1 && s->n_pred() == 1) {
+        // Extend the simple path.
+        n = s;
+        s = n->first_succ();
+    }
+    first->set_sp_last(n);
+    n->set_sp_first(first);
+
+    // Check why the simple path ended.
+    if (s == NULL) {
+        // i.e. `n->n_succ() == 0`
+        // No successors. End the recursion.
+
+    } else if (n->n_succ() > 1) {
+        // Several successors.
+        for (size_t nt2=0; nt2<4; ++nt2)
+            if (n->succ(nt2) != NULL)
+                build_simple_paths(n->succ(nt2));
+    } else {
+        // i.e. `s->n_pred() > 1` (as `s` at least has one predecessor, `n`)
+        // The next node has several predecessors.
+        assert(s->n_pred() != 0); //xxx debug
+        first->set_sp_last(n);
+        n->set_sp_first(first);
+
+        build_simple_paths(s);
     }
 }
 
