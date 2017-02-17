@@ -117,7 +117,7 @@ const string help_string = string() +
         "assemble_pe -b bam_file -O out_dir\n"
         "\n"
         "  -b: path to the input sorted read, in BAM format\n"
-        "  -b: path to an output directory\n"
+        "  -O: path to an output directory\n"
         "\n"
         ;
 
