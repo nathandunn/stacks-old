@@ -108,7 +108,7 @@ bool read_one_locus(CLocReadSet& loc, Bam* bam_f, const map<string, size_t>& rg_
 }
 
 void process_one_locus(const CLocReadSet& loc) {
-    Graph graph;
+    Graph graph (31);
     graph.create(loc, 2);
 }
 
