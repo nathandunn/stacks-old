@@ -27,6 +27,8 @@
 //
 #include "utils.h"
 
+using namespace std;
+
 char reverse(char c) {
     switch (c) {
     case 'A':
@@ -59,12 +61,44 @@ char reverse(char c) {
     return 'N';
 }
 
+string
+rev_comp(const string& seq)
+{
+    string s;
+    s.reserve(seq.length());
+    for (char c: seq) {
+        switch (c) {
+        case 'A':
+        case 'a':
+            s.push_back('T');
+            break;
+        case 'C':
+        case 'c':
+            s.push_back('G');
+            break;
+        case 'G':
+        case 'g':
+            s.push_back('C');
+            break;
+        case 'T':
+        case 't':
+            s.push_back('A');
+            break;
+        default:
+            s.push_back('N');
+            break;
+        }
+    }
+
+    return s;
+}
+
 char *
 rev_comp(const char *seq)
 {
     int len   = strlen(seq);
     int j     = 0;
-    char *com = new char[len + 1];
+    char *com = new char[len + 1]; // *** new
     const char *p;
 
     for (p = seq + len - 1; p >= seq; p--) {
