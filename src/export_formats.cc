@@ -588,7 +588,7 @@ write_vcf_haplotypes(map<int, CSLocus *> &catalog,
             map<string, int> hap_index;
             for (size_t i = 0; i < ordered_hap.size(); i++) {
                 string h = ordered_hap[i].first;
-                rec.alleles.push_back(loc->loc.strand == strand_plus ? h : string(rev_comp(h.c_str())));
+                rec.alleles.push_back(loc->loc.strand == strand_plus ? h : rev_comp(h));
                 hap_index[h] = i;
             }
 
