@@ -1,6 +1,8 @@
 #ifndef DEBRUIJN_H
 #define DEBRUIJN_H
 
+#include <iostream>
+#include <sstream>
 #include <vector>
 #include <list>
 #include <unordered_map>
@@ -47,6 +49,13 @@ public:
         {Kmer k (*this); k.a_.pop_front(); k.a_.set(km_len-1, nt); return k;}
 
     bool empty() const {return a_ == NtArray<Nt2>();}
+    std::string str(size_t km_len) const {
+        string s;
+        s.reserve(km_len);
+        for (size_t i=0; i<km_len; ++i)
+            s.push_back(Nt2::nt_to_ch[a_[i]]);
+        return s;
+    }
 
     bool operator==(const Kmer& other) const {return a_ == other.a_;}
     friend class std::hash<Kmer>;
@@ -98,12 +107,15 @@ public:
 
     size_t sp_n_pred() const {is_spfirst(this); return n_pred();}
     size_t sp_n_succ() const {is_spfirst(this); return sp_last_->n_succ();}
-    Node* sp_pred(size_t nt2) {is_spfirst(this); is_splast(pred(nt2)); return is_set(pred(nt2)->sp_first_);}
-    Node* sp_succ(size_t nt2) {is_spfirst(this); is_splast(sp_last_); return is_set(sp_last_->succ(nt2));}
+    Node* sp_pred(size_t nt2) {is_spfirst(this); is_splast(pred(nt2)); return pred(nt2)->sp_first_;}
+    Node* sp_succ(size_t nt2) {is_spfirst(this); is_splast(sp_last_); return sp_last_->succ(nt2);}
+
+    size_t sp_n_nodes() {size_t i=1; Node* n=this; while(n!=sp_last_) {n=n->first_succ(); ++i;} return i;}
+
+    std::string sp_unitig_str(size_t km_len);
 
 private:
     //xxx debug
-    static Node* is_set(Node* n) {assert(n!=NULL); return n;}
     static void is_spfirst(const Node* n) {assert(n->sp_last_!=NULL);}
     static void is_splast(const Node* n) {assert(n->sp_first_!=NULL);}
 };
@@ -124,6 +136,7 @@ class Graph {
 
 public:
     void create(const CLocReadSet& readset, size_t min_kmer_count);
+    void dump(const string& fastg_path);
 
 private:
     std::unordered_set<Node*> sp_visited;
@@ -131,6 +144,9 @@ private:
 
     // Recursively builds the simple paths, starting at `start`. Updates sp_visited.
     void build_simple_paths(Node* first);
+
+    // Recursively writes unitigs in FastG format.
+    void dump_unitigs(Node* first, std::ostream& os);
 };
 
 //
@@ -251,6 +267,71 @@ void Graph::build_simple_paths(Node* first) {
 
         build_simple_paths(s);
     }
+}
+
+inline
+void Graph::dump(const string& fastg_path) {
+    std::ofstream ofs (fastg_path);
+    if (!ofs) {
+        cerr << "Error: Failed to open '" << fastg_path << "' for writing.\n";
+        throw std::exception();
+    }
+
+    clear_sp_visited();
+    for (Node* n : nodes_wo_preds)
+        dump_unitigs(n, ofs);
+}
+
+void Graph::dump_unitigs(Node* first, std::ostream& os) {
+    if (sp_visited.count(first))
+        return;
+    sp_visited.insert(first);
+
+    //xxx the overlap is written for every unitig
+    //xxx Also the length is approximate
+    //xxx Also write Node::sp_coverage
+
+    // Write the header.
+    size_t id = first - nodes.data();
+    os << ">NODE_" << id << "_length_" << first->sp_n_nodes() << "_cov_1.0_ID_" << id;
+
+    // Write the neighboring unitigs.
+    std::stringstream ss;
+    for (size_t nt2=0; nt2<4; ++nt2) {
+        Node* n = first->sp_succ(nt2);
+        if (n != NULL) {
+            id = n - nodes.data();
+            ss << ",NODE_" << id << "_length_" << n->sp_n_nodes() << "_cov_1.0_ID_" << id;
+        }
+    }
+    os << ss.str().substr(1) << "\n";
+
+    // Write the sequence.
+    os << first->sp_unitig_str(km_len) << "\n";
+
+    // Recurse.
+    for (size_t nt2=0; nt2<4; ++nt2) {
+        Node* n = first->sp_succ(nt2);
+        if (n != NULL)
+            dump_unitigs(n, os);
+    }
+}
+
+inline
+std::string Node::sp_unitig_str(size_t km_len) {
+    string s = d_.km.str(km_len);
+
+    Node* n=this;
+    while (n != sp_last_) {
+        for (size_t nt2=0; nt2<4; ++nt2) {
+            if (n->succ(nt2) != NULL) {
+                s.push_back(Nt2::nt_to_ch[nt2]);
+                break;
+            }
+        }
+    }
+
+    return s;
 }
 
 #endif
