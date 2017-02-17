@@ -2,7 +2,7 @@
 
 using namespace std;
 
-const size_t Nt4::ch_to_nt[256] = {
+const size_t Nt4::ch_to_nt4[256] = {
     0,n,n,n, n,n,n,n, n,n,n,n, n,n,n,n, // 0x
     n,n,n,n, n,n,n,n, n,n,n,n, n,n,n,n, // 1x
     n,n,n,n, n,n,n,n, n,n,n,n, n,n,n,n, // 2x
@@ -22,11 +22,11 @@ const size_t Nt4::ch_to_nt[256] = {
     n,n,n,n, n,n,n,n, n,n,n,n, n,n,n,n
 };
 
-const char Nt4::nt_to_ch[16] {
+const char Nt4::nt4_to_ch[16] {
     '=','A','C','?','G','?','?','?','T','?','?','?','?','?','?','N'
 };
 
-const size_t Nt2::ch_to_nt[256] = {
+const size_t Nt2::ch_to_nt2[256] = {
     0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, // 0x
     0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, // 1x
     0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, // 2x
@@ -46,11 +46,11 @@ const size_t Nt2::ch_to_nt[256] = {
     0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0
 };
 
-const char Nt2::nt_to_ch[4] {
+const char Nt2::nt2_to_ch[4] {
     'A','C','G','T'
 };
 
-const size_t Nt2::nt4_to_nt[16] = {
+const size_t Nt2::nt4_to_nt2[16] = {
     0,a,c,0,g,0,0,0,t,0,0,0,0,0,0,0
 };
 

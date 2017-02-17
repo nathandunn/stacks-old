@@ -22,14 +22,18 @@ struct Nt4 {
     static const size_t t = 8; //1000
     static const size_t n = 15;//1111
 
+    static size_t from(char c) {return ch_to_nt4[size_t(c)];}
+    static char to_ch(size_t nt4) {return nt4_to_ch[nt4];}
+
+private:
     // Trivial ASCII-like hash table giving the 4-bits value of a nucleotide letter.
     // e.g. ch_to_nt [ (int)'G' ] == 4
     // Adapted from `htslib::seq_nt16_table` (hts.cc).
-    static const size_t ch_to_nt[256];
+    static const size_t ch_to_nt4[256];
 
     // Trivial hash table giving the nucleotide letter of a 4-bits value.
     // e.g. nt_to_ch[4] == 'C'
-    static const char nt_to_ch[16];
+    static const char nt4_to_ch[16];
 };
 
 // Definitions for nucleotides coded on 2 bits.
@@ -41,10 +45,14 @@ struct Nt2 {
     static const size_t g = 2;
     static const size_t t = 3;
 
-    static const size_t ch_to_nt[256];
-    static const char nt_to_ch[4];
+    static size_t from(char c) {return ch_to_nt2[size_t(c)];}
+    static size_t from_nt4(size_t nt4) {return nt4_to_nt2[nt4];}
+    static char to_ch(size_t nt2) {return nt2_to_ch[nt2];}
 
-    static const size_t nt4_to_nt[16];
+private:
+    static const size_t ch_to_nt2[256];
+    static const size_t nt4_to_nt2[16];
+    static const char nt2_to_ch[4];
 };
 
 // A sequence of nucleotides on a uint64_t, where the first nucleotide uses the
@@ -86,7 +94,7 @@ public:
     DiNuc(const DiNuc& other) : x_(other.x_) {}
     DiNuc(uchar x) : x_(x) {}
     DiNuc(size_t u1, size_t u2) : x_(0) {set_first(u1); set_second(u2);}
-    DiNuc(char c1, char c2) : DiNuc(Nt4::ch_to_nt[(size_t) c1], Nt4::ch_to_nt[(size_t) c2]) {}
+    DiNuc(char c1, char c2) : DiNuc(Nt4::from(c1), Nt4::from(c2)) {}
     DiNuc& operator= (const DiNuc& other) {x_ = other.x_; return *this;}
 
     size_t first() const {return x_ >>4;}
@@ -142,7 +150,7 @@ public:
 
         // Get the nucleotide.
         size_t nt() const {return first_ ? vi_->first() : vi_->second();}
-        char operator* () const {return Nt4::nt_to_ch[nt()];}
+        char operator* () const {return Nt4::to_ch(nt());}
     };
     iterator begin() const {return iterator(v_.begin(), true);}
     iterator end()   const {return length()%2==0 ? iterator(v_.end(), true) : iterator(--v_.end(), false);}
