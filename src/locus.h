@@ -175,7 +175,7 @@ class CLocReadSet {
     vector<vector<Read*>> reads_per_sample_; // Reads of each sample. size() == mpopi_.samples().size()
 
 public:
-    CLocReadSet(MetaPopInfo m)
+    CLocReadSet(const MetaPopInfo& m)
         : id_(-1), reads_(), mpopi_(m), read_samples_(), reads_per_sample_(mpopi_.samples().size())
         {}
 
