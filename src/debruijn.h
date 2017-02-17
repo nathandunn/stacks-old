@@ -135,6 +135,8 @@ class Graph {
     std::list<Node*> nodes_wo_preds;
 
 public:
+    //Graph(size_t kmer_length) : km_len(kmer_length) {}
+
     void create(const CLocReadSet& readset, size_t min_kmer_count);
     void dump(const string& fastg_path);
 
