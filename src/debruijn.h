@@ -48,7 +48,7 @@ public:
     Kmer succ(size_t km_len, size_t nt) const
         {Kmer k (*this); k.a_.pop_front(); k.a_.set(km_len-1, nt); return k;}
 
-    bool empty() const {return a_ == NtArray<Nt2>();}
+    bool empty() const {return a_ == NtArray<Nt2>();} //TODO This is true for A homopolymers!
     std::string str(size_t km_len) const {
         string s;
         s.reserve(km_len);
@@ -123,7 +123,7 @@ private:
 struct KmMapValue {
     union {
         size_t count;
-        Node* node;
+        size_t node;
     };
     KmMapValue() : count(0) {}
 };
@@ -138,7 +138,7 @@ public:
     Graph(size_t kmer_length) : km_len(kmer_length) {}
 
     void create(const CLocReadSet& readset, size_t min_kmer_count);
-    void dump(const string& fastg_path);
+    void dump_fg(const string& fastg_path);
 
 private:
     std::unordered_set<Node*> sp_visited;
@@ -147,8 +147,8 @@ private:
     // Recursively builds the simple paths, starting at `start`. Updates sp_visited.
     void build_simple_paths(Node* first);
 
-    // Recursively writes unitigs in FastG format.
-    void dump_unitigs(Node* first, std::ostream& os);
+    // Recursively writes contigs in FastG format.
+    void dump_fg(Node* first, std::ostream& os);
 };
 
 //
@@ -159,6 +159,8 @@ private:
 
 inline
 void Graph::create(const CLocReadSet& readset, size_t min_kmer_count) {
+
+    cerr << "Building graph...\n"; //xxx debug
 
     //
     // Count all kmers.
@@ -180,16 +182,19 @@ void Graph::create(const CLocReadSet& readset, size_t min_kmer_count) {
         while (next_nt != r.seq.end()) {
             size_t nt4 = next_nt.nt();
             if (nt4 == Nt4::n) {
+                ++next_nt;
                 km = Kmer(km_len, next_nt, r.seq.end());
                 if (km.empty())
                     // Not enough sequence remaining to make another kmer.
                     break;
             } else {
                 km = km.succ(km_len, Nt2::nt4_to_nt[nt4]);
+                ++next_nt;
             }
             ++map[km].count;
         }
     }
+    cerr << "Found " << map.size() << " kmers.\n"; //xxx debug
 
     //
     // Build the standalone nodes.
@@ -199,22 +204,27 @@ void Graph::create(const CLocReadSet& readset, size_t min_kmer_count) {
             map.erase(km++);
         } else {
             nodes.push_back(Node(NodeData(km->first, km->second.count)));
-            // Replace the count of the kmer with a pointer to its node.
-            km->second.node = &nodes.back();
+            // Replace the count of the kmer with the index of the corresponding node.
+            km->second.node = nodes.size() - 1;
             ++km;
         }
     }
+    assert(map.size() == nodes.size());
+    cerr << "Built " << nodes.size() << " nodes.\n"; //xxx debug
 
     //
     // Build the edges.
     //
     for (Node& n : nodes) {
-        // Check each possible successor.
+        // Check each possible successor kmer.
         for (size_t nt2=0; nt2<4; ++nt2) {
             auto km = map.find(n.km().succ(km_len, nt2));
             if (km != map.end()) {
-                n.set_succ(nt2, km->second.node);
-                km->second.node->set_pred(nt2, &n);
+                if (&nodes[km->second.node] == &n)
+                    // homopolymer, omit the edge
+                    continue;
+                n.set_succ(nt2, &nodes[km->second.node]);
+                nodes[km->second.node].set_pred(nt2, &n);
             }
         }
     }
@@ -225,6 +235,7 @@ void Graph::create(const CLocReadSet& readset, size_t min_kmer_count) {
     for (Node& n : nodes)
         if (n.n_pred() == 0)
             nodes_wo_preds.push_back(&n);
+    cerr << "Found " << nodes_wo_preds.size() << " nodes without predecessors.\n"; //xxx debug
 
     //
     // Build the simple paths.
@@ -272,7 +283,7 @@ void Graph::build_simple_paths(Node* first) {
 }
 
 inline
-void Graph::dump(const string& fastg_path) {
+void Graph::dump_fg(const string& fastg_path) {
     std::ofstream ofs (fastg_path);
     if (!ofs) {
         cerr << "Error: Failed to open '" << fastg_path << "' for writing.\n";
@@ -281,10 +292,10 @@ void Graph::dump(const string& fastg_path) {
 
     clear_sp_visited();
     for (Node* n : nodes_wo_preds)
-        dump_unitigs(n, ofs);
+        dump_fg(n, ofs);
 }
 
-void Graph::dump_unitigs(Node* first, std::ostream& os) {
+void Graph::dump_fg(Node* first, std::ostream& os) {
     if (sp_visited.count(first))
         return;
     sp_visited.insert(first);
@@ -306,7 +317,9 @@ void Graph::dump_unitigs(Node* first, std::ostream& os) {
             ss << ",NODE_" << id << "_length_" << n->sp_n_nodes() << "_cov_1.0_ID_" << id;
         }
     }
-    os << ss.str().substr(1) << "\n";
+    if(!ss.str().empty())
+        os << ":" << ss.str().substr(1) << ";";
+    os << "\n";
 
     // Write the sequence.
     os << first->sp_unitig_str(km_len) << "\n";
@@ -315,7 +328,7 @@ void Graph::dump_unitigs(Node* first, std::ostream& os) {
     for (size_t nt2=0; nt2<4; ++nt2) {
         Node* n = first->sp_succ(nt2);
         if (n != NULL)
-            dump_unitigs(n, os);
+            dump_fg(n, os);
     }
 }
 
@@ -328,6 +341,7 @@ std::string Node::sp_unitig_str(size_t km_len) {
         for (size_t nt2=0; nt2<4; ++nt2) {
             if (n->succ(nt2) != NULL) {
                 s.push_back(Nt2::nt_to_ch[nt2]);
+                n = n->succ(nt2);
                 break;
             }
         }
