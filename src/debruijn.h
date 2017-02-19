@@ -163,7 +163,7 @@ private:
 inline
 void Graph::create(const CLocReadSet& readset, size_t min_kmer_count) {
 
-    cerr << "Building graph...\n"; //xxx debug
+    //cerr << "Building graph...\n"; //debug
 
     //
     // Count all kmers.
@@ -197,7 +197,7 @@ void Graph::create(const CLocReadSet& readset, size_t min_kmer_count) {
             ++map[km].count;
         }
     }
-    cerr << "Found " << map.size() << " kmers.\n"; //xxx debug
+    //cerr << "Found " << map.size() << " kmers in " << readset.reads().size() <<" reads.\n"; //debug
 
     //
     // Build the standalone nodes.
@@ -213,7 +213,7 @@ void Graph::create(const CLocReadSet& readset, size_t min_kmer_count) {
         }
     }
     assert(map.size() == nodes.size());
-    cerr << "Built " << nodes.size() << " nodes.\n"; //xxx debug
+    //cerr << "Built " << nodes.size() << " nodes.\n"; //debug
 
     //
     // Build the edges.
@@ -238,7 +238,7 @@ void Graph::create(const CLocReadSet& readset, size_t min_kmer_count) {
     for (Node& n : nodes)
         if (n.n_pred() == 0)
             nodes_wo_preds.push_back(&n);
-    cerr << "Found " << nodes_wo_preds.size() << " nodes without predecessors.\n"; //xxx debug
+    //cerr << "Found " << nodes_wo_preds.size() << " nodes without predecessors.\n"; //debug
 
     //
     // Build the simple paths.
@@ -246,6 +246,7 @@ void Graph::create(const CLocReadSet& readset, size_t min_kmer_count) {
     clear_sp_visited();
     for (Node* n : nodes_wo_preds)
         build_simple_paths(n);
+    //cerr << "Built " << sp_visited.size() << " simple paths.\n"; //debug
 }
 
 inline
@@ -277,7 +278,7 @@ void Graph::build_simple_paths(Node* first) {
     } else {
         // i.e. `s->n_pred() > 1` (as `s` at least has one predecessor, `n`)
         // The next node has several predecessors.
-        assert(s->n_pred() != 0); //xxx debug
+        assert(s->n_pred() != 0);
         first->set_sp_last(n);
         n->set_sp_first(first);
 
