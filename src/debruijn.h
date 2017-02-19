@@ -42,6 +42,9 @@ public:
         }
     }
 
+    // The first nucleotide.
+    size_t front() const {return a_[0];}
+
     // Create the predecessor/successor kmer given an edge/nucleotide
     Kmer pred(size_t km_len, size_t nt) const
         {Kmer k (*this); k.a_.clear(km_len-1); k.a_.push_front(nt); return k;}
@@ -224,7 +227,7 @@ void Graph::create(const CLocReadSet& readset, size_t min_kmer_count) {
                     // homopolymer, omit the edge
                     continue;
                 n.set_succ(nt2, &nodes[km->second.node]);
-                nodes[km->second.node].set_pred(nt2, &n);
+                nodes[km->second.node].set_pred(n.km().front(), &n);
             }
         }
     }
