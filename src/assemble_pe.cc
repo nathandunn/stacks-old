@@ -81,7 +81,7 @@ int main(int argc, char** argv) {
     }
     do {
         eof = !read_one_locus(loc, bam_f, rg_to_sample);
-        print_loc(loc);
+        //print_loc(loc); //debug
         process_one_locus(loc);
     } while (!eof);
 
@@ -110,7 +110,11 @@ bool read_one_locus(CLocReadSet& loc, Bam* bam_f, const map<string, size_t>& rg_
 void process_one_locus(const CLocReadSet& loc) {
     Graph graph (31);
     graph.create(loc, 2);
-    graph.dump_fg("graph.fg");
+    graph.dump_fg("graph231.fg");
+
+    Graph graph2 (13);
+    graph2.create(loc, 1);
+    graph2.dump_fg("graph113.fg");
 }
 
 const string help_string = string() +
