@@ -56,8 +56,11 @@ int main(int argc, char* argv[]) {
         sorted_loci.insert({sloc_to_cloc.at(sloc.second->id), sloc.second});
 
     // Write the BAM file.
-    write_bam_file(sloci, sample_id);
+    write_bam_file(sorted_loci, sample_id);
 
+    // Cleanup.
+    for (auto loc : sloci)
+        delete loc.second;
     cout << "tags2bam is done." << endl;
     return 0;
 }
