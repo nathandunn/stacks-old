@@ -154,8 +154,8 @@ private:
     std::unordered_set<Node*> sp_visited;
     void clear_sp_visited() {sp_visited.erase(sp_visited.begin(), sp_visited.end());}
 
-    // Recursively builds the simple paths, starting at `start`. Updates sp_visited.
-    void build_simple_paths(Node* first);
+    // Recursively builds the simple paths. Updates sp_visited.
+    void build_simple_paths(Node* sp_first);
 
     // Recursively writes contigs in FastG format.
     void dump_fg(Node* sp, std::ostream& os);
@@ -260,20 +260,20 @@ void Graph::create(const CLocReadSet& readset, size_t min_kmer_count) {
 }
 
 inline
-void Graph::build_simple_paths(Node* first) {
-    if (sp_visited.count(first))
+void Graph::build_simple_paths(Node* sp_first) {
+    if (sp_visited.count(sp_first))
         return;
-    sp_visited.insert(first);
+    sp_visited.insert(sp_first);
 
-    Node* n = first;
+    Node* n = sp_first;
     Node* s = n->first_succ();
     while (n->n_succ() == 1 && s->n_pred() == 1) {
         // Extend the simple path.
         n = s;
         s = n->first_succ();
     }
-    first->set_sp_last(n);
-    n->set_sp_first(first);
+    sp_first->set_sp_last(n);
+    n->set_sp_first(sp_first);
 
     // Check why the simple path ended.
     if (s == NULL) {
@@ -286,12 +286,10 @@ void Graph::build_simple_paths(Node* first) {
             if (n->succ(nt2) != NULL)
                 build_simple_paths(n->succ(nt2));
     } else {
-        // i.e. `s->n_pred() > 1` (as `s` at least has one predecessor, `n`)
-        // The next node has several predecessors.
+        // i.e. `s->n_pred() != 1`
+        // The next node has several predecessors (as `s` at least has one
+        // predecessor, `n`).
         assert(s->n_pred() != 0);
-        first->set_sp_last(n);
-        n->set_sp_first(first);
-
         build_simple_paths(s);
     }
 }
@@ -309,20 +307,20 @@ void Graph::dump_fg(const string& fastg_path) {
         dump_fg(n, ofs);
 }
 
-void Graph::dump_fg(Node* first, std::ostream& os) {
-    if (sp_visited.count(first))
+void Graph::dump_fg(Node* sp, std::ostream& os) {
+    if (sp_visited.count(sp))
         return;
-    sp_visited.insert(first);
+    sp_visited.insert(sp);
 
     // Write the header.
-    os << ">" << fg_header(first);
+    os << ">" << fg_header(sp);
 
     // Write the neighboring unitigs, if any.
-    if (first->sp_n_succ() > 0) {
+    if (sp->sp_n_succ() > 0) {
         os << ":";
         std::stringstream ss;
         for (size_t nt2=0; nt2<4; ++nt2) {
-            Node* succ = first->sp_succ(nt2);
+            Node* succ = sp->sp_succ(nt2);
             if (succ != NULL)
                 ss << "," << fg_header(succ);
         }
@@ -332,11 +330,11 @@ void Graph::dump_fg(Node* first, std::ostream& os) {
     }
 
     // Write the sequence.
-    os << first->sp_unitig_str(km_len) << "\n";
+    os << sp->sp_unitig_str(km_len) << "\n";
 
     // Recurse.
     for (size_t nt2=0; nt2<4; ++nt2) {
-        Node* n = first->sp_succ(nt2);
+        Node* n = sp->sp_succ(nt2);
         if (n != NULL)
             dump_fg(n, os);
     }
