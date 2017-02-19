@@ -15,6 +15,8 @@ class Kmer {
     NtArray<Nt2> a_;
 
 public:
+    Kmer() : a_() {}
+
     // Given a sequence iterator, builds the first valid kmer (i.e. skipping Ns).
     // If no kmer can be found, an empty object is returned.
     // After the call `first` points to the nucleotide immediately past the kmer.
@@ -51,7 +53,7 @@ public:
     Kmer succ(size_t km_len, size_t nt) const
         {Kmer k (*this); k.a_.pop_front(); k.a_.set(km_len-1, nt); return k;}
 
-    bool empty() const {return a_ == NtArray<Nt2>();} //TODO This is true for A homopolymers!
+    bool empty() const {return a_ == NtArray<Nt2>();} //TODO This is true for A homopolymers! Use uint64_t(-1) as the default value, safe for kmers <=31bp
     std::string str(size_t km_len) const {
         string s;
         s.reserve(km_len);
@@ -73,6 +75,7 @@ struct NodeData {
     Kmer km;
     size_t count;
 
+    NodeData() : km(), count(0) {}
     NodeData(const Kmer& k, size_t c) : km(k), count(c) {}
 };
 
@@ -82,6 +85,7 @@ class Node {
     Node* succ_[4];
 
 public:
+    Node() : d_(), pred_(), succ_(), sp_last_(), sp_first_() {}
     Node(const NodeData& d) : d_(d), pred_(), succ_(), sp_last_(), sp_first_() {}
     void set_pred(size_t nt2, Node* n) {pred_[nt2] = n;}
     void set_succ(size_t nt2, Node* n) {succ_[nt2] = n;}
@@ -132,7 +136,7 @@ struct KmMapValue {
 };
 
 class Graph {
-    size_t km_len;
+    const size_t km_len;
     std::unordered_map<Kmer, KmMapValue> map;
     std::vector<Node> nodes;
     std::list<Node*> nodes_wo_preds;
@@ -144,6 +148,8 @@ public:
     void dump_fg(const string& fastg_path);
 
 private:
+    void clear() {nodes.resize(0); map.erase(map.begin(), map.end()); nodes_wo_preds.clear(); clear_sp_visited();}
+
     std::unordered_set<Node*> sp_visited;
     void clear_sp_visited() {sp_visited.erase(sp_visited.begin(), sp_visited.end());}
 
@@ -164,6 +170,8 @@ inline
 void Graph::create(const CLocReadSet& readset, size_t min_kmer_count) {
 
     //cerr << "Building graph...\n"; //debug
+
+    clear();
 
     //
     // Count all kmers.
