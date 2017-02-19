@@ -2,6 +2,7 @@
 #define DEBRUIJN_H
 
 #include <iostream>
+#include <iomanip>
 #include <sstream>
 #include <vector>
 #include <list>
@@ -117,9 +118,9 @@ public:
     Node* sp_pred(size_t nt2) {is_spfirst(this); is_splast(pred(nt2)); return pred(nt2)->sp_first_;}
     Node* sp_succ(size_t nt2) {is_spfirst(this); is_splast(sp_last_); return sp_last_->succ(nt2);}
 
-    size_t sp_n_nodes() {size_t i=1; Node* n=this; while(n!=sp_last_) {n=n->first_succ(); ++i;} return i;}
-
+    size_t sp_n_nodes() {is_spfirst(this); size_t i=1; Node* n=this; while(n!=sp_last_) {n=n->first_succ(); ++i;} return i;}
     std::string sp_unitig_str(size_t km_len);
+    double sp_mean_count();
 
 private:
     //xxx debug
@@ -157,7 +158,8 @@ private:
     void build_simple_paths(Node* first);
 
     // Recursively writes contigs in FastG format.
-    void dump_fg(Node* first, std::ostream& os);
+    void dump_fg(Node* sp, std::ostream& os);
+    std::string fg_header(Node* sp);
 };
 
 //
@@ -312,26 +314,22 @@ void Graph::dump_fg(Node* first, std::ostream& os) {
         return;
     sp_visited.insert(first);
 
-    //xxx the overlap is written for every unitig
-    //xxx Also the length is approximate
-    //xxx Also write Node::sp_coverage
-
     // Write the header.
-    size_t id = first - nodes.data();
-    os << ">NODE_" << id << "_length_" << first->sp_n_nodes() << "_cov_1.0_ID_" << id;
+    os << ">" << fg_header(first);
 
-    // Write the neighboring unitigs.
-    std::stringstream ss;
-    for (size_t nt2=0; nt2<4; ++nt2) {
-        Node* n = first->sp_succ(nt2);
-        if (n != NULL) {
-            id = n - nodes.data();
-            ss << ",NODE_" << id << "_length_" << n->sp_n_nodes() << "_cov_1.0_ID_" << id;
+    // Write the neighboring unitigs, if any.
+    if (first->sp_n_succ() > 0) {
+        os << ":";
+        std::stringstream ss;
+        for (size_t nt2=0; nt2<4; ++nt2) {
+            Node* succ = first->sp_succ(nt2);
+            if (succ != NULL)
+                ss << "," << fg_header(succ);
         }
+        os << ss.str().substr(1) << ";\n";
+    } else {
+        os << "\n";
     }
-    if(!ss.str().empty())
-        os << ":" << ss.str().substr(1) << ";";
-    os << "\n";
 
     // Write the sequence.
     os << first->sp_unitig_str(km_len) << "\n";
@@ -346,6 +344,8 @@ void Graph::dump_fg(Node* first, std::ostream& os) {
 
 inline
 std::string Node::sp_unitig_str(size_t km_len) {
+    is_spfirst(this);
+
     string s = d_.km.str(km_len);
 
     Node* n=this;
@@ -360,6 +360,35 @@ std::string Node::sp_unitig_str(size_t km_len) {
     }
 
     return s;
+}
+
+inline
+double Node::sp_mean_count() {
+    is_spfirst(this);
+
+    size_t cumcount = 0;
+    size_t n_nodes = 0;
+
+    Node* n=this;
+    while (n != sp_last_) {
+        ++n_nodes;
+        cumcount += n->d_.count;
+        n = n->first_succ();
+    }
+    // n == sp_last_
+    ++n_nodes;
+    cumcount += n->d_.count;
+
+    return (double) cumcount / n_nodes;
+}
+
+inline
+std::string Graph::fg_header(Node* sp) {
+    std::stringstream ss;
+    ss << std::fixed << std::setprecision(1);
+    size_t id = sp - nodes.data();
+    ss << "NODE_" << id << "_length_" << sp->sp_n_nodes() << "_cov_" << sp->sp_mean_count() << "_ID_" << id;
+    return ss.str();
 }
 
 #endif
