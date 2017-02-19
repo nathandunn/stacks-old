@@ -47,6 +47,7 @@ public:
 
     // The first nucleotide.
     size_t front() const {return a_[0];}
+    size_t back(size_t km_len) const {return a_[km_len-1];}
 
     // Create the predecessor/successor kmer given an edge/nucleotide
     Kmer pred(size_t km_len, size_t nt) const
@@ -119,7 +120,7 @@ public:
     Node* sp_succ(size_t nt2) {is_spfirst(this); is_splast(sp_last_); return sp_last_->succ(nt2);}
 
     size_t sp_n_nodes() {is_spfirst(this); size_t i=1; Node* n=this; while(n!=sp_last_) {n=n->first_succ(); ++i;} return i;}
-    std::string sp_unitig_str(size_t km_len);
+    std::string sp_path_str(size_t km_len);
     double sp_mean_count();
 
 private:
@@ -330,7 +331,7 @@ void Graph::dump_fg(Node* sp, std::ostream& os) {
     }
 
     // Write the sequence.
-    os << sp->sp_unitig_str(km_len) << "\n";
+    os << sp->sp_path_str(km_len) << "\n";
 
     // Recurse.
     for (size_t nt2=0; nt2<4; ++nt2) {
@@ -341,21 +342,24 @@ void Graph::dump_fg(Node* sp, std::ostream& os) {
 }
 
 inline
-std::string Node::sp_unitig_str(size_t km_len) {
+std::string Node::sp_path_str(size_t km_len) {
     is_spfirst(this);
 
-    string s = d_.km.str(km_len);
+    // Seeding the sequence with the entire first kmer gives the same sequences
+    // as those of Minia. However this is not practical for visualization purposes
+    // as the lengths of the sequences do not correspond to the number of nodes;
+    // instead the lengths are `n_nodes + km_len - 1`.
+    // Thus here we use the last nucleotide of the node/kmer to represent the
+    // graph in FastG.
+    //string s = d_.km.str(km_len); // Same as Minia
+    string s;
 
     Node* n=this;
     while (n != sp_last_) {
-        for (size_t nt2=0; nt2<4; ++nt2) {
-            if (n->succ(nt2) != NULL) {
-                s.push_back(Nt2::nt_to_ch[nt2]);
-                n = n->succ(nt2);
-                break;
-            }
-        }
+        s.push_back(n->d_.km.back(km_len));
+        n = n->first_succ();
     }
+    s.push_back(n->d_.km.back(km_len));
 
     return s;
 }
