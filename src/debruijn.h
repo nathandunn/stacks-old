@@ -137,19 +137,19 @@ struct KmMapValue {
 };
 
 class Graph {
-    const size_t km_len;
-    std::unordered_map<Kmer, KmMapValue> map;
-    std::vector<Node> nodes;
-    std::list<Node*> nodes_wo_preds;
+    const size_t km_len_;
+    std::unordered_map<Kmer, KmMapValue> map_;
+    std::vector<Node> nodes_;
+    std::list<Node*> nodes_wo_preds_;
 
 public:
-    Graph(size_t kmer_length) : km_len(kmer_length) {}
+    Graph(size_t km_length) : km_len_(km_length) {}
 
     void create(const CLocReadSet& readset, size_t min_kmer_count);
     void dump_fg(const std::string& fastg_path);
 
 private:
-    std::unordered_set<Node*> sp_visited;
+    std::unordered_set<Node*> sp_visited_;
 
     // Resets the object.
     void clear();
