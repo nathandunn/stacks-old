@@ -17,6 +17,11 @@ using namespace std;
 bool quiet = false;
 string bam_path;
 string out_dir;
+size_t km_length = -1;
+size_t min_km_count = 2;
+set<int> locus_wl;
+bool fastg_out = false;
+bool fasta_out = false;
 
 //
 // Extra globs.
@@ -81,8 +86,14 @@ int main(int argc, char** argv) {
     }
     do {
         eof = !read_one_locus(loc, bam_f, rg_to_sample);
-        //print_loc(loc); //debug
-        process_one_locus(loc);
+        if (locus_wl.empty()) {
+            process_one_locus(loc);
+        } else if (locus_wl.count(loc.id())) {
+            process_one_locus(loc);
+            locus_wl.erase(loc.id());
+            if (locus_wl.empty())
+                break;
+        }
     } while (!eof);
 
     return 0;
@@ -108,13 +119,17 @@ bool read_one_locus(CLocReadSet& loc, Bam* bam_f, const map<string, size_t>& rg_
 }
 
 void process_one_locus(const CLocReadSet& loc) {
-    Graph graph (31);
-    graph.create(loc, 2);
-    graph.dump_fg("graph231.fg");
+    Graph graph (km_length);
+    graph.create(loc, min_km_count);
 
-    Graph graph2 (13);
-    graph2.create(loc, 1);
-    graph2.dump_fg("graph113.fg");
+    if (fastg_out)
+        graph.dump_fg(out_dir + to_string(loc.id()) + ".fg");
+
+    if (fasta_out) {
+        ofstream fasta (out_dir + to_string(loc.id()) + ".fa");
+        for (const Read& r : loc.reads())
+            fasta << ">" << r.name << "\n" << r.seq.str() << "\n";
+    }
 }
 
 const string help_string = string() +
@@ -123,6 +138,11 @@ const string help_string = string() +
         "\n"
         "  -b: path to the input sorted read, in BAM format\n"
         "  -O: path to an output directory\n"
+        "  -k: kmer length\n"
+        "  --min-cov: minimum coverage to consider a kmer\n"
+        "  -W,--whitelist: a whitelist of locus IDs\n"
+        "  --fastg: output a FastG file for each locus\n"
+        "  --fasta: output a Fasta file for each locus\n"
         "\n"
         ;
 
@@ -137,16 +157,23 @@ void parse_command_line(int argc, char* argv[]) {
         {"help",         no_argument,       NULL, 'h'},
         {"quiet",        no_argument,       NULL, 'q'},
         {"version",      no_argument,       NULL,  1000},
-        {"bam_file",     required_argument, NULL, 'b'},
-        {"out_dir",      required_argument, NULL, 'O'},
+        {"bam-file",     required_argument, NULL, 'b'},
+        {"out-dir",      required_argument, NULL, 'O'},
+        {"kmer-length",  required_argument, NULL, 'k'},
+        {"min-cov",      required_argument, NULL,  1003},
+        {"whitelist",    required_argument, NULL,  'W'},
+        {"fastg",        no_argument,       NULL,  1001},
+        {"fasta",        no_argument,       NULL,  1002},
         {0, 0, 0, 0}
     };
+
+    string wl_path;
 
     int c;
     int long_options_i;
     while (true) {
 
-        c = getopt_long(argc, argv, "hqb:O:", long_options, &long_options_i);
+        c = getopt_long(argc, argv, "hqb:O:k:W:", long_options, &long_options_i);
 
         if (c == -1)
             break;
@@ -169,6 +196,21 @@ void parse_command_line(int argc, char* argv[]) {
         case 'O':
             out_dir = optarg;
             break;
+        case 'k':
+            km_length = atoi(optarg);
+            break;
+        case 1003://min-cov
+            min_km_count = atoi(optarg);
+            break;
+        case 'W':
+            wl_path = optarg;
+            break;
+        case 1001://fastg
+            fastg_out = true;
+            break;
+        case 1002://fasta
+            fasta_out = true;
+            break;
         case '?':
             bad_args();
             break;
@@ -188,15 +230,35 @@ void parse_command_line(int argc, char* argv[]) {
         cerr << "Error: An output directory must be provided (-O).\n";
         bad_args();
     }
+    if (km_length == size_t(-1)) {
+        cerr << "Error: A kmer length must be provided (-k).\n";
+        bad_args();
+    }
 
     // Process arguments.
     if (out_dir.back() != '/')
         out_dir += '/';
+
+    if (!wl_path.empty()) {
+        ifstream wl_fh (wl_path);
+        if (!wl_fh) {
+            cerr << "Error: Failed to open " << wl_path << " for reading.\n";
+            throw exception();
+        }
+        int id;
+        while (wl_fh >> id)
+            locus_wl.insert(id);
+    }
 }
 
 void report_options(ostream& os) {
     os << "Configuration for this run:\n"
        << "  Sorted reads file: '" << bam_path << "'\n"
        << "  Output directory: '" << out_dir << "'\n"
+       << "  Kmer length: " << km_length << "\n"
+       << "  Min coverage: " << min_km_count << "\n"
        ;
+
+    if (!locus_wl.empty())
+        os << "  Whitelist of " << locus_wl.size() << " loci.\n";
 }
