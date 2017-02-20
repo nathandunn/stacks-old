@@ -117,7 +117,7 @@ public:
 
     size_t sp_n_pred() const {is_spfirst(this); return n_pred();}
     size_t sp_n_succ() const {is_spfirst(this); return sp_last_->n_succ();}
-    Node* sp_pred(size_t nt2) {is_spfirst(this); is_splast(pred(nt2)); return pred(nt2)->sp_first_;}
+    Node* sp_pred(size_t nt2) {is_spfirst(this); Node* p = pred(nt2); if(p!=NULL) {is_splast(p); return p->sp_first_;} else return NULL;}
     Node* sp_succ(size_t nt2) {is_spfirst(this); is_splast(sp_last_); return sp_last_->succ(nt2);}
 
     size_t sp_n_nodes() {is_spfirst(this); size_t i=1; Node* n=this; while(n!=sp_last_) {n=n->first_succ(); ++i;} return i;}
