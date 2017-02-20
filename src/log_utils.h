@@ -29,6 +29,12 @@
 
 int init_log(std::ostream &fh, int argc, char **argv);
 
+inline
+void failed_to_open(const std::string& path) {
+    std::cerr << "Error: Failed to open file '" << path << "'.\n";
+    throw std::exception();
+}
+
 // Returns e.g. "23.2%".
 std::string as_percentage(double d);
 

@@ -102,6 +102,9 @@ LogAlterator::LogAlterator(const std::string& log_path, bool quiet)
         , lo_buf(std::cout.rdbuf(), l.rdbuf())
         , le_buf(std::cerr.rdbuf(), l.rdbuf())
         {
+    if (!l)
+        failed_to_open(log_path);
+
     if (quiet) {
         // Use the fstream buffer only, and not at all stdout and stderr.
         std::cout.rdbuf(l.rdbuf());
