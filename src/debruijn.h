@@ -356,10 +356,10 @@ std::string Node::sp_path_str(size_t km_len) {
 
     Node* n=this;
     while (n != sp_last_) {
-        s.push_back(n->d_.km.back(km_len));
+        s.push_back(Nt2::nt_to_ch[n->d_.km.back(km_len)]);
         n = n->first_succ();
     }
-    s.push_back(n->d_.km.back(km_len));
+    s.push_back(Nt2::nt_to_ch[n->d_.km.back(km_len)]);
 
     return s;
 }
