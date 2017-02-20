@@ -7,6 +7,20 @@
 
 using namespace std;
 
+void Node::sp_build() {
+    Node* n = this;
+    Node* s = n->first_succ();
+    while (n->n_succ() == 1 && s->n_pred() == 1) {
+        // Extend the simple path.
+        n = s;
+        s = n->first_succ();
+    }
+
+    // Record the start & end.
+    this->sp_last_ = n;
+    n->sp_first_ = this;
+}
+
 string Node::sp_path_str(size_t km_len) {
     is_spfirst(this);
 
@@ -122,61 +136,35 @@ void Graph::create(const CLocReadSet& readset, size_t min_kmer_count) {
     }
 
     //
-    // Record nodes that don't have predecessors.
-    //
-    for (Node& n : nodes_)
-        if (n.n_pred() == 0)
-            nodes_wo_preds_.push_back(&n);
-    //cerr << "Found " << nodes_wo_preds_.size() << " nodes without predecessors.\n"; //debug
-
-    //
     // Build the simple paths.
+    // There are three types of simple path starts:
+    // * convergence nodes (several predecessors)
+    // * nodes without predecessors
+    // * successors of divergence nodes (one predecessor that has several successors)
     //
-    sp_visited_.clear();
-    for (Node* n : nodes_wo_preds_)
-        build_simple_paths(n);
-    //cerr << "Built " << sp_visited_.size() << " simple paths.\n"; //debug
+    for (Node& n : nodes_) {
+        if (n.n_pred() != 1) {
+            n.sp_build();
+            simple_paths_.insert(&n);
+        }
+
+        if (n.n_succ() > 1) {
+            for (size_t nt2=0; nt2<4; ++nt2) {
+                Node* s = n.succ(nt2);
+                if (s != NULL) {
+                    s->sp_build();
+                    simple_paths_.insert(s);
+                }
+            }
+        }
+    }
+    //cerr << "Built " << simple_paths_.size() << " simple paths.\n"; //debug
 }
 
 void Graph::clear() {
     nodes_.resize(0);
     map_.clear();
-    nodes_wo_preds_.clear();
-    sp_visited_.clear();
-}
-
-void Graph::build_simple_paths(Node* sp_first) {
-    if (sp_visited_.count(sp_first))
-        return;
-    sp_visited_.insert(sp_first);
-
-    Node* n = sp_first;
-    Node* s = n->first_succ();
-    while (n->n_succ() == 1 && s->n_pred() == 1) {
-        // Extend the simple path.
-        n = s;
-        s = n->first_succ();
-    }
-    sp_first->set_sp_last(n);
-    n->set_sp_first(sp_first);
-
-    // Check why the simple path ended.
-    if (s == NULL) {
-        // i.e. `n->n_succ() == 0`
-        // No successors. End the recursion.
-
-    } else if (n->n_succ() > 1) {
-        // Several successors.
-        for (size_t nt2=0; nt2<4; ++nt2)
-            if (n->succ(nt2) != NULL)
-                build_simple_paths(n->succ(nt2));
-    } else {
-        // i.e. `s->n_pred() != 1`
-        // The next node has several predecessors (as `s` at least has one
-        // predecessor, `n`).
-        assert(s->n_pred() != 0);
-        build_simple_paths(s);
-    }
+    simple_paths_.clear();
 }
 
 void Graph::dump_fg(const string& fastg_path) {
@@ -186,15 +174,11 @@ void Graph::dump_fg(const string& fastg_path) {
         throw exception();
     }
 
-    sp_visited_.clear();
-    for (Node* n : nodes_wo_preds_)
-        dump_fg(n, ofs);
+    for (Node* sp : simple_paths_)
+        dump_fg(sp, ofs);
 }
 
 void Graph::dump_fg(Node* sp, ostream& os) {
-    if (sp_visited_.count(sp))
-        return;
-    sp_visited_.insert(sp);
 
     // Write the header.
     os << ">" << fg_header(sp);
@@ -215,13 +199,6 @@ void Graph::dump_fg(Node* sp, ostream& os) {
 
     // Write the sequence.
     os << sp->sp_path_str(km_len_) << "\n";
-
-    // Recurse.
-    for (size_t nt2=0; nt2<4; ++nt2) {
-        Node* n = sp->sp_succ(nt2);
-        if (n != NULL)
-            dump_fg(n, os);
-    }
 }
 
 string Graph::fg_header(Node* sp) {

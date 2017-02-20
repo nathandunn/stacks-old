@@ -96,6 +96,7 @@ public:
     Node* pred(size_t nt2) {return pred_[nt2];}
     Node* succ(size_t nt2) {return succ_[nt2];}
 
+    Node* first_pred() {Node* s = pred_[0]; for (size_t nt2=1; nt2<4; ++nt2) { if (s != NULL) break; s = pred(nt2);} return s;}
     Node* first_succ() {Node* s = succ_[0]; for (size_t nt2=1; nt2<4; ++nt2) { if (s != NULL) break; s = succ(nt2);} return s;}
 
     const Kmer& km() const {return d_.km;}
@@ -110,6 +111,7 @@ private:
     Node* sp_first_; // First node of the path. Set for the last node of the simple path.
 
 public:
+    void sp_build();
     void set_sp_last(Node* n) {sp_last_ = n;}
     void set_sp_first(Node* n) {sp_first_ = n;}
 
@@ -140,7 +142,7 @@ class Graph {
     const size_t km_len_;
     std::unordered_map<Kmer, KmMapValue> map_;
     std::vector<Node> nodes_;
-    std::list<Node*> nodes_wo_preds_;
+    std::unordered_set<Node*> simple_paths_;
 
 public:
     Graph(size_t km_length) : km_len_(km_length) {}
@@ -149,15 +151,10 @@ public:
     void dump_fg(const std::string& fastg_path);
 
 private:
-    std::unordered_set<Node*> sp_visited_;
-
     // Resets the object.
     void clear();
 
-    // Recursively builds the simple paths. Updates sp_visited.
-    void build_simple_paths(Node* sp_first);
-
-    // Recursively writes contigs in FastG format.
+    // Writes contigs in FastG format.
     void dump_fg(Node* sp, std::ostream& os);
     std::string fg_header(Node* sp);
 };
