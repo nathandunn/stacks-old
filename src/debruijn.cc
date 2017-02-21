@@ -21,18 +21,10 @@ void Node::sp_build() {
     n->sp_first_ = this;
 }
 
-string Node::sp_path_str(size_t km_len) {
+string Node::sp_contig_str(size_t km_len) {
     is_spfirst(this);
 
-    // Seeding the sequence with the entire first kmer gives contigs with
-    // overlapping ends. However this is not practical for visualization purposes
-    // as the lengths of the sequences do not correspond to the number of nodes;
-    // instead the lengths are `n_nodes + km_len - 1`.
-    // Thus here we use the last nucleotide of the node/kmer to represent the
-    // graph in GFA.
-    //string s = d_.km.str(km_len); // e.g. same as Minia
-    string s;
-
+    string s = d_.km.str(km_len);
     Node* n=this;
     while (n != sp_last_) {
         s.push_back(Nt2::nt_to_ch[n->d_.km.back(km_len)]);
@@ -191,9 +183,11 @@ void Graph::dump_gfa(const std::string& path) {
     // Write the header.
     ofs << "H\tVN:Z:1.0\n";
 
-    // Write the contigs.
+    // Write the simple paths.
     for (Node* sp : simple_paths_)
-        ofs << "S\t" << index_of(sp) << "\t" << sp->sp_path_str(km_len_) << "\tKC:i:" << sp->sp_cum_count() << "\n";
+        // n.b. In principle the length of the contigs should be (n_nodes+km_len-1).
+        // However for visualization purposes we use n_nodes (for now at least).
+        ofs << "S\t" << index_of(sp) << "\t*\tLN:i:" << sp->sp_n_nodes() << "\tKC:i:" << sp->sp_cum_count() << "\n";
 
     // Write the edges.
     for (Node* sp : simple_paths_) {
