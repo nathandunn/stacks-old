@@ -121,9 +121,9 @@ public:
     Node* sp_succ(size_t nt2) {is_spfirst(this); is_splast(sp_last_); return sp_last_->succ(nt2);}
 
     size_t sp_n_nodes() {is_spfirst(this); size_t i=1; Node* n=this; while(n!=sp_last_) {n=n->first_succ(); ++i;} return i;}
-    std::string sp_path_str(size_t km_len);
     size_t sp_cum_count();
     double sp_mean_count();
+    std::string sp_contig_str(size_t km_len);
 
 private:
     //xxx debug
