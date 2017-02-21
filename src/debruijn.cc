@@ -24,13 +24,13 @@ void Node::sp_build() {
 string Node::sp_path_str(size_t km_len) {
     is_spfirst(this);
 
-    // Seeding the sequence with the entire first kmer gives the same sequences
-    // as those of Minia. However this is not practical for visualization purposes
+    // Seeding the sequence with the entire first kmer gives contigs with
+    // overlapping ends. However this is not practical for visualization purposes
     // as the lengths of the sequences do not correspond to the number of nodes;
     // instead the lengths are `n_nodes + km_len - 1`.
     // Thus here we use the last nucleotide of the node/kmer to represent the
-    // graph in FastG.
-    //string s = d_.km.str(km_len); // Same as Minia
+    // graph in GFA.
+    //string s = d_.km.str(km_len); // e.g. same as Minia
     string s;
 
     Node* n=this;
@@ -179,48 +179,6 @@ void Graph::clear() {
     nodes_.resize(0);
     map_.clear();
     simple_paths_.clear();
-}
-
-void Graph::dump_fg(const string& fastg_path) {
-    ofstream ofs (fastg_path);
-    if (!ofs) {
-        cerr << "Error: Failed to open '" << fastg_path << "' for writing.\n";
-        throw exception();
-    }
-
-    for (Node* sp : simple_paths_)
-        dump_fg(sp, ofs);
-}
-
-void Graph::dump_fg(Node* sp, ostream& os) {
-
-    // Write the header.
-    os << ">" << fg_header(sp);
-
-    // Write the neighboring unitigs, if any.
-    if (sp->sp_n_succ() > 0) {
-        os << ":";
-        stringstream ss;
-        for (size_t nt2=0; nt2<4; ++nt2) {
-            Node* succ = sp->sp_succ(nt2);
-            if (succ != NULL)
-                ss << "," << fg_header(succ);
-        }
-        os << ss.str().substr(1) << ";\n";
-    } else {
-        os << "\n";
-    }
-
-    // Write the sequence.
-    os << sp->sp_path_str(km_len_) << "\n";
-}
-
-string Graph::fg_header(Node* sp) {
-    stringstream ss;
-    ss << std::fixed << setprecision(1);
-    size_t id = sp - nodes_.data();
-    ss << "NODE_" << id << "_length_" << sp->sp_n_nodes() << "_cov_" << sp->sp_mean_count() << "_ID_" << id;
-    return ss.str();
 }
 
 void Graph::dump_gfa(const std::string& path) {
