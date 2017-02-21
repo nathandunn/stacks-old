@@ -122,6 +122,7 @@ public:
 
     size_t sp_n_nodes() {is_spfirst(this); size_t i=1; Node* n=this; while(n!=sp_last_) {n=n->first_succ(); ++i;} return i;}
     std::string sp_path_str(size_t km_len);
+    size_t sp_cum_count();
     double sp_mean_count();
 
 private:
@@ -149,6 +150,7 @@ public:
 
     void create(const CLocReadSet& readset, size_t min_kmer_count);
     void dump_fg(const std::string& fastg_path);
+    void dump_gfa(const std::string& path);
 
 private:
     // Resets the object.
@@ -157,6 +159,8 @@ private:
     // Writes contigs in FastG format.
     void dump_fg(Node* sp, std::ostream& os);
     std::string fg_header(Node* sp);
+
+    size_t index_of(const Node* n) const {return n - nodes_.data();}
 };
 
 #endif
