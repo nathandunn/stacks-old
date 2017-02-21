@@ -21,7 +21,6 @@ size_t km_length = -1;
 size_t min_km_count = 2;
 set<int> locus_wl;
 bool gfa_out = false;
-bool fastg_out = false;
 bool fasta_out = false;
 
 //
@@ -126,9 +125,6 @@ void process_one_locus(const CLocReadSet& loc) {
     if (gfa_out)
         graph.dump_gfa(out_dir + to_string(loc.id()) + ".gfa");
 
-    if (fastg_out)
-        graph.dump_fg(out_dir + to_string(loc.id()) + ".fg");
-
     if (fasta_out) {
         ofstream fasta (out_dir + to_string(loc.id()) + ".fa");
         for (const Read& r : loc.reads())
@@ -146,7 +142,6 @@ const string help_string = string() +
         "  --min-cov: minimum coverage to consider a kmer\n"
         "  -W,--whitelist: a whitelist of locus IDs\n"
         "  --gfa: output a GFA file for each locus\n"
-        "  --fastg: output a FastG file for each locus\n"
         "  --fasta: output a Fasta file for each locus\n"
         "\n"
         ;
@@ -168,7 +163,6 @@ void parse_command_line(int argc, char* argv[]) {
         {"min-cov",      required_argument, NULL,  1003},
         {"whitelist",    required_argument, NULL,  'W'},
         {"gfa",          no_argument,       NULL,  1004},
-        {"fastg",        no_argument,       NULL,  1001},
         {"fasta",        no_argument,       NULL,  1002},
         {0, 0, 0, 0}
     };
@@ -213,9 +207,6 @@ void parse_command_line(int argc, char* argv[]) {
             break;
         case 1004://gfa
             gfa_out = true;
-            break;
-        case 1001://fastg
-            fastg_out = true;
             break;
         case 1002://fasta
             fasta_out = true;

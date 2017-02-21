@@ -149,16 +149,11 @@ public:
     Graph(size_t km_length) : km_len_(km_length) {}
 
     void create(const CLocReadSet& readset, size_t min_kmer_count);
-    void dump_fg(const std::string& fastg_path);
     void dump_gfa(const std::string& path);
 
 private:
     // Resets the object.
     void clear();
-
-    // Writes contigs in FastG format.
-    void dump_fg(Node* sp, std::ostream& os);
-    std::string fg_header(Node* sp);
 
     size_t index_of(const Node* n) const {return n - nodes_.data();}
 };
