@@ -43,6 +43,20 @@ string Node::sp_path_str(size_t km_len) {
     return s;
 }
 
+size_t Node::sp_cum_count() {
+    is_spfirst(this);
+
+    size_t cumcount = 0;
+    Node* n=this;
+    while (n != sp_last_) {
+        cumcount += n->d_.count;
+        n = n->first_succ();
+    }
+    // n == sp_last_
+    cumcount += n->d_.count;
+
+    return cumcount;
+}
 double Node::sp_mean_count() {
     is_spfirst(this);
 
@@ -207,4 +221,28 @@ string Graph::fg_header(Node* sp) {
     size_t id = sp - nodes_.data();
     ss << "NODE_" << id << "_length_" << sp->sp_n_nodes() << "_cov_" << sp->sp_mean_count() << "_ID_" << id;
     return ss.str();
+}
+
+void Graph::dump_gfa(const std::string& path) {
+    ofstream ofs (path);
+    if (!ofs) {
+        cerr << "Error: Failed to open '" << path << "' for writing.\n";
+        throw exception();
+    }
+
+    // Write the header.
+    ofs << "H\tVN:Z:1.0\n";
+
+    // Write the contigs.
+    for (Node* sp : simple_paths_)
+        ofs << "S\t" << index_of(sp) << "\t" << sp->sp_path_str(km_len_) << "\tKC:i:" << sp->sp_cum_count() << "\n";
+
+    // Write the edges.
+    for (Node* sp : simple_paths_) {
+        for (size_t nt2=0; nt2<4; ++nt2) {
+            Node* succ = sp->sp_succ(nt2);
+            if (succ != NULL)
+                ofs << "L\t" << index_of(sp) << "\t+\t" << index_of(succ) << "\t+\tM" << (km_len_-1) << "\n";
+        }
+    }
 }
