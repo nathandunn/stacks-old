@@ -11,6 +11,12 @@
 #include "DNASeq4.h"
 #include "locus.h"
 
+//
+// ==========
+// Kmer
+// ==========
+//
+
 class Kmer {
     NtArray<Nt2> a_;
 
@@ -72,6 +78,41 @@ struct hash<Kmer> { size_t operator() (const Kmer& km) const {
     return hash<NtArray<Nt2>>()(km.a_);
 }};}
 
+//
+// ==========
+// Node & SimplePath
+// ==========
+//
+
+class Node;
+
+class SimplePath {
+    Node* first_; // First node of the path.
+    Node* last_;  // Last node of the path.
+
+public:
+    SimplePath() : first_(NULL), last_(NULL) {}
+    void build(Node* first);
+
+    size_t n_pred() const {return first_->n_pred();}
+    size_t n_succ() const {return last_->n_succ();}
+    SimplePath* pred(size_t nt2) {Node* p = first_->pred(nt2); if(p!=NULL) {return cast(p->sp()->first_);} else return NULL;}
+    Node* succ(size_t nt2) {return last_->succ(nt2);}
+
+    size_t sp_n_nodes() {size_t i=1; Node* n=this; while(n!=sp_last_) {n=n->first_succ(); ++i;} return i;}
+    size_t sp_cum_count();
+    double sp_mean_count();
+    std::string sp_contig_str(size_t km_len);
+
+private:
+    static SimplePath* cast(Node* n) {return (SimplePath*) n;}
+    static bool assert_equivalence() {Node n; return n.sp() == &n ? true : false;}
+
+    //xxx debug
+    static void assert_first(const Node* n) {assert(n->sp_last_!=NULL);}
+    static void is_last(const Node* n) {assert(n->sp_first_!=NULL);}
+};
+
 struct NodeData {
     Kmer km;
     size_t count;
@@ -81,6 +122,7 @@ struct NodeData {
 };
 
 class Node {
+    SimplePath sp_;
     NodeData d_;
     Node* pred_[4];
     Node* succ_[4];
@@ -111,6 +153,7 @@ private:
     Node* sp_first_; // First node of the path. Set for the last node of the simple path.
 
 public:
+    SimplePath* sp() {return &sp_;}
     void sp_build();
     void set_sp_last(Node* n) {sp_last_ = n;}
     void set_sp_first(Node* n) {sp_first_ = n;}
@@ -130,6 +173,12 @@ private:
     static void is_spfirst(const Node* n) {assert(n->sp_last_!=NULL);}
     static void is_splast(const Node* n) {assert(n->sp_first_!=NULL);}
 };
+
+//
+// ==========
+// Graph
+// ==========
+//
 
 struct KmMapValue {
     union {
