@@ -80,38 +80,11 @@ struct hash<Kmer> { size_t operator() (const Kmer& km) const {
 
 //
 // ==========
-// Node & SimplePath
+// Node
 // ==========
 //
 
-class Node;
-
-class SimplePath {
-    Node* first_; // First node of the path.
-    Node* last_;  // Last node of the path.
-
-public:
-    SimplePath() : first_(NULL), last_(NULL) {}
-    void build(Node* first);
-
-    size_t n_pred() const {return first_->n_pred();}
-    size_t n_succ() const {return last_->n_succ();}
-    SimplePath* pred(size_t nt2) {Node* p = first_->pred(nt2); if(p!=NULL) {return cast(p->sp()->first_);} else return NULL;}
-    Node* succ(size_t nt2) {return last_->succ(nt2);}
-
-    size_t sp_n_nodes() {size_t i=1; Node* n=this; while(n!=sp_last_) {n=n->first_succ(); ++i;} return i;}
-    size_t sp_cum_count();
-    double sp_mean_count();
-    std::string sp_contig_str(size_t km_len);
-
-private:
-    static SimplePath* cast(Node* n) {return (SimplePath*) n;}
-    static bool assert_equivalence() {Node n; return n.sp() == &n ? true : false;}
-
-    //xxx debug
-    static void assert_first(const Node* n) {assert(n->sp_last_!=NULL);}
-    static void is_last(const Node* n) {assert(n->sp_first_!=NULL);}
-};
+class SPath;
 
 struct NodeData {
     Kmer km;
@@ -122,14 +95,15 @@ struct NodeData {
 };
 
 class Node {
-    SimplePath sp_;
     NodeData d_;
     Node* pred_[4];
     Node* succ_[4];
 
 public:
-    Node() : d_(), pred_(), succ_(), sp_last_(), sp_first_() {}
-    Node(const NodeData& d) : d_(d), pred_(), succ_(), sp_last_(), sp_first_() {}
+    Node() : d_(), pred_(), succ_(), sp_() {}
+    Node(const NodeData& d) : d_(d), pred_(), succ_(), sp_() {}
+    ~Node() {}
+
     void set_pred(size_t nt2, Node* n) {pred_[nt2] = n;}
     void set_succ(size_t nt2, Node* n) {succ_[nt2] = n;}
 
@@ -144,34 +118,51 @@ public:
     const Kmer& km() const {return d_.km;}
     size_t count() const {return d_.count;}
 
-    //
-    // Code for simple paths ('sp')
-    // A simple path is identified by its first node.
-    //
 private:
-    Node* sp_last_;  // Last node of the path. Set for the first path of the simple path.
-    Node* sp_first_; // First node of the path. Set for the last node of the simple path.
+    SPath* sp_;
+    friend class SPath;
+};
+
+//
+// ==========
+// SPath (Simple Path)
+// ==========
+//
+// Each node includes a SPath pointer so as to not have to maintain
+// separate edge information. This pointer is handled by the methods in
+// SPath, not by those of Node. It is null except for the first and last
+// nodes of the path.
+//
+
+struct SPathData {
+    size_t n_nodes;
+    size_t km_cumcount;
+
+    SPathData() : n_nodes(0), km_cumcount(0) {}
+};
+
+class SPath {
+    Node* first_;
+    Node* last_;
+    SPathData d_;
 
 public:
-    SimplePath* sp() {return &sp_;}
-    void sp_build();
-    void set_sp_last(Node* n) {sp_last_ = n;}
-    void set_sp_first(Node* n) {sp_first_ = n;}
+    SPath(Node* first);
+    void update_ptrs() {first_->sp_ = this; last_->sp_ = this;}
 
-    size_t sp_n_pred() const {is_spfirst(this); return n_pred();}
-    size_t sp_n_succ() const {is_spfirst(this); return sp_last_->n_succ();}
-    Node* sp_pred(size_t nt2) {is_spfirst(this); Node* p = pred(nt2); if(p!=NULL) {is_splast(p); return p->sp_first_;} else return NULL;}
-    Node* sp_succ(size_t nt2) {is_spfirst(this); is_splast(sp_last_); return sp_last_->succ(nt2);}
+    size_t n_pred() const {return n_pred();}
+    size_t n_succ() const {return last_->n_succ();}
+    SPath* pred(size_t nt2) {Node* n = first_->pred(nt2); return n == NULL ? NULL : n->sp_;}
+    SPath* succ(size_t nt2) {Node* n = last_->succ(nt2); return n == NULL ? NULL : n->sp_;}
 
-    size_t sp_n_nodes() {is_spfirst(this); size_t i=1; Node* n=this; while(n!=sp_last_) {n=n->first_succ(); ++i;} return i;}
-    size_t sp_cum_count();
-    double sp_mean_count();
-    std::string sp_contig_str(size_t km_len);
+    SPath* first_pred() {Node* n = first_->first_pred(); return n == NULL ? NULL : n->sp_;}
+    SPath* first_succ() {Node* n = last_->first_succ(); return n == NULL ? NULL : n->sp_;}
 
-private:
-    //xxx debug
-    static void is_spfirst(const Node* n) {assert(n->sp_last_!=NULL);}
-    static void is_splast(const Node* n) {assert(n->sp_first_!=NULL);}
+    size_t n_nodes() const {return d_.n_nodes;}
+    size_t km_cumcount() const {return d_.km_cumcount;}
+    std::string contig_str(size_t km_len);
+
+    const Node* first() const {return first_;}
 };
 
 //
@@ -181,6 +172,8 @@ private:
 //
 
 struct KmMapValue {
+    // Holds a kmer count before nodes are built, and a node index after that
+    // (and the kmer count is copied to NodeData::count).
     union {
         size_t count;
         size_t node;
@@ -190,14 +183,15 @@ struct KmMapValue {
 
 class Graph {
     const size_t km_len_;
+
     std::unordered_map<Kmer, KmMapValue> map_;
     std::vector<Node> nodes_;
-    std::unordered_set<Node*> simple_paths_;
+    std::vector<SPath> simple_paths_;
 
 public:
     Graph(size_t km_length) : km_len_(km_length) {}
-
     void rebuild(const CLocReadSet& readset, size_t min_kmer_count);
+
     size_t n_simple_paths() const {return simple_paths_.size();}
 
     void dump_gfa(const std::string& path);
