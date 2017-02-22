@@ -7,65 +7,34 @@
 
 using namespace std;
 
-void Node::sp_build() {
-    Node* n = this;
+SPath::SPath(Node* first) : first_(first), last_(NULL), d_() {
+    d_.n_nodes = 1;
+    d_.km_cumcount = first->count();
+
+    Node* n = first_;
     Node* s = n->first_succ();
     while (n->n_succ() == 1 && s->n_pred() == 1) {
         // Extend the simple path.
         n = s;
+        ++d_.n_nodes;
+        d_.km_cumcount += n->count();
+
         s = n->first_succ();
     }
-
-    // Record the start & end.
-    this->sp_last_ = n;
-    n->sp_first_ = this;
+    last_ = n;
 }
 
-string Node::sp_contig_str(size_t km_len) {
-    is_spfirst(this);
+string SPath::contig_str(size_t km_len) {
 
-    string s = d_.km.str(km_len);
-    Node* n=this;
-    while (n != sp_last_) {
-        s.push_back(Nt2::nt_to_ch[n->d_.km.back(km_len)]);
+    string s = first_->km().str(km_len);
+    Node* n = first_;
+    while (n != last_) {
+        s.push_back(Nt2::nt_to_ch[n->km().back(km_len)]);
         n = n->first_succ();
     }
-    s.push_back(Nt2::nt_to_ch[n->d_.km.back(km_len)]);
+    s.push_back(Nt2::nt_to_ch[n->km().back(km_len)]);
 
     return s;
-}
-
-size_t Node::sp_cum_count() {
-    is_spfirst(this);
-
-    size_t cumcount = 0;
-    Node* n=this;
-    while (n != sp_last_) {
-        cumcount += n->d_.count;
-        n = n->first_succ();
-    }
-    // n == sp_last_
-    cumcount += n->d_.count;
-
-    return cumcount;
-}
-double Node::sp_mean_count() {
-    is_spfirst(this);
-
-    size_t cumcount = 0;
-    size_t n_nodes = 0;
-
-    Node* n=this;
-    while (n != sp_last_) {
-        ++n_nodes;
-        cumcount += n->d_.count;
-        n = n->first_succ();
-    }
-    // n == sp_last_
-    ++n_nodes;
-    cumcount += n->d_.count;
-
-    return (double) cumcount / n_nodes;
 }
 
 void Graph::rebuild(const CLocReadSet& readset, size_t min_kmer_count) {
@@ -149,21 +118,21 @@ void Graph::rebuild(const CLocReadSet& readset, size_t min_kmer_count) {
     // * successors of divergence nodes (one predecessor that has several successors)
     //
     for (Node& n : nodes_) {
-        if (n.n_pred() != 1) {
-            n.sp_build();
-            simple_paths_.insert(&n);
-        }
+        if (n.n_pred() != 1)
+            simple_paths_.push_back(SPath(&n));
 
         if (n.n_succ() > 1) {
             for (size_t nt2=0; nt2<4; ++nt2) {
                 Node* s = n.succ(nt2);
                 if (s != NULL) {
-                    s->sp_build();
-                    simple_paths_.insert(s);
+                    simple_paths_.push_back(SPath(s));
                 }
             }
         }
     }
+    for (SPath& p : simple_paths_)
+        // A separate loop is required because the vector might have resized.
+        p.update_ptrs();
     //cerr << "Built " << simple_paths_.size() << " simple paths.\n"; //debug
 }
 
@@ -184,17 +153,17 @@ void Graph::dump_gfa(const std::string& path) {
     ofs << "H\tVN:Z:1.0\n";
 
     // Write the simple paths.
-    for (Node* sp : simple_paths_)
+    for (SPath& p : simple_paths_)
         // n.b. In principle the length of the contigs should be (n_nodes+km_len-1).
         // However for visualization purposes we use n_nodes (for now at least).
-        ofs << "S\t" << index_of(sp) << "\t*\tLN:i:" << sp->sp_n_nodes() << "\tKC:i:" << sp->sp_cum_count() << "\n";
+        ofs << "S\t" << index_of(p.first()) << "\t*\tLN:i:" << p.n_nodes() << "\tKC:i:" << p.km_cumcount() << "\n";
 
     // Write the edges.
-    for (Node* sp : simple_paths_) {
+    for (SPath& p : simple_paths_) {
         for (size_t nt2=0; nt2<4; ++nt2) {
-            Node* succ = sp->sp_succ(nt2);
+            SPath* succ = p.succ(nt2);
             if (succ != NULL)
-                ofs << "L\t" << index_of(sp) << "\t+\t" << index_of(succ) << "\t+\tM" << (km_len_-1) << "\n";
+                ofs << "L\t" << index_of(p.first()) << "\t+\t" << index_of(succ->first()) << "\t+\tM" << (km_len_-1) << "\n";
         }
     }
 }
