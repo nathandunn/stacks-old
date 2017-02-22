@@ -32,7 +32,7 @@ LogAlterator* lg = NULL;
 // Function declarations.
 //
 bool read_one_locus(CLocReadSet& loc, Bam* bam_f, const map<string, size_t>& rg_to_sample);
-void process_one_locus(const CLocReadSet& loc);
+void process_one_locus(const CLocReadSet& loc, Graph& graph);
 
 void parse_command_line(int argc, char* argv[]);
 void report_options(ostream& os);
@@ -79,17 +79,18 @@ int main(int argc, char** argv) {
 
     // Process every locus
     CLocReadSet loc (mpopi);
-    bool eof;
     if (!bam_f->next_record()) {
         cerr << "Error: Failed to read records from BAM file '" << bam_path << "'.\n";
         throw exception();
     }
+    bool eof;
+    Graph graph (km_length);
     do {
         eof = !read_one_locus(loc, bam_f, rg_to_sample);
         if (locus_wl.empty()) {
-            process_one_locus(loc);
+            process_one_locus(loc, graph);
         } else if (locus_wl.count(loc.id())) {
-            process_one_locus(loc);
+            process_one_locus(loc, graph);
             locus_wl.erase(loc.id());
             if (locus_wl.empty())
                 break;
@@ -118,9 +119,11 @@ bool read_one_locus(CLocReadSet& loc, Bam* bam_f, const map<string, size_t>& rg_
     return true;
 }
 
-void process_one_locus(const CLocReadSet& loc) {
-    Graph graph (km_length);
-    graph.create(loc, min_km_count);
+void process_one_locus(const CLocReadSet& loc, Graph& graph) {
+    graph.rebuild(loc, min_km_count);
+    if (graph.n_simple_paths() == 0)
+        // Graph is empty.
+        return;
 
     if (gfa_out)
         graph.dump_gfa(out_dir + to_string(loc.id()) + ".gfa");

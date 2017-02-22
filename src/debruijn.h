@@ -148,7 +148,9 @@ class Graph {
 public:
     Graph(size_t km_length) : km_len_(km_length) {}
 
-    void create(const CLocReadSet& readset, size_t min_kmer_count);
+    void rebuild(const CLocReadSet& readset, size_t min_kmer_count);
+    size_t n_simple_paths() const {return simple_paths_.size();}
+
     void dump_gfa(const std::string& path);
 
 private:
