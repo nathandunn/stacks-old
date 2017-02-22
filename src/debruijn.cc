@@ -68,7 +68,7 @@ double Node::sp_mean_count() {
     return (double) cumcount / n_nodes;
 }
 
-void Graph::create(const CLocReadSet& readset, size_t min_kmer_count) {
+void Graph::rebuild(const CLocReadSet& readset, size_t min_kmer_count) {
 
     //cerr << "Building graph...\n"; //debug
 
