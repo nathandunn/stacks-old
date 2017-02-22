@@ -7,7 +7,7 @@
 
 using namespace std;
 
-SPath::SPath(Node* first) : first_(first), last_(NULL), d_() {
+SPath::SPath(Node* first) : first_(first), last_(NULL), d_(), being_visited(false), was_visited(false) {
     d_.n_nodes = 1;
     d_.km_cumcount = first->count();
 
@@ -136,10 +136,34 @@ void Graph::rebuild(const CLocReadSet& readset, size_t min_kmer_count) {
     //cerr << "Built " << simple_paths_.size() << " simple paths.\n"; //debug
 }
 
-void Graph::clear() {
-    nodes_.resize(0);
-    map_.clear();
-    simple_paths_.clear();
+bool Graph::topo_sort() {
+
+    for (auto p=simple_paths_.begin(); p!=simple_paths_.end(); ++p)
+        if (!p->was_visited)
+            if(!topo_sort(&*p))
+                return false;
+
+    return true;
+}
+
+bool Graph::topo_sort(SPath* p) {
+    if (p->being_visited)
+        // The recursion looped; not a DAG.
+        return false;
+
+    p->being_visited = true;
+    for (size_t nt2=0; nt2<4; ++nt2) {
+        SPath* s = p->succ(nt2);
+        if (s != NULL && !s->was_visited)
+            if (!topo_sort(s))
+                return false;
+    }
+    p->being_visited = false;
+
+    sorted_spaths_.push_back(p);
+    p->was_visited = true;
+
+    return true;
 }
 
 void Graph::dump_gfa(const std::string& path) {
