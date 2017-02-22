@@ -147,6 +147,10 @@ class SPath {
     SPathData d_;
 
 public:
+    bool being_visited;
+    bool was_visited;
+
+    SPath() : first_(), last_(), d_(), being_visited(), was_visited() {}
     SPath(Node* first);
     void update_ptrs() {first_->sp_ = this; last_->sp_ = this;}
 
@@ -187,20 +191,23 @@ class Graph {
     std::unordered_map<Kmer, KmMapValue> map_;
     std::vector<Node> nodes_;
     std::vector<SPath> simple_paths_;
+    std::vector<SPath*> sorted_spaths_; // The simple paths, sorted topologically, with the terminal (no successors) ones first.
 
 public:
     Graph(size_t km_length) : km_len_(km_length) {}
     void rebuild(const CLocReadSet& readset, size_t min_kmer_count);
 
     size_t n_simple_paths() const {return simple_paths_.size();}
+    bool topo_sort();
 
     void dump_gfa(const std::string& path);
 
 private:
     // Resets the object.
-    void clear();
-
+    void clear() {nodes_.resize(0); map_.clear(); simple_paths_.resize(0); sorted_spaths_.resize(0);}
     size_t index_of(const Node* n) const {return n - nodes_.data();}
+
+    bool topo_sort(SPath* p);
 };
 
 #endif
