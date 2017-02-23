@@ -1,6 +1,7 @@
 #ifndef DEBRUIJN_H
 #define DEBRUIJN_H
 
+#include <cstdint>
 #include <iostream>
 #include <vector>
 #include <list>
@@ -67,31 +68,27 @@ class SPath;
 
 struct NodeData {
     Kmer km;
-    size_t count;
+    uint32_t count;
 
     NodeData() : km(), count(0) {}
-    NodeData(const Kmer& k, size_t c) : km(k), count(c) {}
+    NodeData(const Kmer& k, uint32_t c) : km(k), count(c) {}
 };
 
 class Node {
     NodeData d_;
-    Node* pred_[4];
+    uchar n_pred_;
     Node* succ_[4];
 
 public:
-    Node() : d_(), pred_(), succ_(), sp_() {}
-    Node(const NodeData& d) : d_(d), pred_(), succ_(), sp_() {}
+    Node() : d_(), n_pred_(0), succ_(), sp_() {}
+    Node(const NodeData& d) : d_(d), n_pred_(0), succ_(), sp_() {}
     ~Node() {}
 
-    void set_pred(size_t nt2, Node* n) {pred_[nt2] = n;}
-    void set_succ(size_t nt2, Node* n) {succ_[nt2] = n;}
+    void set_succ(size_t nt2, Node* n) {succ_[nt2] = n; ++n->n_pred_;}
 
-    size_t n_pred() const {return size_t(pred_[0]!=NULL) + size_t(pred_[1]!=NULL) + size_t(pred_[2]!=NULL) + size_t(pred_[3]!=NULL);}
+    size_t n_pred() const {return n_pred_;}
     size_t n_succ() const {return size_t(succ_[0]!=NULL) + size_t(succ_[1]!=NULL) + size_t(succ_[2]!=NULL) + size_t(succ_[3]!=NULL);}
-    Node* pred(size_t nt2) {return pred_[nt2];}
     Node* succ(size_t nt2) {return succ_[nt2];}
-
-    Node* first_pred() {Node* s = pred_[0]; for (size_t nt2=1; nt2<4; ++nt2) { if (s != NULL) break; s = pred(nt2);} return s;}
     Node* first_succ() {Node* s = succ_[0]; for (size_t nt2=1; nt2<4; ++nt2) { if (s != NULL) break; s = succ(nt2);} return s;}
 
     const Kmer& km() const {return d_.km;}
@@ -140,10 +137,7 @@ public:
 
     size_t n_pred() const {return n_pred();}
     size_t n_succ() const {return last_->n_succ();}
-    SPath* pred(size_t nt2) {Node* n = first_->pred(nt2); return n == NULL ? NULL : n->sp_;}
     SPath* succ(size_t nt2) {Node* n = last_->succ(nt2); return n == NULL ? NULL : n->sp_;}
-
-    SPath* first_pred() {Node* n = first_->first_pred(); return n == NULL ? NULL : n->sp_;}
     SPath* first_succ() {Node* n = last_->first_succ(); return n == NULL ? NULL : n->sp_;}
 
     size_t n_nodes() const {return d_.n_nodes;}
