@@ -55,6 +55,7 @@ class NtArray {
 
 public:
     NtArray() : a_(0) {}
+    NtArray(int) : a_(-1) {}
     NtArray(const NtArray<Nt>& other) : a_(other.a_) {}
     NtArray<Nt>& operator= (const NtArray<Nt>& other) {a_ = other.a_; return *this;}
 
