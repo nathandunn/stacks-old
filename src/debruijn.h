@@ -135,7 +135,7 @@ public:
     SPath(Node* first);
     void update_ptrs() {first_->sp_ = this; last_->sp_ = this;}
 
-    size_t n_pred() const {return n_pred();}
+    size_t n_pred() const {return first_->n_pred();}
     size_t n_succ() const {return last_->n_succ();}
     SPath* succ(size_t nt2) {Node* n = last_->succ(nt2); return n == NULL ? NULL : n->sp_;}
     SPath* first_succ() {Node* n = last_->first_succ(); return n == NULL ? NULL : n->sp_;}
