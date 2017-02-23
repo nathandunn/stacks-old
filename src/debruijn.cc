@@ -105,7 +105,6 @@ void Graph::rebuild(const CLocReadSet& readset, size_t min_kmer_count) {
                     // homopolymer, omit the edge
                     continue;
                 n.set_succ(nt2, &nodes_[km->second.node]);
-                nodes_[km->second.node].set_pred(n.km().front(), &n);
             }
         }
     }
