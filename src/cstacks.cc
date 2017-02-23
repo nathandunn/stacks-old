@@ -47,6 +47,7 @@ double  max_gaps          = 2.0;
 using namespace std;
 
 int main (int argc, char* argv[]) {
+    IF_NDEBUG_TRY
 
     parse_command_line(argc, argv);
 
@@ -187,6 +188,7 @@ int main (int argc, char* argv[]) {
     catalog.clear();
 
     return 0;
+    IF_NDEBUG_CATCH_ALL_EXCEPTIONS
 }
 
 int update_catalog_index(map<int, CLocus *> &catalog, map<string, int> &cat_index) {

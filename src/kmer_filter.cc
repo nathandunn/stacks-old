@@ -55,6 +55,7 @@ int    num_threads    = 1;
 int    barcode_size   = 0;
 
 int main (int argc, char* argv[]) {
+    IF_NDEBUG_TRY
 
     parse_command_line(argc, argv);
 
@@ -232,6 +233,7 @@ int main (int argc, char* argv[]) {
     }
 
     return 0;
+    IF_NDEBUG_CATCH_ALL_EXCEPTIONS
 }
 
 int process_paired_reads(string in_path_1,

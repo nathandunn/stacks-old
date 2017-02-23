@@ -118,6 +118,7 @@ map<string, int>           renz_len;
 map<string, int>           renz_olap;
 
 int main (int argc, char* argv[]) {
+    IF_NDEBUG_TRY
 
 #ifndef HAVE_LIBZ
     cerr << "Stacks was compiled without zlib, and will refuse to parse compressed files.\n";
@@ -699,6 +700,7 @@ int main (int argc, char* argv[]) {
 
     cerr << "Populations is done.\n";
     return 0;
+    IF_NDEBUG_CATCH_ALL_EXCEPTIONS
 }
 
 void vcfcomp_simplify_pmap (map<int, CSLocus*>& catalog, PopMap<CSLocus>* pmap) {

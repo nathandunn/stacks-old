@@ -51,6 +51,7 @@ double  max_gaps        = 2.0;
 int     gapped_kmer_len = 19;
 
 int main (int argc, char* argv[]) {
+    IF_NDEBUG_TRY
 
     parse_command_line(argc, argv);
 
@@ -154,6 +155,7 @@ int main (int argc, char* argv[]) {
 
     cerr << "\nsstacks is done.\n";
     return 0;
+    IF_NDEBUG_CATCH_ALL_EXCEPTIONS
 }
 
 int

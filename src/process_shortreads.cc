@@ -86,6 +86,7 @@ int adp_2_len = 0;
 AdapterHash adp_1_kmers, adp_2_kmers;
 
 int main (int argc, char* argv[]) {
+    IF_NDEBUG_TRY
 
     parse_command_line(argc, argv);
 
@@ -219,6 +220,7 @@ int main (int argc, char* argv[]) {
     print_results(argc, argv, barcodes, counters, barcode_log);
 
     return 0;
+    IF_NDEBUG_CATCH_ALL_EXCEPTIONS
 }
 
 template<typename fhType>

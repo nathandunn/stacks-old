@@ -50,6 +50,7 @@ map<string, int> pop_map;
 map<int, int>    pop_cnts;
 
 int main (int argc, char* argv[]) {
+    IF_NDEBUG_TRY
 
     parse_command_line(argc, argv);
 
@@ -249,6 +250,7 @@ int main (int argc, char* argv[]) {
     log_fh.close();
 
     return 0;
+    IF_NDEBUG_CATCH_ALL_EXCEPTIONS
 }
 
 int
