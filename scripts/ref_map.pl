@@ -850,6 +850,11 @@ sub parse_command_line {
 	usage();
     }
 
+    if (scalar(@parents) == 0 && scalar(@samples) == 0 && length($popmap_path) > 0 && length($sample_path) == 0) {
+	print STDERR "If you are using a population map to specify samples, you must specify the path to the directory containing the samples (--samples).\n";
+	usage();
+    }
+
     if (length($sample_path) > 0) {
         $sample_path .= "/" if (substr($sample_path, -1) ne "/");
     }
