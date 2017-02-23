@@ -183,6 +183,7 @@ public:
 
     size_t n_simple_paths() const {return simple_paths_.size();}
     bool topo_sort();
+    vector<SPath*> find_best_path();
 
     void dump_gfa(const std::string& path);
 
