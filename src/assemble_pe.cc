@@ -125,6 +125,12 @@ void process_one_locus(const CLocReadSet& loc, Graph& graph) {
         // Graph is empty.
         return;
 
+    if (!graph.topo_sort())
+        // Not a DAG.
+        return;
+
+    vector<SPath*> best_path = graph.find_best_path();
+
     if (gfa_out)
         graph.dump_gfa(out_dir + to_string(loc.id()) + ".gfa");
 
