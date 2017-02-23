@@ -166,32 +166,30 @@ public:
 
 bool bp_compare(Locus *, Locus *);
 
-class CLocReadSet {
-    int id_;                                 // Catalog locus ID
-    vector<Read> reads_;                     // All the reads. Order is arbitrary.
+// SRead: a Read belonging to a Sample.
+struct SRead : Read {
+    size_t sample; // index in MetaPopInfo::samples_
 
+    SRead(DNASeq4&& seq, std::string&& n, size_t spl)
+            : Read(std::move(seq), std::move(n)), sample(spl)
+            {}
+};
+
+class CLocReadSet {
     const MetaPopInfo& mpopi_;
-    vector<size_t> read_samples_;     // Sample of each read. size() == reads_.size()
-    vector<vector<Read*>> reads_per_sample_; // Reads of each sample. size() == mpopi_.samples().size()
+    int id_; // Catalog locus ID
+    vector<SRead> reads_; // All the reads. Order is arbitrary.
 
 public:
-    CLocReadSet(const MetaPopInfo& m)
-        : id_(-1), reads_(), mpopi_(m), read_samples_(), reads_per_sample_(mpopi_.samples().size())
-        {}
+    CLocReadSet(const MetaPopInfo& mpopi) : mpopi_(mpopi), id_(-1), reads_() {}
 
     int id() const {return id_;}
-    const vector<Read>& reads() const {return reads_;}
-    size_t sample_of(const Read& r) const {return read_samples_.at(index_of(r));}
-    const vector<Read*>& reads_of(size_t sample) const {return reads_per_sample_.at(sample);}
+    const vector<SRead>& reads() const {return reads_;}
     const MetaPopInfo& mpopi() const {return mpopi_;}
 
+    void clear() {id_= -1; reads_.clear();}
     void id(int id) {id_ = id;}
-    void add(Read&& r, const size_t sample);
-
-    void clear();
-
-private:
-    size_t index_of(const Read& r) const {return &r - &reads_[0];}
+    void add(SRead&& r) {reads_.push_back(std::move(r));}
 };
 
 #endif // __LOCUS_H__

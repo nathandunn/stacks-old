@@ -179,17 +179,3 @@ QLocus::clear_matches()
 
     return 0;
 }
-
-void CLocReadSet::add(Read&& r, const size_t sample) {
-    reads_.push_back(std::move(r));
-    read_samples_.push_back(sample);
-    reads_per_sample_.at(sample).push_back(&reads_.back());
-}
-
-void CLocReadSet::clear() {
-    id_ = -1;
-    reads_.clear();
-    read_samples_.clear();
-    for (auto& v : reads_per_sample_)
-        v.clear();
-}
