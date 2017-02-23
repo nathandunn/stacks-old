@@ -6,7 +6,7 @@
 #include "log_utils.h"
 #include "MetaPopInfo.h"
 #include "locus.h"
-#include "BamI.h"
+#include "BamCLocReader.h"
 #include "debruijn.h"
 
 using namespace std;
@@ -31,17 +31,10 @@ LogAlterator* lg = NULL;
 //
 // Function declarations.
 //
-bool read_one_locus(CLocReadSet& loc, Bam* bam_f, const map<string, size_t>& rg_to_sample);
 void process_one_locus(const CLocReadSet& loc, Graph& graph);
 
 void parse_command_line(int argc, char* argv[]);
 void report_options(ostream& os);
-
-void print_loc(const CLocReadSet& loc) {
-    cout << "Locus #" << loc.id() << "\n";
-    for (const Read& r : loc.reads())
-        cout << r.name << "\t(" << loc.mpopi().samples()[loc.sample_of(r)].name << ")\t" << r.seq.str() << "\n";
-}
 
 int main(int argc, char** argv) {
 
@@ -55,68 +48,36 @@ int main(int argc, char** argv) {
     lg = new LogAlterator(lg_path, quiet);
     init_log(lg->l, argc, argv);
     report_options(cout);
-    cout << "\n";
+    cout << "\n" << flush;
 
-    // Open the BAM file.
-    Bam* bam_f = new Bam(bam_path.c_str());
-
-    // Get the list of samples from the BAM header.
+    // Open the BAM file and parse the header.
     MetaPopInfo mpopi;
-    map<string, size_t> rg_to_sample; // (readgroup ID, sample index)
-    {
-        BamHeader::ReadGroups read_groups = bam_f->h().read_groups();
-
-        // Create the MetaPopInfo object
-        vector<string> samples;
-        for (auto& rg : read_groups)
-            samples.push_back(rg.second.at("SM"));
-        mpopi.init_names(samples);
-
-        // Get the (read group : sample) map
-        for (auto& rg : read_groups)
-            rg_to_sample.insert({rg.first, mpopi.get_sample_index(rg.second.at("SM"))});
-    }
+    BamCLocReader bam_fh = BamCLocReader(bam_path, mpopi);
 
     // Process every locus
     CLocReadSet loc (mpopi);
-    if (!bam_f->next_record()) {
-        cerr << "Error: Failed to read records from BAM file '" << bam_path << "'.\n";
-        throw exception();
-    }
-    bool eof;
     Graph graph (km_length);
-    do {
-        eof = !read_one_locus(loc, bam_f, rg_to_sample);
-        if (locus_wl.empty()) {
+    size_t n_loci = 0;
+    if (locus_wl.empty()) {
+        // No whitelist.
+        while (bam_fh.read_one_locus(loc)) {
             process_one_locus(loc, graph);
-        } else if (locus_wl.count(loc.id())) {
-            process_one_locus(loc, graph);
-            locus_wl.erase(loc.id());
-            if (locus_wl.empty())
-                break;
+            ++n_loci;
         }
-    } while (!eof);
 
+    } else {
+        while (bam_fh.read_one_locus(loc) && !locus_wl.empty()) {
+            if (locus_wl.count(loc.id())) {
+                process_one_locus(loc, graph);
+                ++n_loci;
+                locus_wl.erase(loc.id());
+            }
+        }
+    }
+    cout << "Processed " << n_loci << " loci.\n";
+
+    cout << "assemble_pe is done.\n";
     return 0;
-}
-
-bool read_one_locus(CLocReadSet& loc, Bam* bam_f, const map<string, size_t>& rg_to_sample) {
-    loc.clear();
-    const BamRecord& rec = bam_f->r(); // the current record
-
-    // Parse the locus ID.
-    int32_t curr_chrom = rec.chrom();
-    loc.id(stoi(bam_f->h().chrom_str(curr_chrom)));
-
-    // Read all the reads of the locus, and one more.
-    do {
-        loc.add(Read(rec.seq(), rec.qname()), rg_to_sample.at(rec.read_group()));
-        if(!bam_f->next_record())
-            // EOF.
-            return false;
-    } while (rec.chrom() == curr_chrom);
-
-    return true;
 }
 
 void process_one_locus(const CLocReadSet& loc, Graph& graph) {
@@ -251,12 +212,16 @@ void parse_command_line(int argc, char* argv[]) {
     if (!wl_path.empty()) {
         ifstream wl_fh (wl_path);
         if (!wl_fh) {
-            cerr << "Error: Failed to open " << wl_path << " for reading.\n";
+            cerr << "Error: Failed to open '" << wl_path << "' for reading.\n";
             throw exception();
         }
         int id;
         while (wl_fh >> id)
             locus_wl.insert(id);
+        if (locus_wl.empty()) {
+            cerr << "Error: Whitelist '" << wl_path << "' appears empty.\n";
+            throw exception();
+        }
     }
 }
 
