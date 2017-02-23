@@ -16,51 +16,30 @@
 // Kmer
 // ==========
 //
+// Up to 31-mers. 32 is possible in principle but `empty()` would be true for a
+// series of 32 T's.
+//
 
 class Kmer {
     NtArray<Nt2> a_;
 
 public:
-    Kmer() : a_() {}
+    Kmer() : a_(-1) {}
 
     // Given a sequence iterator, builds the first valid kmer (i.e. skipping Ns).
     // If no kmer can be found, an empty object is returned.
     // After the call `first` points to the nucleotide immediately past the kmer.
-    Kmer(size_t km_len, DNASeq4::iterator& first, DNASeq4::iterator past) : a_() {
-        // Find a series of km_len good nucleotides.
-        DNASeq4::iterator km_start = first;
-        size_t n_good = 0;
-        while(first != past && n_good != km_len) {
-            if (first.nt() == Nt4::n) {
-                // start again
-                km_start = first;
-                n_good = 0;
-                ++first;
-            } else {
-                ++n_good;
-                ++first;
-            }
-        }
-        // Build the kmer.
-        if (n_good == km_len) {
-            for (size_t i=0; i<km_len; ++i) {
-                a_.set(i, Nt2::nt4_to_nt[km_start.nt()]);
-                ++km_start;
-            }
-        }
-    }
+    Kmer(size_t km_len, DNASeq4::iterator& first, DNASeq4::iterator past);
 
     // The first nucleotide.
     size_t front() const {return a_[0];}
     size_t back(size_t km_len) const {return a_[km_len-1];}
 
-    // Create the predecessor/successor kmer given an edge/nucleotide
-    Kmer pred(size_t km_len, size_t nt) const
-        {Kmer k (*this); k.a_.clear(km_len-1); k.a_.push_front(nt); return k;}
-    Kmer succ(size_t km_len, size_t nt) const
-        {Kmer k (*this); k.a_.pop_front(); k.a_.set(km_len-1, nt); return k;}
+    // Create the predecessor/successor kmer given an edge/nucleotide.
+    Kmer pred(size_t km_len, size_t nt) const {Kmer k (*this); k.a_.clear(km_len-1); k.a_.push_front(nt); return k;}
+    Kmer succ(size_t km_len, size_t nt) const {Kmer k (*this); k.a_.pop_front(); k.a_.set(km_len-1, nt); return k;}
 
-    bool empty() const {return a_ == NtArray<Nt2>();} //TODO This is true for A homopolymers! Use uint64_t(-1) as the default value, safe for kmers <=31bp
+    bool empty() const {return *this == Kmer();}
     std::string str(size_t km_len) const {
         std::string s;
         s.reserve(km_len);
@@ -209,5 +188,36 @@ private:
 
     bool topo_sort(SPath* p);
 };
+
+//
+// ==========
+// Inline definitions
+// ==========
+//
+
+inline
+Kmer::Kmer(size_t km_len, DNASeq4::iterator& first, DNASeq4::iterator past) : a_() {
+    // Find a series of km_len good nucleotides.
+    DNASeq4::iterator km_start = first;
+    size_t n_good = 0;
+    while(first != past && n_good != km_len) {
+        if (first.nt() == Nt4::n) {
+            // start again
+            km_start = first;
+            n_good = 0;
+            ++first;
+        } else {
+            ++n_good;
+            ++first;
+        }
+    }
+    // Build the kmer.
+    if (n_good == km_len) {
+        for (size_t i=0; i<km_len; ++i) {
+            a_.set(i, Nt2::nt4_to_nt[km_start.nt()]);
+            ++km_start;
+        }
+    }
+}
 
 #endif
