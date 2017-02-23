@@ -104,13 +104,19 @@ private:
 
 //
 // ==========
-// SPath (Simple Path)
+// SPath
 // ==========
+//
+// Node-like object for a 'simple path'.
 //
 // Each node includes a SPath pointer so as to not have to maintain
 // separate edge information. This pointer is handled by the methods in
 // SPath, not by those of Node. It is null except for the first and last
 // nodes of the path.
+//
+// Includes an externally usable pointer that is used by graph algorithms as
+// a 'visited' flag and to insert information relevant to the algorithm into
+// the object.
 //
 
 struct SPathData {
@@ -126,10 +132,9 @@ class SPath {
     SPathData d_;
 
 public:
-    bool being_visited;
-    bool was_visited;
+    mutable void* visitdata; // For graph algorithms.
 
-    SPath() : first_(), last_(), d_(), being_visited(), was_visited() {}
+    SPath() : first_(), last_(), d_(), visitdata() {}
     SPath(Node* first);
     void update_ptrs() {first_->sp_ = this; last_->sp_ = this;}
 
@@ -186,7 +191,10 @@ private:
     void clear() {nodes_.resize(0); map_.clear(); simple_paths_.resize(0); sorted_spaths_.resize(0);}
     size_t index_of(const Node* n) const {return n - nodes_.data();}
 
-    bool topo_sort(SPath* p);
+    // Sort topologically. Returns false if the graph is not a DAG.
+    // The nodes record whether they are a parent in the current recursion
+    // (and we use uchars instead of bools because vector<bool> is specialized).
+    bool topo_sort(SPath* p, vector<uchar>& visitdata);
 };
 
 //

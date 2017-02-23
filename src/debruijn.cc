@@ -7,7 +7,7 @@
 
 using namespace std;
 
-SPath::SPath(Node* first) : first_(first), last_(NULL), d_(), being_visited(false), was_visited(false) {
+SPath::SPath(Node* first) : first_(first), last_(NULL), d_(), visitdata(NULL) {
     d_.n_nodes = 1;
     d_.km_cumcount = first->count();
 
@@ -137,31 +137,40 @@ void Graph::rebuild(const CLocReadSet& readset, size_t min_kmer_count) {
 }
 
 bool Graph::topo_sort() {
+    vector<uchar> visitdata; // 0/1s; whether each spath is a parent in the recursion
+    visitdata.reserve(simple_paths_.size());
 
-    for (auto p=simple_paths_.begin(); p!=simple_paths_.end(); ++p)
-        if (!p->was_visited)
-            if(!topo_sort(&*p))
-                return false;
+    // Note: no need to reset the SPath::visitdata's to NULL as this is
+    // the first algo to run.
+
+    for (SPath& p : simple_paths_)
+        if(!topo_sort(&p, visitdata))
+            return false;
 
     return true;
 }
 
-bool Graph::topo_sort(SPath* p) {
-    if (p->being_visited)
-        // The recursion looped; not a DAG.
-        return false;
+bool Graph::topo_sort(SPath* p, vector<uchar>& visitdata) {
+    if (p->visitdata != NULL) {
+        if (*(uchar*) p->visitdata)
+            // The recursion looped; not a DAG.
+            return false;
+        else
+            // Joining a known path from a different root.
+            return true;
+    } else {
+        visitdata.push_back(true);
+        p->visitdata = (void*)&visitdata.back();
+        for (size_t nt2=0; nt2<4; ++nt2) {
+            SPath* s = p->succ(nt2);
+            if (s != NULL)
+                if (!topo_sort(s, visitdata))
+                    return false;
+        }
+        *(uchar*)p->visitdata = false;
 
-    p->being_visited = true;
-    for (size_t nt2=0; nt2<4; ++nt2) {
-        SPath* s = p->succ(nt2);
-        if (s != NULL && !s->was_visited)
-            if (!topo_sort(s))
-                return false;
+        sorted_spaths_.push_back(p);
     }
-    p->being_visited = false;
-
-    sorted_spaths_.push_back(p);
-    p->was_visited = true;
 
     return true;
 }
