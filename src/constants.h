@@ -21,8 +21,6 @@
 #ifndef __CONSTANTS_H__
 #define __CONSTANTS_H__
 
-#include <string>
-
 //
 // Pull in the configuration variables from the configure script
 //
@@ -30,12 +28,76 @@
 #include "config.h"
 #endif
 
-typedef unsigned int uint;
+#include <cstdlib>
+#include <cstddef>
+#include <cstring>
+#include <cmath>
+#include <cassert>
+#include <vector>
+#include <string>
+#include <set>
+#include <map>
+#include <unordered_set>
+#include <unordered_map>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <iomanip>
+#include <utility>
+#include <algorithm>
+#include <functional>
 
-//
-//
-//
-const unsigned int fieldw = 4;
+// OpenMP
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
+// Debugging-related macros.
+#ifdef DEBUG
+#define IF_NDEBUG_TRY
+#define IF_NDEBUG_CATCH_ALL_EXCEPTIONS
+
+#else
+#define NDEBUG
+#define IF_NDEBUG_TRY \
+    try {
+#define IF_NDEBUG_CATCH_ALL_EXCEPTIONS \
+    } catch (const std::exception& e) { \
+        std::cerr << "Aborted."; \
+        if (e.what() != std::exception().what()) \
+            std::cerr << " (" << e.what() << ")"; \
+        std::cerr << "\n"; \
+        return 13; \
+    }
+
+#endif
+
+using std::vector;
+using std::string;
+using std::set;
+using std::map;
+using std::unordered_set;
+using std::unordered_map;
+using std::ostream;
+using std::istream;
+using std::streambuf;
+using std::cout;
+using std::cerr;
+using std::cin;
+using std::flush;
+using std::endl;
+using std::ifstream;
+using std::ofstream;
+using std::stringstream;
+using std::pair;
+using std::make_pair;
+using std::stoi;
+using std::getline;
+using std::exception;
+using std::move;
+
+typedef unsigned int uint;
+typedef unsigned char uchar;
 
 //
 // Maximum line length for parsing input files.
@@ -53,6 +115,11 @@ const int id_len = 255;
 const int libz_buffer_size = 1048576;
 
 //
+// Number of digits to use when writing numbers in scientific notation.
+//
+const unsigned int fieldw = 4;
+
+//
 // Supported file types
 //
 enum class FileT {unknown,
@@ -62,10 +129,10 @@ enum class FileT {unknown,
     bowtie,  sam, bam, tsv,
     bustard, phase, fastphase, beagle};
 
-std::string remove_suffix(FileT, const std::string&);
+std::string remove_suffix(FileT, const string&);
 
-FileT guess_file_type(const std::string&);
+FileT guess_file_type(const string&);
 
-void escape_char(char c, std::string& s);
+void escape_char(char c, string& s);
 
 #endif
