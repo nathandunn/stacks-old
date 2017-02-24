@@ -149,7 +149,7 @@ sub execute_stacks {
             # Pull the depth of coverage from pstacks.
             #
             my @lines   = grep(/mean coverage/, @results);
-            my ($depth) = ($lines[0] =~ /^Created \d+ loci; mean coverage is ([\d.]+) \(stdev: [\d.]+, max: [\d.]+\).$/);
+            my ($depth) = ($lines[0] =~ /^Kept \d+ loci; mean coverage is ([\d.]+) \(stdev: [\d.]+, max: [\d.]+\).$/);
             push(@depths_of_cov, [$sample->{'file'}, $depth]);
         }
         write_results(\@results, $log_fh);
