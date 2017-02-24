@@ -1071,24 +1071,25 @@ void help() {
 }
 
 void report_options(std::ostream& os) {
-    os << "Alignments file: " << in_file << "\n"
-         << "Output directory: " << out_path << "\n"
-         << "Sample ID: " << sql_id << "\n"
-         << "Min locus depth: " << min_stack_cov << "\n"
-         << "Max clipped proportion: " << max_clipped << "\n"
-         << "Min mapping quality: " << min_mapping_qual << "\n";
+    os << "pstacks paramters selected:\n"
+       << "  Alignments file: " << in_file << "\n"
+       << "  Output directory: " << out_path << "\n"
+       << "  Sample ID: " << sql_id << "\n"
+       << "  Min locus depth: " << min_stack_cov << "\n"
+       << "  Max clipped proportion: " << max_clipped << "\n"
+       << "  Min mapping quality: " << min_mapping_qual << "\n";
 
     // Model.
     if (model_type == snp) {
-        os << "Model: snp\n"
-           << "Model alpha: " << alpha << "\n";
+        os << "  Model: snp\n"
+           << "    Model alpha: " << alpha << "\n";
     } else if (model_type == bounded) {
-        os << "Model: snp\n"
-           << "Model alpha: " << alpha << "\n"
-           << "Model lower bound: " << bound_low << "\n"
-           << "Model higher bound: " << bound_high << "\n";
+        os << "  Model: snp\n"
+           << "    Model alpha: " << alpha << "\n"
+           << "    Model lower bound: " << bound_low << "\n"
+           << "    Model higher bound: " << bound_high << "\n";
     } else if (model_type == ::fixed) {
-        os << "Model: fixed\n"
-           << "Model barcode err. prob.: " << barcode_err_freq << "\n";
+        os << "  Model: fixed\n"
+           << "    Model barcode err. prob.: " << barcode_err_freq << "\n";
     }
 }
