@@ -40,8 +40,10 @@ invert_cigar(string cigar)
 int
 parse_cigar(const char *cigar_str, vector<pair<char, uint> > &cigar, bool check_correctness)
 {
-    const char* p = cigar_str;
-    uint seqlen = 0;
+    cigar.clear();
+    const char* p      = cigar_str;
+    uint        seqlen = 0;
+
     while(*p != '\0') {
         char* q;
         uint len = strtol(p, &q, 10);
@@ -53,17 +55,20 @@ parse_cigar(const char *cigar_str, vector<pair<char, uint> > &cigar, bool check_
                 cerr << "Error: Malformed CIGAR string '" << cigar_str << "'.\n";
                 throw std::exception();
             }
-            if (c != 'M'
-                    && c != '='
-                    && c != 'X'
-                    && c != 'I'
-                    && c != 'D'
-                    && c != 'S'
-                    && c != 'N'
-                    && c != 'H'
-                    && c != 'P'
-                    ) {
+            switch (c) {
+            case 'M':
+            case '=':
+            case 'X':
+            case 'I':
+            case 'D':
+            case 'S':
+            case 'N':
+            case 'H':
+            case 'P':
+                break;
+            default:
                 cerr << "Warning: Unknown CIGAR operation '" << c << "' in '" << cigar_str << "'.\n";
+                break;
             }
         }
 
