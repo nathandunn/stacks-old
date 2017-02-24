@@ -54,11 +54,12 @@ int main (int argc, char* argv[]) {
     uint sample_cnt = samples.size();
 
     cerr << "cstacks paramters selected:\n"
-         << "  Loci matched based on " << (search_type == sequence ? "sequence identity" : "genomic location") << ".\n";
+         << "  Database/Batch ID: " << batch_id << "\n"
+         << "  Loci matched based on " << (search_type == sequence ? "sequence identity" : "aligned genomic location") << ".\n";
     if (search_type == sequence)
-        cerr << "  Number of mismatches allowed between stacks: " << ctag_dist << "\n";
-    cerr << "  Gapped alignments: " << (gapped_alignments ? "enabled" : "disabled") << "\n"
-         << "Constructing catalog from " << sample_cnt << " samples.\n";
+        cerr << "  Number of mismatches allowed between stacks: " << ctag_dist << "\n"
+             << "  Gapped alignments: " << (gapped_alignments ? "enabled" : "disabled") << "\n";
+    cerr << "Constructing catalog from " << sample_cnt << " samples.\n";
 
     //
     // Set the number of OpenMP parallel threads to execute.
