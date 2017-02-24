@@ -58,6 +58,7 @@ int main (int argc, char* argv[]) {
     parse_command_line(argc, argv);
 
     report_options(cerr);
+    cerr << std::fixed << std::setprecision(2);
 
     //
     // Set limits to call het or homozygote according to chi-square distribution with one
@@ -621,13 +622,14 @@ void populate_merged_tags(map<int, PStack *> &unique, map<int, MergedStack *> &m
     double max;
     calc_coverage_distribution(unique, merged, mean, stdev, max);
 
-    cerr << "Created " << merged.size() << " loci; mean coverage is " << mean << " (stdev: " << stdev << ", max: " << max << ").\n";
+    cerr << "Created " << merged.size() << " loci; mean coverage is " << mean << " (stdev: " << stdev << ", max: " << size_t(max) << ").\n";
 }
 
 void delete_low_cov_loci(map<int, MergedStack *>& merged, const map<int, PStack*>& unique) {
 
     size_t n_deleted = 0;
     size_t n_reads = 0;
+    size_t n_rm_reads = 0;
     vector<int> to_erase;
 
     for (auto& mtag : merged) {
@@ -635,20 +637,28 @@ void delete_low_cov_loci(map<int, MergedStack *>& merged, const map<int, PStack*
         for (int utag_id : mtag.second->utags)
             depth += unique.at(utag_id)->count;
 
+        n_reads += depth;
         if (depth < min_stack_cov) {
             delete mtag.second;
             to_erase.push_back(mtag.first);
 
             n_deleted++;
-            n_reads += depth;
+            n_rm_reads += depth;
         }
     }
 
     for (int id : to_erase)
         merged.erase(id);
 
-    cerr << "Discarded " << n_deleted << " low coverage loci comprising " << n_reads << " reads.\n"
-         << "Now working with " << merged.size() << " loci.\n";
+    double mean;
+    double stdev;
+    double max;
+    calc_coverage_distribution(unique, merged, mean, stdev, max);
+
+    cerr << "Discarded " << n_deleted << " low coverage loci comprising " << n_rm_reads
+         << " (" << as_percentage((double) n_rm_reads/ n_reads) << ") reads.\n"
+         << "Kept " << merged.size() << " loci; mean coverage is "
+         << mean << " (stdev: " << stdev << ", max: " << size_t(max) << ").\n";
 }
 
 //
