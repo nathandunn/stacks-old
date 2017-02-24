@@ -136,7 +136,7 @@ int main (int argc, char* argv[]) {
     //
     parse_command_line(argc, argv);
 
-    cerr << "populations paramters selected:\n"
+    cerr << "populations parameters selected:\n"
          << "  Fst kernel smoothing: " << (kernel_smoothed == true ? "on" : "off") << "\n"
          << "  Bootstrap resampling: ";
     if (bootstrap)

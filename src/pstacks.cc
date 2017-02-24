@@ -1071,7 +1071,7 @@ void help() {
 }
 
 void report_options(std::ostream& os) {
-    os << "pstacks paramters selected:\n"
+    os << "pstacks parameters selected:\n"
        << "  Alignments file: " << in_file << "\n"
        << "  Output directory: " << out_path << "\n"
        << "  Sample ID: " << sql_id << "\n"

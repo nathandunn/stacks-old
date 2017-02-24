@@ -53,7 +53,7 @@ int main (int argc, char* argv[]) {
 
     uint sample_cnt = samples.size();
 
-    cerr << "cstacks paramters selected:\n"
+    cerr << "cstacks parameters selected:\n"
          << "  Database/Batch ID: " << batch_id << "\n"
          << "  Loci matched based on " << (search_type == sequence ? "sequence identity" : "aligned genomic location") << ".\n";
     if (search_type == sequence)
