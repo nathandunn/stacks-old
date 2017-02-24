@@ -74,7 +74,7 @@ int main (int argc, char* argv[]) {
     //
     if (max_rem_dist == -1) max_rem_dist = max_utag_dist + 2;
 
-    cerr << "ustacks paramters selected:\n"
+    cerr << "ustacks parameters selected:\n"
          << "  Sample ID: " << sql_id << "\n"
          << "  Min depth of coverage to create a stack: " << min_merge_cov << "\n"
          << "  Max distance allowed between stacks: " << max_utag_dist << "\n"
