@@ -70,6 +70,52 @@ AC_FUNC_MALLOC
 AC_FUNC_REALLOC
 AC_CHECK_FUNCS([floor memset pow sqrt])
 
+#
+# Test if regular expressions are functional. Early regex implementations have nonfunctional stubs,
+# so the check for C++11 succeeds, but the compiled code will throw an exception.
+#
+dnl AC_LANG(C++)
+dnl AC_MSG_CHECKING([for functional regular expressions])
+dnl AC_RUN_IFELSE([AC_LANG_SOURCE([[
+dnl #include <regex>
+dnl int main() {
+dnl   const std::regex regex(".*");
+dnl   const std::string string = "This should match!";
+dnl   const auto result = std::regex_search(string, regex);
+dnl   return result ? 0 : 1;
+dnl }
+dnl ]])],
+dnl     [AC_DEFINE([REGEX_FUNCTIONAL], [1], [Regular expressions are defined and implemented])],
+dnl     [AC_MSG_ERROR([Regular expressions are not functional, you need g++ 4.9.0 or greater.])],
+dnl     [AC_MSG_WARN([Requires g++ 4.9.0 or greater.])]
+dnl )
+dnl AC_MSG_RESULT([yes])
+
+AC_LANG(C++)
+AC_DEFUN([AC_REGEX_FUNC], [
+AC_CACHE_CHECK([for functional regular expressions], [stacks_cv_header_regex_func],
+[
+stacks_cv_header_regex_func=no
+AC_RUN_IFELSE([AC_LANG_SOURCE([[
+#include <regex>
+int main() {
+  const std::regex regex(".*");
+  const std::string string = "This should match!";
+  const auto result = std::regex_search(string, regex);
+  return result ? 0 : 1;
+}
+]])],
+    [stacks_cv_header_regex_func=yes],
+    [AC_MSG_ERROR([Regular expressions are not functional, you need g++ 4.9.0 or greater.])],
+    [AC_MSG_WARN([Requires g++ 4.9.0 or greater.])]
+)])
+if test "$stacks_cv_header_regex_func" = yes; then
+    AC_DEFINE([REGEX_FUNCTIONAL], [1], [Regular expressions are defined and implemented])
+fi
+])
+
+AC_REGEX_FUNC
+
 # For test harness
 AC_PROG_AWK
 
