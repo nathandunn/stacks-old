@@ -110,10 +110,10 @@ int main (int argc, char* argv[]) {
     while (!samples.empty()) {
         map<int, QLocus *> sample;
 
-        cerr << "\nProcessing sample " << s.second << " [" << i << " of " << sample_cnt << "]\n";
-
         s = samples.front();
         samples.pop();
+
+        cerr << "\nProcessing sample " << s.second << " [" << i << " of " << sample_cnt << "]\n";
 
         if (!load_loci(s.second, sample, false, false, compressed)) {
             cerr << "Failed to load sample " << i << "\n";
