@@ -136,20 +136,27 @@ void Graph::rebuild(const CLocReadSet& readset, size_t min_kmer_count) {
 }
 
 bool Graph::topo_sort() {
+    if (!sorted_spaths_.empty())
+        // Already sorted.
+        return true;
+
     vector<uchar> visitdata; // 0/1s; whether each spath is a parent in the recursion
     visitdata.reserve(simple_paths_.size());
 
     // Note: no need to reset the SPath::visitdata's to NULL as this is
     // the first algo to run.
 
-    for (SPath& p : simple_paths_)
-        if(!topo_sort(&p, visitdata))
+    for (SPath& p : simple_paths_) {
+        if(!topo_sort(&p, visitdata)) {
+            sorted_spaths_.resize(0);
             return false;
+        }
+    }
 
     return true;
 }
 
-bool Graph::topo_sort(const SPath* p, vector<uchar>& visitdata) {
+bool Graph::topo_sort(SPath* p, vector<uchar>& visitdata) {
     if (p->visitdata != NULL) {
         if (*(uchar*) p->visitdata)
             // The recursion looped; not a DAG.
@@ -161,7 +168,7 @@ bool Graph::topo_sort(const SPath* p, vector<uchar>& visitdata) {
         visitdata.push_back(true);
         p->visitdata = (void*)&visitdata.back();
         for (size_t nt2=0; nt2<4; ++nt2) {
-            const SPath* s = p->succ(nt2);
+            SPath* s = p->succ(nt2);
             if (s != NULL)
                 if (!topo_sort(s, visitdata))
                     return false;
@@ -174,7 +181,13 @@ bool Graph::topo_sort(const SPath* p, vector<uchar>& visitdata) {
     return true;
 }
 
-vector<const SPath*> Graph::find_best_path() const {
+bool Graph::find_best_path(vector<const SPath*>& best_path) {
+    best_path.resize(0);
+
+    assert(!empty());
+    if(!topo_sort())
+        // Not a DAG.
+        return false;
 
     #ifdef DEBUG
     // This is unnecessary as we iterate on a sort.
@@ -215,7 +228,6 @@ vector<const SPath*> Graph::find_best_path() const {
     }
 
     // Find the best path.
-    vector<const SPath*> best_path;
     const SPath* curr = best_start;
     while(curr != NULL) {
         best_path.push_back(curr);
@@ -234,7 +246,7 @@ vector<const SPath*> Graph::find_best_path() const {
         // if succ_scores was {0,0,0,0}, curr is null
     }
 
-    return best_path;
+    return true;
 }
 
 void Graph::dump_gfa(const std::string& path) const {

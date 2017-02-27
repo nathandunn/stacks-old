@@ -81,25 +81,26 @@ int main(int argc, char** argv) {
 }
 
 void process_one_locus(const CLocReadSet& loc, Graph& graph) {
-    graph.rebuild(loc, min_km_count);
-    if (graph.n_simple_paths() == 0)
-        // Graph is empty.
-        return;
-
-    if (!graph.topo_sort())
-        // Not a DAG.
-        return;
-
-    vector<const SPath*> best_path = graph.find_best_path();
-
-    if (gfa_out)
-        graph.dump_gfa(out_dir + to_string(loc.id()) + ".gfa");
-
     if (fasta_out) {
         ofstream fasta (out_dir + to_string(loc.id()) + ".fa");
         for (const Read& r : loc.reads())
             fasta << ">" << r.name << "\n" << r.seq.str() << "\n";
     }
+
+    //
+    // Assemble the reads.
+    //
+    graph.rebuild(loc, min_km_count);
+    if (graph.empty())
+        return;
+
+    if (gfa_out)
+        graph.dump_gfa(out_dir + to_string(loc.id()) + ".gfa");
+
+    vector<const SPath*> best_path;
+    if (!graph.find_best_path(best_path))
+        // Not a DAG.
+        return;
 }
 
 const string help_string = string() +
