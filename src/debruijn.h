@@ -140,7 +140,9 @@ public:
     size_t n_pred() const {return first_->n_pred();}
     size_t n_succ() const {return last_->n_succ();}
     const SPath* succ(size_t nt2) const {const Node* n = last_->succ(nt2); return n == NULL ? NULL : n->sp_;}
+          SPath* succ(size_t nt2)       {return (SPath*) ((const SPath*)this)->succ(nt2);}
     const SPath* first_succ() const {const Node* n = last_->first_succ(); return n == NULL ? NULL : n->sp_;}
+          SPath* first_succ()       {return (SPath*) ((const SPath*)this)->first_succ();}
 
     size_t n_nodes() const {return d_.n_nodes;}
     size_t km_cumcount() const {return d_.km_cumcount;}
@@ -171,15 +173,17 @@ class Graph {
     std::unordered_map<Kmer, KmMapValue> map_;
     std::vector<Node> nodes_;
     std::vector<SPath> simple_paths_;
-    std::vector<const SPath*> sorted_spaths_; // The simple paths, sorted topologically, with the terminal (no successors) ones first.
+    std::vector<SPath*> sorted_spaths_; // The simple paths, sorted topologically, with the terminal (no successors) ones first.
 
 public:
     Graph(size_t km_length) : km_len_(km_length) {}
     void rebuild(const CLocReadSet& readset, size_t min_kmer_count);
 
-    size_t n_simple_paths() const {return simple_paths_.size();}
-    bool topo_sort();
-    vector<const SPath*> find_best_path() const;
+    size_t empty() const {return simple_paths_.empty();}
+
+    // Finds the best path in the graph.
+    // Return false if the graph is not a DAG.
+    bool find_best_path(std::vector<const SPath*>& best_path);
 
     void dump_gfa(const std::string& path) const;
 
@@ -191,7 +195,8 @@ private:
     // Sort topologically. Returns false if the graph is not a DAG.
     // The nodes record whether they are a parent in the current recursion
     // (and we use uchars instead of bools because vector<bool> is specialized).
-    bool topo_sort(const SPath* p, vector<uchar>& visitdata);
+    bool topo_sort();
+    bool topo_sort(SPath* p, vector<uchar>& visitdata);
 };
 
 //
