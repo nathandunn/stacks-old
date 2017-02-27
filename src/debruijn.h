@@ -88,14 +88,16 @@ public:
 
     size_t n_pred() const {return n_pred_;}
     size_t n_succ() const {return size_t(succ_[0]!=NULL) + size_t(succ_[1]!=NULL) + size_t(succ_[2]!=NULL) + size_t(succ_[3]!=NULL);}
-    Node* succ(size_t nt2) {return succ_[nt2];}
-    Node* first_succ() {Node* s = succ_[0]; for (size_t nt2=1; nt2<4; ++nt2) { if (s != NULL) break; s = succ(nt2);} return s;}
+    const Node* succ(size_t nt2) const {return succ_[nt2];}
+          Node* succ(size_t nt2)       {return succ_[nt2];} // (non-const)
+    const Node* first_succ() const {const Node* s = succ_[0]; for (size_t nt2=1; nt2<4; ++nt2) { if (s != NULL) break; s = succ(nt2);} return s;}
+          Node* first_succ()       {return (Node*) ((const Node*)this)->first_succ();}
 
     const Kmer& km() const {return d_.km;}
     size_t count() const {return d_.count;}
 
 private:
-    SPath* sp_;
+    mutable SPath* sp_;
     friend class SPath;
 };
 
@@ -137,12 +139,12 @@ public:
 
     size_t n_pred() const {return first_->n_pred();}
     size_t n_succ() const {return last_->n_succ();}
-    SPath* succ(size_t nt2) {Node* n = last_->succ(nt2); return n == NULL ? NULL : n->sp_;}
-    SPath* first_succ() {Node* n = last_->first_succ(); return n == NULL ? NULL : n->sp_;}
+    const SPath* succ(size_t nt2) const {const Node* n = last_->succ(nt2); return n == NULL ? NULL : n->sp_;}
+    const SPath* first_succ() const {const Node* n = last_->first_succ(); return n == NULL ? NULL : n->sp_;}
 
     size_t n_nodes() const {return d_.n_nodes;}
     size_t km_cumcount() const {return d_.km_cumcount;}
-    std::string contig_str(size_t km_len);
+    std::string contig_str(size_t km_len) const;
 
     const Node* first() const {return first_;}
 };
@@ -169,7 +171,7 @@ class Graph {
     std::unordered_map<Kmer, KmMapValue> map_;
     std::vector<Node> nodes_;
     std::vector<SPath> simple_paths_;
-    std::vector<SPath*> sorted_spaths_; // The simple paths, sorted topologically, with the terminal (no successors) ones first.
+    std::vector<const SPath*> sorted_spaths_; // The simple paths, sorted topologically, with the terminal (no successors) ones first.
 
 public:
     Graph(size_t km_length) : km_len_(km_length) {}
@@ -177,9 +179,9 @@ public:
 
     size_t n_simple_paths() const {return simple_paths_.size();}
     bool topo_sort();
-    vector<SPath*> find_best_path();
+    vector<const SPath*> find_best_path() const;
 
-    void dump_gfa(const std::string& path);
+    void dump_gfa(const std::string& path) const;
 
 private:
     // Resets the object.
@@ -189,7 +191,7 @@ private:
     // Sort topologically. Returns false if the graph is not a DAG.
     // The nodes record whether they are a parent in the current recursion
     // (and we use uchars instead of bools because vector<bool> is specialized).
-    bool topo_sort(SPath* p, vector<uchar>& visitdata);
+    bool topo_sort(const SPath* p, vector<uchar>& visitdata);
 };
 
 //

@@ -24,7 +24,7 @@ SPath::SPath(Node* first) : first_(first), last_(NULL), d_(), visitdata(NULL) {
     last_ = n;
 }
 
-string SPath::contig_str(size_t km_len) {
+string SPath::contig_str(size_t km_len) const {
 
     string s = first_->km().str(km_len);
     Node* n = first_;
@@ -149,7 +149,7 @@ bool Graph::topo_sort() {
     return true;
 }
 
-bool Graph::topo_sort(SPath* p, vector<uchar>& visitdata) {
+bool Graph::topo_sort(const SPath* p, vector<uchar>& visitdata) {
     if (p->visitdata != NULL) {
         if (*(uchar*) p->visitdata)
             // The recursion looped; not a DAG.
@@ -161,7 +161,7 @@ bool Graph::topo_sort(SPath* p, vector<uchar>& visitdata) {
         visitdata.push_back(true);
         p->visitdata = (void*)&visitdata.back();
         for (size_t nt2=0; nt2<4; ++nt2) {
-            SPath* s = p->succ(nt2);
+            const SPath* s = p->succ(nt2);
             if (s != NULL)
                 if (!topo_sort(s, visitdata))
                     return false;
@@ -174,11 +174,11 @@ bool Graph::topo_sort(SPath* p, vector<uchar>& visitdata) {
     return true;
 }
 
-vector<SPath*> Graph::find_best_path() {
+vector<const SPath*> Graph::find_best_path() const {
 
     #ifdef DEBUG
     // This is unnecessary as we iterate on a sort.
-    for (SPath& p : simple_paths_)
+    for (const SPath& p : simple_paths_)
         p.visitdata = NULL;
     #endif
 
@@ -186,11 +186,11 @@ vector<SPath*> Graph::find_best_path() {
     vector<size_t> scores;
     scores.reserve(sorted_spaths_.size());
 
-    for (SPath* p : sorted_spaths_) {
+    for (const SPath* p : sorted_spaths_) {
         //n.b. Terminal nodes were added first.
         size_t succ_scores[4];
         for (size_t nt2=0; nt2<4; ++nt2) {
-            SPath* succ = p->succ(nt2);
+            const SPath* succ = p->succ(nt2);
             if (succ != NULL)
                 //n.b. as the graph is sorted, succ->visitdata has been set.
                 succ_scores[nt2] = *(size_t*)succ->visitdata;
@@ -203,7 +203,7 @@ vector<SPath*> Graph::find_best_path() {
 
     // Find the best starting node.
     auto p = sorted_spaths_.rbegin();
-    SPath* best_start = *p;
+    const SPath* best_start = *p;
     size_t best_score = *(size_t*)best_start->visitdata;
     ++p;
     while(p != sorted_spaths_.rend()) {
@@ -215,14 +215,14 @@ vector<SPath*> Graph::find_best_path() {
     }
 
     // Find the best path.
-    vector<SPath*> best_path;
-    SPath* curr = best_start;
+    vector<const SPath*> best_path;
+    const SPath* curr = best_start;
     while(curr != NULL) {
         best_path.push_back(curr);
 
         size_t succ_scores[4];
         for (size_t nt2=0; nt2<4; ++nt2) {
-            SPath* succ = curr->succ(nt2);
+            const SPath* succ = curr->succ(nt2);
             if (succ != NULL)
                 succ_scores[nt2] = *(size_t*)succ->visitdata;
             else
@@ -237,7 +237,7 @@ vector<SPath*> Graph::find_best_path() {
     return best_path;
 }
 
-void Graph::dump_gfa(const std::string& path) {
+void Graph::dump_gfa(const std::string& path) const {
     ofstream ofs (path);
     if (!ofs) {
         cerr << "Error: Failed to open '" << path << "' for writing.\n";
@@ -248,15 +248,15 @@ void Graph::dump_gfa(const std::string& path) {
     ofs << "H\tVN:Z:1.0\n";
 
     // Write the simple paths.
-    for (SPath& p : simple_paths_)
+    for (const SPath& p : simple_paths_)
         // n.b. In principle the length of the contigs should be (n_nodes+km_len-1).
         // However for visualization purposes we use n_nodes (for now at least).
         ofs << "S\t" << index_of(p.first()) << "\t*\tLN:i:" << p.n_nodes() << "\tKC:i:" << p.km_cumcount() << "\n";
 
     // Write the edges.
-    for (SPath& p : simple_paths_) {
+    for (const SPath& p : simple_paths_) {
         for (size_t nt2=0; nt2<4; ++nt2) {
-            SPath* succ = p.succ(nt2);
+            const SPath* succ = p.succ(nt2);
             if (succ != NULL)
                 ofs << "L\t" << index_of(p.first()) << "\t+\t" << index_of(succ->first()) << "\t+\tM" << (km_len_-1) << "\n";
         }
