@@ -8,6 +8,8 @@
 #include "locus.h"
 #include "BamCLocReader.h"
 #include "debruijn.h"
+#include "GappedAln.h"
+#include "aln_utils.h"
 
 using namespace std;
 
@@ -103,6 +105,19 @@ void process_one_locus(const CLocReadSet& loc, Graph& graph) {
         return;
 
     string ctg = SPath::contig_str(best_path.begin(), best_path.end(), km_length);
+
+    //
+    // Align each read to the contig.
+    //
+    vector<string> cigars;
+    GappedAln aligner;
+    for (const SRead& r : loc.reads()) {
+        string seq = r.seq.str();
+        aligner.init(ctg.length(), r.seq.length());
+        assert(seq.length() == r.seq.length());
+        aligner.align(ctg, seq);
+        cigars.push_back(aligner.result().cigar);
+    }
 }
 
 const string help_string = string() +
