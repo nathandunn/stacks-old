@@ -24,19 +24,6 @@ SPath::SPath(Node* first) : first_(first), last_(NULL), d_(), visitdata(NULL) {
     last_ = n;
 }
 
-string SPath::contig_str(size_t km_len) const {
-
-    string s = first_->km().str(km_len);
-    Node* n = first_;
-    while (n != last_) {
-        s.push_back(Nt2::nt_to_ch[n->km().back(km_len)]);
-        n = n->first_succ();
-    }
-    s.push_back(Nt2::nt_to_ch[n->km().back(km_len)]);
-
-    return s;
-}
-
 void Graph::rebuild(const CLocReadSet& readset, size_t min_kmer_count) {
 
     //cerr << "Building graph...\n"; //debug

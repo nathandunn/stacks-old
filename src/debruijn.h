@@ -146,9 +146,11 @@ public:
 
     size_t n_nodes() const {return d_.n_nodes;}
     size_t km_cumcount() const {return d_.km_cumcount;}
-    std::string contig_str(size_t km_len) const;
 
     const Node* first() const {return first_;}
+
+    template<typename SPathIt>
+    static std::string contig_str(SPathIt first, SPathIt past, size_t km_len);
 };
 
 //
@@ -228,6 +230,34 @@ Kmer::Kmer(size_t km_len, DNASeq4::iterator& first, DNASeq4::iterator past) : a_
             ++km_start;
         }
     }
+}
+
+template<typename SPathIt>
+std::string SPath::contig_str(SPathIt first, SPathIt past, size_t km_len) {
+
+    // Compute the final size.
+    size_t ctg_len = km_len - 1;
+    for (SPathIt sp=first; sp!=past; ++sp)
+        ctg_len += (*sp)->n_nodes();
+
+    // Initialize the contig with the contents of the first kmer minus its last
+    // nucleotide.
+    std::string ctg = (*first)->first_->km().str(km_len);
+    ctg.pop_back();
+    ctg.reserve(ctg_len);
+
+    // Extend the contig; loop over every Node of every SPath.
+    while (first != past) {
+        Node* n = (*first)->first_;
+        while (n != (*first)->last_) {
+            ctg.push_back(Nt2::nt_to_ch[n->km().back(km_len)]);
+            n = n->first_succ();
+        }
+        ctg.push_back(Nt2::nt_to_ch[n->km().back(km_len)]);
+        ++first;
+    }
+
+    return ctg;
 }
 
 #endif
