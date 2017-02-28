@@ -101,6 +101,8 @@ void process_one_locus(const CLocReadSet& loc, Graph& graph) {
     if (!graph.find_best_path(best_path))
         // Not a DAG.
         return;
+
+    string ctg = SPath::contig_str(best_path.begin(), best_path.end(), km_length);
 }
 
 const string help_string = string() +
