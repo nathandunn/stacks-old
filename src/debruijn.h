@@ -45,7 +45,7 @@ public:
         std::string s;
         s.reserve(km_len);
         for (size_t i=0; i<km_len; ++i)
-            s.push_back(Nt2::nt_to_ch[a_[i]]);
+            s.push_back(Nt2::to_ch(a_[i]));
         return s;
     }
 
@@ -226,7 +226,7 @@ Kmer::Kmer(size_t km_len, DNASeq4::iterator& first, DNASeq4::iterator past) : a_
     // Build the kmer.
     if (n_good == km_len) {
         for (size_t i=0; i<km_len; ++i) {
-            a_.set(i, Nt2::nt4_to_nt[km_start.nt()]);
+            a_.set(i, Nt2::from_nt4(km_start.nt()));
             ++km_start;
         }
     }
@@ -250,10 +250,10 @@ std::string SPath::contig_str(SPathIt first, SPathIt past, size_t km_len) {
     while (first != past) {
         Node* n = (*first)->first_;
         while (n != (*first)->last_) {
-            ctg.push_back(Nt2::nt_to_ch[n->km().back(km_len)]);
+            ctg.push_back(Nt2::to_ch(n->km().back(km_len)));
             n = n->first_succ();
         }
-        ctg.push_back(Nt2::nt_to_ch[n->km().back(km_len)]);
+        ctg.push_back(Nt2::to_ch(n->km().back(km_len)));
         ++first;
     }
 

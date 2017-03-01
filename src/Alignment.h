@@ -48,7 +48,7 @@ public:
         operator bool() const {return cig_it_ != cig_past_;}
 
         size_t nt() const {if (cig_it_->first=='M') return seq_it_.nt(); else {assert(cig_it_->first=='D'); return Nt4::n;}}
-        char operator* () const {return Nt4::nt_to_ch[nt()];}
+        char operator* () const {return Nt4::to_ch(nt());}
 
     private:
         void skip_insertion();

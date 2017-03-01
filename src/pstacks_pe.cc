@@ -261,7 +261,7 @@ vector<vector<PStack> > load_aligned_reads(
     else if (in_file_type == FileT::tsv)
         pe_reads_f = new Tsv(paired_alns_path.c_str());
     else
-        assert(NEVER);
+        assert(false);
 
     // Read and stack the alignments, per locus.
     vector<set<PStack> > stack_sets_per_loc (fwloci_info.size());
