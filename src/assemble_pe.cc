@@ -10,6 +10,7 @@
 #include "debruijn.h"
 #include "GappedAln.h"
 #include "aln_utils.h"
+#include "Alignment.h"
 
 using namespace std;
 
