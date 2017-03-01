@@ -258,9 +258,7 @@ struct Read {
         : seq(std::move(s)), name(std::move(n))
         {}
     Read(Read&&) = default;
-    Read(const Read&) = delete;
     Read& operator= (Read&&) = default;
-    Read& operator= (const Read&) = delete;
 };
 
 //
