@@ -170,8 +170,8 @@ bool bp_compare(Locus *, Locus *);
 struct SRead : Read {
     size_t sample; // index in MetaPopInfo::samples_
 
-    SRead(DNASeq4&& seq, std::string&& n, size_t spl)
-            : Read(std::move(seq), std::move(n)), sample(spl)
+    SRead(Read&& r, size_t spl)
+            : Read(std::move(r)), sample(spl)
             {}
 };
 

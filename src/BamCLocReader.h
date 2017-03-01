@@ -76,7 +76,7 @@ bool BamCLocReader::read_one_locus(CLocReadSet& readset) {
 
     // Read all the reads of the locus, and one more.
     do {
-        readset.add(SRead(rec.seq(), rec.qname(), rg_to_sample_.at(rec.read_group())));
+        readset.add(SRead(Read(rec.seq(), rec.qname()), rg_to_sample_.at(rec.read_group())));
         if(!bam_f_->next_record()) {
             // EOF
             delete bam_f_;
