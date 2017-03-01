@@ -22,14 +22,8 @@
 #define __WRITE_H__
 
 #include <string>
-using std::string;
 #include <iostream>
 #include <fstream>
-using std::ofstream;
-using std::cin;
-using std::cout;
-using std::cerr;
-using std::endl;
 #include <zlib.h>
 #include <errno.h>
 

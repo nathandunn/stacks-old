@@ -30,22 +30,11 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-using std::stringstream;
-using std::istream;
-using std::ofstream;
-using std::cin;
-using std::cout;
-using std::cerr;
-using std::endl;
 
 #include <vector>
-using std::vector;
 #include <map>
-using std::map;
 #include <set>
-using std::set;
 #include <utility>
-using std::pair;
 
 #include "constants.h"
 #include "renz.h"

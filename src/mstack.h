@@ -22,16 +22,10 @@
 #define __MSTACK_H__
 
 #include <string>
-using std::string;
 #include <vector>
-using std::vector;
 #include <map>
-using std::map;
 #include <utility>
-using std::pair;
-using std::make_pair;
 #include<iostream>
-using std::cerr;
 
 #include "stacks.h"
 
@@ -94,17 +88,17 @@ MergedStack::MergedStack(MergedStack&& o)
         , con (o.con)
         , len (o.len)
         , count (o.count)
-        , utags (std::move(o.utags))
-        , remtags (std::move(o.remtags))
+        , utags (move(o.utags))
+        , remtags (move(o.remtags))
         , matrix (o.matrix)
-        , dist (std::move(o.dist))
-        , alns (std::move(o.alns))
+        , dist (move(o.dist))
+        , alns (move(o.alns))
         , cohort_id (o.cohort_id)
         , lnl (o.lnl)
-        , loc (std::move(o.loc))
-        , snps (std::move(o.snps))
-        , alleles (std::move(o.alleles))
-        , gaps (std::move(o.gaps))
+        , loc (move(o.loc))
+        , snps (move(o.snps))
+        , alleles (move(o.alleles))
+        , gaps (move(o.gaps))
         , deleveraged (o.deleveraged)
         , masked (o.masked)
         , blacklisted (o.blacklisted)

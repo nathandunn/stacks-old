@@ -27,6 +27,7 @@
 #include <iomanip>
 #include <cstdlib>
 
+#include "constants.h"
 #include "process_radtags.h"
 
 using namespace std;
@@ -96,6 +97,7 @@ map<string, int>           renz_cnt;
 map<string, int>           renz_len;
 
 int main (int argc, char* argv[]) {
+    IF_NDEBUG_TRY
 
     initialize_renz(renz, renz_cnt, renz_len);
 
@@ -233,6 +235,7 @@ int main (int argc, char* argv[]) {
     print_results(argc, argv, barcodes, counters, barcode_log);
 
     return 0;
+    IF_NDEBUG_CATCH_ALL_EXCEPTIONS
 }
 
 template <typename fhType>
@@ -1246,13 +1249,13 @@ int parse_command_line(int argc, char* argv[]) {
 }
 
 void version() {
-    std::cerr << "process_radtags " << VERSION << "\n\n";
+    cerr << "process_radtags " << VERSION << "\n\n";
 
     exit(0);
 }
 
 void help() {
-    std::cerr << "process_radtags " << VERSION << "\n"
+    cerr << "process_radtags " << VERSION << "\n"
               << "process_radtags -p in_dir [--paired [--interleaved]] [-i format] -b barcode_file -o out_dir -e enz [-c] [-q] [-r] [-t len] [-D] [-w size] [-s lim]\n"
               << "process_radtags -f in_file [-i format] -b barcode_file -o out_dir -e enz [-c] [-q] [-r] [-t len] [-D] [-w size] [-s lim]\n"
               << "process_radtags -1 pair_1 -2 pair_2 [-i format] -b barcode_file -o out_dir -e enz [-c] [-q] [-r] [-t len] [-D] [-w size] [-s lim]\n"
@@ -1295,20 +1298,20 @@ void help() {
     uint cnt = renz_cnt.size();
     it = renz_cnt.begin();
     for (uint i = 1; i <= cnt; i++) {
-        std::cerr << "'" << it->first << "'";
+        cerr << "'" << it->first << "'";
         if (i < cnt - 1)
-            std::cerr << ", ";
+            cerr << ", ";
         else if (i == cnt - 1)
-            std::cerr << ", or ";
+            cerr << ", or ";
 
         if (i % 8 == 0)
-            std::cerr << "\n      ";
+            cerr << "\n      ";
 
         it++;
     }
     cerr << "\n";
 
-    std::cerr << "\n"
+    cerr << "\n"
               << "  Adapter options:\n"
               << "    --adapter_1 <sequence>: provide adaptor sequence that may occur on the single-end read for filtering.\n"
               << "    --adapter_2 <sequence>: provide adaptor sequence that may occur on the paired-read for filtering.\n"

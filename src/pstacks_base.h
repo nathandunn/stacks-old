@@ -10,12 +10,12 @@ extern string prefix_path;
 extern int    sql_id;
 extern modelt model_type;
 
-int call_consensus(std::map<int, MergedStack *>& merged,
-                   std::map<int, PStack *>& unique,
+int call_consensus(map<int, MergedStack *>& merged,
+                   map<int, PStack *>& unique,
                    bool invoke_model);
 
 void call_alleles(MergedStack* mstack,
-                 std::vector<DNANSeq *>& reads);
+                 vector<DNANSeq *>& reads);
 
 void calc_coverage_distribution(const map<int, PStack*>& unique,
                                 const map<int, MergedStack *>& merged,

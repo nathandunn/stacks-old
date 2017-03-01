@@ -23,17 +23,11 @@
 
 #include <string.h>
 #include <string>
-using std::string;
 #include <vector>
-using std::vector;
 #include <map>
-using std::map;
 #include <set>
-using std::set;
 #include <algorithm>
 #include <utility>
-using std::pair;
-using std::make_pair;
 #include <cstdint>
 #include <math.h>
 

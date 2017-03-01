@@ -114,6 +114,7 @@ map<string, int>           renz_len;
 map<string, int>           renz_olap;
 
 int main (int argc, char* argv[]) {
+    IF_NDEBUG_TRY
 
 #ifndef HAVE_LIBZ
     cerr << "Stacks was compiled without zlib, and will refuse to parse compressed files.\n";
@@ -131,21 +132,21 @@ int main (int argc, char* argv[]) {
     //
     parse_command_line(argc, argv);
 
-    cerr
-        << "Fst kernel smoothing: " << (kernel_smoothed == true ? "on" : "off") << "\n"
-        << "Bootstrap resampling: ";
+    cerr << "populations parameters selected:\n"
+         << "  Fst kernel smoothing: " << (kernel_smoothed == true ? "on" : "off") << "\n"
+         << "  Bootstrap resampling: ";
     if (bootstrap)
         cerr << "on, " << (bootstrap_type == bs_exact ? "exact; " : "approximate; ") << bootstrap_reps << " reptitions\n";
     else
         cerr << "off\n";
     cerr
-        << "Percent samples limit per population: " << sample_limit << "\n"
-        << "Locus Population limit: " << population_limit << "\n"
-        << "Minimum stack depth: " << min_stack_depth << "\n"
-        << "Log liklihood filtering: " << (filter_lnl == true ? "on"  : "off") << "; threshold: " << lnl_limit << "\n"
-        << "Minor allele frequency cutoff: " << minor_allele_freq << "\n"
-        << "Maximum observed heterozygosity cutoff: " << max_obs_het << "\n"
-        << "Applying Fst correction: ";
+        << "  Percent samples limit per population: " << sample_limit << "\n"
+        << "  Locus Population limit: " << population_limit << "\n"
+        << "  Minimum stack depth: " << min_stack_depth << "\n"
+        << "  Log liklihood filtering: " << (filter_lnl == true ? "on"  : "off") << "; threshold: " << lnl_limit << "\n"
+        << "  Minor allele frequency cutoff: " << minor_allele_freq << "\n"
+        << "  Maximum observed heterozygosity cutoff: " << max_obs_het << "\n"
+        << "  Applying Fst correction: ";
     switch(fst_correction) {
     case p_value:
         cerr << "P-value correction.\n";
@@ -160,6 +161,7 @@ int main (int argc, char* argv[]) {
         cerr << "none.\n";
         break;
     }
+    cerr << "\n";
 
     //
     // Open and initialize the log file.
@@ -695,6 +697,7 @@ int main (int argc, char* argv[]) {
 
     cerr << "Populations is done.\n";
     return 0;
+    IF_NDEBUG_CATCH_ALL_EXCEPTIONS
 }
 
 void vcfcomp_simplify_pmap (map<int, CSLocus*>& catalog, PopMap<CSLocus>* pmap) {
@@ -1109,7 +1112,7 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
             // If this locus is fixed, don't try to filter it out.
             //
             if (loc->snps.size() == 0) {
-                new_wl.insert(make_pair(loc->id, std::set<int>()));
+                new_wl.insert(make_pair(loc->id, set<int>()));
                 continue;
             }
 
@@ -3288,7 +3291,6 @@ haplotype_amova(Datum **d, LocSum **s, vector<int> &pop_ids)
     //      << "  Sigma_a: " << sigma_a << "; Sigma_b: "    << sigma_b   << "; Sigma_c: " << sigma_c << "; Sigma_Total: " << sigma_total << "\n"
     //      << "  Phi_st: "  << phi_st  << "; Phi_ct: "     << phi_ct    << "; Phi_sc: "  << phi_sc  << "\n";
 
-
     //
     // Calculate Fst' = Fst / Fst_max
     //
@@ -3619,7 +3621,7 @@ haplotype_d_est(Datum **d, LocSum **s, vector<int> &pop_ids)
     return d_est;
 }
 
-void log_snps_per_loc_distrib(std::ostream& log_fh, map<int, CSLocus*>& catalog)
+void log_snps_per_loc_distrib(ostream& log_fh, map<int, CSLocus*>& catalog)
 {
 
     // N.B. The method below gives the same numbers as by counting the SNPs that satisfy
@@ -5137,7 +5139,7 @@ int load_marker_column_list(string path, map<int, set<int> > &list) {
                 cerr << "Unable to parse whitelist, '" << path << "' at line " << line_num << "\n";
                 exit(1);
             }
-            list.insert(make_pair(marker, std::set<int>()));
+            list.insert(make_pair(marker, set<int>()));
         }
 
         line_num++;
@@ -5152,7 +5154,6 @@ int load_marker_column_list(string path, map<int, set<int> > &list) {
 
     return 0;
 }
-
 
 bool hap_compare(pair<string, int> a, pair<string, int> b) {
     return (a.second > b.second);
@@ -5468,7 +5469,7 @@ int parse_command_line(int argc, char* argv[]) {
             static const set<string> known_debug_flags = {"VCFCOMP"};
             stringstream ss (optarg);
             string s;
-            while (std::getline(ss, s, ',')) {
+            while (getline(ss, s, ',')) {
                 if (known_debug_flags.count(s)) {
                     debug_flags.insert(s);
                 } else {

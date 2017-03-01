@@ -27,12 +27,18 @@
 
 #include "constants.h"
 
-int init_log(std::ostream &fh, int argc, char **argv);
+int init_log(ostream &fh, int argc, char **argv);
+
+inline
+void failed_to_open(const string& path) {
+    cerr << "Error: Failed to open file '" << path << "'.\n";
+    throw exception();
+}
 
 // Returns e.g. "23.2%".
-std::string as_percentage(double d);
+string as_percentage(double d);
 
-std::string to_string(const FileT& ft);
+string to_string(const FileT& ft);
 
 // TeeBuf
 // ==========
@@ -40,16 +46,16 @@ std::string to_string(const FileT& ft);
 // From http://wordaligned.org/articles/cpp-streambufs */
 // This tee buffer has no actual buffer, so every character "overflows"
 // directly into the teed buffers.
-class TeeBuf: public std::streambuf {
+class TeeBuf: public streambuf {
 public:
 
-    TeeBuf(std::streambuf* sb1, std::streambuf* sb2)
+    TeeBuf(streambuf* sb1, streambuf* sb2)
         : sb1(sb1) , sb2(sb2)
         {}
 
 private:
-    std::streambuf* sb1;
-    std::streambuf* sb2;
+    streambuf* sb1;
+    streambuf* sb2;
 
     virtual int overflow(int c) {
         if (c == EOF) {
@@ -74,20 +80,20 @@ private:
 class TeeBuf;
 class LogAlterator {
 public:
-    std::ofstream l; // The actual log file
-    std::ostream o;  // Just stdout
-    std::ostream e;  // Just stderr
+    ofstream l; // The actual log file
+    ostream o;  // Just stdout
+    ostream e;  // Just stderr
 
     // Construct the log alterator.
-    // std::cout and std::cerr will also write to the log file (if quiet
+    // cout and cerr will also write to the log file (if quiet
 	// is true, output to stdout and stderr is suppressed i.e. they only
     // write to the log file).
-    LogAlterator(const std::string& log_path, bool quiet = false);
+    LogAlterator(const string& log_path, bool quiet = false);
 
     // Upon destruction, restore cout and cerr.
     ~LogAlterator() {
-        std::cout.rdbuf(o.rdbuf());
-        std::cerr.rdbuf(e.rdbuf());
+        cout.rdbuf(o.rdbuf());
+        cerr.rdbuf(e.rdbuf());
     }
 
 private:

@@ -23,15 +23,10 @@
 
 #include <string.h>
 #include <string>
-using std::string;
 #include <vector>
-using std::vector;
 #include <map>
-using std::map;
 #include <algorithm>
 #include <utility>
-using std::pair;
-using std::make_pair;
 
 #include "constants.h"
 #include "stacks.h"

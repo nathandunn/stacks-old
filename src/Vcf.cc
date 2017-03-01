@@ -14,6 +14,8 @@ const map<string, VcfMeta> VcfMeta::predefined = {
         {"FORMAT/DP", VcfMeta("FORMAT","<ID=DP,Number=1,Type=Integer,Description=\"Read Depth\">")},
         {"FORMAT/AD", VcfMeta("FORMAT","<ID=AD,Number=1,Type=Integer,Description=\"Allele Depth\">")},
         {"FORMAT/GL", VcfMeta("FORMAT","<ID=GL,Number=.,Type=Float,Description=\"Genotype Likelihood\">")},
+        // Custom fields.
+        {"INFO/locori", VcfMeta("INFO","<ID=locori,Number=1,Type=Character,Description=\"Orientation the corresponding Stacks locus aligns in\">")},
     };
 
 void VcfHeader::init_meta(const string& fileformat) {

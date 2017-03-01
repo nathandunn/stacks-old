@@ -197,7 +197,7 @@ check_whitelist_integrity(map<int, CSLocus *> &catalog, map<int, set<int> > &whi
             loc = catalog[it->first];
 
             if (it->second.size() == 0) {
-                new_wl.insert(make_pair(it->first, std::set<int>()));
+                new_wl.insert(make_pair(it->first, set<int>()));
                 continue;
             }
 

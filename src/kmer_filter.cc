@@ -55,6 +55,7 @@ int    num_threads    = 1;
 int    barcode_size   = 0;
 
 int main (int argc, char* argv[]) {
+    IF_NDEBUG_TRY
 
     parse_command_line(argc, argv);
 
@@ -232,6 +233,7 @@ int main (int argc, char* argv[]) {
     }
 
     return 0;
+    IF_NDEBUG_CATCH_ALL_EXCEPTIONS
 }
 
 int process_paired_reads(string in_path_1,
@@ -1414,7 +1416,6 @@ kmer_lookup(SeqKmerHash &kmer_map,
 //     //         }
 //     // cerr << t << " total cnts.\n";
 
-
 //     //
 //     // Look for runs of kmers at various orders of magnitude.
 //     //
@@ -1800,13 +1801,13 @@ int parse_command_line(int argc, char* argv[]) {
 }
 
 void version() {
-    std::cerr << "kmer_filter " << VERSION << "\n\n";
+    cerr << "kmer_filter " << VERSION << "\n\n";
 
     exit(0);
 }
 
 void help() {
-    std::cerr << "kmer_filter " << VERSION << "\n"
+    cerr << "kmer_filter " << VERSION << "\n"
               << "kmer_filter [-f in_file_1 [-f in_file_2...] | -p in_dir] [-1 pair_1 -2 pair_2 [-1 pair_1...]] -o out_dir [-i type] [-y type] [-D] [-h]\n"
               << "  f: path to the input file if processing single-end seqeunces.\n"
               << "  i: input file type, either 'bustard' for the Illumina BUSTARD output files, 'fasta', 'fastq', 'gzfasta', or 'gzfastq' (default 'fastq').\n"

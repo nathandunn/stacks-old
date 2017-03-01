@@ -22,12 +22,8 @@
 #define __ALN_UTILS_H__
 
 #include <utility>
-using std::pair;
-using std::make_pair;
 #include <string>
-using std::string;
 #include <vector>
-using std::vector;
 
 #include "locus.h"
 #include "constants.h"

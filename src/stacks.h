@@ -23,22 +23,13 @@
 
 #include <string.h>
 #include <string>
-using std::string;
 #include <vector>
-using std::vector;
 #include <map>
-using std::map;
 #include <set>
-using std::set;
 #include <algorithm>
 #include <utility>
-using std::pair;
-using std::make_pair;
 #include<iostream>
-using std::ofstream;
-using std::cerr;
 #include<sstream>
-using std::stringstream;
 
 #include "constants.h"
 #include "Seq.h"
@@ -303,7 +294,6 @@ bool PhyLoc::operator<(const PhyLoc& other) const {
         // Minus strand first.
         return strand == strand_minus && other.strand == strand_plus;
 }
-
 
 inline
 PStack::PStack(const PStack& other)
