@@ -56,7 +56,7 @@ void Graph::rebuild(const CLocReadSet& readset, size_t min_kmer_count) {
                     // Not enough sequence remaining to make another kmer.
                     break;
             } else {
-                km = km.succ(km_len_, Nt2::nt4_to_nt[nt4]);
+                km = km.succ(km_len_, Nt2::from_nt4(nt4));
                 ++next_nt;
             }
             ++map_[km].count;
