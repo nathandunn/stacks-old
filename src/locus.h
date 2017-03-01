@@ -198,24 +198,45 @@ public:
     void add(SRead&& r) {reads_.push_back(std::move(r));}
 };
 
-class ClocAlnSet {
+class CLocAlnSet {
     const MetaPopInfo& mpopi_;
     int id_; // Catalog locus ID
     DNASeq4 ref_;
     vector<SAlnRead> reads_;
 
 public:
-    ClocAlnSet(const MetaPopInfo& mpopi) : mpopi_(mpopi), id_(-1), ref_(), reads_() {}
+    CLocAlnSet(const MetaPopInfo& mpopi) : mpopi_(mpopi), id_(-1), ref_(), reads_() {}
 
     const MetaPopInfo& mpopi() const {return mpopi_;}
     int id() const {return id_;}
     const DNASeq4& ref() const {return ref_;}
-    const vector<SRead>& reads() const {return reads_;}
+    const vector<SAlnRead>& reads() const {return reads_;}
 
     void clear() {id_= -1; ref_ = DNASeq4(); reads_.clear();}
     void id(int id) {id_ = id;}
     void ref(DNASeq4&& ref) {ref_ = std::move(ref);}
     void add(SAlnRead&& r) {reads_.push_back(std::move(r));}
+
+    class range_iterator {
+        DNASeq4::iterator ref_it_;
+        DNASeq4::iterator ref_past_;
+        vector<Alignment::range_iterator> its_;
+
+    public:
+        range_iterator(const CLocAlnSet& loc_aln)
+                : ref_it_(loc_aln.ref_.begin()),
+                ref_past_(loc_aln.ref_.end()),
+                its_()
+                {
+            its_.reserve(loc_aln.reads_.size());
+            for (const SAlnRead& r: loc_aln.reads_)
+                its_.push_back(Alignment::range_iterator(r.aln));
+        }
+        operator bool () const {return ref_it_ != ref_past_;}
+        range_iterator& operator++ () {++ref_it_; for (auto& it: its_) {assert(bool(it)); ++it;} return *this;}
+        size_t ref_nt() const {return ref_it_.nt();}
+        AlnSite operator* () const {return AlnSite(its_);}
+    };
 };
 
 #endif // __LOCUS_H__
