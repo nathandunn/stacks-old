@@ -26,11 +26,8 @@
 #include <limits.h>
 #include <math.h>
 #include <iostream>
-using std::cerr;
-using std::endl;
 #include <utility>
-using std::pair;
-using std::make_pair;
+#include <string>
 
 #include <dirent.h>
 #include "constants.h"
@@ -38,6 +35,7 @@ using std::make_pair;
 
 char   reverse(char);
 char  *rev_comp(const char *);
+string rev_comp(const string&);
 void   reverse_string(char *);
 int    is_integer(const char *);
 double is_double(const char *);
@@ -82,11 +80,11 @@ class DirIterator {
     DIR* dir;
     struct dirent* entry;
 public:
-    DirIterator(const std::string& dir_path) : dir(NULL), entry(NULL) {
+    DirIterator(const string& dir_path) : dir(NULL), entry(NULL) {
         dir = opendir(dir_path.c_str());
         if (dir == NULL) {
             cerr << "Error: Unable to open directory '" << dir_path << "' for reading.\n";
-            throw std::exception();
+            throw exception();
         }
         entry = readdir(dir);
     }

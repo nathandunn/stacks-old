@@ -72,6 +72,7 @@ map<string, int>           renz_len;
 map<string, map<string, string> > global_dictionary;
 
 int main (int argc, char* argv[]) {
+    IF_NDEBUG_TRY
 
     initialize_renz(renz, renz_cnt, renz_len);
 
@@ -294,6 +295,7 @@ int main (int argc, char* argv[]) {
 
     cerr << "genotypes is done.\n";
     return 0;
+    IF_NDEBUG_CATCH_ALL_EXCEPTIONS
 }
 
 int
@@ -2446,7 +2448,6 @@ write_onemap(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<string, st
     marker_types["abxac"] = "A.2";
     marker_types["abxcd"] = "A.1";
 
-
     //
     // Output the header: number of individuals followed by number of markers.
     //
@@ -2885,13 +2886,13 @@ int parse_command_line(int argc, char* argv[]) {
 }
 
 void version() {
-    std::cerr << "genotypes " << VERSION << "\n\n";
+    cerr << "genotypes " << VERSION << "\n\n";
 
     exit(0);
 }
 
 void help() {
-    std::cerr << "genotypes " << VERSION << "\n"
+    cerr << "genotypes " << VERSION << "\n"
               << "genotypes -b batch_id -P path [-r min] [-m min] [-t map_type -o type] [-B blacklist] [-W whitelist] [-c] [-s] [-e renz] [-v] [-h]" << "\n"
               << "  b: Batch ID to examine when exporting from the catalog.\n"
               << "  r: minimum number of progeny required to print a marker.\n"

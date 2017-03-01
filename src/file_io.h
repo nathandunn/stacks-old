@@ -29,21 +29,11 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <string>
-using std::string;
 #include <map>
-using std::map;
 #include <vector>
-using std::vector;
 #include <utility>
-using std::pair;
 #include <iostream>
 #include <fstream>
-using std::istream;
-using std::ofstream;
-using std::cin;
-using std::cout;
-using std::cerr;
-using std::endl;
 #include <zlib.h>
 #include <errno.h>
 

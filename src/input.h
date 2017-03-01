@@ -29,13 +29,6 @@
 #include <vector>
 #include <iostream>
 #include <fstream>
-using std::ifstream;
-using std::string;
-using std::vector;
-using std::cin;
-using std::cout;
-using std::cerr;
-using std::endl;
 
 #include "constants.h"
 #include "stacks.h"

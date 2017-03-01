@@ -478,7 +478,6 @@ GappedAln::trace_alignment(string tag_1, string tag_2)
 
     } while (more_paths);
 
-
     sort(alns.begin(), alns.end(), compare_alignres);
     this->_aln = alns[0];
     // cerr << "Final alignment: " << this->_aln.cigar << "; contiguity: " << contiguity << "; gaps: " << this->_aln.gap_cnt << "\n";

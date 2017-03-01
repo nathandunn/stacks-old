@@ -47,17 +47,19 @@ double  max_gaps          = 2.0;
 using namespace std;
 
 int main (int argc, char* argv[]) {
+    IF_NDEBUG_TRY
 
     parse_command_line(argc, argv);
 
     uint sample_cnt = samples.size();
 
-    cerr << "cstacks paramters selected:\n"
-         << "  Loci matched based on " << (search_type == sequence ? "sequence identity" : "genomic location") << ".\n";
+    cerr << "cstacks parameters selected:\n"
+         << "  Database/Batch ID: " << batch_id << "\n"
+         << "  Loci matched based on " << (search_type == sequence ? "sequence identity" : "aligned genomic location") << ".\n";
     if (search_type == sequence)
-        cerr << "  Number of mismatches allowed between stacks: " << ctag_dist << "\n";
-    cerr << "  Gapped alignments: " << (gapped_alignments ? "enabled" : "disabled") << "\n"
-         << "Constructing catalog from " << sample_cnt << " samples.\n";
+        cerr << "  Number of mismatches allowed between stacks: " << ctag_dist << "\n"
+             << "  Gapped alignments: " << (gapped_alignments ? "enabled" : "disabled") << "\n";
+    cerr << "Constructing catalog from " << sample_cnt << " samples.\n";
 
     //
     // Set the number of OpenMP parallel threads to execute.
@@ -108,10 +110,10 @@ int main (int argc, char* argv[]) {
     while (!samples.empty()) {
         map<int, QLocus *> sample;
 
-        cerr << "\nProcessing sample " << s.second << " [" << i << " of " << sample_cnt << "]\n";
-
         s = samples.front();
         samples.pop();
+
+        cerr << "\nProcessing sample " << s.second << " [" << i << " of " << sample_cnt << "]\n";
 
         if (!load_loci(s.second, sample, 0, false, compressed)) {
             cerr << "Failed to load sample " << i << "\n";
@@ -187,6 +189,7 @@ int main (int argc, char* argv[]) {
     catalog.clear();
 
     return 0;
+    IF_NDEBUG_CATCH_ALL_EXCEPTIONS
 }
 
 int update_catalog_index(map<int, CLocus *> &catalog, map<string, int> &cat_index) {
@@ -1947,24 +1950,24 @@ int parse_command_line(int argc, char* argv[]) {
 }
 
 void version() {
-    std::cerr << "cstacks " << VERSION << "\n";
+    cerr << "cstacks " << VERSION << "\n";
 
     exit(0);
 }
 
 void help() {
-    std::cerr << "cstacks " << VERSION << "\n"
+    cerr << "cstacks " << VERSION << "\n"
               << "cstacks -P in_dir -M popmap [-n num_mismatches] [--gapped] [-p num_threads] [-b batch_id]" << "\n"
               << "cstacks --aligned -P in_dir -M popmap [-p num_threads] [-b batch_id]" << "\n"
               << "cstacks -s sample1_path [-s sample2_path ...] -o path [-n num_mismatches] [--gapped] [-p num_threads] [-b batch_id]" << "\n"
               << "cstacks --aligned -s sample1_path [-s sample2_path ...] -o path [-p num_threads] [-b batch_id]" << "\n"
               << "\n"
-              << "  g,--aligned: base catalog construction on alignment position, not sequence identity." << "\n"
+              << "  b: database/batch ID for this catalog (default 1)." << "\n"
               << "  P: path to the directory containing Stacks files.\n"
               << "  M: path to a population map file.\n"
+              << "  g,--aligned: base catalog construction on alignment position, not sequence identity." << "\n"
               << "  n: number of mismatches allowed between sample loci when build the catalog (default 1)." << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
-              << "  b: database/batch ID for this catalog (default 1)." << "\n"
               << "  s: sample prefix from which to load loci into the catalog." << "\n"
               << "  o: output path to write results." << "\n"
               << "  --catalog <path>: add to an existing catalog.\n"

@@ -23,5 +23,4 @@
 
 #include "phasedstacks.h"
 
-
 #endif // __PHASEI_H__

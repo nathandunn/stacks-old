@@ -47,6 +47,7 @@ double heterozygote_limit = -3.84;
 double homozygote_limit   =  3.84;
 
 int main (int argc, char* argv[]) {
+    IF_NDEBUG_TRY
 
     parse_command_line(argc, argv);
 
@@ -82,6 +83,7 @@ int main (int argc, char* argv[]) {
     write_sql(merged, unique);
 
     return 0;
+    IF_NDEBUG_CATCH_ALL_EXCEPTIONS
 }
 
 int call_alleles(MergedStack *mtag, vector<DNANSeq *> &reads) {
@@ -256,10 +258,10 @@ int write_sql(map<int, MergedStack *> &m, map<int, PStack *> &u) {
     string pil_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".pileup.tsv";
 
     // Open the output files for writing.
-    std::ofstream tags(tag_file.c_str());
-    std::ofstream snps(snp_file.c_str());
-    std::ofstream alle(all_file.c_str());
-    std::ofstream pile(pil_file.c_str());
+    ofstream tags(tag_file.c_str());
+    ofstream snps(snp_file.c_str());
+    ofstream alle(all_file.c_str());
+    ofstream pile(pil_file.c_str());
     int tag_id, comp_id;
 
     tag_id = 0;
@@ -324,7 +326,6 @@ int write_sql(map<int, MergedStack *> &m, map<int, PStack *> &u) {
                     continue;
                 allele[(*u[*k]->seq)[(*s)->col]] += u[*k]->count;
             }
-
 
             char pct[id_len];
             map<char, int>::iterator a;
@@ -672,13 +673,13 @@ int parse_command_line(int argc, char* argv[]) {
 }
 
 void version() {
-    std::cerr << "estacks " << VERSION << "\n\n";
+    cerr << "estacks " << VERSION << "\n\n";
 
     exit(0);
 }
 
 void help() {
-    std::cerr << "estacks " << VERSION << "\n"
+    cerr << "estacks " << VERSION << "\n"
               << "estacks -t file_type -f file_path [-o path] [-i id] [-m min_cov] [-r] [-e errfreq] [-p num_threads] [-h]" << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
               << "  t: input file Type. Supported types: bowtie, sam.\n"

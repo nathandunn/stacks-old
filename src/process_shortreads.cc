@@ -86,6 +86,7 @@ int adp_2_len = 0;
 AdapterHash adp_1_kmers, adp_2_kmers;
 
 int main (int argc, char* argv[]) {
+    IF_NDEBUG_TRY
 
     parse_command_line(argc, argv);
 
@@ -219,6 +220,7 @@ int main (int argc, char* argv[]) {
     print_results(argc, argv, barcodes, counters, barcode_log);
 
     return 0;
+    IF_NDEBUG_CATCH_ALL_EXCEPTIONS
 }
 
 template<typename fhType>
@@ -421,7 +423,6 @@ process_paired_reads(string prefix_1,
         i++;
     } while ((s_1 = fh_1->next_seq()) != NULL &&
              (s_2 = fh_2->next_seq()) != NULL);
-
 
     if (discards) {
         delete discard_fh_1;
@@ -1116,13 +1117,13 @@ int parse_command_line(int argc, char* argv[]) {
 }
 
 void version() {
-    std::cerr << "process_shortreads " << VERSION << "\n\n";
+    cerr << "process_shortreads " << VERSION << "\n\n";
 
     exit(0);
 }
 
 void help() {
-    std::cerr << "process_shortreads " << VERSION << "\n"
+    cerr << "process_shortreads " << VERSION << "\n"
               << "process_shortreads [-f in_file | -p in_dir [-P] [-I] | -1 pair_1 -2 pair_2] -b barcode_file -o out_dir [-i type] [-y type] [-c] [-q] [-r] [-E encoding] [-t len] [-D] [-w size] [-s lim] [-h]\n"
               << "  f: path to the input file if processing single-end seqeunces.\n"
               << "  i: input file type, either 'bustard' for the Illumina BUSTARD format, 'bam', 'fastq' (default), or 'gzfastq' for gzipped FASTQ.\n"

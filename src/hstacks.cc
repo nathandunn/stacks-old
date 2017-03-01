@@ -46,6 +46,7 @@ int    stack_dist      = 0;
 int    n_limit         = 4;
 
 int main (int argc, char* argv[]) {
+    IF_NDEBUG_TRY
 
     parse_command_line(argc, argv);
 
@@ -98,6 +99,7 @@ int main (int argc, char* argv[]) {
     write_homologous_loci(samples);
 
     return 0;
+    IF_NDEBUG_CATCH_ALL_EXCEPTIONS
 }
 
 int calc_kmer_distance(map<int, HLocus *> &loci, int stack_dist) {
@@ -904,13 +906,13 @@ int parse_command_line(int argc, char* argv[]) {
 }
 
 void version() {
-    std::cerr << "hstacks " << VERSION << "\n\n";
+    cerr << "hstacks " << VERSION << "\n\n";
 
     exit(0);
 }
 
 void help() {
-    std::cerr << "hstacks " << VERSION << "\n"
+    cerr << "hstacks " << VERSION << "\n"
               << "hstacks -i path [-o path] [-b batch_id] [-n mismatches] [-m min] [-p min_threads] [-N limit] [-h]" << "\n"
               << "  i: path to the set of SQL files from which to load loci." << "\n"
               << "  o: output path to write results." << "\n"
