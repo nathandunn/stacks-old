@@ -45,8 +45,8 @@ chrs_default = ['groupI', 'groupII', 'groupIII', 'groupIV', 'groupV', 'groupVI',
                 'groupVIII', 'groupIX', 'groupX', 'groupXI', 'groupXII', 'groupXIII', 'groupXIV', 
                 'groupXV', 'groupXVI', 'groupXVII', 'groupXVIII', 'groupXIX', 'groupXX', 'groupXXI']
 cols = {'fst'     : 18,
-        'phist'   : 22,
-        'fstp'    : 25,
+        'phist'   : 7,
+        'fstp'    : 10,
         'hapdiv'  : 11,
         'hapavg'  : 11,
         'hapdiff' :  8}

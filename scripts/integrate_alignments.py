@@ -297,6 +297,7 @@ def convert_sample(path, file, out_path, alns):
 
         if sample_locus in alns_written:
             if read_type == "consensus":
+                cat_locus = matches[sample_locus]
                 (chr, bp, strand) = alns[cat_locus]
                 buf = "\t".join(parts[0:3]) + "\t" + chr + "\t" + str(bp) + "\t" + strand + "\t" + "\t".join(parts[6:])
                 out_fh.write(buf)

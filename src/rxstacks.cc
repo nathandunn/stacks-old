@@ -57,6 +57,7 @@ double homozygote_limit   =  2.71;
 const int barcode_size    = 5;
 
 int main (int argc, char* argv[]) {
+    IF_NDEBUG_TRY
 
     parse_command_line(argc, argv);
 
@@ -404,6 +405,7 @@ int main (int argc, char* argv[]) {
 
     cerr << "rxstacks is done.\n";
     return 0;
+    IF_NDEBUG_CATCH_ALL_EXCEPTIONS
 }
 
 int

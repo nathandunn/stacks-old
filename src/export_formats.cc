@@ -411,6 +411,7 @@ write_vcf(map<int, CSLocus *> &catalog,
     header.add_meta(VcfMeta::predefined.at("FORMAT/DP"));
     header.add_meta(VcfMeta::predefined.at("FORMAT/AD"));
     header.add_meta(VcfMeta::predefined.at("FORMAT/GL"));
+    header.add_meta(VcfMeta::predefined.at("INFO/locori"));
     for(auto& s : mpopi.samples()) {
         header.add_sample(s.name);
     }
@@ -464,6 +465,7 @@ write_vcf(map<int, CSLocus *> &catalog,
             rec.filter.push_back("PASS");
             rec.info.push_back({"NS",to_string(t->nucs[col].num_indv)});
             rec.info.push_back({"AF",freq_alt});
+            rec.info.push_back({"locori", loc->loc.strand == strand_plus ? "p" : "m"});
             rec.format.push_back("GT");
             rec.format.push_back("DP");
             rec.format.push_back("AD");
@@ -547,6 +549,7 @@ write_vcf_haplotypes(map<int, CSLocus *> &catalog,
     header.add_meta(VcfMeta::predefined.at("INFO/AF"));
     header.add_meta(VcfMeta::predefined.at("FORMAT/GT"));
     header.add_meta(VcfMeta::predefined.at("FORMAT/DP"));
+    header.add_meta(VcfMeta::predefined.at("INFO/locori"));
     for(auto& s : mpopi.samples()) {
         header.add_sample(s.name);
     }
@@ -581,6 +584,7 @@ write_vcf_haplotypes(map<int, CSLocus *> &catalog,
             rec.chrom = loc->loc.chr;
             rec.pos = loc->sort_bp() + 1;
             rec.id = to_string(loc->id);
+            rec.info.push_back({"locori", loc->loc.strand == strand_plus ? "p" : "m"});
 
             //alleles
             vector<pair<string, double> > ordered_hap (hap_freq.begin(), hap_freq.end());
@@ -588,7 +592,7 @@ write_vcf_haplotypes(map<int, CSLocus *> &catalog,
             map<string, int> hap_index;
             for (size_t i = 0; i < ordered_hap.size(); i++) {
                 string h = ordered_hap[i].first;
-                rec.alleles.push_back(loc->loc.strand == strand_plus ? h : string(rev_comp(h.c_str())));
+                rec.alleles.push_back(loc->loc.strand == strand_plus ? h : rev_comp(h));
                 hap_index[h] = i;
             }
 

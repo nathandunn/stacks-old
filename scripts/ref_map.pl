@@ -149,7 +149,7 @@ sub execute_stacks {
             # Pull the depth of coverage from pstacks.
             #
             my @lines   = grep(/mean coverage/, @results);
-            my ($depth) = ($lines[0] =~ /^Created \d+ loci; mean coverage is ([\d.]+) \(stdev: [\d.]+, max: [\d.]+\).$/);
+            my ($depth) = ($lines[-1] =~ /^Kept \d+ loci; mean coverage is ([\d.]+) \(stdev: [\d.]+, max: [\d.]+\).$/);
             push(@depths_of_cov, [$sample->{'file'}, $depth]);
         }
         write_results(\@results, $log_fh);
@@ -847,6 +847,11 @@ sub parse_command_line {
 
     if (scalar(@parents) == 0 && scalar(@samples) == 0 && length($popmap_path) == 0) {
 	print STDERR "You must specify at least one parent or sample file.\n";
+	usage();
+    }
+
+    if (scalar(@parents) == 0 && scalar(@samples) == 0 && length($popmap_path) > 0 && length($sample_path) == 0) {
+	print STDERR "If you are using a population map to specify samples, you must specify the path to the directory containing the samples (--samples).\n";
 	usage();
     }
 

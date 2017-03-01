@@ -114,6 +114,7 @@ map<string, int>           renz_len;
 map<string, int>           renz_olap;
 
 int main (int argc, char* argv[]) {
+    IF_NDEBUG_TRY
 
 #ifndef HAVE_LIBZ
     cerr << "Stacks was compiled without zlib, and will refuse to parse compressed files.\n";
@@ -131,21 +132,21 @@ int main (int argc, char* argv[]) {
     //
     parse_command_line(argc, argv);
 
-    cerr
-        << "Fst kernel smoothing: " << (kernel_smoothed == true ? "on" : "off") << "\n"
-        << "Bootstrap resampling: ";
+    cerr << "populations parameters selected:\n"
+         << "  Fst kernel smoothing: " << (kernel_smoothed == true ? "on" : "off") << "\n"
+         << "  Bootstrap resampling: ";
     if (bootstrap)
         cerr << "on, " << (bootstrap_type == bs_exact ? "exact; " : "approximate; ") << bootstrap_reps << " reptitions\n";
     else
         cerr << "off\n";
     cerr
-        << "Percent samples limit per population: " << sample_limit << "\n"
-        << "Locus Population limit: " << population_limit << "\n"
-        << "Minimum stack depth: " << min_stack_depth << "\n"
-        << "Log liklihood filtering: " << (filter_lnl == true ? "on"  : "off") << "; threshold: " << lnl_limit << "\n"
-        << "Minor allele frequency cutoff: " << minor_allele_freq << "\n"
-        << "Maximum observed heterozygosity cutoff: " << max_obs_het << "\n"
-        << "Applying Fst correction: ";
+        << "  Percent samples limit per population: " << sample_limit << "\n"
+        << "  Locus Population limit: " << population_limit << "\n"
+        << "  Minimum stack depth: " << min_stack_depth << "\n"
+        << "  Log liklihood filtering: " << (filter_lnl == true ? "on"  : "off") << "; threshold: " << lnl_limit << "\n"
+        << "  Minor allele frequency cutoff: " << minor_allele_freq << "\n"
+        << "  Maximum observed heterozygosity cutoff: " << max_obs_het << "\n"
+        << "  Applying Fst correction: ";
     switch(fst_correction) {
     case p_value:
         cerr << "P-value correction.\n";
@@ -160,6 +161,7 @@ int main (int argc, char* argv[]) {
         cerr << "none.\n";
         break;
     }
+    cerr << "\n";
 
     //
     // Open and initialize the log file.
@@ -695,6 +697,7 @@ int main (int argc, char* argv[]) {
 
     cerr << "Populations is done.\n";
     return 0;
+    IF_NDEBUG_CATCH_ALL_EXCEPTIONS
 }
 
 void vcfcomp_simplify_pmap (map<int, CSLocus*>& catalog, PopMap<CSLocus>* pmap) {

@@ -23,6 +23,7 @@
 //
 
 #include "log_utils.h"
+
 #include "pstacks_base.h"
 #include "pstacks.h"
 
@@ -53,10 +54,12 @@ double heterozygote_limit = -3.84;
 double homozygote_limit   =  3.84;
 
 int main (int argc, char* argv[]) {
+    IF_NDEBUG_TRY
 
     parse_command_line(argc, argv);
 
     report_options(cerr);
+    cerr << std::fixed << std::setprecision(2);
 
     //
     // Set limits to call het or homozygote according to chi-square distribution with one
@@ -86,24 +89,19 @@ int main (int argc, char* argv[]) {
 
     map<int, PStack *> unique; // Unique {sequence, alignment position} combinations.
     HashMap*           radtags = new HashMap();
-
     load_radtags(in_file, *radtags);
-
     reduce_radtags(*radtags, unique);
-
     for (auto& stack : *radtags)
         for (Seq* read : stack.second)
             delete read;
     delete radtags;
 
     map<int, MergedStack *> merged;
-
     populate_merged_tags(unique, merged);
 
     delete_low_cov_loci(merged, unique);
 
     // Call the consensus sequence again, now that remainder tags have been merged.
-
     call_consensus(merged, unique, true);
 
     write_results(merged, unique, true, false);
@@ -111,7 +109,9 @@ int main (int argc, char* argv[]) {
     cerr << "pstacks is done.\n";
 
     return 0;
+    IF_NDEBUG_CATCH_ALL_EXCEPTIONS
 }
+
 
 void populate_merged_tags(map<int, PStack *> &unique, map<int, MergedStack *> &merged) {
     map<int, PStack *>::iterator i;
@@ -171,13 +171,14 @@ void populate_merged_tags(map<int, PStack *> &unique, map<int, MergedStack *> &m
     double max;
     calc_coverage_distribution(unique, merged, mean, stdev, max);
 
-    cerr << "Created " << merged.size() << " loci; mean coverage is " << mean << " (stdev: " << stdev << ", max: " << max << ").\n";
+    cerr << "Created " << merged.size() << " loci; mean coverage is " << mean << " (stdev: " << stdev << ", max: " << size_t(max) << ").\n";
 }
 
 void delete_low_cov_loci(map<int, MergedStack *>& merged, const map<int, PStack*>& unique) {
 
     size_t n_deleted = 0;
     size_t n_reads = 0;
+    size_t n_rm_reads = 0;
     vector<int> to_erase;
 
     for (auto& mtag : merged) {
@@ -185,20 +186,28 @@ void delete_low_cov_loci(map<int, MergedStack *>& merged, const map<int, PStack*
         for (int utag_id : mtag.second->utags)
             depth += unique.at(utag_id)->count;
 
+        n_reads += depth;
         if (depth < min_stack_cov) {
             delete mtag.second;
             to_erase.push_back(mtag.first);
 
             n_deleted++;
-            n_reads += depth;
+            n_rm_reads += depth;
         }
     }
 
     for (int id : to_erase)
         merged.erase(id);
 
-    cerr << "Discarded " << n_deleted << " low coverage loci comprising " << n_reads << " reads.\n"
-         << "Now working with " << merged.size() << " loci.\n";
+    double mean;
+    double stdev;
+    double max;
+    calc_coverage_distribution(unique, merged, mean, stdev, max);
+
+    cerr << "Discarded " << n_deleted << " low coverage loci comprising " << n_rm_reads
+         << " (" << as_percentage((double) n_rm_reads/ n_reads) << ") reads.\n"
+         << "Kept " << merged.size() << " loci; mean coverage is "
+         << mean << " (stdev: " << stdev << ", max: " << size_t(max) << ").\n";
 }
 
 //
@@ -346,7 +355,6 @@ void load_radtags(string in_file, HashMap &radtags) {
     cerr << "Collapsed reads into " << radtags.size() << " stacks.\n";
 
     delete fh;
-
 }
 
 int dump_stacks(map<int, PStack *> &u) {
@@ -402,8 +410,8 @@ int dump_merged_stacks(map<int, MergedStack *> &m) {
 
 int parse_command_line(int argc, char* argv[]) {
     string out_path;
-
     int c;
+
     while (1) {
         static struct option long_options[] = {
             {"help",         no_argument,       NULL, 'h'},
@@ -552,7 +560,6 @@ int parse_command_line(int argc, char* argv[]) {
         cerr << "You must specify the barcode error frequency.\n";
         help();
     }
-
     if (in_file.empty()) {
         cerr << "You must specify an input file.\n";
         help();
@@ -617,24 +624,25 @@ void help() {
 }
 
 void report_options(std::ostream& os) {
-    os << "Alignments file: " << in_file << "\n"
-         << "Output prefix: " << prefix_path << "\n"
-         << "Sample ID: " << sql_id << "\n"
-         << "Min locus depth: " << min_stack_cov << "\n"
-         << "Max clipped proportion: " << max_clipped << "\n"
-         << "Min mapping quality: " << min_mapping_qual << "\n";
+    os << "pstacks parameters selected:\n"
+       << "  Alignments file: " << in_file << "\n"
+       << "  Output prefix: " << prefix_path << "\n"
+       << "  Sample ID: " << sql_id << "\n"
+       << "  Min locus depth: " << min_stack_cov << "\n"
+       << "  Max clipped proportion: " << max_clipped << "\n"
+       << "  Min mapping quality: " << min_mapping_qual << "\n";
 
     // Model.
     if (model_type == snp) {
-        os << "Model: snp\n"
-           << "Model alpha: " << alpha << "\n";
+        os << "  Model: snp\n"
+           << "    Model alpha: " << alpha << "\n";
     } else if (model_type == bounded) {
-        os << "Model: snp\n"
-           << "Model alpha: " << alpha << "\n"
-           << "Model lower bound: " << bound_low << "\n"
-           << "Model higher bound: " << bound_high << "\n";
+        os << "  Model: snp\n"
+           << "    Model alpha: " << alpha << "\n"
+           << "    Model lower bound: " << bound_low << "\n"
+           << "    Model higher bound: " << bound_high << "\n";
     } else if (model_type == ::fixed) {
-        os << "Model: fixed\n"
-           << "Model barcode err. prob.: " << barcode_err_freq << "\n";
+        os << "  Model: fixed\n"
+           << "    Model barcode err. prob.: " << barcode_err_freq << "\n";
     }
 }

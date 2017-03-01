@@ -72,6 +72,7 @@ map<string, int>           renz_len;
 map<string, map<string, string> > global_dictionary;
 
 int main (int argc, char* argv[]) {
+    IF_NDEBUG_TRY
 
     initialize_renz(renz, renz_cnt, renz_len);
 
@@ -294,6 +295,7 @@ int main (int argc, char* argv[]) {
 
     cerr << "genotypes is done.\n";
     return 0;
+    IF_NDEBUG_CATCH_ALL_EXCEPTIONS
 }
 
 int

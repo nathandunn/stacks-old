@@ -47,6 +47,7 @@ double heterozygote_limit = -3.84;
 double homozygote_limit   =  3.84;
 
 int main (int argc, char* argv[]) {
+    IF_NDEBUG_TRY
 
     parse_command_line(argc, argv);
 
@@ -82,6 +83,7 @@ int main (int argc, char* argv[]) {
     write_sql(merged, unique);
 
     return 0;
+    IF_NDEBUG_CATCH_ALL_EXCEPTIONS
 }
 
 int call_alleles(MergedStack *mtag, vector<DNANSeq *> &reads) {

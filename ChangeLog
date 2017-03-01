@@ -1,4 +1,4 @@
-Stacks 1.45 - tba
+Stacks 1.45 - Feb 24, 2017
 --------------------------
     Feature: Tweaked the interfaces of most programs:
              * cstacks and sstacks now accept a population map as input.
@@ -15,7 +15,6 @@ Stacks 1.45 - tba
     Feature: populations now logs the 'number of SNPs per locus' distribution.
     Feature: Added mapping quality filter in pstacks (--min_mapq).
     Feature: Added enzyme ApaLI.
-
     Bugfix: populations: Corrected a VCF-related segfault (current use of VCF's GL field was
             improper and was removed).
     Bugfix: rxstacks: Corrected a bug that affected locus likelihood medians.
@@ -23,6 +22,8 @@ Stacks 1.45 - tba
     Bugfix: populations: Fixed parsing of option --sigma.
     Bugfix: Fixed process_radtags writing fasta (instead of fastq) discard files when input
             files were gzfastq.
+    Bugfix: kernel smoothing was not working correctly for Fis values (values were too negative).
+    Bugfix: fixed a regression for gapped alignments in cstacks that was causing a buffer overflow. 
 
 Stacks 1.44 - Oct 11, 2016
 --------------------------

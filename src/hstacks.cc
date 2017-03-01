@@ -46,6 +46,7 @@ int    stack_dist      = 0;
 int    n_limit         = 4;
 
 int main (int argc, char* argv[]) {
+    IF_NDEBUG_TRY
 
     parse_command_line(argc, argv);
 
@@ -98,6 +99,7 @@ int main (int argc, char* argv[]) {
     write_homologous_loci(samples);
 
     return 0;
+    IF_NDEBUG_CATCH_ALL_EXCEPTIONS
 }
 
 int calc_kmer_distance(map<int, HLocus *> &loci, int stack_dist) {
