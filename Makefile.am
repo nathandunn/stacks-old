@@ -78,7 +78,7 @@ rxstacks_SOURCES    = libcore.a libpop.a src/rxstacks.h src/rxstacks.cc
 pstacks_pe_SOURCES  = libcore.a src/pstacks_pe.h src/pstacks_pe.cc src/pstacks_base.h src/pstacks_base.cc
 tags2bam_SOURCES    = libcore.a src/tags2bam.h src/tags2bam.cc
 tags2bam_pe_SOURCES = libcore.a src/tags2bam_pe.h src/tags2bam_pe.cc
-assemble_pe_SOURCES = libcore.a src/assemble_pe.cc src/debruijn.h src/debruijn.cc
+assemble_pe_SOURCES = libcore.a src/assemble_pe.cc src/debruijn.h src/debruijn.cc src/Alignment.h
 
 ctg_SOURCES = src/ctg.cc
 
