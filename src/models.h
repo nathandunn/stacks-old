@@ -24,21 +24,11 @@
 #include <string.h>
 #include <math.h>
 #include <string>
-using std::string;
 #include <vector>
-using std::vector;
 #include <map>
-using std::map;
 #include <utility>
-using std::pair;
-using std::make_pair;
 #include <algorithm>
 #include <iostream>
-using std::ifstream;
-using std::cin;
-using std::cout;
-using std::cerr;
-using std::endl;
 
 #include "constants.h"
 #include "utils.h"
@@ -85,7 +75,7 @@ void set_model_thresholds(double alpha) {
         homozygote_limit   =  10.83;
     } else {
         cerr << "Error: Unsupported alpha value '" << alpha << "'.\n";
-        throw std::exception();
+        throw exception();
     }
 }
 

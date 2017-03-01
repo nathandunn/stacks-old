@@ -801,7 +801,6 @@ prune_locus_haplotypes(CSLocus *cloc, Datum *d, Locus *loc, unsigned long &prune
     return 0;
 }
 
-
 string
 convert_catalog_haplotype_to_sample(string cat_haplotype, CSLocus *cloc, Locus *loc)
 {
@@ -1785,13 +1784,13 @@ parse_command_line(int argc, char* argv[])
 }
 
 void version() {
-    std::cerr << "rxstacks " << VERSION << "\n\n";
+    cerr << "rxstacks " << VERSION << "\n\n";
 
     exit(0);
 }
 
 void help() {
-    std::cerr << "rxstacks " << VERSION << "\n"
+    cerr << "rxstacks " << VERSION << "\n"
               << "rxstacks -P path -o path [-t threads] [-b batch_id]" << "\n"
               << "  P: path to the Stacks output files.\n"
               << "  o: output path to write results ('.' to override the current files).\n"

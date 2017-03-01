@@ -925,7 +925,6 @@ calc_dprime(PhasedSummary *psum)
                 else
                     psum->recomb[i][j] = true;
 
-
                 D = freq_AB - (freq_A * freq_B);
                 // cerr << "D_AB: " << D << "; ";
                 // D = freq_Ab - (freq_A * freq_b);
@@ -1938,13 +1937,13 @@ int parse_command_line(int argc, char* argv[]) {
 }
 
 void version() {
-    std::cerr << "phasedstacks " << VERSION << "\n\n";
+    cerr << "phasedstacks " << VERSION << "\n\n";
 
     exit(0);
 }
 
 void help() {
-    std::cerr << "phasedstacks " << VERSION << "\n"
+    cerr << "phasedstacks " << VERSION << "\n"
               << "phasedstacks -b id -S path -P path -t file_type [-p threads] [-M popmap] [-v] [-h]" << "\n"
               << "  b: Stacks batch ID.\n"
               << "  P: path to the phased output files.\n"
@@ -1961,7 +1960,6 @@ void help() {
               << "  --skip_zeros: do not include D' values of zero in the D' output.\n"
               << "  --minor_allele_freq: specify a minimum minor allele frequency required to process a nucleotide site (0 < a < 0.5).\n"
               << "  --min_inform_pairs: when building D' haplotype blocks, the minimum number of informative D' measures to combine two blocks (default 0.9).\n\n";
-
 
     exit(0);
 }

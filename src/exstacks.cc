@@ -201,13 +201,13 @@ int parse_command_line(int argc, char* argv[]) {
 }
 
 void version() {
-    std::cerr << "exstacks " << stacks_version << "\n\n";
+    cerr << "exstacks " << stacks_version << "\n\n";
 
     exit(0);
 }
 
 void help() {
-    std::cerr << "exstacks " << stacks_version << "\n"
+    cerr << "exstacks " << stacks_version << "\n"
               << "exstacks -s sample_file [-o path] [-p num_threads] [-h]" << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
               << "  s: TSV file from which to load radtags." << "\n"

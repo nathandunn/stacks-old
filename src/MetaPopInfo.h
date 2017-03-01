@@ -5,11 +5,7 @@
 #include <vector>
 #include <map>
 
-using std::size_t;
-using std::pair;
-using std::vector;
-using std::string;
-using std::map;
+#include "constants.h"
 
 struct Sample {
     string name;

@@ -989,7 +989,6 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
          << "    " << no_haps   << " loci had no verified haplotypes.\n"
          << "    " << bad_aln   << " loci had inconsistent alignments to a catalog locus and were excluded.\n";
 
-
     return 0;
 }
 
@@ -1116,7 +1115,6 @@ verify_gapped_match(map<int, Locus *> &catalog, QLocus *query,
         //     }
         // }
     }
-
 
     if (verified > 0) {
         ver_hits += verified;
@@ -1462,13 +1460,13 @@ int parse_command_line(int argc, char* argv[]) {
 }
 
 void version() {
-    std::cerr << "sstacks " << VERSION << "\n\n";
+    cerr << "sstacks " << VERSION << "\n\n";
 
     exit(0);
 }
 
 void help() {
-    std::cerr << "sstacks " << VERSION << "\n"
+    cerr << "sstacks " << VERSION << "\n"
               << "sstacks [--aligned] -P dir [-b batch_id] -M popmap [-p n_threads]" << "\n"
               << "sstacks [--aligned] -c catalog_path -s sample_path [-s sample_path ...] -o path [-p n_threads]" << "\n"
               << "  b: database/batch ID of the catalog to consider (default: guess)." << "\n"

@@ -24,8 +24,7 @@
 #include <string>
 #include <map>
 
-using std::string;
-using std::map;
+#include "constants.h"
 
 enum map_types {unk, none, gen, dh, cp, bc1, f2};
 enum out_types {rqtl, joinmap, onemap, genomic};

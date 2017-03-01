@@ -22,18 +22,10 @@
 #define __CLEAN_H__
 
 #include <string>
-using std::string;
 #include <map>
-using std::map;
 #include <iostream>
 #include <fstream>
-using std::ofstream;
-using std::cin;
-using std::cout;
-using std::cerr;
-using std::endl;
 #include <unordered_map>
-using std::unordered_map;
 
 #include "input.h"
 #include "kmers.h"

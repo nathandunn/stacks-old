@@ -24,21 +24,12 @@
 #include <math.h>
 #include <iostream>
 #include <sstream>
-using std::stringstream;
-using std::cin;
-using std::cout;
-using std::cerr;
 #include <list>
 using std::list;
 #include <vector>
-using std::vector;
 #include <string>
-using std::string;
 #include <set>
-using std::set;
 #include <utility>
-using std::pair;
-using std::make_pair;
 
 #include "constants.h"
 #include "mst.h"

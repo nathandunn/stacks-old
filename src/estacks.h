@@ -29,23 +29,13 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-using std::stringstream;
-using std::cin;
-using std::cout;
-using std::cerr;
-using std::endl;
 
 #include <vector>
-using std::vector;
 #include <map>
-using std::map;
 #include <set>
-using std::set;
 #include <utility>
-using std::pair;
 
 #include <unordered_map>
-using std::unordered_map;
 
 #ifdef HAVE_SPARSEHASH
 #include <sparsehash/sparse_hash_map>
@@ -90,6 +80,5 @@ int  write_sam(map<int, MergedStack *> &, map<int, PStack *> &);
 //
 int  dump_stacks(map<int, PStack *> &);
 int  dump_merged_stacks(map<int, MergedStack *> &);
-
 
 #endif // __ESTACKS_H__

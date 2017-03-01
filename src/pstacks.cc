@@ -112,7 +112,6 @@ int main (int argc, char* argv[]) {
     IF_NDEBUG_CATCH_ALL_EXCEPTIONS
 }
 
-
 void populate_merged_tags(map<int, PStack *> &unique, map<int, MergedStack *> &merged) {
     map<int, PStack *>::iterator i;
     map<int, MergedStack *>::iterator it_new, it_old;
@@ -349,7 +348,7 @@ void load_radtags(string in_file, HashMap &radtags) {
 
     if (radtags.empty()) {
         cerr << "Error: No input.\n";
-        throw std::exception();
+        throw exception();
     }
 
     cerr << "Collapsed reads into " << radtags.size() << " stacks.\n";
@@ -592,13 +591,13 @@ int parse_command_line(int argc, char* argv[]) {
 }
 
 void version() {
-    std::cerr << "pstacks " << VERSION << "\n\n";
+    cerr << "pstacks " << VERSION << "\n\n";
 
     exit(0);
 }
 
 void help() {
-    std::cerr << "pstacks " << VERSION << "\n"
+    cerr << "pstacks " << VERSION << "\n"
               << "pstacks -f file_path -i id -o path [-m min_cov] [-p num_threads]" << "\n"
               << "  f: input file path.\n"
               << "  i: a unique integer ID for this sample.\n"
@@ -623,7 +622,7 @@ void help() {
     exit(0);
 }
 
-void report_options(std::ostream& os) {
+void report_options(ostream& os) {
     os << "pstacks parameters selected:\n"
        << "  Alignments file: " << in_file << "\n"
        << "  Output prefix: " << prefix_path << "\n"

@@ -118,20 +118,20 @@ public:
 // Uses DiNuc and is thus compatible with BAM/HTSLIB.
 class DNASeq4 {
     size_t l_;
-    std::vector<DiNuc> v_;
+    vector<DiNuc> v_;
 
 public:
     DNASeq4() : l_(0), v_() {}
     DNASeq4(const DNASeq4& other) : l_(other.l_), v_(other.v_) {}
-    DNASeq4(DNASeq4&& other) : l_(other.l_), v_(std::move(other.v_)) {}
+    DNASeq4(DNASeq4&& other) : l_(other.l_), v_(move(other.v_)) {}
     DNASeq4(const char* s, size_t len);
     DNASeq4(const uchar* arr, size_t len) : l_(len), v_(arr, arr+len/2+len%2) {} // `len` is the length of the sequence (not of the array)
-    DNASeq4(const std::string& s) : DNASeq4(s.c_str(), s.size()) {}
+    DNASeq4(const string& s) : DNASeq4(s.c_str(), s.size()) {}
     DNASeq4& operator= (const DNASeq4& other) {l_ = other.l_; v_ = other.v_; return *this;}
-    DNASeq4& operator= (DNASeq4&& other) {l_ = other.l_; v_ = std::move(other.v_); return *this;}
+    DNASeq4& operator= (DNASeq4&& other) {l_ = other.l_; v_ = move(other.v_); return *this;}
 
     size_t length() const {return l_;}
-    std::string str() const;
+    string str() const;
 
     size_t operator[] (size_t i) const {return i%2==0 ? v_[i/2].first() : v_[i/2].second();}
     bool  operator== (const DNASeq4& other) const {return l_ == other.l_ && v_ == other.v_;}
@@ -140,11 +140,11 @@ public:
 
     // Iterator.
     class iterator {
-        std::vector<DiNuc>::const_iterator vi_;
+        vector<DiNuc>::const_iterator vi_;
         bool first_;
 
     public:
-        iterator(std::vector<DiNuc>::const_iterator vi, bool f) : vi_(vi), first_(f) {}
+        iterator(vector<DiNuc>::const_iterator vi, bool f) : vi_(vi), first_(f) {}
         bool operator!= (iterator other) {return ! (vi_ == other.vi_? first_ == other.first_ : false);}
         iterator& operator++ () {if (first_) {first_ = false;} else {++vi_; first_ = true;} return *this; }
 

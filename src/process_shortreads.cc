@@ -424,7 +424,6 @@ process_paired_reads(string prefix_1,
     } while ((s_1 = fh_1->next_seq()) != NULL &&
              (s_2 = fh_2->next_seq()) != NULL);
 
-
     if (discards) {
         delete discard_fh_1;
         delete discard_fh_2;
@@ -1118,13 +1117,13 @@ int parse_command_line(int argc, char* argv[]) {
 }
 
 void version() {
-    std::cerr << "process_shortreads " << VERSION << "\n\n";
+    cerr << "process_shortreads " << VERSION << "\n\n";
 
     exit(0);
 }
 
 void help() {
-    std::cerr << "process_shortreads " << VERSION << "\n"
+    cerr << "process_shortreads " << VERSION << "\n"
               << "process_shortreads [-f in_file | -p in_dir [-P] [-I] | -1 pair_1 -2 pair_2] -b barcode_file -o out_dir [-i type] [-y type] [-c] [-q] [-r] [-E encoding] [-t len] [-D] [-w size] [-s lim] [-h]\n"
               << "  f: path to the input file if processing single-end seqeunces.\n"
               << "  i: input file type, either 'bustard' for the Illumina BUSTARD format, 'bam', 'fastq' (default), or 'gzfastq' for gzipped FASTQ.\n"

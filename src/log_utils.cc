@@ -97,22 +97,22 @@ string to_string(const FileT& ft) {
     return "?!";
 }
 
-LogAlterator::LogAlterator(const std::string& log_path, bool quiet)
+LogAlterator::LogAlterator(const string& log_path, bool quiet)
         : l(log_path)
-        , o(std::cout.rdbuf())
-        , e(std::cerr.rdbuf())
-        , lo_buf(std::cout.rdbuf(), l.rdbuf())
-        , le_buf(std::cerr.rdbuf(), l.rdbuf())
+        , o(cout.rdbuf())
+        , e(cerr.rdbuf())
+        , lo_buf(cout.rdbuf(), l.rdbuf())
+        , le_buf(cerr.rdbuf(), l.rdbuf())
         {
     if (!l)
         failed_to_open(log_path);
 
     if (quiet) {
         // Use the fstream buffer only, and not at all stdout and stderr.
-        std::cout.rdbuf(l.rdbuf());
-        std::cerr.rdbuf(l.rdbuf());
+        cout.rdbuf(l.rdbuf());
+        cerr.rdbuf(l.rdbuf());
     } else {
-        std::cout.rdbuf(&lo_buf);
-        std::cerr.rdbuf(&le_buf);
+        cout.rdbuf(&lo_buf);
+        cerr.rdbuf(&le_buf);
     }
 }
