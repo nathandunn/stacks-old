@@ -27,6 +27,7 @@ public:
     size_t operator[] (size_t ref_i) const;
 
     const Cigar& cigar() const {return cig_;}
+    std::string str() const {std::string s; for(range_iterator it (*this); it; ++it) s.push_back(*it); return s;}
 
     // Iterator.
     // We have to use a range-style iterator to let operator++ skip insertions
