@@ -36,6 +36,7 @@ using std::make_pair;
 #include "constants.h"
 #include "stacks.h"
 #include "MetaPopInfo.h"
+#include "Alignment.h"
 
 typedef struct match {
     uint        cat_id;
@@ -175,6 +176,11 @@ struct SRead : Read {
             {}
 };
 
+struct SAlnRead : AlnRead {
+    size_t sample; // index in MetaPopInfo::samples_
+    SAlnRead(AlnRead&& r, size_t spl) : AlnRead(std::move(r)), sample(spl) {}
+};
+
 class CLocReadSet {
     const MetaPopInfo& mpopi_;
     int id_; // Catalog locus ID
@@ -183,13 +189,33 @@ class CLocReadSet {
 public:
     CLocReadSet(const MetaPopInfo& mpopi) : mpopi_(mpopi), id_(-1), reads_() {}
 
+    const MetaPopInfo& mpopi() const {return mpopi_;}
     int id() const {return id_;}
     const vector<SRead>& reads() const {return reads_;}
-    const MetaPopInfo& mpopi() const {return mpopi_;}
 
     void clear() {id_= -1; reads_.clear();}
     void id(int id) {id_ = id;}
     void add(SRead&& r) {reads_.push_back(std::move(r));}
+};
+
+class ClocAlnSet {
+    const MetaPopInfo& mpopi_;
+    int id_; // Catalog locus ID
+    DNASeq4 ref_;
+    vector<SAlnRead> reads_;
+
+public:
+    ClocAlnSet(const MetaPopInfo& mpopi) : mpopi_(mpopi), id_(-1), ref_(), reads_() {}
+
+    const MetaPopInfo& mpopi() const {return mpopi_;}
+    int id() const {return id_;}
+    const DNASeq4& ref() const {return ref_;}
+    const vector<SRead>& reads() const {return reads_;}
+
+    void clear() {id_= -1; ref_ = DNASeq4(); reads_.clear();}
+    void id(int id) {id_ = id;}
+    void ref(DNASeq4&& ref) {ref_ = std::move(ref);}
+    void add(SAlnRead&& r) {reads_.push_back(std::move(r));}
 };
 
 #endif // __LOCUS_H__
