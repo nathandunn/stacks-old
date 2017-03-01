@@ -5,6 +5,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <algorithm>
 #include <functional>
 
 #include "constants.h"
@@ -45,6 +46,32 @@ struct Nt2 {
     static const char nt_to_ch[4];
 
     static const size_t nt4_to_nt[16];
+};
+
+class Nt4Counts {
+    // Array of counts, containing the count of A's at index Nt4::a, of C's at
+    // Nt4::c, G's at Nt4::g, T's at Nt4::t and N's at Nt4::n.
+    size_t counts_[16];
+    size_t* sorted_[4]; // Pointers to the counts of A, C, G, and T above.
+
+public:
+    Nt4Counts()
+            : sorted_{counts_+Nt4::a, counts_+Nt4::c, counts_+Nt4::g, counts_+Nt4::t}
+        {memset(counts_, uchar(-1), 16 * sizeof(size_t));}
+
+    size_t a() const {return counts_[Nt4::a];}
+    size_t c() const {return counts_[Nt4::c];}
+    size_t g() const {return counts_[Nt4::g];}
+    size_t t() const {return counts_[Nt4::t];}
+    void increment(size_t nt4) {++counts_[nt4];}
+    void reset() {counts_[Nt4::a]=0; counts_[Nt4::c]=0; counts_[Nt4::g]=0; counts_[Nt4::t]=0;}
+
+    void sort() {std::sort(sorted_, sorted_+4, [](size_t* cnt1, size_t* cnt2){return *cnt1>*cnt2;});}
+    const size_t* first() const {return sorted_[0];}
+    const size_t* second() const {return sorted_[1];}
+    const size_t* third() const {return sorted_[2];}
+    const size_t* fourth() const {return sorted_[3];}
+    size_t nt4_of(const size_t* count) const {return count-counts_;}
 };
 
 // A sequence of nucleotides on a uint64_t, where the first nucleotide uses the
@@ -138,7 +165,7 @@ public:
 
     public:
         iterator(std::vector<DiNuc>::const_iterator vi, bool f) : vi_(vi), first_(f) {}
-        bool operator!= (iterator other) {return ! (vi_ == other.vi_? first_ == other.first_ : false);}
+        bool operator!= (iterator other) const {return ! (vi_ == other.vi_? first_ == other.first_ : false);}
         iterator& operator++ () {if (first_) {first_ = false;} else {++vi_; first_ = true;} return *this; }
 
         // Get the nucleotide.

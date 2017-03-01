@@ -48,10 +48,21 @@ public:
     };
 };
 
-class AlnRead : Read {
+struct AlnRead : Read {
     Alignment aln;
     AlnRead(Read&& r, Alignment&& a) : Read(std::move(r)), aln(std::move(a)) {}
 };
+
+// AlnSite
+// A site in a multiple alignment.
+class AlnSite {
+    const vector<Alignment::range_iterator>& col_; // One iterator per read in the alignment.
+
+public:
+    AlnSite(const vector<Alignment::range_iterator>& column) : col_(column) {}
+    void counts(Nt4Counts& counts) const {counts.reset(); for (auto& read: col_) counts.increment(read.nt()); counts.sort();}
+};
+
 
 //
 // ==================
