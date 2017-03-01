@@ -77,7 +77,7 @@ int Sam::next_seq(Seq& s) {
     parse_tsv(line, parts);
     if (parts.size() < n_mandatory_fields) {
         cerr << "Error: Malformed SAM record:\n" << line << "\n";
-        throw std::exception();
+        throw exception();
     }
 
     //

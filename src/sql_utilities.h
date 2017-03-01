@@ -27,10 +27,6 @@
 #include "input.h"
 #include "utils.h"
 
-using std::string;
-using std::vector;
-using std::map;
-
 //
 // The expected number of tab-separated fields in our SQL input files.
 //

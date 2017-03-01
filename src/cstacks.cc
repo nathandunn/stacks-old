@@ -1950,13 +1950,13 @@ int parse_command_line(int argc, char* argv[]) {
 }
 
 void version() {
-    std::cerr << "cstacks " << VERSION << "\n";
+    cerr << "cstacks " << VERSION << "\n";
 
     exit(0);
 }
 
 void help() {
-    std::cerr << "cstacks " << VERSION << "\n"
+    cerr << "cstacks " << VERSION << "\n"
               << "cstacks -P in_dir -M popmap [-n num_mismatches] [--gapped] [-p num_threads] [-b batch_id]" << "\n"
               << "cstacks --aligned -P in_dir -M popmap [-p num_threads] [-b batch_id]" << "\n"
               << "cstacks -s sample1_path [-s sample2_path ...] -o path [-n num_mismatches] [--gapped] [-p num_threads] [-b batch_id]" << "\n"

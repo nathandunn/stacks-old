@@ -29,6 +29,8 @@
 #include <tr1/functional>
 #endif
 
+#include "constants.h"
+
 /*
 #define BITMASK(b)     (1 << ((b) % CHAR_BIT))
 #define BITSLOT(b)     ((b) / CHAR_BIT)
@@ -37,7 +39,6 @@
 #define BITTEST(a, b)  ((a)[BITSLOT(b)] & BITMASK(b))
 #define BITNSLOTS(nb)  ((nb + CHAR_BIT - 1) / CHAR_BIT)
 */
-
 
 //
 // DNANSeq
@@ -70,7 +71,7 @@ public:
     char operator[](uint pos) const;
     uint size() const {return bits / bits_per_nuc;}
     void seq(char* buf) const;
-    std::string seq() const;
+    string seq() const;
 
     bool operator==(const DNANSeq& other) const;
     bool operator<(const DNANSeq& other) const;

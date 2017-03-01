@@ -33,24 +33,13 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-using std::ofstream;
-using std::stringstream;
-using std::cin;
-using std::cout;
-using std::cerr;
-using std::endl;
 #include <iomanip> // std::setprecision
 
 #include <unordered_map>
-using std::unordered_map;
 #include <vector>
-using std::vector;
 #include <map>
-using std::map;
 #include <set>
-using std::set;
 #include <utility>
-using std::pair;
 
 #include "config.h"
 #include "constants.h"
@@ -78,16 +67,15 @@ void   version( void );
 int    parse_command_line(int, char**);
 void   load_radtags(string, HashMap &);
 int    reduce_radtags(HashMap &, map<int, PStack *> &);
-void   populate_merged_tags(std::map<int, PStack *>& unique, std::map<int, MergedStack *>& merged);
+void   populate_merged_tags(map<int, PStack *>& unique, map<int, MergedStack *>& merged);
 void   delete_low_cov_loci(map<int, MergedStack *>&, const map<int, PStack *>&);
 
-void report_options(std::ostream& os);
+void report_options(ostream& os);
 
 //
 // Debugging
 //
 int  dump_stacks(map<int, PStack *> &);
 int  dump_merged_stacks(map<int, MergedStack *> &);
-
 
 #endif // __PSTACKS_H__

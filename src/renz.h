@@ -24,8 +24,7 @@
 #include <map>
 #include <string>
 
-using std::map;
-using std::string;
+#include "constants.h"
 
 void initialize_renz_olap(map<string, int> &renz_olap);
 void initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, map<string, int> &renz_len);

@@ -131,7 +131,7 @@ enum class FileT {unknown,
     bowtie,  sam, bam, tsv,
     bustard, phase, fastphase, beagle};
 
-std::string remove_suffix(FileT, const string&);
+string remove_suffix(FileT, const string&);
 
 FileT guess_file_type(const string&);
 

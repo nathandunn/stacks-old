@@ -661,7 +661,6 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
         break;
     }
 
-
     //
     // Read in the first record, initializing the Seq object s. Then
     // initialize the Read object r, then loop, using the same objects.
@@ -1267,13 +1266,13 @@ int parse_command_line(int argc, char* argv[]) {
 }
 
 void version() {
-    std::cerr << "clone_filter " << VERSION << "\n\n";
+    cerr << "clone_filter " << VERSION << "\n\n";
 
     exit(0);
 }
 
 void help() {
-    std::cerr << "clone_filter " << VERSION << "\n"
+    cerr << "clone_filter " << VERSION << "\n"
               << "clone_filter [-f in_file | -p in_dir [-P] [-I] | -1 pair_1 -2 pair_2] -o out_dir [-i type] [-y type] [-D] [-h]\n"
               << "  f: path to the input file if processing single-end sequences.\n"
               << "  p: path to a directory of files.\n"

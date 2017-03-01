@@ -118,7 +118,7 @@ public:
         bam_fh = hts_open(path, "r");
         if (bam_fh == NULL) {
             cerr << "Error: Failed to open BAM file '" << path << "'.\n";
-            throw std::exception();
+            throw exception();
         }
         hdr.init(sam_hdr_read(bam_fh));
     };

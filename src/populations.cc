@@ -1112,7 +1112,7 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
             // If this locus is fixed, don't try to filter it out.
             //
             if (loc->snps.size() == 0) {
-                new_wl.insert(make_pair(loc->id, std::set<int>()));
+                new_wl.insert(make_pair(loc->id, set<int>()));
                 continue;
             }
 
@@ -3291,7 +3291,6 @@ haplotype_amova(Datum **d, LocSum **s, vector<int> &pop_ids)
     //      << "  Sigma_a: " << sigma_a << "; Sigma_b: "    << sigma_b   << "; Sigma_c: " << sigma_c << "; Sigma_Total: " << sigma_total << "\n"
     //      << "  Phi_st: "  << phi_st  << "; Phi_ct: "     << phi_ct    << "; Phi_sc: "  << phi_sc  << "\n";
 
-
     //
     // Calculate Fst' = Fst / Fst_max
     //
@@ -3622,7 +3621,7 @@ haplotype_d_est(Datum **d, LocSum **s, vector<int> &pop_ids)
     return d_est;
 }
 
-void log_snps_per_loc_distrib(std::ostream& log_fh, map<int, CSLocus*>& catalog)
+void log_snps_per_loc_distrib(ostream& log_fh, map<int, CSLocus*>& catalog)
 {
 
     // N.B. The method below gives the same numbers as by counting the SNPs that satisfy
@@ -5140,7 +5139,7 @@ int load_marker_column_list(string path, map<int, set<int> > &list) {
                 cerr << "Unable to parse whitelist, '" << path << "' at line " << line_num << "\n";
                 exit(1);
             }
-            list.insert(make_pair(marker, std::set<int>()));
+            list.insert(make_pair(marker, set<int>()));
         }
 
         line_num++;
@@ -5155,7 +5154,6 @@ int load_marker_column_list(string path, map<int, set<int> > &list) {
 
     return 0;
 }
-
 
 bool hap_compare(pair<string, int> a, pair<string, int> b) {
     return (a.second > b.second);
@@ -5471,7 +5469,7 @@ int parse_command_line(int argc, char* argv[]) {
             static const set<string> known_debug_flags = {"VCFCOMP"};
             stringstream ss (optarg);
             string s;
-            while (std::getline(ss, s, ',')) {
+            while (getline(ss, s, ',')) {
                 if (known_debug_flags.count(s)) {
                     debug_flags.insert(s);
                 } else {

@@ -53,7 +53,7 @@ parse_cigar(const char *cigar_str, vector<pair<char, uint> > &cigar, bool check_
             if (q == p || c == '\0') {
                 // No number or no qualifier, respectively.
                 cerr << "Error: Malformed CIGAR string '" << cigar_str << "'.\n";
-                throw std::exception();
+                throw exception();
             }
             switch (c) {
             case 'M':

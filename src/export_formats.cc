@@ -308,7 +308,6 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
             }
             Datum** d = pmap->locus(loc->id);
 
-
             const char ref = sites[pos]->p_allele;
             const char alt = sites[pos]->q_allele;
             char freq_alt[32];
@@ -1668,7 +1667,6 @@ write_fastphase(map<int, CSLocus *> &catalog,
                 for (uint pos = 0; pos < ordered_loci.size(); pos++) {
                     loc = catalog[ordered_loci[pos].id];
                     col = loc->snps[ordered_loci[pos].snp_index]->col;
-
 
                     s = psum->locus(loc->id);
                     d = pmap->locus(loc->id);
@@ -3033,7 +3031,7 @@ find_datum_allele_depths(Datum *d, int snp_index, char allele1, char allele2, in
         else if(nt == allele2)
             dp2 += d->depth[i];
         else
-            throw std::exception();
+            throw exception();
     }
 
     return 0;
