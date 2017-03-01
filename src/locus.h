@@ -218,6 +218,9 @@ public:
     void ref(DNASeq4&& ref) {ref_ = std::move(ref);}
     void add(SAlnRead&& r) {reads_.push_back(std::move(r));}
 
+    friend std::ostream& operator<< (std::ostream& os, const CLocAlnSet& loc)
+        {os << loc.ref_.str(); for (auto& r : loc.reads_) os << "\n" << r.aln.str(); return os;}
+
     class range_iterator {
         DNASeq4::iterator ref_it_;
         DNASeq4::iterator ref_past_;
