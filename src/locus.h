@@ -192,6 +192,7 @@ public:
     const MetaPopInfo& mpopi() const {return mpopi_;}
     int id() const {return id_;}
     const vector<SRead>& reads() const {return reads_;}
+          vector<SRead>& reads()       {return reads_;}
 
     void clear() {id_= -1; reads_.clear();}
     void id(int id) {id_ = id;}

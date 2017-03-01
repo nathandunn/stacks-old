@@ -34,7 +34,7 @@ LogAlterator* lg = NULL;
 //
 // Function declarations.
 //
-void process_one_locus(const CLocReadSet& loc, Graph& graph);
+void process_one_locus(CLocReadSet&& loc, Graph& graph);
 
 void parse_command_line(int argc, char* argv[]);
 void report_options(ostream& os);
@@ -64,14 +64,14 @@ int main(int argc, char** argv) {
     if (locus_wl.empty()) {
         // No whitelist.
         while (bam_fh.read_one_locus(loc)) {
-            process_one_locus(loc, graph);
+            process_one_locus(move(loc), graph);
             ++n_loci;
         }
 
     } else {
         while (bam_fh.read_one_locus(loc) && !locus_wl.empty()) {
             if (locus_wl.count(loc.id())) {
-                process_one_locus(loc, graph);
+                process_one_locus(move(loc), graph);
                 ++n_loci;
                 locus_wl.erase(loc.id());
             }
@@ -83,7 +83,7 @@ int main(int argc, char** argv) {
     return 0;
 }
 
-void process_one_locus(const CLocReadSet& loc, Graph& graph) {
+void process_one_locus(CLocReadSet&& loc, Graph& graph) {
     if (fasta_out) {
         ofstream fasta (out_dir + to_string(loc.id()) + ".fa");
         for (const Read& r : loc.reads())
@@ -110,14 +110,21 @@ void process_one_locus(const CLocReadSet& loc, Graph& graph) {
     //
     // Align each read to the contig.
     //
-    vector<string> cigars;
+    CLocAlnSet aln_loc (loc.mpopi());
+    aln_loc.id(loc.id());
+    aln_loc.ref(DNASeq4(ctg));
+
     GappedAln aligner;
-    for (const SRead& r : loc.reads()) {
+    for (SRead& r : loc.reads()) {
         string seq = r.seq.str();
         aligner.init(ctg.length(), r.seq.length());
-        assert(seq.length() == r.seq.length());
         aligner.align(ctg, seq);
-        cigars.push_back(aligner.result().cigar);
+        Cigar cigar;
+        parse_cigar(aligner.result().cigar.c_str(), cigar);
+        if (cigar.size() > 10)
+            // Read didn't align, discard it. xxx Refine this.
+            continue;
+        aln_loc.add(SAlnRead(AlnRead(move(r), move(cigar)), r.sample));
     }
 }
 
