@@ -5,25 +5,28 @@
 #include "DNASeq4.h"
 #include "stacks.h"
 
-class Alignment {
-public:
-    typedef std::vector<std::pair<char, size_t>> Cigar;
+typedef std::vector<std::pair<char, uint>> Cigar;
 
-private:
+class Alignment {
+    const DNASeq4* seq_;
     Cigar cig_;
-    const DNASeq4& seq_;
 
 public:
     Alignment(const DNASeq4& seq, Cigar&& cigar)
-        : cig_(std::move(cigar)), seq_(seq)
+        : seq_(&seq), cig_(std::move(cigar))
         {}
-    Alignment(Alignment&&) = default; // Trivial move constructor.
-    Alignment(const Alignment&) = delete; // Forbid copying.
+
+    // N.B. Copying of course copies the pointer as well; this is not always
+    // what we want, c.f. AlnRead
+    Alignment(Alignment&&) = default;
     Alignment& operator= (Alignment&&) = default;
-    Alignment& operator= (const Alignment&) = delete;
+    Cigar&& move_cigar() {return std::move(cig_);}
+    void assign(const DNASeq4& seq, Cigar&& cigar) {seq_ = &seq; cig_ = std::move(cigar);}
 
     // N.B. Inefficient; prefer iteration.
     size_t operator[] (size_t ref_i) const;
+
+    const Cigar& cigar() const {return cig_;}
 
     // Iterator.
     // We have to use a range-style iterator to let operator++ skip insertions
@@ -38,7 +41,7 @@ public:
 
     public:
         range_iterator(const Alignment& a)
-            : cig_it_(a.cig_.begin()), cig_past_(a.cig_.end()), pos_(0), seq_it_(a.seq_.begin()), seq_past_(a.seq_.end())
+            : cig_it_(a.cig_.begin()), cig_past_(a.cig_.end()), pos_(0), seq_it_(a.seq_->begin()), seq_past_(a.seq_->end())
             {}
         range_iterator& operator++ ();
         operator bool() const {return cig_it_ != cig_past_;}
@@ -50,7 +53,13 @@ public:
 
 struct AlnRead : Read {
     Alignment aln;
-    AlnRead(Read&& r, Alignment&& a) : Read(std::move(r)), aln(std::move(a)) {}
+    AlnRead(Read&& r, Cigar&& c) : Read(std::move(r)), aln(seq, std::move(c)) {}
+
+    AlnRead(AlnRead&& other)
+        : Read(std::move(other)), aln(seq, other.aln.move_cigar()) //n.b. `seq` is `this->seq`.
+        {}
+    AlnRead& operator= (AlnRead&& other)
+        {Read::operator=(std::move(other)); aln.assign(seq, other.aln.move_cigar()); return *this;}
 };
 
 // AlnSite
@@ -92,7 +101,7 @@ size_t Alignment::operator[] (size_t ref_i) const {
     }
 
     seq_i += ref_i;
-    return seq_[seq_i];
+    return (*seq_)[seq_i];
 }
 
 inline
