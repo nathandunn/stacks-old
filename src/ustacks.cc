@@ -64,6 +64,7 @@ double heterozygote_limit = -3.84;
 double homozygote_limit   =  3.84;
 
 int main (int argc, char* argv[]) {
+    IF_NDEBUG_TRY
 
     parse_command_line(argc, argv);
 
@@ -73,7 +74,8 @@ int main (int argc, char* argv[]) {
     //
     if (max_rem_dist == -1) max_rem_dist = max_utag_dist + 2;
 
-    cerr << "ustacks paramters selected:\n"
+    cerr << "ustacks parameters selected:\n"
+         << "  Sample ID: " << sql_id << "\n"
          << "  Min depth of coverage to create a stack: " << min_merge_cov << "\n"
          << "  Max distance allowed between stacks: " << max_utag_dist << "\n"
          << "  Max distance allowed to align secondary reads: " << max_rem_dist << "\n"
@@ -198,6 +200,7 @@ int main (int argc, char* argv[]) {
 
     cerr << "ustacks is done.\n";
     return 0;
+    IF_NDEBUG_CATCH_ALL_EXCEPTIONS
 }
 
 int

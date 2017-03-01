@@ -27,6 +27,7 @@
 #include <iomanip>
 #include <cstdlib>
 
+#include "constants.h"
 #include "process_radtags.h"
 
 using namespace std;
@@ -96,6 +97,7 @@ map<string, int>           renz_cnt;
 map<string, int>           renz_len;
 
 int main (int argc, char* argv[]) {
+    IF_NDEBUG_TRY
 
     initialize_renz(renz, renz_cnt, renz_len);
 
@@ -233,6 +235,7 @@ int main (int argc, char* argv[]) {
     print_results(argc, argv, barcodes, counters, barcode_log);
 
     return 0;
+    IF_NDEBUG_CATCH_ALL_EXCEPTIONS
 }
 
 template <typename fhType>

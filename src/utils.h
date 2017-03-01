@@ -31,6 +31,8 @@ using std::endl;
 #include <utility>
 using std::pair;
 using std::make_pair;
+#include <string>
+using std::string;
 
 #include <dirent.h>
 
@@ -39,6 +41,7 @@ using std::make_pair;
 
 char   reverse(char);
 char  *rev_comp(const char *);
+string rev_comp(const string&);
 void   reverse_string(char *);
 int    is_integer(const char *);
 double is_double(const char *);

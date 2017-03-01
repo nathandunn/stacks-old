@@ -47,6 +47,10 @@ AC_PROG_CXX
 AM_PROG_CC_C_O
 AX_CXX_COMPILE_STDCXX(11,, [mandatory])
 
+# Checks for ar-based static libs.
+AC_PROG_RANLIB
+m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
+
 # Checks for libraries.
 AC_CHECK_LIB([gomp], [omp_set_num_threads],, [AC_MSG_WARN([Unable to locate OpenMP library, you should probably specify '--disable-openmp'.])])
 AC_CHECK_LIB([z], [gzread],, [AC_MSG_ERROR([Zlib not found, reading gzipped files will not be possible.])]) 
@@ -70,9 +74,34 @@ AC_FUNC_MALLOC
 AC_FUNC_REALLOC
 AC_CHECK_FUNCS([floor memset pow sqrt])
 
-# Checks for compiling libraries.
-AC_PROG_RANLIB
-m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
+#
+# Test if regular expressions are functional. Early regex implementations have nonfunctional stubs,
+# so the check for C++11 succeeds, but the compiled code will throw an exception.
+#
+AC_LANG(C++)
+AC_DEFUN([AC_REGEX_FUNC], [
+AC_CACHE_CHECK([for functional regular expressions], [stacks_cv_header_regex_func],
+[
+stacks_cv_header_regex_func=no
+AC_RUN_IFELSE([AC_LANG_SOURCE([[
+#include <regex>
+int main() {
+  const std::regex regex(".*");
+  const std::string string = "This should match!";
+  const auto result = std::regex_search(string, regex);
+  return result ? 0 : 1;
+}
+]])],
+    [stacks_cv_header_regex_func=yes],
+    [AC_MSG_ERROR([Regular expressions are not functional, you need g++ 4.9.0 or greater.])],
+    [AC_MSG_WARN([Requires g++ 4.9.0 or greater.])]
+)])
+if test "$stacks_cv_header_regex_func" = yes; then
+    AC_DEFINE([REGEX_FUNCTIONAL], [1], [Regular expressions are defined and implemented])
+fi
+])
+
+AC_REGEX_FUNC
 
 # For test harness
 AC_PROG_AWK
