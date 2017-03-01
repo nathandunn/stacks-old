@@ -30,9 +30,9 @@ public:
     std::string str() const {std::string s; for(range_iterator it (*this); it; ++it) s.push_back(*it); return s;}
 
     // Iterator.
-    // We have to use a range-style iterator to let operator++ skip insertions
-    // (as we can't peek at the next CIGAR operation if we don't know if we
-    // have reached the end or not / we can't dereference cig_.end()).
+    // We have to use a range-style iterator to skip insertions (as we can't
+    // peek at the next CIGAR operation if we don't know if we have reached the
+    // end or not / we can't dereference cig_.end()).
     class range_iterator {
         Cigar::const_iterator cig_it_;
         Cigar::const_iterator cig_past_;
@@ -43,12 +43,15 @@ public:
     public:
         range_iterator(const Alignment& a)
             : cig_it_(a.cig_.begin()), cig_past_(a.cig_.end()), pos_(0), seq_it_(a.seq_->begin()), seq_past_(a.seq_->end())
-            {}
+            {skip_insertion();}
         range_iterator& operator++ ();
         operator bool() const {return cig_it_ != cig_past_;}
 
         size_t nt() const {if (cig_it_->first=='M') return seq_it_.nt(); else {assert(cig_it_->first=='D'); return Nt4::n;}}
         char operator* () const {return Nt4::nt_to_ch[nt()];}
+
+    private:
+        void skip_insertion();
     };
 };
 
@@ -119,22 +122,26 @@ Alignment::range_iterator& Alignment::range_iterator::operator++ () {
         // Enter the next CIGAR operation.
         pos_ = 0;
         ++cig_it_;
-        if (cig_it_ != cig_past_) {
-            if (cig_it_->first == 'I') {
-                // Op is I; skip this insertion.
-                for (size_t i=0; i<cig_it_->second; ++i) {
-                    assert(seq_it_ != seq_past_);
-                    ++seq_it_;
-                }
-                ++cig_it_;
-            }
-        } else {
-            // End of the CIGAR; check that the entire sequence was consumed.
-            assert(!(seq_it_ != seq_past_));
-        }
+        skip_insertion();
     }
 
+    // Upon reaching the end of the CIGAR, check that the entire sequence was
+    // also consumed.
+    assert(cig_it_ == cig_past_ ? !(seq_it_ != seq_past_) : true);
+
     return *this;
+}
+
+inline
+void Alignment::range_iterator::skip_insertion() {
+    if (cig_it_ != cig_past_ && cig_it_->first == 'I') {
+        // Op is I; skip this insertion.
+        for (size_t i=0; i<cig_it_->second; ++i) {
+            assert(seq_it_ != seq_past_);
+            ++seq_it_;
+        }
+        ++cig_it_;
+    }
 }
 
 #endif

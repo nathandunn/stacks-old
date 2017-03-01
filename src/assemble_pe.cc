@@ -117,8 +117,8 @@ void process_one_locus(CLocReadSet&& loc, Graph& graph) {
     GappedAln aligner;
     for (SRead& r : loc.reads()) {
         string seq = r.seq.str();
-        aligner.init(ctg.length(), r.seq.length());
-        aligner.align(ctg, seq);
+        aligner.init(r.seq.length(), ctg.length());
+        aligner.align(seq, ctg);
         Cigar cigar;
         parse_cigar(aligner.result().cigar.c_str(), cigar);
         if (cigar.size() > 10)
@@ -126,7 +126,6 @@ void process_one_locus(CLocReadSet&& loc, Graph& graph) {
             continue;
         aln_loc.add(SAlnRead(AlnRead(move(r), move(cigar)), r.sample));
     }
-    cerr << aln_loc;
 }
 
 const string help_string = string() +
