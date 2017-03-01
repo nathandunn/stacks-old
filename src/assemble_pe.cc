@@ -23,8 +23,9 @@ string out_dir;
 size_t km_length = -1;
 size_t min_km_count = 2;
 set<int> locus_wl;
-bool gfa_out = false;
 bool fasta_out = false;
+bool gfa_out = false;
+bool aln_out = false;
 
 //
 // Extra globs.
@@ -126,19 +127,26 @@ void process_one_locus(CLocReadSet&& loc, Graph& graph) {
             continue;
         aln_loc.add(SAlnRead(AlnRead(move(r), move(cigar)), r.sample));
     }
+
+    if (aln_out) {
+        ofstream aln (out_dir + to_string(loc.id()) + ".aln");
+        aln << aln_loc << "\n";
+    }
+
 }
 
 const string help_string = string() +
         "assemble_pe " + VERSION  + "\n"
-        "assemble_pe -b bam_file -O out_dir\n"
+        "assemble_pe -b bam_file -O out_dir -k km_len\n"
         "\n"
         "  -b: path to the input sorted read, in BAM format\n"
         "  -O: path to an output directory\n"
         "  -k: kmer length\n"
-        "  --min-cov: minimum coverage to consider a kmer\n"
+        "  --min-cov: minimum coverage to consider a kmer (default 2)\n"
         "  -W,--whitelist: a whitelist of locus IDs\n"
-        "  --gfa: output a GFA file for each locus\n"
         "  --fasta: output a Fasta file for each locus\n"
+        "  --gfa: output a GFA file for each locus\n"
+        "  --aln: output a file showing the contig & read alignments\n"
         "\n"
         ;
 
@@ -160,6 +168,7 @@ void parse_command_line(int argc, char* argv[]) {
         {"whitelist",    required_argument, NULL,  'W'},
         {"gfa",          no_argument,       NULL,  1004},
         {"fasta",        no_argument,       NULL,  1002},
+        {"aln",          no_argument,       NULL,  1005},
         {0, 0, 0, 0}
     };
 
@@ -206,6 +215,9 @@ void parse_command_line(int argc, char* argv[]) {
             break;
         case 1002://fasta
             fasta_out = true;
+            break;
+        case 1005://aln
+            aln_out = true;
             break;
         case '?':
             bad_args();
