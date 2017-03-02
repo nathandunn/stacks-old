@@ -1,6 +1,6 @@
 bin_PROGRAMS = ustacks pstacks estacks cstacks sstacks rxstacks hstacks process_radtags process_shortreads \
 	kmer_filter clone_filter genotypes populations phasedstacks \
-	pstacks_pe tags2bam tags2bam_pe assemble_pe ctg
+	pstacks_pe tags2bam tags2bam_pe assemble_pe
 
 noinst_LIBRARIES = libcore.a libclean.a libpop.a
 
@@ -80,8 +80,6 @@ tags2bam_SOURCES    = libcore.a src/tags2bam.h src/tags2bam.cc
 tags2bam_pe_SOURCES = libcore.a src/tags2bam_pe.h src/tags2bam_pe.cc
 assemble_pe_SOURCES = libcore.a src/assemble_pe.cc src/debruijn.h src/debruijn.cc src/Alignment.h
 
-ctg_SOURCES = src/ctg.cc
-
 estacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS) $(BAM_CFLAGS)
 estacks_LDFLAGS  = $(OPENMP_CFLAGS)
 estacks_LDADD    = $(BAM_LIBS) libcore.a
@@ -141,10 +139,6 @@ tags2bam_pe_LDADD    = $(BAM_LIBS) libcore.a
 assemble_pe_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
 assemble_pe_LDFLAGS  = $(OPENMP_CFLAGS)
 assemble_pe_LDADD    = $(BAM_LIBS) libcore.a
-
-ctg_CXXFLAGS =
-ctg_LDFLAGS  =
-ctg_LDADD    = -lgatbcore -lpthread -lhdf5 -lhdf5_tools -ldl
 
 dist_bin_SCRIPTS = scripts/denovo_map.pl scripts/ref_map.pl	scripts/export_sql.pl \
 	scripts/sort_read_pairs.pl scripts/exec_velvet.pl scripts/load_sequences.pl \
