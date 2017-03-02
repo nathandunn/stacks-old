@@ -70,8 +70,8 @@ int main(int argc, char* argv[]) {
 }
 
 void read_sample_files(
-        std::vector<int>& cloci,
-        std::unordered_map<string, size_t>& read_name_to_loc,
+        vector<int>& cloci,
+        unordered_map<string, size_t>& read_name_to_loc,
         int& sample_id
         ){
 

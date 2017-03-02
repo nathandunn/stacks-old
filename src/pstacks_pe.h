@@ -7,7 +7,7 @@
 #include "stacks.h"
 
 void parse_command_line(int argc, char* argv[]);
-void report_options(std::ostream& fh);
+void report_options(ostream& fh);
 
 // FwLocInfo
 // ----------
@@ -27,7 +27,7 @@ struct FwLocInfo {
 struct Contig {
     PhyLoc loc;
     int len;
-    std::set<const PStack*> stacks;
+    set<const PStack*> stacks;
 
     Contig(const PStack& s) : loc(s.loc), len(s.seq->size()), stacks({&s}) {}
 
@@ -47,24 +47,24 @@ struct Contig {
 // names of the paired-end reads (via `convert_fw_read_name_to_paired`).
 // Uses glob `prefix_path`.
 void link_reads_to_loci(
-        std::vector<FwLocInfo>& loc_info,
-        std::unordered_map<std::string, size_t>& read_name_to_loc
+        vector<FwLocInfo>& loc_info,
+        unordered_map<string, size_t>& read_name_to_loc
         );
 
 // load_aligned_reads()
 // ----------
 // Collapses reads into PStacks according to their sequence and PhyLoc.
 // Uses glob `paired_alns_path`.
-std::vector<std::vector<PStack> > load_aligned_reads(
-        const std::vector<FwLocInfo>& fwloci_info,
-        const std::unordered_map<std::string, size_t>& read_name_to_loc
+vector<vector<PStack> > load_aligned_reads(
+        const vector<FwLocInfo>& fwloci_info,
+        const unordered_map<string, size_t>& read_name_to_loc
         );
 
 // merge_pstacks()
 // ----------
 // Creates a MergedStack from a set of PStack's. The PStacks are "extended" to
 // the length of the contig.
-MergedStack merge_pstacks(std::vector<PStack>& pstacks, int loc_id);
+MergedStack merge_pstacks(vector<PStack>& pstacks, int loc_id);
 
 //
 // Inline definitions.

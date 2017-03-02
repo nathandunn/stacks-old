@@ -13,10 +13,10 @@
 class BamCLocReader {
     Bam* bam_f_;
     const MetaPopInfo& mpopi_;
-    std::map<std::string, size_t> rg_to_sample_;
+    map<string, size_t> rg_to_sample_;
 
 public:
-    BamCLocReader(const std::string& bam_path, MetaPopInfo& mpopi);
+    BamCLocReader(const string& bam_path, MetaPopInfo& mpopi);
     ~BamCLocReader() {if (bam_f_) delete bam_f_;}
 
     // Reads one locus. Returns false on EOF.
@@ -24,7 +24,7 @@ public:
 };
 
 inline
-BamCLocReader::BamCLocReader(const std::string& bam_path, MetaPopInfo& mpopi)
+BamCLocReader::BamCLocReader(const string& bam_path, MetaPopInfo& mpopi)
         : bam_f_(NULL),
           mpopi_(mpopi),
           rg_to_sample_()
@@ -36,7 +36,7 @@ BamCLocReader::BamCLocReader(const std::string& bam_path, MetaPopInfo& mpopi)
     BamHeader::ReadGroups read_groups = bam_f_->h().read_groups();
 
     // Create the MetaPopInfo object.
-    std::vector<std::string> samples;
+    vector<string> samples;
     for (auto& rg : read_groups)
         samples.push_back(rg.second.at("SM"));
     mpopi.init_names(samples);
@@ -47,11 +47,11 @@ BamCLocReader::BamCLocReader(const std::string& bam_path, MetaPopInfo& mpopi)
 
     // Read the very first record.
     if (!bam_f_->next_record()) {
-        std::cerr << "Error: No records in BAM file '" << bam_path << "'.\n";
-        throw std::exception();
+        cerr << "Error: No records in BAM file '" << bam_path << "'.\n";
+        throw exception();
     } else if (bam_f_->r().is_unmapped()) {
-        std::cerr << "Error: BAM file '" << bam_path << "' unexpectedly contains unmapped records.\n";
-        throw std::exception();
+        cerr << "Error: BAM file '" << bam_path << "' unexpectedly contains unmapped records.\n";
+        throw exception();
     }
 }
 
@@ -68,8 +68,8 @@ bool BamCLocReader::read_one_locus(CLocReadSet& readset) {
     int32_t curr_chrom = rec.chrom();
     static int32_t last_chrom = -1;
     if (curr_chrom < last_chrom) {
-        std::cerr << "Error: BAM file isn't properly sorted.\n";
-        throw std::exception();
+        cerr << "Error: BAM file isn't properly sorted.\n";
+        throw exception();
     }
     last_chrom = curr_chrom;
     readset.id(atoi(bam_f_->h().chrom_str(curr_chrom)));

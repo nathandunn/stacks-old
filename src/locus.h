@@ -167,13 +167,13 @@ struct SRead : Read {
     size_t sample; // index in MetaPopInfo::samples_
 
     SRead(Read&& r, size_t spl)
-            : Read(std::move(r)), sample(spl)
+            : Read(move(r)), sample(spl)
             {}
 };
 
 struct SAlnRead : AlnRead {
     size_t sample; // index in MetaPopInfo::samples_
-    SAlnRead(AlnRead&& r, size_t spl) : AlnRead(std::move(r)), sample(spl) {}
+    SAlnRead(AlnRead&& r, size_t spl) : AlnRead(move(r)), sample(spl) {}
 };
 
 class CLocReadSet {
@@ -191,7 +191,7 @@ public:
 
     void clear() {id_= -1; reads_.clear();}
     void id(int id) {id_ = id;}
-    void add(SRead&& r) {reads_.push_back(std::move(r));}
+    void add(SRead&& r) {reads_.push_back(move(r));}
 };
 
 class CLocAlnSet {
@@ -210,10 +210,10 @@ public:
 
     void clear() {id_= -1; ref_ = DNASeq4(); reads_.clear();}
     void id(int id) {id_ = id;}
-    void ref(DNASeq4&& ref) {ref_ = std::move(ref);}
-    void add(SAlnRead&& r) {reads_.push_back(std::move(r));}
+    void ref(DNASeq4&& ref) {ref_ = move(ref);}
+    void add(SAlnRead&& r) {reads_.push_back(move(r));}
 
-    friend std::ostream& operator<< (std::ostream& os, const CLocAlnSet& loc)
+    friend ostream& operator<< (ostream& os, const CLocAlnSet& loc)
         {os << loc.ref_.str(); for (auto& r : loc.reads_) os << "\n" << r.aln.str(); return os;}
 
     class range_iterator {

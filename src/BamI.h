@@ -43,7 +43,7 @@ int bam_find_start_bp(int, strand_type, const vector<pair<char, uint> > &);
 int bam_edit_gaps(vector<pair<char, uint> > &, char *);
 
 // Write a SAM-style text header to a BAM file.
-void write_bam_header(htsFile* bam_f, const std::string& header_text);
+void write_bam_header(htsFile* bam_f, const string& header_text);
 
 class BamRecord {
     bam1_t* r_;
