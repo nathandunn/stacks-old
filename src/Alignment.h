@@ -5,7 +5,7 @@
 #include "DNASeq4.h"
 #include "stacks.h"
 
-typedef std::vector<std::pair<char, uint>> Cigar;
+typedef vector<pair<char, uint>> Cigar;
 
 class Alignment {
     const DNASeq4* seq_;
@@ -13,21 +13,21 @@ class Alignment {
 
 public:
     Alignment(const DNASeq4& seq, Cigar&& cigar)
-        : seq_(&seq), cig_(std::move(cigar))
+        : seq_(&seq), cig_(move(cigar))
         {}
 
     // N.B. Copying of course copies the pointer as well; this is not always
     // what we want, c.f. AlnRead
     Alignment(Alignment&&) = default;
     Alignment& operator= (Alignment&&) = default;
-    Cigar&& move_cigar() {return std::move(cig_);}
-    void assign(const DNASeq4& seq, Cigar&& cigar) {seq_ = &seq; cig_ = std::move(cigar);}
+    Cigar&& move_cigar() {return move(cig_);}
+    void assign(const DNASeq4& seq, Cigar&& cigar) {seq_ = &seq; cig_ = move(cigar);}
 
     // N.B. Inefficient; prefer iteration.
     size_t operator[] (size_t ref_i) const;
 
     const Cigar& cigar() const {return cig_;}
-    std::string str() const {std::string s; for(range_iterator it (*this); it; ++it) s.push_back(*it); return s;}
+    string str() const {string s; for(range_iterator it (*this); it; ++it) s.push_back(*it); return s;}
 
     // Iterator.
     // We have to use a range-style iterator to skip insertions (as we can't
@@ -57,13 +57,13 @@ public:
 
 struct AlnRead : Read {
     Alignment aln;
-    AlnRead(Read&& r, Cigar&& c) : Read(std::move(r)), aln(seq, std::move(c)) {}
+    AlnRead(Read&& r, Cigar&& c) : Read(move(r)), aln(seq, move(c)) {}
 
     AlnRead(AlnRead&& other)
-        : Read(std::move(other)), aln(seq, other.aln.move_cigar()) //n.b. `seq` is `this->seq`.
+        : Read(move(other)), aln(seq, other.aln.move_cigar()) //n.b. `seq` is `this->seq`.
         {}
     AlnRead& operator= (AlnRead&& other)
-        {Read::operator=(std::move(other)); aln.assign(seq, other.aln.move_cigar()); return *this;}
+        {Read::operator=(move(other)); aln.assign(seq, other.aln.move_cigar()); return *this;}
 };
 
 // AlnSite
@@ -101,7 +101,7 @@ size_t Alignment::operator[] (size_t ref_i) const {
         }
         ++op;
         if (op == cig_.end())
-            throw std::out_of_range(std::string("out_of_range in Alignment::op[]: +")+std::to_string(ref_i));
+            throw std::out_of_range(string("out_of_range in Alignment::op[]: +")+to_string(ref_i));
     }
 
     seq_i += ref_i;

@@ -243,10 +243,10 @@ public:
 
 struct Read {
     DNASeq4 seq;
-    std::string name;
+    string name;
 
-    Read(DNASeq4&& s, std::string&& n)
-        : seq(std::move(s)), name(std::move(n))
+    Read(DNASeq4&& s, string&& n)
+        : seq(move(s)), name(move(n))
         {}
     Read(Read&&) = default;
     Read& operator= (Read&&) = default;

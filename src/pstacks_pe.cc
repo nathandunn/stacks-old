@@ -35,8 +35,8 @@
 #define IF_NDEBUG_TRY \
     try {
 #define IF_NDEBUG_CATCH_ALL_EXCEPTIONS \
-    } catch (const std::exception& e) { \
-        std::cerr << "Aborted. (" << e.what() << ").\n"; \
+    } catch (const exception& e) { \
+        cerr << "Aborted. (" << e.what() << ").\n"; \
         return -1; \
     }
 #endif
@@ -246,7 +246,7 @@ void link_reads_to_loci(
 
 vector<vector<PStack> > load_aligned_reads(
         const vector<FwLocInfo>& fwloci_info,
-        const std::unordered_map<std::string, size_t>& read_name_to_loc
+        const unordered_map<string, size_t>& read_name_to_loc
         ) {
     vector<vector<PStack> > stacks_per_loc;
 

@@ -41,8 +41,8 @@ public:
     Kmer succ(size_t km_len, size_t nt) const {Kmer k (*this); k.a_.pop_front(); k.a_.set(km_len-1, nt); return k;}
 
     bool empty() const {return *this == Kmer();}
-    std::string str(size_t km_len) const {
-        std::string s;
+    string str(size_t km_len) const {
+        string s;
         s.reserve(km_len);
         for (size_t i=0; i<km_len; ++i)
             s.push_back(Nt2::to_ch(a_[i]));
@@ -150,7 +150,7 @@ public:
     const Node* first() const {return first_;}
 
     template<typename SPathIt>
-    static std::string contig_str(SPathIt first, SPathIt past, size_t km_len);
+    static string contig_str(SPathIt first, SPathIt past, size_t km_len);
 };
 
 //
@@ -172,10 +172,10 @@ struct KmMapValue {
 class Graph {
     const size_t km_len_;
 
-    std::unordered_map<Kmer, KmMapValue> map_;
-    std::vector<Node> nodes_;
-    std::vector<SPath> simple_paths_;
-    std::vector<SPath*> sorted_spaths_; // The simple paths, sorted topologically, with the terminal (no successors) ones first.
+    unordered_map<Kmer, KmMapValue> map_;
+    vector<Node> nodes_;
+    vector<SPath> simple_paths_;
+    vector<SPath*> sorted_spaths_; // The simple paths, sorted topologically, with the terminal (no successors) ones first.
 
 public:
     Graph(size_t km_length) : km_len_(km_length) {}
@@ -185,9 +185,9 @@ public:
 
     // Finds the best path in the graph.
     // Return false if the graph is not a DAG.
-    bool find_best_path(std::vector<const SPath*>& best_path);
+    bool find_best_path(vector<const SPath*>& best_path);
 
-    void dump_gfa(const std::string& path) const;
+    void dump_gfa(const string& path) const;
 
 private:
     // Resets the object.
@@ -233,7 +233,7 @@ Kmer::Kmer(size_t km_len, DNASeq4::iterator& first, DNASeq4::iterator past) : a_
 }
 
 template<typename SPathIt>
-std::string SPath::contig_str(SPathIt first, SPathIt past, size_t km_len) {
+string SPath::contig_str(SPathIt first, SPathIt past, size_t km_len) {
 
     // Compute the final size.
     size_t ctg_len = km_len - 1;
@@ -242,7 +242,7 @@ std::string SPath::contig_str(SPathIt first, SPathIt past, size_t km_len) {
 
     // Initialize the contig with the contents of the first kmer minus its last
     // nucleotide.
-    std::string ctg = (*first)->first_->km().str(km_len);
+    string ctg = (*first)->first_->km().str(km_len);
     ctg.pop_back();
     ctg.reserve(ctg_len);
 

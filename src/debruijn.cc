@@ -236,7 +236,7 @@ bool Graph::find_best_path(vector<const SPath*>& best_path) {
     return true;
 }
 
-void Graph::dump_gfa(const std::string& path) const {
+void Graph::dump_gfa(const string& path) const {
     ofstream ofs (path);
     if (!ofs) {
         cerr << "Error: Failed to open '" << path << "' for writing.\n";
