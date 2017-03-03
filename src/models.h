@@ -96,20 +96,20 @@ double lr_multinomial_model (double nuc_1, double nuc_2, double nuc_3, double nu
     //
 
     double total = nuc_1 + nuc_2 + nuc_3 + nuc_4;
-    assert(total > 0.);
+    assert(total > 0.0);
 
     double l_ratio = (nuc_1 * log(nuc_1 / total));
 
-    if (total - nuc_1 > 0.)
-        l_ratio += ((total - nuc_1) * log((total - nuc_1) / (3. * total)));
+    if (total - nuc_1 > 0.0)
+        l_ratio += ((total - nuc_1) * log((total - nuc_1) / (3.0 * total)));
 
-    if (nuc_1 + nuc_2 > 0.)
-        l_ratio -= ((nuc_1 + nuc_2) * log((nuc_1 + nuc_2) / (2. * total)));
+    if (nuc_1 + nuc_2 > 0.0)
+        l_ratio -= ((nuc_1 + nuc_2) * log((nuc_1 + nuc_2) / (2.0 * total)));
 
-    if (nuc_3 + nuc_4 > 0.)
-        l_ratio -= ((nuc_3 + nuc_4) * log((nuc_3 + nuc_4) / (2. * total)));
+    if (nuc_3 + nuc_4 > 0.0)
+        l_ratio -= ((nuc_3 + nuc_4) * log((nuc_3 + nuc_4) / (2.0 * total)));
 
-    l_ratio *= 2.;
+    l_ratio *= 2.0;
 
     return l_ratio;
 }
@@ -122,13 +122,13 @@ double lr_bounded_multinomial_model (double nuc_1, double nuc_2, double nuc_3, d
     //
 
     double total = nuc_1 + nuc_2 + nuc_3 + nuc_4;
-    assert(total > 0.);
+    assert(total > 0.0);
 
     //
     // Calculate the site specific error rate for homozygous and heterozygous genotypes.
     //
-    double epsilon_hom  = (4. / 3.) * ((total - nuc_1) / total);
-    double epsilon_het  = 2. * ((nuc_3 + nuc_4) / total);
+    double epsilon_hom  = (4.0 / 3.0) * ((total - nuc_1) / total);
+    double epsilon_het  = 2.0 * ((nuc_3 + nuc_4) / total);
 
     //
     // Check if the error rate is above or below the specified bound.
@@ -146,16 +146,16 @@ double lr_bounded_multinomial_model (double nuc_1, double nuc_2, double nuc_3, d
     //
     // Calculate the log likelihood for the homozygous and heterozygous genotypes.
     //
-    double ln_L_hom = nuc_1 * log(1 - ((3./4.) * epsilon_hom));
-    ln_L_hom += epsilon_hom > 0. ? ((nuc_2 + nuc_3 + nuc_4) * log(epsilon_hom / 4.)) : 0.;
+    double ln_L_hom = nuc_1 * log(1 - ((3.0/4.0) * epsilon_hom));
+    ln_L_hom += epsilon_hom > 0.0 ? ((nuc_2 + nuc_3 + nuc_4) * log(epsilon_hom / 4.0)) : 0.0;
 
-    double ln_L_het = (nuc_1 + nuc_2) * log(0.5 - (epsilon_het / 4.));
-    ln_L_het += epsilon_het > 0. ? ((nuc_3 + nuc_4) * log(epsilon_het / 4.)) : 0.;
+    double ln_L_het = (nuc_1 + nuc_2) * log(0.5 - (epsilon_het / 4.0));
+    ln_L_het += epsilon_het > 0.0 ? ((nuc_3 + nuc_4) * log(epsilon_het / 4.0)) : 0.0;
 
     //
     // Calculate the likelihood ratio.
     //
-    double l_ratio  = 2. * (ln_L_hom - ln_L_het);
+    double l_ratio  = 2.0 * (ln_L_hom - ln_L_het);
 
     // cerr << "  Nuc_1: " << nuc_1 << " Nuc_2: " << nuc_2 << " Nuc_3: " << nuc_3 << " Nuc_4: " << nuc_4
     //   << " epsilon homozygote: " << epsilon_hom
