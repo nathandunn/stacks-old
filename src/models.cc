@@ -76,6 +76,9 @@ void record_snp(SNP& snp, snp_type type, uint col, double l_ratio, const vector<
         snp.rank_2 = '-';
         break;
     default:
+        // snp_type_unk, with at least one observation (otherwise record_dummy_snp
+        // would have been called)
+        // A rank_2 nucleotide is set only if at least two nucleotides were observed.
         snp.rank_2 = nuc[1].second > 0 ? nuc[1].first : '-';
         break;
     }
