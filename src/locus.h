@@ -33,6 +33,9 @@
 #include "MetaPopInfo.h"
 #include "Alignment.h"
 
+class Locus;
+#include "aln_utils.h"
+
 typedef struct match {
     uint        cat_id;
     allele_type cat_type;
@@ -165,10 +168,7 @@ bool bp_compare(Locus *, Locus *);
 // SRead: a Read belonging to a Sample.
 struct SRead : Read {
     size_t sample; // index in MetaPopInfo::samples_
-
-    SRead(Read&& r, size_t spl)
-            : Read(move(r)), sample(spl)
-            {}
+    SRead(Read&& r, size_t spl) : Read(move(r)), sample(spl) {}
 };
 
 struct SAlnRead : AlnRead {
@@ -199,43 +199,103 @@ class CLocAlnSet {
     int id_; // Catalog locus ID
     DNASeq4 ref_;
     vector<SAlnRead> reads_;
+    vector<vector<size_t>> reads_per_sample_;
 
 public:
-    CLocAlnSet(const MetaPopInfo& mpopi) : mpopi_(mpopi), id_(-1), ref_(), reads_() {}
+    CLocAlnSet(const MetaPopInfo& mpopi)
+        : mpopi_(mpopi), id_(-1), ref_(), reads_(), reads_per_sample_(mpopi_.samples().size())
+        {}
 
     const MetaPopInfo& mpopi() const {return mpopi_;}
     int id() const {return id_;}
     const DNASeq4& ref() const {return ref_;}
     const vector<SAlnRead>& reads() const {return reads_;}
+    const vector<size_t>& sample_reads(size_t sample) const {return reads_per_sample_.at(sample);}
 
-    void clear() {id_= -1; ref_ = DNASeq4(); reads_.clear();}
+    void clear() {id_= -1; ref_ = DNASeq4(); reads_.clear(); reads_per_sample_.clear();}
     void id(int id) {id_ = id;}
     void ref(DNASeq4&& ref) {ref_ = move(ref);}
-    void add(SAlnRead&& r) {reads_.push_back(move(r));}
+    void add(SAlnRead&& r);
 
     friend ostream& operator<< (ostream& os, const CLocAlnSet& loc)
         {os << loc.ref_.str(); for (auto& r : loc.reads_) os << "\n" << r.aln.str(); return os;}
 
-    class range_iterator {
+    //
+    // Class to iterate over sites.
+    //
+    class site_iterator {
+
+        const CLocAlnSet& loc_aln_;
         DNASeq4::iterator ref_it_;
         DNASeq4::iterator ref_past_;
-        vector<Alignment::range_iterator> its_;
+        vector<Alignment::iterator> its_;
 
     public:
-        range_iterator(const CLocAlnSet& loc_aln)
-                : ref_it_(loc_aln.ref_.begin()),
-                ref_past_(loc_aln.ref_.end()),
+        // Iteration methods.
+        site_iterator(const CLocAlnSet& loc_aln)
+                : loc_aln_(loc_aln),
+                ref_it_(loc_aln.ref().begin()),
+                ref_past_(loc_aln.ref().end()),
                 its_()
                 {
-            its_.reserve(loc_aln.reads_.size());
-            for (const SAlnRead& r: loc_aln.reads_)
-                its_.push_back(Alignment::range_iterator(r.aln));
+            its_.reserve(loc_aln.reads().size());
+            for (const SAlnRead& r: loc_aln.reads())
+                its_.push_back(Alignment::iterator(r.aln));
         }
         operator bool () const {return ref_it_ != ref_past_;}
-        range_iterator& operator++ () {++ref_it_; for (auto& it: its_) {assert(bool(it)); ++it;} return *this;}
-        size_t ref_nt() const {return ref_it_.nt();}
-        AlnSite operator* () const {return AlnSite(its_);}
+        site_iterator& operator++ ();
+
+        // Site interface.
+        size_t ref_nt() const {return ref_it_.nt();} // Get the contig nt.
+        void counts(Nt4Counts& counts) const; // Get the nt counts across all samples.
+        void counts(Nt4Counts& counts, size_t sample) const; // Get the nt counts for a given sample.
     };
 };
+
+//
+// ==================
+// Inline definitions
+// ==================
+//
+
+inline
+void CLocAlnSet::add(SAlnRead&& r) {
+    assert(std::get<1>(cigar_lengths(r.aln.cigar())) == ref_.length());
+    reads_per_sample_.at(r.sample).push_back(reads_.size());
+    reads_.push_back(move(r));
+}
+
+inline
+CLocAlnSet::site_iterator& CLocAlnSet::site_iterator::operator++ () {
+    ++ref_it_;
+    for (auto& it: its_)
+        ++it;
+
+    #ifdef DEBUG
+    if (! (ref_it_ != ref_past_)) {
+        // Make sure we've reached the end of the alignment for every read.
+        for (auto& it: its_)
+            assert(!bool(it));
+    }
+    #endif
+
+    return *this;
+}
+
+inline
+void CLocAlnSet::site_iterator::counts(Nt4Counts& counts) const {
+    counts.reset();
+    for (auto& read: its_)
+        counts.increment(read.nt());
+    counts.sort();
+}
+
+inline
+void CLocAlnSet::site_iterator::counts(Nt4Counts& counts, size_t sample) const {
+    counts.reset();
+    for (size_t read_i : loc_aln_.sample_reads(sample))
+        counts.increment(its_[read_i].nt());
+    counts.sort();
+}
 
 #endif // __LOCUS_H__

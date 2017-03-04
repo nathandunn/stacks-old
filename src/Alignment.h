@@ -14,7 +14,7 @@ class Alignment {
 public:
     Alignment(const DNASeq4& seq, Cigar&& cigar)
         : seq_(&seq), cig_(move(cigar))
-        {}
+        {assert(check_cigar());}
 
     // N.B. Copying of course copies the pointer as well; this is not always
     // what we want, c.f. AlnRead
@@ -27,13 +27,17 @@ public:
     size_t operator[] (size_t ref_i) const;
 
     const Cigar& cigar() const {return cig_;}
-    string str() const {string s; for(range_iterator it (*this); it; ++it) s.push_back(*it); return s;}
+    string str() const {string s; for(iterator it (*this); it; ++it) s.push_back(*it); return s;}
 
+private:
+    bool check_cigar() const;
+
+public:
     // Iterator.
     // We have to use a range-style iterator to skip insertions (as we can't
     // peek at the next CIGAR operation if we don't know if we have reached the
     // end or not / we can't dereference cig_.end()).
-    class range_iterator {
+    class iterator {
         Cigar::const_iterator cig_it_;
         Cigar::const_iterator cig_past_;
         size_t pos_; // Position in the current cigar op.
@@ -41,10 +45,10 @@ public:
         DNASeq4::iterator seq_past_; // For debugging purposes; only used in assert's.
 
     public:
-        range_iterator(const Alignment& a)
+        iterator(const Alignment& a)
             : cig_it_(a.cig_.begin()), cig_past_(a.cig_.end()), pos_(0), seq_it_(a.seq_->begin()), seq_past_(a.seq_->end())
             {skip_insertion();}
-        range_iterator& operator++ ();
+        iterator& operator++ ();
         operator bool() const {return cig_it_ != cig_past_;}
 
         size_t nt() const {if (cig_it_->first=='M') return seq_it_.nt(); else {assert(cig_it_->first=='D'); return Nt4::n;}}
@@ -65,17 +69,6 @@ struct AlnRead : Read {
     AlnRead& operator= (AlnRead&& other)
         {Read::operator=(move(other)); aln.assign(seq, other.aln.move_cigar()); return *this;}
 };
-
-// AlnSite
-// A site in a multiple alignment.
-class AlnSite {
-    const vector<Alignment::range_iterator>& col_; // One iterator per read in the alignment.
-
-public:
-    AlnSite(const vector<Alignment::range_iterator>& column) : col_(column) {}
-    void counts(Nt4Counts& counts) const {counts.reset(); for (auto& read: col_) counts.increment(read.nt()); counts.sort();}
-};
-
 
 //
 // ==================
@@ -109,7 +102,7 @@ size_t Alignment::operator[] (size_t ref_i) const {
 }
 
 inline
-Alignment::range_iterator& Alignment::range_iterator::operator++ () {
+Alignment::iterator& Alignment::iterator::operator++ () {
     assert(cig_it_ != cig_past_);
 
     if (cig_it_->first == 'M') {
@@ -133,7 +126,7 @@ Alignment::range_iterator& Alignment::range_iterator::operator++ () {
 }
 
 inline
-void Alignment::range_iterator::skip_insertion() {
+void Alignment::iterator::skip_insertion() {
     if (cig_it_ != cig_past_ && cig_it_->first == 'I') {
         // Op is I; skip this insertion.
         for (size_t i=0; i<cig_it_->second; ++i) {
@@ -142,6 +135,21 @@ void Alignment::range_iterator::skip_insertion() {
         }
         ++cig_it_;
     }
+}
+
+inline
+bool Alignment::check_cigar() const {
+    size_t seq_i = 0;
+    for (auto& op : cig_) {
+        if (op.first == 'M' || op.first == 'I')
+            // M and I consume the sequence.
+            seq_i += op.second;
+        else if (op.first != 'D')
+            // Oops, the class only knows M, I and D.
+            return false;
+    }
+
+    return seq_i == seq_->length();
 }
 
 #endif

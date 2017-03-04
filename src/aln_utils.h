@@ -24,8 +24,8 @@
 #include <utility>
 #include <string>
 #include <vector>
+#include <tuple>
 
-#include "locus.h"
 #include "constants.h"
 #include "utils.h"
 
@@ -36,6 +36,9 @@ string remove_cigar_from_seq(const char *, vector<pair<char, uint> > &);
 string apply_cigar_to_model_seq(const char *, vector<pair<char, uint> > &);
 int    apply_cigar_to_seq(char *, uint, const char *, vector<pair<char, uint> > &);
 int    apply_cigar_to_model_seq(char *, uint, const char *, vector<pair<char, uint> > &);
+std::tuple<uint,uint,uint> cigar_lengths(const vector<pair<char, uint>>&);
+
+#include "locus.h"
 int    adjust_snps_for_gaps(vector<pair<char, uint> > &, Locus *);
 int    adjust_and_add_snps_for_gaps(vector<pair<char, uint> > &, Locus *);
 int    remove_snps_from_gaps(vector<pair<char, uint> > &, Locus *);

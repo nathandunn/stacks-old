@@ -480,3 +480,38 @@ remove_snps_from_gaps(vector<pair<char, uint> > &cigar, Locus *loc)
 
     return 0;
 }
+
+std::tuple<uint,uint,uint> cigar_lengths(const vector<pair<char, uint>>& cigar) {
+    uint padded_len = 0;
+    uint ref_len = 0;
+    uint seq_len = 0;
+    for (auto& op : cigar) {
+        padded_len += op.second;
+        switch (op.first) {
+        case 'M':
+        case '=':
+        case 'X':
+            // Consume both ref & seq.
+            ref_len += op.second;
+            seq_len += op.second;
+            break;
+        case 'I':
+            // Consume seq.
+            seq_len += op.second;
+            break;
+        case 'D':
+        case 'S':
+        case 'N':
+        case 'H':
+        case 'P':
+            // Consume ref.
+            ref_len += op.second;
+            break;
+        default:
+            assert(false);
+            break;
+        }
+    }
+
+    return std::make_tuple(padded_len, ref_len, seq_len);
+}
