@@ -34,8 +34,8 @@ public:
         this->contiguity = 0;
         this->pct_id     = 0.0;
     }
-    AlignRes(string cigar, uint gapcnt, uint contiguity, double pct_id) {
-        this->cigar      = cigar;
+    AlignRes(string&& cigar, uint gapcnt, uint contiguity, double pct_id) {
+        this->cigar      = move(cigar);
         this->gap_cnt    = gapcnt;
         this->contiguity = contiguity;
         this->pct_id     = pct_id;
@@ -81,7 +81,7 @@ class GappedAln {
     AlignRes    _aln;
 
     inline int swap(double *, dynprog *, int, int);
-    int        trace_alignment(string, string);
+    int        trace_alignment(const string&, const string&);
 
  public:
     GappedAln();
@@ -90,11 +90,11 @@ class GappedAln {
     ~GappedAln();
 
     int        init(int, int);
-    int        align(string, string);
-    AlignRes   result();
+    int        align(const string&, const string&);
+    const AlignRes& result();
 
     int parse_cigar(vector<pair<char, uint> > &);
-    int dump_alignment(string, string);
+    int dump_alignment(const string&, const string&);
 };
 
 GappedAln::GappedAln()
@@ -178,7 +178,7 @@ GappedAln::init(int size_1, int size_2)
 }
 
 int
-GappedAln::align(string tag_1, string tag_2)
+GappedAln::align(const string& tag_1, const string& tag_2)
 {
     //         j---->
     //        [0][1][2][3]...[n-1]
@@ -355,7 +355,7 @@ GappedAln::swap(double *scores, dynprog *direction, int index_1, int index_2)
 }
 
 bool
-compare_alignres(AlignRes a, AlignRes b)
+compare_alignres(const AlignRes& a, const AlignRes& b)
 {
     if (a.gap_cnt == b.gap_cnt) {
 
@@ -370,7 +370,7 @@ compare_alignres(AlignRes a, AlignRes b)
 }
 
 int
-GappedAln::trace_alignment(string tag_1, string tag_2)
+GappedAln::trace_alignment(const string& tag_1, const string& tag_2)
 {
     //         j---->
     //        [0][1][2][3]...[n-1]
@@ -471,7 +471,7 @@ GappedAln::trace_alignment(string tag_1, string tag_2)
             cigar += buf;
         }
 
-        alns.push_back(AlignRes(cigar, gaps, contiguity, (ident / (double) len)));
+        alns.push_back(AlignRes(move(cigar), gaps, contiguity, (ident / (double) len)));
 
         // cerr << aln_1 << " [" << cigar << ", contiguity: " << contiguity << ", gaps: " << gaps << "]\n"
         //      << aln_2 << "\n";
@@ -485,7 +485,7 @@ GappedAln::trace_alignment(string tag_1, string tag_2)
     return 1;
 }
 
-AlignRes
+const AlignRes&
 GappedAln::result()
 {
     return this->_aln;
@@ -520,7 +520,7 @@ GappedAln::parse_cigar(vector<pair<char, uint> > &cigar)
 }
 
 int
-GappedAln::dump_alignment(string tag_1, string tag_2)
+GappedAln::dump_alignment(const string& tag_1, const string& tag_2)
 {
     //         j---->
     //        [0][1][2][3]...[n-1]
