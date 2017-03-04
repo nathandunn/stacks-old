@@ -12,6 +12,7 @@ import cairo
 #
 outtype        = "pdf"
 outpath        = ""
+chrpath        = ""
 files          = []
 file_types     = []
 draw_filenames = True
@@ -21,29 +22,19 @@ draw_plotkey   = True
 # The img dictionary will hold image-specific dimensions.
 #
 img = {}
-img['height']      = 800
-img['width']       = 800
-img['min_rad_pct'] = 0.55
-img['max_rad_pct'] = 0.8
-img['font_size']   = 16;
+img['height']        = 800
+img['width']         = 800
+img['min_rad_pct']   = 0.55
+img['max_rad_pct']   = 0.8
+img['font_size']     = 16;
+img['fst_scale_max'] = 1.0
+img['div_scale_max'] = 1.0
 
 colors = []
 colors.append((255.0/255.0, 255.0/255.0, 255.0/255.0)) # ffffff White
 colors.append((  0.0/255.0,  80.0/255.0, 242.0/255.0)) # 0050f2 Blue
 colors.append((255.0/255.0,   0.0/255.0,   0.0/255.0)) # ff0000 Red
 
-#
-# Define chromosome sizes in stickleback.
-#
-chrs = {'groupI'    : 28185914, 'groupII'   : 23295652, 'groupIII'   : 16798506, 'groupIV'  : 32632948,
-        'groupIX'   : 20249479, 'groupV'    : 12251397, 'groupVI'    : 17083675, 'groupVII' : 27937443,
-        'groupVIII' : 19368704, 'groupX'    : 15657440, 'groupXI'    : 16706052, 'groupXII' : 18401067,
-        'groupXIII' : 20083130, 'groupXIV'  : 15246461, 'groupXIX'   : 20240660, 'groupXV'  : 16198764,
-        'groupXVI'  : 18115788, 'groupXVII' : 14603141, 'groupXVIII' : 16282716, 'groupXX'  : 19732071,
-        'groupXXI'  : 11717487}
-chrs_default = ['groupI', 'groupII', 'groupIII', 'groupIV', 'groupV', 'groupVI', 'groupVII',
-                'groupVIII', 'groupIX', 'groupX', 'groupXI', 'groupXII', 'groupXIII', 'groupXIV', 
-                'groupXV', 'groupXVI', 'groupXVII', 'groupXVIII', 'groupXIX', 'groupXX', 'groupXXI']
 cols = {'fst'     : 18,
         'phist'   : 7,
         'fstp'    : 10,
@@ -54,31 +45,34 @@ cols = {'fst'     : 18,
 #
 # Global variables to hold plotting data.
 #
-chrs_sorted = []
-stats       = {}
-means       = {}
+chrs         = {}
+chrs_default = []
+chrs_sorted  = []
+stats        = {}
+means        = {}
 
 def parse_file_type(option, opt, value, parser):
     global files
     global file_types
 
     files.append(value)
-    if opt == "-f":
+    if opt == "-f" or opt == "--fst":
         file_types.append('fst')
-    elif opt == "-F":
+    elif opt == "-F" or opt == "--fstprine":
         file_types.append('fstp')
-    elif opt == "-P":
+    elif opt == "-P" or opt == "--phist":
         file_types.append('phist')
-    elif opt == "-H":
+    elif opt == "-H" or opt == "--hapdiv":
         file_types.append('hapdiv')
-    elif opt == "-D":
+    elif opt == "-D" or opt == "--hapdiff":
         file_types.append('hapdiff')
-    elif opt == "-A":
+    elif opt == "-A" or opt == "--hapavg":
         file_types.append('hapavg')
 
 def parse_command_line(img):
     global outpath
     global outtype
+    global chrpath
     global files
     global file_types
     global chrs_sorted
@@ -94,8 +88,10 @@ def parse_command_line(img):
                  help="write output to this file.")
     p.add_option("-t", "--outtype", action="store", dest="outtype",
                  help="output type, either 'pdf' or 'svg'.")
-    p.add_option("-c", action="store", dest="chr_list",
-                 help="comma-seperated list of chromosomes to plot.")
+    p.add_option("-c", "--chrs", action="store", dest="chrpath",
+                 help="chromosome definition file: two column, chromosome and length, in plot order.")
+    p.add_option("-C", action="store", dest="chr_list",
+                 help="only plot this comma-seperated list of chromosomes.")
     p.add_option("-m", action="store", type="float", dest="min_rad",
                  help="minimum radius, between 0 and 1.0 (default 0.55).")
     p.add_option("-M", action="store", type="float", dest="max_rad",
@@ -106,19 +102,23 @@ def parse_command_line(img):
                  help="Suppress drawing of input filenames.")
     p.add_option("-k", "--no_key", action="store_false", dest="draw_key",
                  help="Suppress drawing of plot key.")
-    p.add_option("-f", action="callback", type="string", callback=parse_file_type,
+    p.add_option("-f", "--fst", action="callback", type="string", callback=parse_file_type,
                  help="Stacks Fst statistic from 'fst' file.")
-    p.add_option("-F", action="callback", type="string", callback=parse_file_type,
+    p.add_option("-F", "--fstprime", action="callback", type="string", callback=parse_file_type,
                  help="Stacks Fst' statistic from 'phistats' file.")
-    p.add_option("-P", action="callback", type="string", callback=parse_file_type,
+    p.add_option("-P", "--phist", action="callback", type="string", callback=parse_file_type,
                  help="Stacks Phi_st statistic from 'phistats' file.")
-    p.add_option("-H", action="callback", type="string", callback=parse_file_type, 
+    p.add_option("-H", "--hapdiv", action="callback", type="string", callback=parse_file_type, 
                  help="Stacks haplotype statistics file, 'hapstats', will plot raw haplotype diversity.")
-    p.add_option("-D", action="callback", type="string", callback=parse_file_type,
+    p.add_option("-D", "--hapdiff", action="callback", type="string", callback=parse_file_type,
                  help="Stacks haplotype statistics difference file, 'hapstats_diff', will plot difference between two haplotype diversities.")
-    p.add_option("-A", action="callback", type="string", callback=parse_file_type,
+    p.add_option("-A", "--hapavg", action="callback", type="string", callback=parse_file_type,
                  help="Stacks haplotype statistics file, 'hapstats', will plot difference from haplotype diversity average.")
-
+    p.add_option("--hapdiv_scale", action="store", type="float", dest="hapdiv_scale",
+                 help="Maximum haplotype diversity value for drawing the color scale.")
+    p.add_option("--fst_scale", action="store", type="float", dest="fst_scale",
+                 help="Maximum Fst/Phist/Fst' value for drawing the color scale.")
+    
     #
     # Parse the command line
     #
@@ -128,6 +128,12 @@ def parse_command_line(img):
         outpath = opts.outfile
     if opts.outtype != None:
         outtype = opts.outtype
+    if opts.chrpath != None:
+        chrpath = opts.chrpath
+    if opts.fst_scale != None:
+        img['fst_scale_max'] = opts.fst_scale
+    if opts.hapdiv_scale != None:
+        img['div_scale_max'] = opts.hapdiv_scale
     if opts.min_rad != None:
         img['min_rad_pct'] = opts.min_rad
     if opts.max_rad != None:
@@ -312,6 +318,14 @@ def draw_scale_bars(cr, img, chrs_sorted):
 
     cr.set_dash([4, 1])
 
+    genome_len = 0.0
+    tic_size   = 15000000
+
+    for chr in chrs_sorted:
+        genome_len += chrs[chr]
+    if genome_len < 500000000:
+        tic_size = 5000000
+
     for chr in chrs_sorted:
 	c       = img['chrs'][chr]
 	chr_len = chrs[chr]
@@ -319,10 +333,10 @@ def draw_scale_bars(cr, img, chrs_sorted):
 	#
 	# Determine chromosome length rounded to nearest 10Mb.
 	#
-	tics = int(chr_len / 5000000) % 5000000
+	tics = int(chr_len / tic_size) % tic_size
 
 	for i in range(1, tics + 1):
-	    start_bp = 5000000 * i
+	    start_bp = tic_size * i
 
 	    #
 	    # Scale the starting point for proper placement on the chromosome arc
@@ -620,10 +634,11 @@ def draw_key(cr, img, key_type, index, mean):
     cr.set_line_width(1)
 
     if key_type == "hapdiff" or key_type == "hapavg":
+        scale_max  = 1.0
         color_step = 1.0 / (float(img['key_height']) / 2.0)
         text       = "Diff" if key_type == "hapdiff" else "Avg"
         i          = -1
-        while (i <= 1):
+        while (i <= 1.0):
             if i >= 0:
                 if key_type == "hapdiff":
                     (r, g, b) = hsv2rgb(0.61, scale_sigmoid_color(i), 0.95)    
@@ -643,10 +658,11 @@ def draw_key(cr, img, key_type, index, mean):
             i += color_step
 
     else:
+        scale_max  = img['div_scale_max'] if key_type == "hapdiv" else img['fst_scale_max']
         color_step = 1.0 / float(img['key_height'])
         text       = "Div" if key_type == "hapdiv" else "Fst"
         i          = 0
-        while (i <= 1):
+        while (i <= 1.0):
             if key_type == "hapdiv":
                 # (r, g, b) = hsv2rgb(scale_hapdiv_color(i), 1.0, 0.85)
                 (r, g, b) = three_color_gradient(colors[0], colors[1], colors[2], mean, i)
@@ -689,14 +705,14 @@ def draw_key(cr, img, key_type, index, mean):
     if key_type == "hapdiff" or key_type == "hapavg":
         text = "0"
     else:
-        text = "0.5"
+        text = str(round(scale_max / 2.0, 2))
     textents    = cr.text_extents(text)
     text_width  = textents[2]
     text_height = textents[3]
     cr.move_to(x1 - text_width - 3, float((y1 + y2) / 2.0) + float(text_height / 2.0))
     cr.show_text(text)
 
-    text        = "1.0"
+    text        = str(round(scale_max, 2))
     textents    = cr.text_extents(text)
     text_width  = textents[2]
     text_height = textents[3]
@@ -801,13 +817,19 @@ def draw_stat_values(cr, img, stats, mean, chr, radius, file_type):
 		(r, g, b) = hsv2rgb(0.083, scale_sigmoid_color(mean_stat), 1.0)
 
         elif file_type == "hapdiv":
+            scale_factor = 1.0 / img['div_scale_max']
+            if mean_stat > img['div_scale_max']:
+                mean_stat = img['div_scale_max']
 	    # Purple
 	    # (r, g, b) = hsv2rgb(0.791, scale_hapdiv_color(mean_stat), 1.0)
 	    # (r, g, b) = hsv2rgb(scale_hapdiv_color(mean_stat), 1.0, 0.85)
-            (r, g, b) = three_color_gradient(colors[0], colors[1], colors[2], mean, mean_stat)
+            (r, g, b) = three_color_gradient(colors[0], colors[1], colors[2], mean, mean_stat * scale_factor)
         else:
 	    # Red/Green
-	    (r, g, b) = hsv2rgb(scale_fst_color(mean_stat), 1.0, 0.85)
+            scale_factor = 1.0 / img['fst_scale_max']
+            if mean_stat > img['fst_scale_max']:
+                mean_stat = img['fst_scale_max']
+	    (r, g, b) = hsv2rgb(scale_fst_color(mean_stat * scale_factor), 1.0, 0.85)
 
         x = 0.0
         y = 0.0
@@ -922,6 +944,47 @@ def generate_img(img, chrs, chrs_sorted, files, file_types):
     cr.show_page()
     ps.finish()
 
+def parse_chromosome_definitions(chrpath, chrs, chrs_default):
+
+    if len(chrpath) > 0:
+        fh = open(chrpath, "r")
+
+        for line in fh:
+            line = line.strip("\n")
+
+            if len(line) == 0 or line[0] == "#":
+                continue
+
+            parts = line.split("\t")
+            if len(parts) != 2:
+                print >> sys.stderr, ("Cannot parse chromosome definition file, '" +
+                                      chrpath +
+                                      "'; should be two, tab-separated columns, found " + len(parts))
+                exit(1)
+            chrs[parts[0]] = int(parts[1])
+            chrs_default.append(parts[0])
+
+        fh.close()
+    else:
+        #
+        # Define chromosome sizes in stickleback.
+        #
+        c = {'groupI'    : 28185914, 'groupII'   : 23295652, 'groupIII'   : 16798506, 'groupIV'  : 32632948,
+             'groupIX'   : 20249479, 'groupV'    : 12251397, 'groupVI'    : 17083675, 'groupVII' : 27937443,
+             'groupVIII' : 19368704, 'groupX'    : 15657440, 'groupXI'    : 16706052, 'groupXII' : 18401067,
+             'groupXIII' : 20083130, 'groupXIV'  : 15246461, 'groupXIX'   : 20240660, 'groupXV'  : 16198764,
+             'groupXVI'  : 18115788, 'groupXVII' : 14603141, 'groupXVIII' : 16282716, 'groupXX'  : 19732071,
+             'groupXXI'  : 11717487}
+        d = ['groupI', 'groupII', 'groupIII', 'groupIV', 'groupV', 'groupVI', 'groupVII',
+             'groupVIII', 'groupIX', 'groupX', 'groupXI', 'groupXII', 'groupXIII', 'groupXIV', 
+             'groupXV', 'groupXVI', 'groupXVII', 'groupXVIII', 'groupXIX', 'groupXX', 'groupXXI']
+        for chr in d:
+            chrs_default.append(chr)
+            chrs[chr] = c[chr]
+
+    print >> sys.stderr, "Parsed " + str(len(chrs_default)) + " chromosomes."
+
+
 def populate_stats(files, file_types, stats, means):
 
     for i in range(len(files)):
@@ -976,6 +1039,8 @@ def populate_stats(files, file_types, stats, means):
             
 parse_command_line(img)
 
+print >> sys.stderr, "Parsing chromosome definitions from '" + chrpath + "'..."
+parse_chromosome_definitions(chrpath, chrs, chrs_default)
 print >> sys.stderr, "Populating statistical measures for each input file..."
 populate_stats(files, file_types, stats, means)
 print >> sys.stderr,  "done."
