@@ -28,19 +28,6 @@
 #include "pstacks_base.h"
 #include "pstacks_pe.h"
 
-#ifdef DEBUG
-#define IF_NDEBUG_TRY
-#define IF_NDEBUG_CATCH_ALL_EXCEPTIONS
-#else
-#define IF_NDEBUG_TRY \
-    try {
-#define IF_NDEBUG_CATCH_ALL_EXCEPTIONS \
-    } catch (const exception& e) { \
-        cerr << "Aborted. (" << e.what() << ").\n"; \
-        return -1; \
-    }
-#endif
-
 using namespace std;
 
 //
