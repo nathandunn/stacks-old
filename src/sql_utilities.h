@@ -45,6 +45,7 @@ int load_snp_calls(string sample,  map<int, SNPRes *> &snpres);
 // ----------
 // Returns pairs of (sample locus ID, catalog locus ID) for which there is a bijective relation.
 vector<pair<int, int> > retrieve_bijective_loci(const vector<CatMatch*>& matches);
+vector<pair<int, int> > retrieve_bijective_loci(const vector<pair<int,int>>& sloc_cloc_id_pairs);
 
 template <class LocusT>
 int

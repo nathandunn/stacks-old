@@ -301,13 +301,20 @@ int load_snp_calls(string sample,  map<int, SNPRes *> &snpres) {
 }
 
 vector<pair<int,int> > retrieve_bijective_loci(const vector<CatMatch*>& matches) {
+    vector<pair<int,int> > sloc_cloc_id_pairs;
+    for (const CatMatch* m : matches)
+        sloc_cloc_id_pairs.push_back({m->tag_id, m->cat_id});
+    return retrieve_bijective_loci(sloc_cloc_id_pairs);
+}
+
+vector<pair<int,int> > retrieve_bijective_loci(const vector<pair<int,int>>& sloc_cloc_id_pairs) {
     vector<pair<int,int> > bij_sloci;
 
     unordered_map<int, set<int> > cloc_id_to_sloc_ids;
     unordered_map<int, set<int> > sloc_id_to_cloc_ids;
-    for (const CatMatch* m : matches) {
-        cloc_id_to_sloc_ids[m->cat_id].insert(m->tag_id);
-        sloc_id_to_cloc_ids[m->tag_id].insert(m->cat_id);
+    for (auto p : sloc_cloc_id_pairs) {
+        cloc_id_to_sloc_ids[p.second].insert(p.first);
+        sloc_id_to_cloc_ids[p.first].insert(p.second);
     }
 
     bij_sloci.reserve(sloc_id_to_cloc_ids.size());

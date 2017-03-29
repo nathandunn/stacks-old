@@ -51,6 +51,7 @@ using std::queue;
 using google::sparse_hash_map;
 #endif
 
+#include "constants.h"
 #include "kmers.h"
 #include "stacks.h"
 #include "locus.h"
@@ -82,5 +83,6 @@ int    generate_query_haplotypes(Locus *, QLocus *, set<string> &);
 int    impute_haplotype(string, vector<pair<allele_type, string> > &, string &);
 bool   compare_dist(pair<int, int>, pair<int, int>);
 int    write_matches(string, map<int, QLocus *> &);
+void   write_matches_bam(const string&, map<int, QLocus*>&);
 
 #endif // __SSTACKS_H__
