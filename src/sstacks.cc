@@ -24,8 +24,11 @@
 
 #include <regex>
 
+#include "constants.h"
 #include "catalog_utils.h"
 #include "MetaPopInfo.h"
+#include "gzFastq.h"
+#include "BamI.h"
 
 #include "sstacks.h"
 
@@ -48,6 +51,10 @@ searcht search_type             = sequence;
 double  min_match_len   = 0.80;
 double  max_gaps        = 2.0;
 int     gapped_kmer_len = 19;
+
+bool write_bam = true;
+string pe_reads_path;
+FileT pe_reads_format = FileT::unknown;
 
 int main (int argc, char* argv[]) {
     IF_NDEBUG_TRY
@@ -133,6 +140,7 @@ int main (int argc, char* argv[]) {
         }
 
         write_matches(sample_path, sample);
+        write_matches_bam(sample_path, sample);
         i++;
 
         //
@@ -1293,6 +1301,146 @@ write_matches(string sample_path, map<int, QLocus *> &sample)
     return 0;
 }
 
+void write_matches_bam(const string& sample_prefix, map<int, QLocus *>& sloci) {
+    //
+    // Get the list of bijective loci.
+    //
+    vector<pair<int,int>> sloc_cloc_id_pairs;
+    for(auto sloc : sloci)
+        for(Match* m : sloc.second->matches)
+            sloc_cloc_id_pairs.push_back({sloc.second->id, m->cat_id});
+
+    vector<pair<int,int>> bij_loci = retrieve_bijective_loci(sloc_cloc_id_pairs);
+
+    if (bij_loci.empty()) {
+        cerr << "Couldn't find any useful matches to the catalog.\n";
+        throw exception();
+    }
+
+    //
+    // Sort these loci by catalog ID.
+    //
+    struct Loc {
+        uint cloc_id;
+        QLocus* sloc;
+        map<DNASeq4, vector<string>>* pe_reads;
+
+        bool operator< (const Loc& other) const {return cloc_id < other.cloc_id;}
+    };
+    vector<Loc> sorted_loci;
+    for (auto loc : bij_loci) {
+        QLocus* sloc = sloci.at(loc.first);
+        assert(sloc->matches.size() == 1); //(bijective)
+        sorted_loci.push_back({sloc->matches.front()->cat_id, sloc, NULL});
+    }
+    std::sort(sorted_loci.begin(), sorted_loci.end());
+
+    //
+    // Read in the paired-end reads.
+    //
+    if(!pe_reads_path.empty()) {
+        for (Loc& loc : sorted_loci)
+            loc.pe_reads = new map<DNASeq4, vector<string>>();
+
+        // Get the read-name-to-locus map.
+        unordered_map<string, Loc*> readname_to_loc;
+        for (Loc& loc : sorted_loci) {
+            for (const char* read_name : loc.sloc->comp) {
+                string pe_read (read_name);
+                convert_fw_read_name_to_paired(pe_read);
+                readname_to_loc.insert({move(pe_read), &loc});
+            }
+        }
+
+        // Open the paired-end reads file.
+        Input* pe_reads_f;
+        if (pe_reads_format == FileT::gzfastq)
+            pe_reads_f = new GzFastq(pe_reads_path.c_str());
+        else
+            throw exception(); //TODO
+
+        // Read the paired-end reads file.
+        size_t n_used_reads = 0;
+        Seq seq;
+        seq.id   = new char[id_len];
+        seq.seq  = new char[max_len];
+        seq.qual = new char[max_len];
+        while(pe_reads_f->next_seq(seq)) {
+            string id (seq.id);
+            auto loc = readname_to_loc.find(id);
+            if (loc == readname_to_loc.end())
+                continue;
+
+            ++n_used_reads;
+
+            DNASeq4 seq4 (seq.seq);
+
+            map<DNASeq4, vector<string> >& loc_stacks = *loc->second->pe_reads;
+            auto& stack = *loc_stacks.insert({move(seq4), vector<string>()}).first;
+            stack.second.push_back(move(id));
+        }
+
+        if (n_used_reads == 0) {
+            cerr << "Error: Failed to find any matching paired-end reads in '" << pe_reads_path << "'.\n";
+            throw exception();
+        }
+
+        cerr << "Assigned " << n_used_reads << " paired-end reads to catalog loci." << endl;
+    }
+
+    //
+    // Write the BAM file.
+    //
+    string sample_name = sample_prefix.substr(sample_prefix.find_last_of('/')+1);
+    string matches_bam_path = out_path + sample_name + ".matches.bam";
+    cerr << "Outputing to file '" << matches_bam_path << "'\n";
+    htsFile* bam_f = hts_open(matches_bam_path.c_str(), "wb");
+
+    // Write the header.
+    int sample_id = sorted_loci.front().sloc->sample_id;
+    string header_text = string() +
+            "@HD\tVN:1.5\tSO:coordinate\n"
+            "@RG\tID:" + to_string(sample_id) + "\tSM:" + sample_name + "\tid:" + to_string(sample_id) + "\n";
+    const string chrlen = to_string(pow<size_t>(2,31)-1);
+    for (auto& loc : sorted_loci)
+        header_text += string() + "@SQ\tSN:" + to_string(loc.cloc_id) + "\tLN:" + chrlen + "\n";
+
+    write_bam_header(bam_f, header_text);
+
+    // Write the records.
+    size_t loc_i = 0; // Locus index; we use the same loop as for the header.
+    for (auto& loc : sorted_loci) {
+        const QLocus* sloc = loc.sloc;
+        for (size_t j=0; j<sloc->comp.size();++j) {
+            const char* name = sloc->comp[j];
+            DNASeq4 seq (sloc->reads[j], strlen(sloc->reads[j]));
+            //TODO Write the read.
+        }
+        for (const pair<DNASeq4, vector<string>>& stack : *loc.pe_reads) {
+            for (const string& name : stack.second) {
+                //TODO Write the read.
+            }
+        }
+        ++loc_i;
+    }
+
+    //
+    // Cleanup.
+    //
+    hts_close(bam_f);
+    if(!pe_reads_path.empty())
+        for (Loc& loc : sorted_loci)
+            delete loc.pe_reads;
+}
+
+void load_pe_reads(
+        const unordered_map<string, size_t>& read_name_to_loc
+        ) {
+
+    cout << "Reading the paired-end reads..." << endl;
+
+}
+
 int parse_command_line(int argc, char* argv[]) {
     string in_dir;
     string popmap_path;
@@ -1312,6 +1460,8 @@ int parse_command_line(int argc, char* argv[]) {
             {"outpath",     required_argument, NULL, 'o'},
             {"in_dir",      required_argument, NULL, 'P'},
             {"popmap",      required_argument, NULL, 'M'},
+            {"no_bam",      required_argument, NULL, 1001},
+            {"pe_reads",    required_argument, NULL, 1002},
             {0, 0, 0, 0}
         };
 
@@ -1362,6 +1512,17 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 'M':
             popmap_path = optarg;
+            break;
+        case 1001: //no_bam
+            write_bam = false;
+            break;
+        case 1002: //pe_reads
+            pe_reads_path = optarg;
+            pe_reads_format = guess_file_type(pe_reads_path);
+            if (pe_reads_format == FileT::unknown) {
+                cerr << "Error: Unable to guess the format of '" << pe_reads_path << "'.\n";
+                throw exception();
+            }
             break;
         case 'v':
             version();
@@ -1480,7 +1641,11 @@ void help() {
               << "  x: don't verify haplotype of matching locus." << "\n"
               << "\n"
               << "Gapped assembly options:\n"
-              << "  --gapped: preform gapped alignments between stacks.\n";
+              << "  --gapped: preform gapped alignments between stacks.\n"
+              << "\n"
+              << "Sheared paired-ends options:\n"
+              << "  --pe_reads: path to the sample's paired-end read sequences (if any)." << "\n"
+              ;
 
     exit(0);
 }

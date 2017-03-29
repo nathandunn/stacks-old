@@ -99,9 +99,9 @@ pstacks_LDADD    = $(BAM_LIBS) libcore.a
 cstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
 cstacks_LDFLAGS  = $(OPENMP_CFLAGS)
 cstacks_LDADD    = libcore.a
-sstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
-sstacks_LDFLAGS  = $(OPENMP_CFLAGS)
-sstacks_LDADD    = libcore.a
+sstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS) $(BAM_CFLAGS)
+sstacks_LDFLAGS  = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
+sstacks_LDADD    = $(BAM_LIBS) libcore.a
 
 process_radtags_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS) $(BAM_CFLAGS)
 process_radtags_LDFLAGS  = $(OPENMP_CFLAGS)
