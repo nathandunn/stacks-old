@@ -1386,6 +1386,7 @@ void write_matches_bam(const string& sample_prefix, map<int, QLocus *>& sloci) {
         }
 
         cerr << "Assigned " << n_used_reads << " paired-end reads to catalog loci." << endl;
+        delete pe_reads_f;
     }
 
     //
@@ -1409,16 +1410,40 @@ void write_matches_bam(const string& sample_prefix, map<int, QLocus *>& sloci) {
 
     // Write the records.
     size_t loc_i = 0; // Locus index; we use the same loop as for the header.
+    BamRecord rec;
     for (auto& loc : sorted_loci) {
         const QLocus* sloc = loc.sloc;
         for (size_t j=0; j<sloc->comp.size();++j) {
+            // For each forward read.
             const char* name = sloc->comp[j];
-            DNASeq4 seq (sloc->reads[j], strlen(sloc->reads[j]));
-            //TODO Write the read.
+            const char* seq = sloc->reads[j];
+            size_t seq_l = strlen(seq);
+            rec.assign(
+                    string(name),
+                    pe_reads_path.empty() ? 0 : BAM_FREAD1,
+                    loc_i,
+                    0,
+                    {{'M', seq_l}},
+                    DNASeq4(seq, seq_l),
+                    sample_id
+                    );
+            rec.write_to(bam_f);
         }
-        for (const pair<DNASeq4, vector<string>>& stack : *loc.pe_reads) {
-            for (const string& name : stack.second) {
-                //TODO Write the read.
+        if(!pe_reads_path.empty()) {
+            for (const pair<DNASeq4, vector<string>>& stack : *loc.pe_reads) {
+                for (const string& name : stack.second) {
+                    // For each reverse read.
+                    rec.assign(
+                            name,
+                            BAM_FREAD2,
+                            loc_i,
+                            4096,
+                            {{'S', stack.first.length()}},
+                            stack.first,
+                            sample_id
+                            );
+                    rec.write_to(bam_f);
+                }
             }
         }
         ++loc_i;
@@ -1431,14 +1456,6 @@ void write_matches_bam(const string& sample_prefix, map<int, QLocus *>& sloci) {
     if(!pe_reads_path.empty())
         for (Loc& loc : sorted_loci)
             delete loc.pe_reads;
-}
-
-void load_pe_reads(
-        const unordered_map<string, size_t>& read_name_to_loc
-        ) {
-
-    cout << "Reading the paired-end reads..." << endl;
-
 }
 
 int parse_command_line(int argc, char* argv[]) {
