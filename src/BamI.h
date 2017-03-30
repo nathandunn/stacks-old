@@ -39,6 +39,12 @@
 #include "input.h"
 #include "DNASeq4.h"
 
+// Trivial hash table giving the binary value (0-9) of a cigar character.
+// htslib doesn't define this (c.f. the use of `bam_hdr_t::cigar_tab` in sam.c).
+// However, it does define the reverse variable in sam.h:
+// `#define BAM_CIGAR_STR "MIDNSHP=XB"`
+extern const size_t cigar_c2i[128];
+
 int bam_find_start_bp(int, strand_type, const vector<pair<char, uint> > &);
 int bam_edit_gaps(vector<pair<char, uint> > &, char *);
 
@@ -53,7 +59,7 @@ class BamRecord {
     BamRecord& operator= (BamRecord&) = delete;
 
 public:
-    BamRecord() : r_(bam_init1()), c_(r_->core) {}
+    BamRecord() : r_(bam_init1()), c_(r_->core) {r_->data = NULL; r_->m_data = 0;}
     ~BamRecord() {bam_destroy1(r_);}
 
     bam1_t*& r() {return r_;}
@@ -80,6 +86,17 @@ public:
     AlnT aln_type() const;
     const char* read_group() const;
 
+    void assign(
+            const string& name,
+            uint16_t flg,
+            int32_t chr_index,
+            int32_t aln_pos,
+            const vector<pair<char,uint>>& cig,
+            const DNASeq4& seq,
+            size_t read_group
+            );
+    void write_to(htsFile* bam_f) const;
+
 private:
     // Moves the pointer to the start of the next AUX field. Doesn't actually read
     // anything, the point is just to be able to scan until field(s) of interest.
@@ -98,7 +115,7 @@ public:
     ~BamHeader() {if (h_!=NULL) bam_hdr_destroy(h_);}
 
     // n.b. sam_hdr_read() calls bam_hdr_init()
-    void init() {bam_hdr_init();}
+    void init() {h_ = bam_hdr_init();}
     void init(bam_hdr_t* h) {h_ = h;}
 
     bam_hdr_t* h() {return h_;}
