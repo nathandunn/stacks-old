@@ -1,6 +1,6 @@
 bin_PROGRAMS = ustacks pstacks estacks cstacks sstacks rxstacks hstacks process_radtags process_shortreads \
 	kmer_filter clone_filter genotypes populations phasedstacks \
-	pstacks_pe tags2bam tags2bam_pe assemble_pe
+	pstacks_pe assemble_pe
 
 noinst_LIBRARIES = libcore.a libclean.a libpop.a
 
@@ -76,8 +76,6 @@ rxstacks_SOURCES    = libcore.a libpop.a src/rxstacks.h src/rxstacks.cc
 
 # n_pe
 pstacks_pe_SOURCES  = libcore.a src/pstacks_pe.h src/pstacks_pe.cc src/pstacks_base.h src/pstacks_base.cc
-tags2bam_SOURCES    = libcore.a src/tags2bam.h src/tags2bam.cc
-tags2bam_pe_SOURCES = libcore.a src/tags2bam_pe.h src/tags2bam_pe.cc
 assemble_pe_SOURCES = libcore.a src/assemble_pe.cc src/debruijn.h src/debruijn.cc src/Alignment.h
 
 estacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS) $(BAM_CFLAGS)
@@ -130,12 +128,6 @@ rxstacks_LDADD    = $(OPENMP_CFLAGS) libcore.a libpop.a
 pstacks_pe_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS) $(SPARSEHASH_CFLAGS)
 pstacks_pe_LDFLAGS  = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
 pstacks_pe_LDADD    = $(BAM_LIBS) libcore.a
-tags2bam_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
-tags2bam_LDFLAGS  = $(OPENMP_CFLAGS)
-tags2bam_LDADD    = $(BAM_LIBS) libcore.a
-tags2bam_pe_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
-tags2bam_pe_LDFLAGS  = $(OPENMP_CFLAGS)
-tags2bam_pe_LDADD    = $(BAM_LIBS) libcore.a
 assemble_pe_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
 assemble_pe_LDFLAGS  = $(OPENMP_CFLAGS)
 assemble_pe_LDADD    = $(BAM_LIBS) libcore.a
