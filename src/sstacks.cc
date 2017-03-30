@@ -253,7 +253,7 @@ find_matches_by_genomic_loc(map<int, Locus *> &sample_1, map<int, QLocus *> &sam
         }
     }
 
-    cerr << keys.size() << " stacks matched against the catalog containing " << sample_1.size() << " loci.\n"
+    cerr << keys.size() << " sample loci matched against the catalog containing " << sample_1.size() << " loci.\n"
          << "  " << matches << " matching loci, " << nomatch << " contained no verified haplotypes.\n"
          << "  " << nosnps  << " loci contained SNPs unaccounted for in the catalog and were excluded.\n"
          << "  " << tot_hap << " total haplotypes examined from matching loci, " << ver_hap << " verified.\n";
@@ -674,7 +674,7 @@ find_matches_by_sequence(map<int, Locus *> &sample_1, map<int, QLocus *> &sample
         delete [] sample_1_map_keys[i];
     sample_1_map_keys.clear();
 
-    cerr << keys.size() << " stacks compared against the catalog containing " << sample_1.size() << " loci.\n"
+    cerr << keys.size() << " sample loci compared against the catalog containing " << sample_1.size() << " loci.\n"
          << "  " << matches << " matching loci, " << no_haps << " contained no verified haplotypes.\n"
          << "  " << mmatch  << " loci matched more than one catalog locus and were excluded.\n"
          << "  " << nosnps  << " loci contained SNPs unaccounted for in the catalog and were excluded.\n"
@@ -1312,9 +1312,10 @@ void write_matches_bam(const string& sample_prefix, map<int, QLocus *>& sloci) {
             sloc_cloc_id_pairs.push_back({sloc.second->id, m->cat_id});
 
     vector<pair<int,int>> bij_loci = retrieve_bijective_loci(sloc_cloc_id_pairs);
+    cerr << bij_loci.size() << " sample loci had a one-to-one relationship with the catalog.\n";
 
     if (bij_loci.empty()) {
-        cerr << "Couldn't find any useful matches to the catalog.\n";
+        cerr << "Error: Couldn't find any useful matches to the catalog.\n";
         throw exception();
     }
 
@@ -1331,7 +1332,8 @@ void write_matches_bam(const string& sample_prefix, map<int, QLocus *>& sloci) {
     vector<Loc> sorted_loci;
     for (auto loc : bij_loci) {
         QLocus* sloc = sloci.at(loc.first);
-        assert(sloc->matches.size() == 1); //(bijective)
+        assert(sloc->matches.size() > 0); // (Bijective relationship between the sample/catalog loci,
+                                          // but matching is per haplotype so this can be >1.)
         sorted_loci.push_back({sloc->matches.front()->cat_id, sloc, NULL});
     }
     std::sort(sorted_loci.begin(), sorted_loci.end());
