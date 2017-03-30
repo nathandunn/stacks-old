@@ -1755,6 +1755,7 @@ initialize_existing_catalog(string catalog_path, map<int, CLocus *> &catalog)
     //
     // Parse the input files.
     //
+    catalog_path += ".catalog";
     if (!load_loci(catalog_path, catalog, 0, false, compressed))
         return 0;
 
