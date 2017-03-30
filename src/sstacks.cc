@@ -140,7 +140,8 @@ int main (int argc, char* argv[]) {
         }
 
         write_matches(sample_path, sample);
-        write_matches_bam(sample_path, sample);
+        if (write_bam)
+            write_matches_bam(sample_path, sample);
         i++;
 
         //
