@@ -12,21 +12,23 @@
 
 class BamCLocReader {
     Bam* bam_f_;
-    const MetaPopInfo& mpopi_;
+    MetaPopInfo mpopi_;
     map<string, size_t> rg_to_sample_;
 
 public:
-    BamCLocReader(const string& bam_path, MetaPopInfo& mpopi);
+    BamCLocReader(const string& bam_path);
     ~BamCLocReader() {if (bam_f_) delete bam_f_;}
+
+    const MetaPopInfo mpopi() const {return mpopi_;}
 
     // Reads one locus. Returns false on EOF.
     bool read_one_locus(CLocReadSet& readset);
 };
 
 inline
-BamCLocReader::BamCLocReader(const string& bam_path, MetaPopInfo& mpopi)
+BamCLocReader::BamCLocReader(const string& bam_path)
         : bam_f_(NULL),
-          mpopi_(mpopi),
+          mpopi_(),
           rg_to_sample_()
         {
 
@@ -39,11 +41,11 @@ BamCLocReader::BamCLocReader(const string& bam_path, MetaPopInfo& mpopi)
     vector<string> samples;
     for (auto& rg : read_groups)
         samples.push_back(rg.second.at("SM"));
-    mpopi.init_names(samples);
+    mpopi_.init_names(samples);
 
     // Fill the (read group : sample) map.
     for (auto& rg : read_groups)
-        rg_to_sample_.insert({rg.first, mpopi.get_sample_index(rg.second.at("SM"))});
+        rg_to_sample_.insert({rg.first, mpopi_.get_sample_index(rg.second.at("SM"))});
 
     // Read the very first record.
     if (!bam_f_->next_record()) {
