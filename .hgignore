@@ -34,3 +34,8 @@ rxstacks
 sstacks
 ustacks
 htslib/libhts.a
+pstacks_pe
+cstacks_pe
+ustacks_pe
+sstacks_pe
+rxstacks_pe

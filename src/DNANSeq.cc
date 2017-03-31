@@ -156,3 +156,38 @@ string DNANSeq::seq() const {
         str.push_back((*this)[i]);
     return str;
 }
+
+void DNANSeq::extend(uint n_before, uint n_after) {
+    if (n_before == 0 && n_after == 0)
+        return;
+
+    uint old_bits = bits;
+    unsigned char* old_s = s;
+
+    bits += (n_before + n_after) * bits_per_nuc;
+    s = new unsigned char[nbytes()];
+    memset(s, 0, nbytes());
+
+    uint bit = 0;
+
+    // Prepend N's
+    for (uint i = 0; i < n_before; ++i) {
+        setbit(s, bit);
+        bit += 3;
+    }
+
+    // Copy the old sequence.
+    for (uint old_bit=0; old_bit < old_bits; ++old_bit) {
+        if (testbit(old_s, old_bit))
+            setbit(s, bit);
+        ++bit;
+    }
+
+    // Append N's.
+    for (uint i = 0; i < n_after; ++i) {
+        setbit(s, bit);
+        bit += 3;
+    }
+
+    delete[] old_s;
+}
