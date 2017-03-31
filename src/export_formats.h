@@ -11,10 +11,6 @@
 #include "ordered.h" // for "snp"
 #include "populations.h" // for "merget", "InputMode", "uncalled_haplotype()", "count_haplotypes_at_locus()"
 
-using std::ofstream;
-using std::pair;
-using std::map;
-
 class GenPos {
 public:
     uint     id;

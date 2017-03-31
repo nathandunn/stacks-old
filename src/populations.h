@@ -31,30 +31,17 @@
 #include <string.h>
 #include <time.h>
 #include <utility>
-using std::pair;
-using std::make_pair;
 #include <string>
-using std::string;
 #include <iostream>
 #include <fstream>
-using std::ifstream;
-using std::ofstream;
-using std::cin;
-using std::cout;
-using std::cerr;
-using std::endl;
 #include <iomanip>
 using std::setw;
 using std::setprecision;
 using std::fixed;
 #include <sstream>
-using std::stringstream;
 #include <vector>
-using std::vector;
 #include <map>
-using std::map;
 #include <set>
-using std::set;
 
 #include "constants.h"
 #include "stacks.h"
@@ -124,7 +111,7 @@ double   haplotype_d_est(Datum **, LocSum **, vector<int> &);
 LocStat *haplotype_diversity(int, int, Datum **);
 double   count_haplotypes_at_locus(int, int, Datum**, map<string, double>&);
 
-void log_snps_per_loc_distrib(std::ostream&, map<int, CSLocus*>&);
+void log_snps_per_loc_distrib(ostream&, map<int, CSLocus*>&);
 
 //int  tally_ref_alleles(LocSum **, int, int, char &, char &); //unused; also commented out in the .cc
 //int  load_snp_calls(string,  PopMap<CSLocus> *); //no implementation

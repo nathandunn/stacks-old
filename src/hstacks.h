@@ -31,27 +31,15 @@
 #include <dirent.h>
 #include <errno.h>
 #include <utility>
-using std::pair;
-using std::make_pair;
 #include <string>
-using std::string;
 #include <iostream>
 #include <fstream>
 #include <sstream>
-using std::ofstream;
-using std::stringstream;
-using std::cin;
-using std::cout;
-using std::cerr;
-using std::endl;
 #include <vector>
-using std::vector;
 #include <map>
-using std::map;
 #include <queue>
 using std::queue;
 #include <set>
-using std::set;
 #include <algorithm>
 
 #include "constants.h"

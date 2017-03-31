@@ -29,55 +29,9 @@
 #include <vector>
 #include <iostream>
 #include <fstream>
-using std::ifstream;
-using std::string;
-using std::vector;
-using std::cin;
-using std::cout;
-using std::cerr;
-using std::endl;
 
 #include "constants.h"
-#include "utils.h"
 #include "stacks.h"
-
-enum class AlnT {null, primary, secondary, supplementary};
-
-class Seq {
- public:
-    char *id;
-    char *seq;
-    char *qual;
-
-    //
-    // Information for an aligned sequence.
-    //
-    AlnT   aln_type;
-    double pct_clipped;
-    int    map_qual;
-    char  *loc_str;
-    PhyLoc loc;
-
-    Seq();
-    Seq(const Seq& other);
-    Seq(const char *, const char *);
-    Seq(const char *, const char *, const char *);
-    Seq(const char *, const char *, const char *, const char *, uint, strand_type);
-    Seq(const char *, const char *, const char *, const char *, uint, strand_type, AlnT, double, int);
-    ~Seq( void ) {
-        if (id != NULL)
-            delete[] id;
-        if (seq != NULL)
-            delete[] seq;
-        if (qual != NULL)
-            delete[] qual;
-        if (loc_str != NULL)
-            delete[] loc_str;
-    }
-    friend void swap(Seq&, Seq&);
-    Seq& operator=(Seq&& other) {swap(*this, other); return *this;}
-    Seq& operator=(const Seq& other) = delete;
-};
 
 //
 // The base class for all of our Input classes, such as Tsv, Fastq, Fasta, etc.

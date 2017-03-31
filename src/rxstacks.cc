@@ -28,8 +28,6 @@
 
 #include "rxstacks.h"
 
-typedef MetaPopInfo::Sample Sample;
-
 // Global variables to hold command-line options.
 int    num_threads = 1;
 int    batch_id    = -1;
@@ -112,7 +110,7 @@ int main (int argc, char* argv[]) {
     bool compressed = false;
     int res;
     catalog_file << in_path << "batch_" << batch_id << ".catalog";
-    if ((res = load_loci(catalog_file.str(), catalog, false, false, compressed)) == 0) {
+    if ((res = load_loci(catalog_file.str(), catalog, 0, false, compressed)) == 0) {
         cerr << "Unable to load the catalog '" << catalog_file.str() << "'\n";
         return 0;
     }
@@ -198,7 +196,7 @@ int main (int argc, char* argv[]) {
 
         map<int, Locus *> stacks;
         int res;
-        if ((res = load_loci(in_path + sample.name, stacks, true, true, compressed)) == 0) {
+        if ((res = load_loci(in_path + sample.name, stacks, 2, true, compressed)) == 0) {
             cerr << "Unable to load sample file '" << sample.name << "'\n";
             continue;
         }
@@ -548,12 +546,12 @@ prune_mst_haplotypes(CSLocus *cloc, Datum *d, Locus *loc, unsigned long &pruned_
     // Create a minimum spanning tree in order to determine the minimum distance
     // between each node in the list.
     //
-    MinSpanTree *mst = new MinSpanTree;
+    mst::MinSpanTree *mst = new mst::MinSpanTree();
 
     map<string, int>::iterator it;
     vector<uint>   keys;
     vector<string> haps;
-    Node *n;
+    mst::Node *n;
 
     for (it = cloc->hap_cnts.begin(); it != cloc->hap_cnts.end(); it++) {
         n = mst->add_node(it->first);
@@ -565,7 +563,7 @@ prune_mst_haplotypes(CSLocus *cloc, Datum *d, Locus *loc, unsigned long &pruned_
     // We are going to connect nodes in the graph when a SNP occurs in one
     // of the positions of the haplotype.
     //
-    Node *n_1, *n_2;
+    mst::Node *n_1, *n_2;
 
     uint snp_pos = 0;
     for (uint i = 0; i < cloc->snps.size(); i++) {
@@ -802,7 +800,6 @@ prune_locus_haplotypes(CSLocus *cloc, Datum *d, Locus *loc, unsigned long &prune
 
     return 0;
 }
-
 
 string
 convert_catalog_haplotype_to_sample(string cat_haplotype, CSLocus *cloc, Locus *loc)
@@ -1787,13 +1784,13 @@ parse_command_line(int argc, char* argv[])
 }
 
 void version() {
-    std::cerr << "rxstacks " << VERSION << "\n\n";
+    cerr << "rxstacks " << VERSION << "\n\n";
 
     exit(0);
 }
 
 void help() {
-    std::cerr << "rxstacks " << VERSION << "\n"
+    cerr << "rxstacks " << VERSION << "\n"
               << "rxstacks -P path -o path [-t threads] [-b batch_id]" << "\n"
               << "  P: path to the Stacks output files.\n"
               << "  o: output path to write results ('.' to override the current files).\n"

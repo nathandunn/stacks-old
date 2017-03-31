@@ -23,7 +23,6 @@
 
 #include <math.h>
 #include <vector>
-using std::vector;
 
 #include "smoothing_utils.h"
 
@@ -281,7 +280,6 @@ Bootstrap<StatT>::execute_mixed(vector<StatT *> &sites)
                     for (uint k = 0; k < this->num_stats; k++)
                         bs[j].stat[k] = this->stats[k][index];
 
-
                     final_weight = (bs[j].alleles - 1) * this->weights[dist];
                     for (uint k = 0; k < this->num_stats; k++)
                         weighted_stat[k] += bs[j].stat[k] * final_weight;
@@ -327,6 +325,5 @@ Bootstrap<StatT>::pval(double stat, vector<double> &dist)
 
     return 1.0 - (double) first_greater / dist.size();
 }
-
 
 #endif // __BOOTSTRAP_H__

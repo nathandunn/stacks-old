@@ -41,17 +41,6 @@
 
 #include "constants.h"
 
-using std::size_t;
-using std::pair;
-using std::vector;
-using std::string;
-using std::set;
-using std::map;
-using std::ifstream;
-using std::ofstream;
-using std::cerr;
-
-using std::exception;
 using std::out_of_range;
 
 class VcfAbstractParser;
@@ -379,8 +368,8 @@ pair<int, int> VcfRecord::parse_genotype(const string& sample) const {
 
     const char* colon = strchr(slash, ':');
     try {
-        genotype.first = std::stoi(string(first, slash));
-        genotype.second = std::stoi(colon==NULL ? string(slash+1) : string(slash+1, colon));
+        genotype.first = stoi(string(first, slash));
+        genotype.second = stoi(colon==NULL ? string(slash+1) : string(slash+1, colon));
         if (genotype.first < 0
             || genotype.first >= int(alleles.size())
             || genotype.second < 0

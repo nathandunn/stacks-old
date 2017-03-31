@@ -35,14 +35,16 @@ const uint num_snps_fields    = 10;
 const uint num_alleles_fields =  6;
 const uint num_matches_fields =  9;
 
-int load_catalog_matches(string sample,  vector<CatMatch *> &matches);
+void load_catalog_matches(string sample,  vector<CatMatch *> &matches);
 int load_model_results(string sample,  map<int, ModRes *> &modres);
 int load_snp_calls(string sample,  map<int, SNPRes *> &snpres);
 
 template <class LocusT>
 int
-load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool load_all_model_calls, bool &compressed)
+load_loci(const string& sample,  map<int, LocusT *> &loci, int store_reads, bool load_all_model_calls, bool &compressed)
 {
+    using namespace std;
+
     LocusT        *c;
     SNP           *snp;
     string         f;
@@ -55,7 +57,7 @@ load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool load_
     ifstream       fh;
     gzFile         gz_fh;
 
-    char *line      = (char *) malloc(sizeof(char) * max_len);
+    char *line      = new char[max_len];
     int   size      = max_len;
     bool  gzip      = false;
     bool  open_fail = true;
@@ -167,10 +169,13 @@ load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool load_
                     //
                     loci[id]->depth++;
 
-                    if (store_reads) {
-                        char *read = new char[parts[9].length() + 1];
-                        strcpy(read, parts[9].c_str());
-                        loci[id]->reads.push_back(read);
+                    if (store_reads >= 1) {
+                        if (store_reads >= 2) {
+                            // Load the actual sequences (otherwise don't).
+                            char *read = new char[parts[9].length() + 1];
+                            strcpy(read, parts[9].c_str());
+                            loci[id]->reads.push_back(read);
+                        }
 
                         char *read_id = new char[parts[8].length() + 1];
                         strcpy(read_id, parts[8].c_str());

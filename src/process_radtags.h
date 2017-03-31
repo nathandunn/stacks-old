@@ -30,22 +30,11 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-using std::stringstream;
-using std::istream;
-using std::ofstream;
-using std::cin;
-using std::cout;
-using std::cerr;
-using std::endl;
 
 #include <vector>
-using std::vector;
 #include <map>
-using std::map;
 #include <set>
-using std::set;
 #include <utility>
-using std::pair;
 
 #include "constants.h"
 #include "renz.h"
@@ -75,11 +64,11 @@ int  process_paired_reads(string, string,
                           map<BarcodePair, fhType *> &,
                           map<BarcodePair, fhType *> &,
                           map<string, long> &, map<BarcodePair, map<string, long> > &);
-int  process_singlet(Read *,
+int  process_singlet(RawRead *,
                      string, bool,
                      map<string, long> &, map<string, long> &);
-int  correct_radtag(Read *, string, map<string, long> &);
-int  check_quality_scores(Read *, bool);
+int  correct_radtag(RawRead *, string, map<string, long> &);
+int  check_quality_scores(RawRead *, bool);
 int  dist(const char *, char *);
 int  print_results(int, char **, vector<BarcodePair> &, map<string, map<string, long> > &, map<BarcodePair, map<string, long> > &);
 
