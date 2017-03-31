@@ -1,12 +1,6 @@
 #ifndef DNASEQ4_H
 #define DNASEQ4_H
 
-#include <cstring>
-#include <iostream>
-#include <vector>
-#include <string>
-#include <functional>
-
 #include "constants.h"
 
 // Definitions for nucleotides coded on 4 bits.
@@ -21,6 +15,7 @@ struct Nt4 {
     static const size_t g = 4; //0100
     static const size_t t = 8; //1000
     static const size_t n = 15;//1111
+    static const vector<size_t> all; // All of the above.
 
     static size_t from(char c) {return ch_to_nt4[size_t(c)];}
     static char to_ch(size_t nt4) {return nt4_to_ch[nt4];}
@@ -44,6 +39,7 @@ struct Nt2 {
     static const size_t c = 1;
     static const size_t g = 2;
     static const size_t t = 3;
+    static const vector<size_t> all;
 
     static size_t from(char c) {return ch_to_nt2[size_t(c)];}
     static size_t from_nt4(size_t nt4) {return nt4_to_nt2[nt4];}
@@ -55,6 +51,31 @@ private:
     static const char nt2_to_ch[4];
 };
 
+class Nt4Counts {
+    // Array of counts, containing the count of A's at index Nt4::a, of C's at
+    // Nt4::c, G's at Nt4::g, T's at Nt4::t and N's at Nt4::n.
+    size_t counts_[16];
+    size_t* sorted_[4]; // Pointers to the counts of A, C, G, and T above.
+
+public:
+    Nt4Counts()
+        : sorted_{counts_+Nt4::a, counts_+Nt4::c, counts_+Nt4::g, counts_+Nt4::t}
+        {memset(counts_, uchar(-1), 16 * sizeof(size_t));}
+
+    void reset() {for (size_t nt4 : Nt4::all) counts_[nt4]=0;}
+    void increment(size_t nt4) {++counts_[nt4];}
+    void sort();
+
+    size_t count(size_t nt4) const {return counts_[nt4];}
+    const size_t* rank1() const {return sorted_[3];}
+    const size_t* rank2() const {return sorted_[2];}
+    const size_t* rank3() const {return sorted_[1];}
+    const size_t* rank4() const {return sorted_[0];}
+    size_t nt4_of(const size_t* count_ptr) const {return count_ptr-counts_;} // Returns e.g. Nt4::a.
+
+    friend ostream& operator<< (ostream& os, const Nt4Counts& loc);
+};
+
 // A sequence of nucleotides on a uint64_t, where the first nucleotide uses the
 // low bits.
 template<class Nt>
@@ -63,6 +84,7 @@ class NtArray {
 
 public:
     NtArray() : a_(0) {}
+    NtArray(int) : a_(-1) {}
     NtArray(const NtArray<Nt>& other) : a_(other.a_) {}
     NtArray<Nt>& operator= (const NtArray<Nt>& other) {a_ = other.a_; return *this;}
 
@@ -145,7 +167,7 @@ public:
 
     public:
         iterator(vector<DiNuc>::const_iterator vi, bool f) : vi_(vi), first_(f) {}
-        bool operator!= (iterator other) {return ! (vi_ == other.vi_? first_ == other.first_ : false);}
+        bool operator!= (iterator other) const {return ! (vi_ == other.vi_? first_ == other.first_ : false);}
         iterator& operator++ () {if (first_) {first_ = false;} else {++vi_; first_ = true;} return *this; }
 
         // Get the nucleotide.
@@ -159,6 +181,31 @@ public:
     size_t nbytes() const {return v_.size() * sizeof (DiNuc);}
     const uchar* vdata() const {return (uchar*) v_.data();}
 };
+
+inline
+void Nt4Counts::sort() {
+    std::sort(
+        sorted_, sorted_+4,
+        [] (const size_t* cnt1, const size_t* cnt2) {
+            // Primarily on the count.
+            // Secondarily on the pointer (i.e. array index/Nt4 value).
+            return std::tie(*cnt1, cnt1) < std::tie(*cnt2, cnt2);
+        }
+    );
+}
+
+inline
+ostream& operator<< (ostream& os, const Nt4Counts& cnts) {
+    const size_t* r1 = cnts.rank1();
+    const size_t* r2 = cnts.rank2();
+    const size_t* r3 = cnts.rank3();
+    const size_t* r4 = cnts.rank4();
+    os << Nt4::to_ch(cnts.nt4_of(r1)) << ":" << *r1 << " "
+       << Nt4::to_ch(cnts.nt4_of(r2)) << ":" << *r2 << " "
+       << Nt4::to_ch(cnts.nt4_of(r3)) << ":" << *r4 << " "
+       << Nt4::to_ch(cnts.nt4_of(r4)) << ":" << *r4;
+    return os;
+}
 
 namespace std { template<class Nt>
 struct hash<NtArray<Nt>> { size_t operator() (const NtArray<Nt>& a) const {
