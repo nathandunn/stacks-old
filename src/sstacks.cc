@@ -25,6 +25,7 @@
 #include <regex>
 
 #include "constants.h"
+#include "log_utils.h"
 #include "catalog_utils.h"
 #include "MetaPopInfo.h"
 #include "gzFastq.h"
@@ -108,7 +109,7 @@ int main (int argc, char* argv[]) {
 
         cerr << "\nProcessing sample '" << sample_path << "' [" << i << " of " << sample_cnt << "]\n";
 
-        res = load_loci(sample_path, sample, 0, false, compressed);
+        res = load_loci(sample_path, sample, 2, false, compressed);
 
         if (res == 0) {
             cerr << "Unable to parse '" << sample_path << "'\n";
@@ -1342,6 +1343,7 @@ void write_matches_bam(const string& sample_prefix, map<int, QLocus *>& sloci) {
     // Read in the paired-end reads.
     //
     if(!pe_reads_path.empty()) {
+        cerr << "Importing paired-end reads from '" << pe_reads_path << "'...\n";
         for (Loc& loc : sorted_loci)
             loc.pe_reads = new map<DNASeq4, vector<string>>();
 
@@ -1363,12 +1365,14 @@ void write_matches_bam(const string& sample_prefix, map<int, QLocus *>& sloci) {
             throw exception(); //TODO
 
         // Read the paired-end reads file.
+        size_t n_pe_reads = 0;
         size_t n_used_reads = 0;
         Seq seq;
         seq.id   = new char[id_len];
         seq.seq  = new char[max_len];
         seq.qual = new char[max_len];
         while(pe_reads_f->next_seq(seq)) {
+            ++n_pe_reads;
             string id (seq.id);
             auto loc = readname_to_loc.find(id);
             if (loc == readname_to_loc.end())
@@ -1388,7 +1392,8 @@ void write_matches_bam(const string& sample_prefix, map<int, QLocus *>& sloci) {
             throw exception();
         }
 
-        cerr << "Assigned " << n_used_reads << " paired-end reads to catalog loci." << endl;
+        cerr << "Assigned " << n_used_reads << " paired-end reads (" << as_percentage((double) n_used_reads / n_pe_reads)
+             << ") to catalog loci." << endl;
         delete pe_reads_f;
     }
 
