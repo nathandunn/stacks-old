@@ -107,7 +107,7 @@ int main (int argc, char* argv[]) {
     bool compressed = false;
     int res;
     catalog_file << in_path << "batch_" << batch_id << ".catalog";
-    if ((res = load_loci(catalog_file.str(), catalog, false, false, compressed)) == 0) {
+    if ((res = load_loci(catalog_file.str(), catalog, 0, false, compressed)) == 0) {
         cerr << "Unable to load the catalog '" << catalog_file.str() << "'\n";
         return 0;
     }
@@ -127,7 +127,7 @@ int main (int argc, char* argv[]) {
         catalog_matches.push_back(vector<CatMatch*>());
         vector<CatMatch *>& m = catalog_matches.back();
 
-        const MetaPopInfo::Sample& sample = mpopi.samples()[i];
+        const Sample& sample = mpopi.samples()[i];
         load_catalog_matches(in_path + sample.name, m);
 
         if (m.size() == 0) {
@@ -937,7 +937,7 @@ automated_corrections(map<int, string> &samples, set<int> &parent_ids, map<int, 
         map<int, Locus *> stacks;
         bool compressed = false;
         int  res;
-        if ((res = load_loci(in_path + file, stacks, true, false, compressed)) == 0) {
+        if ((res = load_loci(in_path + file, stacks, 2, false, compressed)) == 0) {
             cerr << "Unable to load sample file '" << file << "'\n";
             return 0;
         }
@@ -2448,7 +2448,6 @@ write_onemap(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<string, st
     marker_types["abxac"] = "A.2";
     marker_types["abxcd"] = "A.1";
 
-
     //
     // Output the header: number of individuals followed by number of markers.
     //
@@ -2887,13 +2886,13 @@ int parse_command_line(int argc, char* argv[]) {
 }
 
 void version() {
-    std::cerr << "genotypes " << VERSION << "\n\n";
+    cerr << "genotypes " << VERSION << "\n\n";
 
     exit(0);
 }
 
 void help() {
-    std::cerr << "genotypes " << VERSION << "\n"
+    cerr << "genotypes " << VERSION << "\n"
               << "genotypes -b batch_id -P path [-r min] [-m min] [-t map_type -o type] [-B blacklist] [-W whitelist] [-c] [-s] [-e renz] [-v] [-h]" << "\n"
               << "  b: Batch ID to examine when exporting from the catalog.\n"
               << "  r: minimum number of progeny required to print a marker.\n"

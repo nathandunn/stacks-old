@@ -29,7 +29,7 @@
 #include "write.h"
 
 int
-write_fasta(ofstream *fh, Read *href, bool overhang) {
+write_fasta(ofstream *fh, RawRead *href, bool overhang) {
     char tile[id_len];
     sprintf(tile, "%04d", href->tile);
 
@@ -56,7 +56,7 @@ write_fasta(ofstream *fh, Read *href, bool overhang) {
 }
 
 int
-write_fasta(gzFile *fh, Read *href, bool overhang) {
+write_fasta(gzFile *fh, RawRead *href, bool overhang) {
     stringstream sstr;
     char tile[id_len];
     sprintf(tile, "%04d", href->tile);
@@ -110,7 +110,7 @@ write_fasta(gzFile *fh, Seq *href) {
 }
 
 int
-write_fastq(ofstream *fh, Read *href, bool overhang) {
+write_fastq(ofstream *fh, RawRead *href, bool overhang) {
     //
     // Write the sequence and quality scores in FASTQ format.
     //
@@ -144,7 +144,7 @@ write_fastq(ofstream *fh, Read *href, bool overhang) {
 }
 
 int
-write_fastq(gzFile *fh, Read *href, bool overhang) {
+write_fastq(gzFile *fh, RawRead *href, bool overhang) {
     //
     // Write the sequence and quality scores in FASTQ format.
     //
@@ -310,7 +310,7 @@ write_fasta(gzFile *fh, Seq *href, string msg) {
 }
 
 int
-write_fasta(ofstream *fh, Seq *href, Read *r) {
+write_fasta(ofstream *fh, Seq *href, RawRead *r) {
     *fh        << ">"
         << href->id << "\n"
         << r->seq + r->inline_bc_len << "\n";
@@ -321,7 +321,7 @@ write_fasta(ofstream *fh, Seq *href, Read *r) {
 }
 
 int
-write_fasta(gzFile *fh, Seq *href, Read *r) {
+write_fasta(gzFile *fh, Seq *href, RawRead *r) {
     stringstream sstr;
     sstr << ">"
          << href->id << "\n"
@@ -333,7 +333,7 @@ write_fasta(gzFile *fh, Seq *href, Read *r) {
 }
 
 int
-write_fastq(ofstream *fh, Seq *href, Read *r) {
+write_fastq(ofstream *fh, Seq *href, RawRead *r) {
     *fh << "@" << href->id << "\n"
         << r->seq   + r->inline_bc_len << "\n"
         << "+\n"
@@ -345,7 +345,7 @@ write_fastq(ofstream *fh, Seq *href, Read *r) {
 }
 
 int
-write_fastq(gzFile *fh, Seq *href, Read *r) {
+write_fastq(gzFile *fh, Seq *href, RawRead *r) {
     stringstream sstr;
     sstr << "@" << href->id << "\n"
          << r->seq   + r->inline_bc_len << "\n"

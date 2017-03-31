@@ -1,152 +1,125 @@
 bin_PROGRAMS = ustacks pstacks estacks cstacks sstacks rxstacks hstacks process_radtags process_shortreads \
 	kmer_filter clone_filter genotypes populations phasedstacks
 
-ustacks_SOURCES = src/ustacks.h src/ustacks.cc src/stacks.h src/stacks.cc src/constants.h src/constants.cc \
-	src/mstack.h src/mstack.cc src/mst.h src/mst.cc src/cmb.h src/cmb.cc \
-	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
-	src/models.h src/models.cc src/utils.h src/utils.cc \
-	src/kmers.h src/kmers.cc src/GappedAln.h src/aln_utils.h src/aln_utils.cc \
-	src/input.h src/input.cc src/Tsv.h src/BowtieI.h src/FastaI.h src/FastqI.h src/SamI.h \
-	src/gzFasta.h src/gzFastq.h
+noinst_LIBRARIES = libcore.a libclean.a libpop.a
 
-pstacks_SOURCES = src/pstacks.h src/pstacks.cc src/stacks.h src/stacks.cc src/constants.h src/constants.cc \
-	src/mstack.h src/mstack.cc src/log_utils.h src/log_utils.cc \
-	src/DNANSeq.h src/DNANSeq.cc src/DNASeq.h src/DNASeq.cc \
-	src/models.h src/models.cc src/utils.h src/utils.cc src/aln_utils.h src/aln_utils.cc \
-	src/input.h src/input.cc src/Tsv.h src/BowtieI.h src/FastaI.h src/FastqI.h src/SamI.h \
-	src/BamI.h
-
-estacks_SOURCES = src/estacks.h src/estacks.cc src/stacks.h src/stacks.cc src/constants.h src/constants.cc \
-	src/mstack.h src/mstack.cc \
-        src/models.h src/models.cc src/utils.h src/utils.cc src/aln_utils.h src/aln_utils.cc \
-	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
-        src/input.h src/input.cc src/Tsv.h src/BowtieI.h src/FastaI.h src/FastqI.h src/SamI.h
-
-cstacks_SOURCES = src/cstacks.h src/cstacks.cc src/constants.h src/constants.cc \
-	src/stacks.h src/stacks.cc src/locus.h src/locus.cc \
-	src/kmers.h src/kmers.cc src/utils.h src/utils.cc \
-	src/GappedAln.h src/aln_utils.h src/aln_utils.cc \
-	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
-	src/input.h src/input.cc src/sql_utilities.h src/sql_utilities.cc \
-	src/MetaPopInfo.h src/MetaPopInfo.cc
-
-hstacks_SOURCES = src/hstacks.h src/hstacks.cc src/constants.h src/constants.cc \
-	src/stacks.h src/stacks.cc src/locus.h src/locus.cc \
-	src/kmers.h src/kmers.cc \
-	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
-	src/utils.h src/utils.cc \
-	src/input.h src/input.cc src/sql_utilities.h src/sql_utilities.cc
-
-sstacks_SOURCES = src/sstacks.h src/sstacks.cc src/constants.h src/constants.cc \
-	src/stacks.h src/stacks.cc src/locus.h src/locus.cc \
-	src/kmers.h src/kmers.cc \
-	src/GappedAln.h src/aln_utils.h src/aln_utils.cc \
-	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc src/utils.h src/utils.cc \
-	src/input.h src/input.cc src/sql_utilities.h src/sql_utilities.cc src/catalog_utils.cc \
-	src/MetaPopInfo.h src/MetaPopInfo.cc
-
-rxstacks_SOURCES = src/rxstacks.h src/rxstacks.cc src/constants.h src/constants.cc \
-	src/stacks.h src/stacks.cc src/locus.h src/locus.cc \
-	src/DNANSeq.h src/DNANSeq.cc src/DNASeq.h src/DNASeq.cc \
-	src/mst.h src/mst.cc \
-	src/models.h src/models.cc \
-	src/aln_utils.h src/aln_utils.cc src/utils.h src/utils.cc \
-	src/input.h src/input.cc src/sql_utilities.h src/sql_utilities.cc src/catalog_utils.cc \
-	src/MetaPopInfo.h src/MetaPopInfo.cc
-
-process_radtags_SOURCES = src/process_radtags.h src/process_radtags.cc src/constants.h src/constants.cc \
-	src/utils.h src/utils.cc src/log_utils.h src/log_utils.cc \
-	src/write.h src/write.cc \
-	src/clean.h src/clean.cc \
-	src/file_io.h src/file_io.cc \
-	src/input.h src/input.cc src/BustardI.h src/BamUnalignedI.h src/FastqI.h src/gzFastq.h \
-	src/renz.h src/renz.cc
-
-process_shortreads_SOURCES = src/process_shortreads.h src/process_shortreads.cc src/constants.h src/constants.cc \
-	src/clean.h src/clean.cc \
-	src/file_io.h src/file_io.cc \
-	src/utils.h src/utils.cc src/log_utils.h src/log_utils.cc \
-	src/write.h src/write.cc \
-	src/kmers.h src/kmers.cc \
-	src/input.h src/input.cc src/BustardI.h src/BamUnalignedI.h src/FastqI.h src/gzFastq.h 
-
-kmer_filter_SOURCES = src/kmer_filter.h src/kmer_filter.cc src/constants.h src/constants.cc \
-	src/utils.h src/utils.cc \
-	src/write.h src/write.cc \
-	src/kmers.h src/kmers.cc \
-	src/input.h src/input.cc src/BustardI.h src/FastqI.h src/FastaI.h \
-	src/gzFastq.h src/gzFasta.h
-
-clone_filter_SOURCES = src/clone_filter.h src/clone_filter.cc src/constants.h src/constants.cc \
-	src/kmers.h src/kmers.cc \
-	src/utils.h src/utils.cc \
-	src/write.h src/write.cc \
-	src/clean.h src/clean.cc src/file_io.h src/file_io.cc \
-	src/input.h src/input.cc src/BustardI.h src/FastqI.h src/FastaI.h \
-	src/gzFastq.h src/gzFasta.h
-
-genotypes_SOURCES = src/genotypes.h src/genotypes.cc src/constants.h src/constants.cc \
-	src/utils.h src/utils.cc src/catalog_utils.h src/catalog_utils.cc \
-	src/log_utils.h src/log_utils.cc \
-	src/stacks.h src/stacks.cc src/locus.h src/locus.cc \
-	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
+libcore_a_SOURCES = \
 	src/aln_utils.h src/aln_utils.cc \
-	src/PopMap.h src/genotype_dictionaries.h src/genotype_dictionaries.cc\
-	src/input.h src/input.cc src/sql_utilities.h src/sql_utilities.cc src/renz.h src/renz.cc \
-	src/MetaPopInfo.h src/MetaPopInfo.cc
-
-populations_SOURCES = src/populations.h src/populations.cc src/constants.h src/constants.cc \
-	src/utils.h src/utils.cc src/catalog_utils.h src/catalog_utils.cc \
-	src/log_utils.h src/log_utils.cc \
-	src/stacks.h src/stacks.cc src/locus.h src/locus.cc \
-	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
-	src/PopMap.h src/PopSum.h src/aln_utils.h src/aln_utils.cc src/genotype_dictionaries.h src/genotype_dictionaries.cc \
-	src/input.h src/input.cc src/sql_utilities.h src/sql_utilities.cc src/renz.h src/renz.cc \
-	src/bootstrap.h src/ordered.h src/smoothing.h src/smoothing_utils.h \
-	src/export_formats.h src/export_formats.cc \
-	src/MetaPopInfo.h src/MetaPopInfo.cc src/Vcf.h src/Vcf.cc
-
-phasedstacks_SOURCES = src/phasedstacks.h src/phasedstacks.cc src/constants.h src/constants.cc \
+	src/BamI.h \
+	src/BamUnalignedI.h \
+	src/BowtieI.h \
+	src/BustardI.h \
+	src/catalog_utils.h src/catalog_utils.cc \
+	src/cmb.h src/cmb.cc \
+	src/constants.h src/constants.cc \
+	src/DNANSeq.h src/DNANSeq.cc \
+	src/DNASeq4.h src/DNASeq4.cc \
+	src/DNASeq.h src/DNASeq.cc \
+	src/FastaI.h \
+	src/FastqI.h \
+	src/GappedAln.h \
+	src/gzFasta.h \
+	src/gzFastq.h \
+	src/input.h src/input.cc \
+	src/kmers.h src/kmers.cc \
 	src/locus.h src/locus.cc \
-	src/input.h src/input.cc src/sql_utilities.h src/sql_utilities.cc \
 	src/log_utils.h src/log_utils.cc \
-	src/utils.h src/utils.cc src/catalog_utils.h src/catalog_utils.cc 
+	src/MetaPopInfo.h src/MetaPopInfo.cc \
+	src/models.h src/models.cc \
+	src/mstack.h src/mstack.cc \
+	src/mst.h src/mst.cc \
+	src/renz.h src/renz.cc \
+	src/SamI.h \
+	src/Seq.h src/Seq.cc \
+	src/sql_utilities.h src/sql_utilities.cc \
+	src/stacks.h src/stacks.cc \
+	src/Tsv.h \
+	src/utils.h src/utils.cc \
+	src/Vcf.h src/Vcf.cc
 
-ustacks_CXXFLAGS  = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
-ustacks_LDFLAGS   = $(OPENMP_CFLAGS)
-pstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS) $(SPARSEHASH_CFLAGS)
-pstacks_LDFLAGS   = $(OPENMP_CFLAGS)
-pstacks_LDADD     = $(BAM_LIBS)
+libclean_a_SOURCES = \
+	src/clean.h src/clean.cc \
+	src/file_io.h src/file_io.cc \
+	src/write.h src/write.cc
+
+libpop_a_SOURCES = \
+	src/bootstrap.h \
+	src/export_formats.h src/export_formats.cc \
+	src/genotype_dictionaries.h src/genotype_dictionaries.cc \
+	src/ordered.h \
+	src/PopMap.h \
+	src/PopSum.h \
+	src/smoothing.h \
+	src/smoothing_utils.h
+
+libcore_a_CXXFLAGS = $(BAM_CFLAGS)
+libpop_a_CXXFLAGS  = $(OPENMP_CFLAGS)
+
+estacks_SOURCES      = libcore.a src/estacks.h src/estacks.cc
+hstacks_SOURCES      = libcore.a src/hstacks.h src/hstacks.cc
+phasedstacks_SOURCES = libcore.a src/phasedstacks.h src/phasedstacks.cc
+
+process_radtags_SOURCES    = libcore.a libclean.a src/process_radtags.h src/process_radtags.cc
+process_shortreads_SOURCES = libcore.a libclean.a src/process_shortreads.h src/process_shortreads.cc
+kmer_filter_SOURCES        = libcore.a libclean.a src/kmer_filter.h src/kmer_filter.cc
+clone_filter_SOURCES       = libcore.a libclean.a src/clone_filter.h src/clone_filter.cc
+
+ustacks_SOURCES = libcore.a src/ustacks.h src/ustacks.cc
+pstacks_SOURCES = libcore.a src/pstacks.h src/pstacks.cc src/pstacks_base.h src/pstacks_base.cc
+cstacks_SOURCES = libcore.a src/cstacks.h src/cstacks.cc
+sstacks_SOURCES = libcore.a src/sstacks.h src/sstacks.cc
+
+populations_SOURCES = libcore.a libpop.a src/populations.h src/populations.cc
+genotypes_SOURCES   = libcore.a libpop.a src/genotypes.h src/genotypes.cc
+rxstacks_SOURCES    = libcore.a libpop.a src/rxstacks.h src/rxstacks.cc
+
 estacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS) $(BAM_CFLAGS)
-estacks_LDFLAGS   = $(OPENMP_CFLAGS)
-estacks_LDADD = $(BAM_LIBS)
-cstacks_CXXFLAGS  = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
-cstacks_LDFLAGS   = $(OPENMP_CFLAGS)
+estacks_LDFLAGS  = $(OPENMP_CFLAGS)
+estacks_LDADD    = $(BAM_LIBS) libcore.a
 hstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
-hstacks_LDFLAGS   = $(OPENMP_CFLAGS)
-sstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
-sstacks_LDFLAGS   = $(OPENMP_CFLAGS)
-rxstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
-rxstacks_LDFLAGS  = $(OPENMP_CFLAGS)
-process_radtags_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS) $(BAM_CFLAGS) 
-process_radtags_LDFLAGS  = $(OPENMP_CFLAGS)
-process_radtags_LDADD    = $(BAM_LIBS)
-process_shortreads_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS) $(BAM_CFLAGS) 
-process_shortreads_LDFLAGS  = $(OPENMP_CFLAGS)
-process_shortreads_LDADD    = $(BAM_LIBS)
-kmer_filter_CXXFLAGS  = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
-kmer_filter_LDFLAGS   = $(OPENMP_CFLAGS)
-genotypes_CXXFLAGS    = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
-genotypes_LDFLAGS     = $(OPENMP_CFLAGS)
-populations_CXXFLAGS  = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
-populations_LDFLAGS   = $(OPENMP_CFLAGS)
+hstacks_LDFLAGS  = $(OPENMP_CFLAGS)
+hstacks_LDADD    = libcore.a
 phasedstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
 phasedstacks_LDFLAGS  = $(OPENMP_CFLAGS)
+phasedstacks_LDADD    = libcore.a
+
+ustacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
+ustacks_LDFLAGS  = $(OPENMP_CFLAGS)
+ustacks_LDADD    = libcore.a
+pstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS) $(SPARSEHASH_CFLAGS)
+pstacks_LDFLAGS  = $(OPENMP_CFLAGS)
+pstacks_LDADD    = $(BAM_LIBS) libcore.a
+cstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
+cstacks_LDFLAGS  = $(OPENMP_CFLAGS)
+cstacks_LDADD    = libcore.a
+sstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
+sstacks_LDFLAGS  = $(OPENMP_CFLAGS)
+sstacks_LDADD    = libcore.a
+
+process_radtags_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS) $(BAM_CFLAGS)
+process_radtags_LDFLAGS  = $(OPENMP_CFLAGS)
+process_radtags_LDADD    = $(BAM_LIBS) libcore.a libclean.a
+process_shortreads_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS) $(BAM_CFLAGS)
+process_shortreads_LDFLAGS  = $(OPENMP_CFLAGS)
+process_shortreads_LDADD    = $(BAM_LIBS) libcore.a libclean.a
 clone_filter_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS) $(BAM_CFLAGS)
 clone_filter_LDFLAGS  = $(OPENMP_CFLAGS)
-clone_filter_LDADD    = $(BAM_LIBS)
+clone_filter_LDADD    = $(BAM_LIBS) libcore.a libclean.a
+kmer_filter_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
+kmer_filter_LDFLAGS  = $(OPENMP_CFLAGS)
+kmer_filter_LDADD    = libcore.a libclean.a
 
-dist_bin_SCRIPTS = scripts/denovo_map.pl scripts/ref_map.pl scripts/export_sql.pl \
+genotypes_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
+genotypes_LDFLAGS  = $(OPENMP_CFLAGS)
+genotypes_LDADD    = libcore.a libpop.a
+populations_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
+populations_LDFLAGS  = $(OPENMP_CFLAGS)
+populations_LDADD    = $(OPENMP_CFLAGS) libcore.a libpop.a
+rxstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
+rxstacks_LDFLAGS  = $(OPENMP_CFLAGS)
+rxstacks_LDADD    = $(OPENMP_CFLAGS) libcore.a libpop.a
+
+dist_bin_SCRIPTS = scripts/denovo_map.pl scripts/ref_map.pl	scripts/export_sql.pl \
 	scripts/sort_read_pairs.pl scripts/exec_velvet.pl scripts/load_sequences.pl \
 	scripts/index_radtags.pl scripts/load_radtags.pl scripts/stacks_export_notify.pl \
 	scripts/integrate_alignments.py
@@ -170,12 +143,12 @@ TESTS = tests/process_radtags.t tests/kmer_filter.t tests/ustacks.t tests/pstack
 
 EXTRA_DIST = $(nobase_pkgdata_DATA) LICENSE INSTALL README ChangeLog $(TESTS)
 
-SUBDIRS = htslib .
-
 pkglocalstatedir = $(localstatedir)/$(PACKAGE)
 
+SUBDIRS = htslib .
+
 debug:
-	$(MAKE) all "CXXFLAGS=-g -Wall -DDEBUG -std=gnu++0x"
+	$(MAKE) all "CXXFLAGS=-g -Wall -DDEBUG -std=gnu++11"
 
 install-data-hook:
 	sed -e 's,_VERSION_,$(VERSION),' -e 's,_BINDIR_,$(bindir)/,g' -e 's,_PKGDATADIR_,$(pkgdatadir)/,g' $(DESTDIR)$(bindir)/denovo_map.pl > $(DESTDIR)$(bindir)/denovo_map.pl.subst

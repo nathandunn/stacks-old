@@ -24,9 +24,7 @@
 #include <vector>
 #include <string>
 #include <map>
-using std::map;
 #include <set>
-using std::set;
 
 #include "constants.h"
 #include "stacks.h"
@@ -37,7 +35,7 @@ using std::set;
 
 // find_catalogs()
 // Looks for catalog files in the given directory and returns the associated ID(s).
-std::vector<int> find_catalogs(const std::string& dir_path);
+vector<int> find_catalogs(const string& dir_path);
 
 int check_whitelist_integrity(map<int, CSLocus *> &, map<int, set<int> > &);
 int reduce_catalog(map<int, CSLocus *> &, set<int> &, set<int> &);

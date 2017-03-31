@@ -31,27 +31,14 @@
 #include <string.h>
 #include <time.h>
 #include <utility>
-using std::pair;
-using std::make_pair;
 #include <string>
-using std::string;
 #include <iostream>
 #include <fstream>
-using std::ifstream;
-using std::ofstream;
-using std::cin;
-using std::cout;
-using std::cerr;
-using std::endl;
 #include <sstream>
-using std::stringstream;
 #include <iomanip>
 #include <vector>
-using std::vector;
 #include <map>
-using std::map;
 #include <set>
-using std::set;
 
 #include "constants.h"
 #include "utils.h"
@@ -68,7 +55,7 @@ using std::set;
 
 enum loc_t {strong_ld, recomb, uninformative};
 
-class Sample {
+class PhasedSample {
 public:
     string name;
     int    id;
@@ -76,13 +63,13 @@ public:
     char  *nucs_1;
     char  *nucs_2;
 
-    Sample() {
+    PhasedSample() {
         this->id   = 0;
         this->size = 0;
         this->nucs_1 = NULL;
         this->nucs_2 = NULL;
     }
-    ~Sample() {
+    ~PhasedSample() {
         if (this->nucs_1 != NULL)
             delete [] this->nucs_1;
         if (this->nucs_2 != NULL)
@@ -138,13 +125,13 @@ public:
     uint     size;
     uint     sample_cnt;
     NucSum  *nucs;
-    Sample  *samples;
+    PhasedSample  *samples;
     dPrime **dprime;
     bool   **recomb;
 
     PhasedSummary(uint num_samples, uint num_genotypes) {
         this->sample_cnt = num_samples;
-        this->samples    = new Sample[this->sample_cnt];
+        this->samples    = new PhasedSample[this->sample_cnt];
         this->size       = num_genotypes;
         this->nucs       = new NucSum[this->size];
         this->dprime     = new dPrime *[this->size];

@@ -5,11 +5,34 @@
 #include <vector>
 #include <map>
 
-using std::size_t;
-using std::pair;
-using std::vector;
-using std::string;
-using std::map;
+#include "constants.h"
+
+struct Sample {
+    string name;
+    size_t pop;
+    size_t id; // optional
+
+    Sample(const string& n) : name(n), pop(-1), id(-1) {}
+    inline bool operator<(const Sample& other) const;
+};
+
+struct Pop {
+    string name;
+    size_t first_sample;
+    size_t last_sample;
+    size_t group;
+
+    Pop(const string& n) : name(n), first_sample(-1), last_sample(-1), group(-1) {}
+    static const string default_name;
+};
+
+struct Group {
+    string name;
+    vector<size_t> pops;
+
+    Group(const string& n) : name(n), pops() {}
+    static const string default_name;
+};
 
 /*
  * MetaPopInfo
@@ -17,33 +40,6 @@ using std::map;
  * groups of populations, and associated information.
  */
 class MetaPopInfo {
-public:
-    struct Sample {
-        string name;
-        size_t pop;
-        size_t id; // optional, deprecated
-
-        Sample(const string& n) : name(n), pop(-1), id(-1) {}
-        inline bool operator<(const Sample& other) const;
-    };
-    struct Pop {
-        string name;
-        size_t first_sample;
-        size_t last_sample;
-        size_t group;
-
-        Pop(const string& n) : name(n), first_sample(-1), last_sample(-1), group(-1) {}
-        static const string default_name;
-    };
-    struct Group {
-        string name;
-        vector<size_t> pops;
-
-        Group(const string& n) : name(n), pops() {}
-        static const string default_name;
-    };
-
-private:
     vector<Sample> samples_; //n.b. Samples are sorted primarily by population index, and secondarily by name.
     vector<Pop> pops_;
     vector<Group> groups_;
@@ -101,7 +97,7 @@ public:
 };
 
 inline
-bool MetaPopInfo::Sample::operator<(const Sample& other) const {
+bool Sample::operator<(const Sample& other) const {
     if (pop == other.pop)
         return name < other.name;
     else

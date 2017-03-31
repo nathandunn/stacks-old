@@ -74,7 +74,7 @@ int main (int argc, char* argv[]) {
         string sample_id = (*in_file).substr(pos_1 + 1, (pos_2 - pos_1 - 1));
 
         bool compressed = false;
-        load_loci(*in_file, sample, false, false, compressed);
+        load_loci(*in_file, sample, 0, false, compressed);
 
         //
         // Give each locus a unique ID among all samples
@@ -906,13 +906,13 @@ int parse_command_line(int argc, char* argv[]) {
 }
 
 void version() {
-    std::cerr << "hstacks " << VERSION << "\n\n";
+    cerr << "hstacks " << VERSION << "\n\n";
 
     exit(0);
 }
 
 void help() {
-    std::cerr << "hstacks " << VERSION << "\n"
+    cerr << "hstacks " << VERSION << "\n"
               << "hstacks -i path [-o path] [-b batch_id] [-n mismatches] [-m min] [-p min_threads] [-N limit] [-h]" << "\n"
               << "  i: path to the set of SQL files from which to load loci." << "\n"
               << "  o: output path to write results." << "\n"

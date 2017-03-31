@@ -13,8 +13,8 @@
 
 using namespace std;
 
-const string MetaPopInfo::Pop::default_name = "defaultpop";
-const string MetaPopInfo::Group::default_name = "defaultgrp";
+const string Pop::default_name = "defaultpop";
+const string Group::default_name = "defaultgrp";
 
 void MetaPopInfo::reset_sample_map() {
     sample_indexes_.clear();
