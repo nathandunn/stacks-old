@@ -23,17 +23,9 @@
 
 #include <iostream>
 #include <fstream>
-using std::ifstream;
-using std::ofstream;
-using std::cin;
-using std::cout;
-using std::cerr;
 #include <vector>
-using std::vector;
 #include <map>
-using std::map;
 #include <set>
-using std::set;
 
 #include "MetaPopInfo.h"
 #include "PopSum.h"

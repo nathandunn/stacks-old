@@ -47,6 +47,10 @@ AC_PROG_CXX
 AM_PROG_CC_C_O
 AX_CXX_COMPILE_STDCXX(11,, [mandatory])
 
+# Checks for ar-based static libs.
+AC_PROG_RANLIB
+m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
+
 # Checks for libraries.
 AC_CHECK_LIB([gomp], [omp_set_num_threads],, [AC_MSG_WARN([Unable to locate OpenMP library, you should probably specify '--disable-openmp'.])])
 AC_CHECK_LIB([z], [gzread],, [AC_MSG_ERROR([Zlib not found, reading gzipped files will not be possible.])]) 

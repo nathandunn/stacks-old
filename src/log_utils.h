@@ -22,12 +22,83 @@
 #define __LOG_UTILS_H__
 
 #include <string>
+#include <iostream>
 #include <fstream>
-using std::ofstream;
 
-int init_log(ofstream &, int, char **);
+#include "constants.h"
+
+int init_log(ostream &fh, int argc, char **argv);
+
+inline
+void failed_to_open(const string& path) {
+    cerr << "Error: Failed to open file '" << path << "'.\n";
+    throw exception();
+}
 
 // Returns e.g. "23.2%".
-std::string as_percentage(double d);
+string as_percentage(double d);
+
+string to_string(const FileT& ft);
+
+// TeeBuf
+// ==========
+// A streambuf which tees to two streambufs.
+// From http://wordaligned.org/articles/cpp-streambufs */
+// This tee buffer has no actual buffer, so every character "overflows"
+// directly into the teed buffers.
+class TeeBuf: public streambuf {
+public:
+
+    TeeBuf(streambuf* sb1, streambuf* sb2)
+        : sb1(sb1) , sb2(sb2)
+        {}
+
+private:
+    streambuf* sb1;
+    streambuf* sb2;
+
+    virtual int overflow(int c) {
+        if (c == EOF) {
+            return !EOF;
+        } else {
+            int r1 = sb1->sputc(c);
+            int r2 = sb2->sputc(c);
+            return r1 == EOF || r2 == EOF ? EOF : c;
+        }
+    }
+
+    // Sync both teed buffers.
+    virtual int sync() {
+        int r1 = sb1->pubsync();
+        int r2 = sb2->pubsync();
+        return r1 == 0 && r2 == 0 ? 0 : -1;
+    }
+};
+
+// LogAlterator
+// ==========
+class TeeBuf;
+class LogAlterator {
+public:
+    ofstream l; // The actual log file
+    ostream o;  // Just stdout
+    ostream e;  // Just stderr
+
+    // Construct the log alterator.
+    // cout and cerr will also write to the log file (if quiet
+	// is true, output to stdout and stderr is suppressed i.e. they only
+    // write to the log file).
+    LogAlterator(const string& log_path, bool quiet = false);
+
+    // Upon destruction, restore cout and cerr.
+    ~LogAlterator() {
+        cout.rdbuf(o.rdbuf());
+        cerr.rdbuf(e.rdbuf());
+    }
+
+private:
+    TeeBuf lo_buf;
+    TeeBuf le_buf;
+};
 
 #endif // __LOG_UTILS_H__

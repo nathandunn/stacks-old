@@ -92,6 +92,8 @@ using std::stringstream;
 using std::pair;
 using std::make_pair;
 using std::stoi;
+using std::to_string;
+using std::size_t;
 using std::getline;
 using std::exception;
 using std::move;
@@ -129,7 +131,7 @@ enum class FileT {unknown,
     bowtie,  sam, bam, tsv,
     bustard, phase, fastphase, beagle};
 
-std::string remove_suffix(FileT, const string&);
+string remove_suffix(FileT, const string&);
 
 FileT guess_file_type(const string&);
 

@@ -30,22 +30,11 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-using std::stringstream;
-using std::istream;
-using std::ofstream;
-using std::cin;
-using std::cout;
-using std::cerr;
-using std::endl;
 
 #include <vector>
-using std::vector;
 #include <map>
-using std::map;
 #include <set>
-using std::set;
 #include <utility>
-using std::pair;
 
 #include "constants.h"
 #include "clean.h"
@@ -74,7 +63,7 @@ int  process_paired_reads(string, string,
                           map<BarcodePair, fhType *> &,
                           map<BarcodePair, fhType *> &,
                           map<string, long> &, map<BarcodePair, map<string, long> > &);
-int  process_singlet(Read *,
+int  process_singlet(RawRead *,
                      bool,
                      map<string, long> &, map<string, long> &);
 

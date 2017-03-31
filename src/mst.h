@@ -23,23 +23,17 @@
 
 #include <stdio.h>
 #include <string>
-using std::string;
 #include <map>
-using std::map;
 #include <vector>
-using std::vector;
 #include <set>
-using std::set;
 #include <queue>
 using std::queue;
 #include <sstream>
-using std::stringstream;
 #include<iostream>
-using std::cerr;
 
 #include "constants.h"
 
-typedef unsigned int uint;
+namespace mst {
 
 class Node;
 
@@ -104,4 +98,5 @@ class MinSpanTree {
 
 bool min_span_tree_cmp(const Node *, const Node *);
 
+} // namespace mst
 #endif // __MST_H__
