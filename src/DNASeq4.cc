@@ -2,6 +2,9 @@
 
 using namespace std;
 
+const vector<size_t> Nt4::all = {a, c, g, t, n};
+const vector<size_t> Nt2::all = {a, c, g, t};
+
 const size_t Nt4::ch_to_nt4[256] = {
     0,n,n,n, n,n,n,n, n,n,n,n, n,n,n,n, // 0x
     n,n,n,n, n,n,n,n, n,n,n,n, n,n,n,n, // 1x

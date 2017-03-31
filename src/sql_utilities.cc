@@ -1,3 +1,5 @@
+#include <unordered_map>
+
 #include "sql_utilities.h"
 
 using namespace std;
@@ -296,4 +298,32 @@ int load_snp_calls(string sample,  map<int, SNPRes *> &snpres) {
     delete [] line;
 
     return 1;
+}
+
+vector<pair<int,int> > retrieve_bijective_loci(const vector<CatMatch*>& matches) {
+    vector<pair<int,int> > sloc_cloc_id_pairs;
+    for (const CatMatch* m : matches)
+        sloc_cloc_id_pairs.push_back({m->tag_id, m->cat_id});
+    return retrieve_bijective_loci(sloc_cloc_id_pairs);
+}
+
+vector<pair<int,int> > retrieve_bijective_loci(const vector<pair<int,int>>& sloc_cloc_id_pairs) {
+    vector<pair<int,int> > bij_sloci;
+
+    unordered_map<int, set<int> > cloc_id_to_sloc_ids;
+    unordered_map<int, set<int> > sloc_id_to_cloc_ids;
+    for (auto p : sloc_cloc_id_pairs) {
+        cloc_id_to_sloc_ids[p.second].insert(p.first);
+        sloc_id_to_cloc_ids[p.first].insert(p.second);
+    }
+
+    bij_sloci.reserve(sloc_id_to_cloc_ids.size());
+    for (const auto& sloc : sloc_id_to_cloc_ids)
+        if (sloc.second.size() == 1
+                && cloc_id_to_sloc_ids.at(*sloc.second.begin()).size() == 1
+                )
+            // Bijective, keep it.
+            bij_sloci.push_back({sloc.first, *sloc.second.begin()});
+
+    return bij_sloci;
 }
