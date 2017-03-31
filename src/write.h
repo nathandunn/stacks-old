@@ -22,40 +22,34 @@
 #define __WRITE_H__
 
 #include <string>
-using std::string;
 #include <iostream>
 #include <fstream>
-using std::ofstream;
-using std::cin;
-using std::cout;
-using std::cerr;
-using std::endl;
 #include <zlib.h>
 #include <errno.h>
 
 #include "input.h"
 #include "clean.h"
 
-int  write_fastq(ofstream *, Read *, bool);
+int  write_fastq(ofstream *, RawRead *, bool);
 int  write_fastq(ofstream *, Seq *);
 int  write_fastq(ofstream *, Seq *, int);
 int  write_fastq(ofstream *, Seq *, string);
-int  write_fasta(ofstream *, Read *, bool);
+int  write_fasta(ofstream *, RawRead *, bool);
 int  write_fasta(ofstream *, Seq *);
 int  write_fasta(ofstream *, Seq *, int);
 int  write_fasta(ofstream *, Seq *, string);
-int  write_fastq(ofstream *, Seq *, Read *);
-int  write_fasta(ofstream *, Seq *, Read *);
+int  write_fastq(ofstream *, Seq *, RawRead *);
+int  write_fasta(ofstream *, Seq *, RawRead *);
 
-int  write_fastq(gzFile *, Read *, bool);
+int  write_fastq(gzFile *, RawRead *, bool);
 int  write_fastq(gzFile *, Seq *);
 int  write_fastq(gzFile *, Seq *, int);
 int  write_fastq(gzFile *, Seq *, string);
-int  write_fasta(gzFile *, Read *, bool);
+int  write_fasta(gzFile *, RawRead *, bool);
 int  write_fasta(gzFile *, Seq *);
 int  write_fasta(gzFile *, Seq *, int);
 int  write_fasta(gzFile *, Seq *, string);
-int  write_fastq(gzFile *, Seq *, Read *);
-int  write_fasta(gzFile *, Seq *, Read *);
+int  write_fastq(gzFile *, Seq *, RawRead *);
+int  write_fasta(gzFile *, Seq *, RawRead *);
 
 #endif // __WRITE_H__

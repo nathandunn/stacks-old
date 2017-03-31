@@ -23,7 +23,6 @@
 
 #include <math.h>
 #include <vector>
-using std::vector;
 
 extern double sigma;
 

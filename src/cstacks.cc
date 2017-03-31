@@ -115,7 +115,7 @@ int main (int argc, char* argv[]) {
 
         cerr << "\nProcessing sample " << s.second << " [" << i << " of " << sample_cnt << "]\n";
 
-        if (!load_loci(s.second, sample, false, false, compressed)) {
+        if (!load_loci(s.second, sample, 0, false, compressed)) {
             cerr << "Failed to load sample " << i << "\n";
             continue;
         }
@@ -1720,7 +1720,7 @@ initialize_new_catalog(pair<int, string> &sample, map<int, CLocus *> &catalog)
     //
     // Parse the input files.
     //
-    if (!load_loci(sample.second, tmp_catalog, false, false, compressed))
+    if (!load_loci(sample.second, tmp_catalog, 0, false, compressed))
         return 0;
 
     in_file_type = compressed == true ? FileT::gzsql : FileT::sql;
@@ -1755,7 +1755,8 @@ initialize_existing_catalog(string catalog_path, map<int, CLocus *> &catalog)
     //
     // Parse the input files.
     //
-    if (!load_loci(catalog_path, catalog, false, false, compressed))
+    catalog_path += ".catalog";
+    if (!load_loci(catalog_path, catalog, 0, false, compressed))
         return 0;
 
     in_file_type = compressed == true ? FileT::gzsql : FileT::sql;
@@ -1921,7 +1922,7 @@ int parse_command_line(int argc, char* argv[]) {
         // Set `samples`.
         MetaPopInfo popmap;
         popmap.init_popmap(popmap_path);
-        for (const MetaPopInfo::Sample& s : popmap.samples())
+        for (const Sample& s : popmap.samples())
             samples.push({0, in_dir + s.name});
 
         // Set `out_path`.
@@ -1950,13 +1951,13 @@ int parse_command_line(int argc, char* argv[]) {
 }
 
 void version() {
-    std::cerr << "cstacks " << VERSION << "\n";
+    cerr << "cstacks " << VERSION << "\n";
 
     exit(0);
 }
 
 void help() {
-    std::cerr << "cstacks " << VERSION << "\n"
+    cerr << "cstacks " << VERSION << "\n"
               << "cstacks -P in_dir -M popmap [-n num_mismatches] [--gapped] [-p num_threads] [-b batch_id]" << "\n"
               << "cstacks --aligned -P in_dir -M popmap [-p num_threads] [-b batch_id]" << "\n"
               << "cstacks -s sample1_path [-s sample2_path ...] -o path [-n num_mismatches] [--gapped] [-p num_threads] [-b batch_id]" << "\n"

@@ -22,18 +22,10 @@
 #define __CLEAN_H__
 
 #include <string>
-using std::string;
 #include <map>
-using std::map;
 #include <iostream>
 #include <fstream>
-using std::ofstream;
-using std::cin;
-using std::cout;
-using std::cerr;
-using std::endl;
 #include <unordered_map>
-using std::unordered_map;
 
 #include "input.h"
 #include "kmers.h"
@@ -148,7 +140,7 @@ public:
     }
 };
 
-class Read {
+class RawRead {
 public:
     fastqt fastq_type;
     char  *inline_bc;
@@ -173,7 +165,7 @@ public:
     double win_len;
     double stop_pos;
 
-    Read(uint buf_len, int read, int barcode_size, double win_size) {
+    RawRead(uint buf_len, int read, int barcode_size, double win_size) {
         this->inline_bc     = new char[id_len  + 1];
         this->index_bc      = new char[id_len  + 1];
         this->machine       = new char[id_len  + 1];
@@ -241,7 +233,7 @@ public:
             }
         }
     }
-    ~Read() {
+    ~RawRead() {
         delete [] this->inline_bc;
         delete [] this->index_bc;
         delete [] this->machine;
@@ -291,23 +283,23 @@ public:
 
 int  parse_illumina_v1(const char *);
 int  parse_illumina_v2(const char *);
-int  parse_input_record(Seq *, Read *);
+int  parse_input_record(Seq *, RawRead *);
 int  rev_complement(char *, int, bool);
 int  reverse_qual(char *, int, bool);
 
-bool correct_barcode(set<string> &, Read *, seqt, int);
+bool correct_barcode(set<string> &, RawRead *, seqt, int);
 
-int  filter_adapter_seq(Read *, char *, int, AdapterHash &, int, int, int);
+int  filter_adapter_seq(RawRead *, char *, int, AdapterHash &, int, int, int);
 int  init_adapter_seq(int, char *, int &, AdapterHash &);
 
-int  check_quality_scores(Read *, int, int, int, int);
+int  check_quality_scores(RawRead *, int, int, int, int);
 
 //
 // Templated function to process barcodes.
 //
 template<typename fhType>
 int
-process_barcode(Read *href_1, Read *href_2, BarcodePair &bc,
+process_barcode(RawRead *href_1, RawRead *href_2, BarcodePair &bc,
                 map<BarcodePair, fhType *> &fhs,
                 set<string> &se_bc, set<string> &pe_bc,
                 map<BarcodePair, map<string, long> > &barcode_log, map<string, long> &counter)

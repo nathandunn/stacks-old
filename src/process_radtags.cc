@@ -250,7 +250,7 @@ process_paired_reads(string prefix_1,
                      map<string, long> &counter,
                      map<BarcodePair, map<string, long> > &barcode_log) {
     Input    *fh_1, *fh_2;
-    Read     *r_1, *r_2;
+    RawRead     *r_1, *r_2;
     ofstream *discard_fh_1, *discard_fh_2;
 
     int return_val = 1;
@@ -310,8 +310,8 @@ process_paired_reads(string prefix_1,
         exit(1);
     }
 
-    r_1 = new Read(strlen(s_1->seq), 1, min_bc_size_1, win_size);
-    r_2 = new Read(strlen(s_2->seq), 2, min_bc_size_2, win_size);
+    r_1 = new RawRead(strlen(s_1->seq), 1, min_bc_size_1, win_size);
+    r_2 = new RawRead(strlen(s_2->seq), 2, min_bc_size_2, win_size);
 
     //
     // Set len_limit so that if we encounter reads already shorter than truncate_seq limit
@@ -467,7 +467,7 @@ process_reads(string prefix,
               map<string, long> &counter,
               map<BarcodePair, map<string, long> > &barcode_log) {
     Input *fh;
-    Read  *r;
+    RawRead  *r;
     ofstream *discard_fh;
 
     int return_val = 1;
@@ -514,7 +514,7 @@ process_reads(string prefix,
     if (truncate_seq > 0)
         len_limit = truncate_seq;
 
-    r = new Read(strlen(s->seq), 1, min_bc_size_1, win_size);
+    r = new RawRead(strlen(s->seq), 1, min_bc_size_1, win_size);
 
     BarcodePair bc;
     //
@@ -612,7 +612,7 @@ process_reads(string prefix,
 
 inline
 int
-process_singlet(Read *href,
+process_singlet(RawRead *href,
                 string res_enz, bool paired_end,
                 map<string, long> &bc_log, map<string, long> &counter)
 {
@@ -713,7 +713,7 @@ process_singlet(Read *href,
 }
 
 int
-correct_radtag(Read *href, string res_enz, map<string, long> &counter)
+correct_radtag(RawRead *href, string res_enz, map<string, long> &counter)
 {
     if (recover == false)
         return 0;
@@ -764,7 +764,12 @@ print_results(int argc, char **argv,
         // In directory mode, use `$out_path/process_radtags.$(basename $in_path).log`.
         // For consistency we always use realpath().
         char abspath [PATH_MAX];
-        realpath(in_path_1.c_str(), abspath);
+        char* rv = realpath(in_path_1.c_str(), abspath);
+        if (rv == NULL) {
+            int errnum = errno;
+            cerr << "Error: Failed to compute an absolute path from '" << in_path_1 << "' (" << strerror(errnum) << ").\n";
+            throw exception();
+        }
         string abspath_s (abspath);
         size_t p = abspath_s.find_last_of('/');
         string in_dir_name = abspath_s.substr(p+1);
@@ -1249,13 +1254,13 @@ int parse_command_line(int argc, char* argv[]) {
 }
 
 void version() {
-    std::cerr << "process_radtags " << VERSION << "\n\n";
+    cerr << "process_radtags " << VERSION << "\n\n";
 
     exit(0);
 }
 
 void help() {
-    std::cerr << "process_radtags " << VERSION << "\n"
+    cerr << "process_radtags " << VERSION << "\n"
               << "process_radtags -p in_dir [--paired [--interleaved]] [-i format] -b barcode_file -o out_dir -e enz [-c] [-q] [-r] [-t len] [-D] [-w size] [-s lim]\n"
               << "process_radtags -f in_file [-i format] -b barcode_file -o out_dir -e enz [-c] [-q] [-r] [-t len] [-D] [-w size] [-s lim]\n"
               << "process_radtags -1 pair_1 -2 pair_2 [-i format] -b barcode_file -o out_dir -e enz [-c] [-q] [-r] [-t len] [-D] [-w size] [-s lim]\n"
@@ -1298,20 +1303,20 @@ void help() {
     uint cnt = renz_cnt.size();
     it = renz_cnt.begin();
     for (uint i = 1; i <= cnt; i++) {
-        std::cerr << "'" << it->first << "'";
+        cerr << "'" << it->first << "'";
         if (i < cnt - 1)
-            std::cerr << ", ";
+            cerr << ", ";
         else if (i == cnt - 1)
-            std::cerr << ", or ";
+            cerr << ", or ";
 
         if (i % 8 == 0)
-            std::cerr << "\n      ";
+            cerr << "\n      ";
 
         it++;
     }
     cerr << "\n";
 
-    std::cerr << "\n"
+    cerr << "\n"
               << "  Adapter options:\n"
               << "    --adapter_1 <sequence>: provide adaptor sequence that may occur on the single-end read for filtering.\n"
               << "    --adapter_2 <sequence>: provide adaptor sequence that may occur on the paired-read for filtering.\n"

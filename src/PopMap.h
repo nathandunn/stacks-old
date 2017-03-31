@@ -22,22 +22,15 @@
 #define __POPMAP_H__
 
 #include <exception>
-using std::exception;
 #include <cstring>
 #include <string>
-using std::string;
 #include <vector>
-using std::vector;
 #include <map>
-using std::map;
 #include <set>
-using std::set;
 #include <numeric>
 using std::accumulate;
 #include <algorithm>
 #include <utility>
-using std::pair;
-using std::make_pair;
 
 #include "stacks.h"
 #include "locus.h"
@@ -177,7 +170,7 @@ int PopMap<LocusT>::populate(map<int, LocusT*> &catalog,
     // Create an index showing what position each catalog locus is stored at in the datum
     // array. Create a second index allowing ordering of Loci by genomic position.
     //
-    typename std::map<int, LocusT*>::const_iterator it;
+    typename map<int, LocusT*>::const_iterator it;
     uint i = 0;
     for (it = catalog.begin(); it != catalog.end(); it++) {
         this->locus_order[it->first] = i;
@@ -350,12 +343,12 @@ int PopMap<LocusT>::populate(map<int, LocusT*>& catalog,
                 size_t coma;
                 try {
                      while ((coma = ad_str.find(',', start)) != string::npos) {
-                         ad.push_back(std::stoi(ad_str.substr(start,coma)));
+                         ad.push_back(stoi(ad_str.substr(start,coma)));
                          if (ad.back() < 0)
                              throw exception();
                          start=coma+1;
                      }
-                     ad.push_back(std::stoi(ad_str.substr(start)));
+                     ad.push_back(stoi(ad_str.substr(start)));
                      if (ad.size() != rec.alleles.size())
                          throw exception();
                  } catch (exception& e) {
@@ -414,7 +407,7 @@ int PopMap<LocusT>::order_loci(const map<int, LocusT*> &catalog)
 {
     this->ordered_loci.clear();
 
-    typename std::map<int, LocusT*>::const_iterator it;
+    typename map<int, LocusT*>::const_iterator it;
 
     for (it = catalog.begin(); it != catalog.end(); it++) {
         if (strlen(it->second->loc.chr) > 0)

@@ -33,33 +33,20 @@
 #include <string.h>
 #include <algorithm>
 #include <utility>
-using std::pair;
-using std::make_pair;
 
 #include <string>
-using std::string;
 
 #include <iostream>
 #include <fstream>
 #include <sstream>
-using std::ofstream;
-using std::stringstream;
-using std::cin;
-using std::cout;
-using std::cerr;
-using std::endl;
 #include <iomanip> // std::setprecision
 
 #include <vector>
-using std::vector;
 #include <map>
-using std::map;
 #include <unordered_map>
-using std::unordered_map;
 #include <queue>
 using std::queue;
 #include <set>
-using std::set;
 #include <unistd.h>
 
 #ifdef HAVE_SPARSEHASH
