@@ -764,7 +764,12 @@ print_results(int argc, char **argv,
         // In directory mode, use `$out_path/process_radtags.$(basename $in_path).log`.
         // For consistency we always use realpath().
         char abspath [PATH_MAX];
-        realpath(in_path_1.c_str(), abspath);
+        char* rv = realpath(in_path_1.c_str(), abspath);
+        if (rv == NULL) {
+            int errnum = errno;
+            cerr << "Error: Failed to compute an absolute path from '" << in_path_1 << "' (" << strerror(errnum) << ").\n";
+            throw exception();
+        }
         string abspath_s (abspath);
         size_t p = abspath_s.find_last_of('/');
         string in_dir_name = abspath_s.substr(p+1);
