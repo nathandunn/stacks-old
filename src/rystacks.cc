@@ -136,6 +136,9 @@ void process_one_locus(CLocReadSet&& loc) {
         aln_loc.add(SAlnRead(AlnRead(move(*(Read*)r), move(cigar)), r->sample));
     }
 
+    if (aln_loc.reads().empty())
+        return;
+
     if (aln_out) {
         ofstream aln_f (in_dir + to_string(loc.id()) + ".aln");
         aln_f << aln_loc << "\n";
