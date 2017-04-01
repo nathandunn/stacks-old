@@ -179,19 +179,23 @@ struct SAlnRead : AlnRead {
 class CLocReadSet {
     const MetaPopInfo& mpopi_;
     int id_; // Catalog locus ID
-    vector<SRead> reads_; // All the reads. Order is arbitrary.
+    vector<SRead> reads_; // Forward reads. Order is arbitrary.
+    vector<SRead> pe_reads_; // Paired-end reads. Order and size are arbitrary.
 
 public:
-    CLocReadSet(const MetaPopInfo& mpopi) : mpopi_(mpopi), id_(-1), reads_() {}
+    CLocReadSet(const MetaPopInfo& mpopi) : mpopi_(mpopi), id_(-1), reads_(), pe_reads_() {}
 
     const MetaPopInfo& mpopi() const {return mpopi_;}
     int id() const {return id_;}
     const vector<SRead>& reads() const {return reads_;}
           vector<SRead>& reads()       {return reads_;}
+          const vector<SRead>& pe_reads() const {return pe_reads_;}
+                vector<SRead>& pe_reads()       {return pe_reads_;}
 
-    void clear() {id_= -1; reads_.clear();}
+    void clear() {id_= -1; reads_.clear(); pe_reads_.clear();}
     void id(int id) {id_ = id;}
     void add(SRead&& r) {reads_.push_back(move(r));}
+    void add_pe(SRead&& r) {pe_reads_.push_back(move(r));}
 };
 
 class CLocAlnSet {
