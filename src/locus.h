@@ -250,7 +250,7 @@ public:
         site_iterator& operator++ ();
 
         // Site interface.
-        size_t ref_nt() const {return ref_it_.nt();} // Get the contig nt.
+        size_t ref_nt() const {return *ref_it_;} // Get the contig nt4.
         void counts(Nt4Counts& counts) const; // Get the nt counts across all samples.
         void counts(Nt4Counts& counts, size_t sample) const; // Get the nt counts for a given sample.
     };
@@ -290,7 +290,7 @@ inline
 void CLocAlnSet::site_iterator::counts(Nt4Counts& counts) const {
     counts.reset();
     for (auto& read: its_)
-        counts.increment(read.nt());
+        counts.increment(*read);
     counts.sort();
 }
 
@@ -298,7 +298,7 @@ inline
 void CLocAlnSet::site_iterator::counts(Nt4Counts& counts, size_t sample) const {
     counts.reset();
     for (size_t read_i : loc_aln_.sample_reads(sample))
-        counts.increment(its_[read_i].nt());
+        counts.increment(*its_[read_i]);
     counts.sort();
 }
 

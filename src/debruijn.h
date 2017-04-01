@@ -213,7 +213,7 @@ Kmer::Kmer(size_t km_len, DNASeq4::iterator& first, DNASeq4::iterator past) : a_
     DNASeq4::iterator km_start = first;
     size_t n_good = 0;
     while(first != past && n_good != km_len) {
-        if (first.nt() == Nt4::n) {
+        if (*first == Nt4::n) {
             // start again
             km_start = first;
             n_good = 0;
@@ -226,7 +226,7 @@ Kmer::Kmer(size_t km_len, DNASeq4::iterator& first, DNASeq4::iterator past) : a_
     // Build the kmer.
     if (n_good == km_len) {
         for (size_t i=0; i<km_len; ++i) {
-            a_.set(i, Nt2::from_nt4(km_start.nt()));
+            a_.set(i, Nt2::from_nt4(*km_start));
             ++km_start;
         }
     }

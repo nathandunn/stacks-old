@@ -29,6 +29,10 @@ const char Nt4::nt4_to_ch[16] {
     '=','A','C','?','G','?','?','?','T','?','?','?','?','?','?','N'
 };
 
+const size_t Nt4::rev_compl_nt4[16] {
+    n,t,g,n,c,n,n,n,a,n,n,n,n,n,n,n
+};
+
 const size_t Nt2::ch_to_nt2[256] = {
     0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, // 0x
     0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, // 1x
@@ -53,6 +57,10 @@ const char Nt2::nt2_to_ch[4] {
     'A','C','G','T'
 };
 
+const size_t Nt2::rev_compl_nt2[4] {
+    t,g,c,a
+};
+
 const size_t Nt2::nt4_to_nt2[16] = {
     0,a,c,0,g,0,0,0,t,0,0,0,0,0,0,0
 };
@@ -67,6 +75,32 @@ string DNASeq4::str() const {
     string s;
     s.reserve(l_);
     for (auto nt=begin(); nt!=end(); ++nt)
-        s.push_back(*nt);
+        s.push_back(Nt4::to_ch(*nt));
     return s;
+}
+
+DNASeq4 DNASeq4::rev_compl() const {
+    assert(v_.size() == (l_+1)/2);
+
+    DNASeq4 rev;
+    rev.l_ = l_;
+    rev.v_.reserve(v_.size());
+
+    iterator nt = end();
+    --nt;
+    for (size_t i=0; i<l_/2; ++i) {
+        // Push two nucleotides, l_/2 times.
+        rev.v_.push_back(
+                DiNuc( Nt4::rev_compl(*nt), Nt4::rev_compl(*--nt) )
+                );
+        --nt;
+    }
+
+    if (l_ % 2 == 1)
+        rev.v_.push_back(
+                DiNuc( Nt4::rev_compl(*nt), 0 )
+                );
+
+    assert(rev.v_.size() == v_.size() && !(--nt != begin()));
+    return rev;
 }
