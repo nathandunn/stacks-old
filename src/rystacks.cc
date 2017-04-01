@@ -80,13 +80,18 @@ int main(int argc, char** argv) {
 }
 
 void process_one_locus(CLocReadSet&& loc) {
-    assert(!loc.reads().empty());
+    if (loc.reads().empty() || loc.pe_reads().empty())
+        return; //xxx
 
     //
     // Assemble the reads.
     //
+    vector<const DNASeq4*> seqs_to_assemble;
+    for (const Read& r : loc.pe_reads())
+        seqs_to_assemble.push_back(&r.seq);
+
     Graph graph (km_length);
-    graph.rebuild(loc, min_km_count);
+    graph.rebuild(seqs_to_assemble, min_km_count);
     if (graph.empty())
         return;
 
@@ -98,12 +103,12 @@ void process_one_locus(CLocReadSet&& loc) {
         // Not a DAG.
         return;
 
-    string ctg = SPath::contig_str(best_path.begin(), best_path.end(), km_length);
+    string pe_ctg = SPath::contig_str(best_path.begin(), best_path.end(), km_length);
 
     //
     // Get the contig of the locus.
     //
-    ctg = loc.reads().at(0).seq.str() + string(10, 'N') + ctg; //xxx
+    string ctg = loc.reads().at(0).seq.str() + string(10, 'N') + pe_ctg; //xxx
 
     //
     // Align each read to the contig.
@@ -112,22 +117,28 @@ void process_one_locus(CLocReadSet&& loc) {
     aln_loc.id(loc.id());
     aln_loc.ref(DNASeq4(ctg));
 
+    vector<SRead*> reads_to_align; // Both fw & pe.
+    for (SRead& r : loc.reads())
+        reads_to_align.push_back(&r);
+    for (SRead& r : loc.pe_reads())
+        reads_to_align.push_back(&r);
+
     GappedAln aligner;
-    for (SRead& r : loc.reads()) {
-        string seq = r.seq.str();
-        aligner.init(r.seq.length(), ctg.length());
+    for (SRead* r : reads_to_align) {
+        string seq = r->seq.str();
+        aligner.init(r->seq.length(), ctg.length());
         aligner.align(seq, ctg);
         Cigar cigar;
         parse_cigar(aligner.result().cigar.c_str(), cigar);
         if (cigar.size() > 10)
             // Read didn't align, discard it. xxx Refine this.
             continue;
-        aln_loc.add(SAlnRead(AlnRead(move(r), move(cigar)), r.sample));
+        aln_loc.add(SAlnRead(AlnRead(move(*(Read*)r), move(cigar)), r->sample));
     }
 
     if (aln_out) {
-        ofstream aln (in_dir + to_string(loc.id()) + ".aln");
-        aln << aln_loc << "\n";
+        ofstream aln_f (in_dir + to_string(loc.id()) + ".aln");
+        aln_f << aln_loc << "\n";
     }
 }
 

@@ -179,7 +179,7 @@ class Graph {
 
 public:
     Graph(size_t km_length) : km_len_(km_length) {}
-    void rebuild(const CLocReadSet& readset, size_t min_kmer_count);
+    void rebuild(const vector<const DNASeq4*>& reads, size_t min_kmer_count);
 
     size_t empty() const {return simple_paths_.empty();}
 
