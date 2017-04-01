@@ -19,6 +19,7 @@ struct Nt4 {
 
     static size_t from(char c) {return ch_to_nt4[size_t(c)];}
     static char to_ch(size_t nt4) {return nt4_to_ch[nt4];}
+    static size_t rev_compl(size_t nt4) {return rev_compl_nt4[nt4];}
 
 private:
     // Trivial ASCII-like hash table giving the 4-bits value of a nucleotide letter.
@@ -29,6 +30,9 @@ private:
     // Trivial hash table giving the nucleotide letter of a 4-bits value.
     // e.g. nt_to_ch[4] == 'C'
     static const char nt4_to_ch[16];
+
+    // Table giving the reverse complement of the nucleotide.
+    static const size_t rev_compl_nt4[16];
 };
 
 // Definitions for nucleotides coded on 2 bits.
@@ -44,11 +48,14 @@ struct Nt2 {
     static size_t from(char c) {return ch_to_nt2[size_t(c)];}
     static size_t from_nt4(size_t nt4) {return nt4_to_nt2[nt4];}
     static char to_ch(size_t nt2) {return nt2_to_ch[nt2];}
+    static size_t rev_compl(size_t nt2) {return rev_compl_nt2[nt2];}
 
 private:
     static const size_t ch_to_nt2[256];
     static const size_t nt4_to_nt2[16];
     static const char nt2_to_ch[4];
+
+    static const size_t rev_compl_nt2[4];
 };
 
 class Nt4Counts {
@@ -154,6 +161,7 @@ public:
 
     size_t length() const {return l_;}
     string str() const;
+    DNASeq4 rev_compl() const;
 
     size_t operator[] (size_t i) const {return i%2==0 ? v_[i/2].first() : v_[i/2].second();}
     bool  operator== (const DNASeq4& other) const {return l_ == other.l_ && v_ == other.v_;}
@@ -169,10 +177,10 @@ public:
         iterator(vector<DiNuc>::const_iterator vi, bool f) : vi_(vi), first_(f) {}
         bool operator!= (iterator other) const {return ! (vi_ == other.vi_? first_ == other.first_ : false);}
         iterator& operator++ () {if (first_) {first_ = false;} else {++vi_; first_ = true;} return *this; }
+        iterator& operator-- () {if (first_) {--vi_; first_ = false;} else {first_ = true;} return *this; }
 
-        // Get the nucleotide.
-        size_t nt() const {return first_ ? vi_->first() : vi_->second();}
-        char operator* () const {return Nt4::to_ch(nt());}
+        // Get the (Nt4) nucleotide.
+        size_t operator* () const {return first_ ? vi_->first() : vi_->second();}
     };
     iterator begin() const {return iterator(v_.begin(), true);}
     iterator end()   const {return length()%2==0 ? iterator(v_.end(), true) : iterator(--v_.end(), false);}

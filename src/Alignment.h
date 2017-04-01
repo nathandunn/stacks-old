@@ -27,7 +27,7 @@ public:
     size_t operator[] (size_t ref_i) const;
 
     const Cigar& cigar() const {return cig_;}
-    string str() const {string s; for(iterator it (*this); it; ++it) s.push_back(*it); return s;}
+    string str() const {string s; for(iterator it (*this); it; ++it) s.push_back(Nt4::to_ch(*it)); return s;}
 
 private:
     bool check_cigar() const;
@@ -51,8 +51,7 @@ public:
         iterator& operator++ ();
         operator bool() const {return cig_it_ != cig_past_;}
 
-        size_t nt() const {if (cig_it_->first=='M') return seq_it_.nt(); else {assert(cig_it_->first=='D'); return Nt4::n;}}
-        char operator* () const {return Nt4::to_ch(nt());}
+        size_t operator* () const {if (cig_it_->first=='M') return *seq_it_; else {assert(cig_it_->first=='D'); return Nt4::n;}}
 
     private:
         void skip_insertion();
