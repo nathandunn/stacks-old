@@ -250,7 +250,7 @@ public:
         site_iterator& operator++ ();
 
         // Site interface.
-        size_t ref_nt() const {return *ref_it_;} // Get the contig nt4.
+        Nt4 ref_nt() const {return *ref_it_;} // Get the contig nt4.
         void counts(Nt4Counts& counts) const; // Get the nt counts across all samples.
         void counts(Nt4Counts& counts, size_t sample) const; // Get the nt counts for a given sample.
 

@@ -48,7 +48,7 @@ void Graph::rebuild(const vector<const DNASeq4*>& reads, size_t min_kmer_count) 
 
         // Walk the sequence.
         while (next_nt != s->end()) {
-            size_t nt4 = *next_nt;
+            Nt4 nt4 = *next_nt;
             if (nt4 == Nt4::n) {
                 ++next_nt;
                 km = Kmer(km_len_, next_nt, s->end());
@@ -56,7 +56,7 @@ void Graph::rebuild(const vector<const DNASeq4*>& reads, size_t min_kmer_count) 
                     // Not enough sequence remaining to make another kmer.
                     break;
             } else {
-                km = km.succ(km_len_, Nt2::from_nt4(nt4));
+                km = km.succ(km_len_, Nt2(nt4));
                 ++next_nt;
             }
             ++map_[km].count;
