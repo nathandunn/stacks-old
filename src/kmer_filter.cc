@@ -52,7 +52,6 @@ double min_k_pct      = 0.15;
 int    min_lim        = 0;
 int    max_lim        = 0;
 int    num_threads    = 1;
-int    barcode_size   = 0;
 
 int main (int argc, char* argv[]) {
     IF_NDEBUG_TRY

@@ -54,8 +54,6 @@
 #include "BamI.h"       // Reading input files in BAM format
 #include "DNANSeq.h"
 
-const int barcode_size = 5;
-
 #ifdef HAVE_SPARSEHASH
 typedef sparse_hash_map<DNANSeq, vector<Seq*> > HashMap;
 #else

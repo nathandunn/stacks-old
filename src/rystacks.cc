@@ -51,13 +51,6 @@ bool aln_out = false;
 // Extra globs.
 //
 LogAlterator* lg = NULL;
-double heterozygote_limit;
-double homozygote_limit;
-double barcode_err_freq;
-const int barcode_size = -1;
-double p_freq;
-double bound_low;
-double bound_high;
 
 int main(int argc, char** argv) {
 

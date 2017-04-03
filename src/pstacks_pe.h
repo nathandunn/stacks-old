@@ -88,7 +88,6 @@ bool FwLocInfo::is_upstream_of(const Seq& s) const {
                 && int(s.loc.bp) > int(loc.bp) - max_allowed_distance;
 }
 
-
 inline
 bool Contig::overlaps(const PhyLoc& oloc, int olen) const {
     // Check chromosome & strand.
