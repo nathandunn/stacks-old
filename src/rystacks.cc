@@ -9,12 +9,27 @@
 #include "GappedAln.h"
 #include "aln_utils.h"
 #include "Alignment.h"
+#include "models.h"
 
 using namespace std;
 
 void parse_command_line(int argc, char* argv[]);
 void report_options(ostream& os);
 void process_one_locus(CLocReadSet&& loc);
+
+struct SampleCall {
+    array<size_t, 4> depths;
+    snp_type call;
+    array<size_t, 2> nts; // hom {nt, Nt4::n} | het {min_nt, max_nt} | unk {Nt4::n, Nt4::n}
+};
+
+struct SiteCall {
+    size_t tot_depth;
+    map<size_t, size_t> alleles; // Map of {nt4, allele_count}
+    vector<SampleCall> sample_calls;
+
+    SiteCall(const CLocAlnSet::site_iterator& site);
+};
 
 const string prog_name = "rystacks";
 
@@ -24,6 +39,7 @@ const string prog_name = "rystacks";
 bool quiet = false;
 string in_dir;
 int batch_id = -1;
+double gt_alpha = 0.05;
 set<int> locus_wl;
 size_t km_length = 31;
 size_t min_km_count = 2;
@@ -35,6 +51,13 @@ bool aln_out = false;
 // Extra globs.
 //
 LogAlterator* lg = NULL;
+double heterozygote_limit;
+double homozygote_limit;
+double barcode_err_freq;
+const int barcode_size = -1;
+double p_freq;
+double bound_low;
+double bound_high;
 
 int main(int argc, char** argv) {
 
@@ -49,6 +72,9 @@ int main(int argc, char** argv) {
     init_log(lg->l, argc, argv);
     report_options(cout);
     cout << "\n" << flush;
+
+    // Initialize the model globs.
+    set_model_thresholds(gt_alpha);
 
     // Open the BAM file and parse the header.
     BamCLocReader bam_fh (in_dir + "batch_" + to_string(batch_id) + ".catalog.bam");
@@ -143,6 +169,87 @@ void process_one_locus(CLocReadSet&& loc) {
         ofstream aln_f (in_dir + to_string(loc.id()) + ".aln");
         aln_f << aln_loc << "\n";
     }
+
+    //
+    // Call SNPs.
+    //
+    vector<SiteCall> calls;
+    CLocAlnSet::site_iterator site (aln_loc);
+    while(site) {
+        calls.push_back(SiteCall(site));
+        ++site;
+    }
+}
+
+SiteCall::SiteCall(const CLocAlnSet::site_iterator& site)
+{
+    Nt4Counts counts;
+
+    // N.B. For now we use the old binomial model.
+
+    //
+    //
+    //
+    vector<SampleCall> sample_calls;
+    for (size_t s=0; s<site.mpopi().samples().size(); ++s) {
+        site.counts(counts, s);
+        if (*counts.rank1() == 0) {
+            SampleCall missing;
+            missing.depths = {0, 0, 0, 0};
+            missing.call = snp_type_unk;
+            missing.nts = {Nt4::n, Nt4::n};
+            sample_calls.push_back(missing);
+            continue;
+        }
+
+        SampleCall s_call;
+        s_call.depths = {counts.count(Nt4::a), counts.count(Nt4::c), counts.count(Nt4::g), counts.count(Nt4::t)};
+        s_call.call = call_snp(lr_multinomial_model(*counts.rank1(), *counts.rank2(), *counts.rank3(), *counts.rank4()));
+        switch (s_call.call) {
+        case snp_type_hom:
+            s_call.nts = {counts.nt4_of(counts.rank1()), Nt4::n};
+            break;
+        case snp_type_het:
+            s_call.nts = {counts.nt4_of(counts.rank1()), counts.nt4_of(counts.rank2())};
+            sort(s_call.nts.begin(), s_call.nts.end());
+            break;
+        default:
+            s_call.nts = {Nt4::n, Nt4::n};
+            break;
+        }
+        sample_calls.push_back(s_call);
+    }
+
+    tot_depth = 0;
+    counts.reset();
+    for (const SampleCall& sc : sample_calls) {
+        tot_depth += sc.depths[0] + sc.depths[1] + sc.depths[2] + sc.depths[3];
+        switch (sc.call) {
+        case snp_type_hom : counts.increment(sc.nts[0]); counts.increment(sc.nts[0]); break;
+        case snp_type_het : counts.increment(sc.nts[0]); counts.increment(sc.nts[1]); break;
+        default: break;
+        }
+    }
+    counts.sort();
+
+    if (*counts.rank1() > 0) {
+        // At least one allele was observed.
+        alleles.insert({counts.nt4_of(counts.rank1()), *counts.rank1()});
+
+        if (*counts.rank2() > 0) {
+            // SNP with at least two alleles.
+            alleles.insert({counts.nt4_of(counts.rank2()), *counts.rank2()});
+
+            if (*counts.rank3() > 0) {
+                alleles.insert({counts.nt4_of(counts.rank3()), *counts.rank3()});
+
+                if (*counts.rank4() > 0) {
+                    // Quaternary SNP.
+                    alleles.insert({counts.nt4_of(counts.rank4()), *counts.rank4()});
+                }
+            }
+        }
+    }
 }
 
 const string help_string = string() +
@@ -152,6 +259,7 @@ const string help_string = string() +
         "  -P: input directory (must contain a batch_X.catalog.bam file)\n"
         "  -b: batch ID (default: guess)\n"
         "  -W,--whitelist: a whitelist of locus IDs\n"
+        "  --gt-alpha: alpha threshold for calling genotypes\n"
         "\n"
         "Alignment options:\n"
         "  -k: kmer length (default: 31)\n"
@@ -173,6 +281,7 @@ void parse_command_line(int argc, char* argv[]) {
         {"help",         no_argument,       NULL,  'h'},
         {"quiet",        no_argument,       NULL,  'q'},
         {"in-dir",       required_argument, NULL,  'P'},
+        {"gt-alpha",     required_argument, NULL,  1005},
         {"whitelist",    required_argument, NULL,  'W'},
         {"kmer-length",  required_argument, NULL,  1001},
         {"min-cov",      required_argument, NULL,  1002},
@@ -209,6 +318,13 @@ void parse_command_line(int argc, char* argv[]) {
             break;
         case 'b':
             batch_id = atoi(optarg);
+            break;
+        case 1005: //gt-alpha
+            gt_alpha = atof(optarg);
+            if (gt_alpha != 0.1 && gt_alpha != 0.05 && gt_alpha != 0.01 && gt_alpha != 0.001) {
+                cerr << "Error: Illegal --gt-alpha value; pick one of {0.1, 0.05, 0.01, 0.001}.\n";
+                bad_args();
+            }
             break;
         case 'W':
             wl_path = optarg;

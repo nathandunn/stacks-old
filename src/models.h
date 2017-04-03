@@ -54,8 +54,8 @@ extern double homozygote_limit;
 void     set_model_thresholds (double alpha);
 snp_type call_snp (double l_ratio);
 
-double   multinomial_model         (double nuc_1, double nuc_2, double nuc_3, double nuc_4);
-double   bounded_multinomial_model (double nuc_1, double nuc_2, double nuc_3, double nuc_4);
+double   lr_multinomial_model         (double nuc_1, double nuc_2, double nuc_3, double nuc_4);
+double   lr_bounded_multinomial_model (double nuc_1, double nuc_2, double nuc_3, double nuc_4);
 
 void call_bounded_multinomial_snp(MergedStack *, int, map<char, int> &, bool);
 void call_bounded_multinomial_snp(Locus *, int, map<char, int> &);

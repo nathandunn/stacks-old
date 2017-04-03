@@ -67,7 +67,7 @@ class Nt4Counts {
 public:
     Nt4Counts()
         : sorted_{counts_+Nt4::a, counts_+Nt4::c, counts_+Nt4::g, counts_+Nt4::t}
-        {memset(counts_, uchar(-1), 16 * sizeof(size_t));}
+        {memset(counts_, 0xFF, 16 * sizeof(size_t)); reset();}
 
     void reset() {for (size_t nt4 : Nt4::all) counts_[nt4]=0;}
     void increment(size_t nt4) {++counts_[nt4];}
