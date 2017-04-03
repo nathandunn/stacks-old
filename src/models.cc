@@ -29,6 +29,15 @@
 //
 #include "models.h"
 
+int    barcode_size     = 5;
+double barcode_err_freq = 0.0;
+
+double heterozygote_limit = -3.84;
+double homozygote_limit   = 3.84;
+double bound_low          = 0.0;
+double bound_high         = 1.0;
+double p_freq             = 0.5;
+
 vector<pair<char, int>> sort_acgt(const map<char, int>&);
 void record_snp(SNP& snp, snp_type type, uint col, double l_ratio, const vector<pair<char, int>>& nuc);
 void record_dummy_snp(SNP& snp, uint col);

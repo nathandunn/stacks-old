@@ -39,12 +39,6 @@ int    num_threads   = 1;
 // For use with the multinomial model to call fixed nucleotides.
 //
 modelt model_type         = snp;
-double bound_low          = 0.0;
-double bound_high         = 1.0;
-double p_freq             = 0.5;
-double barcode_err_freq   = 0.0;
-double heterozygote_limit = -3.84;
-double homozygote_limit   =  3.84;
 
 int main (int argc, char* argv[]) {
     IF_NDEBUG_TRY

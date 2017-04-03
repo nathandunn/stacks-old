@@ -48,13 +48,6 @@ bool   verbose           = false;
 //
 modelt model_type         = snp;
 double alpha              = 0.1;
-double bound_low          = 0.0;
-double bound_high         = 1.0;
-double p_freq             = 0.5;
-double barcode_err_freq   = 0.0;
-double heterozygote_limit = -2.71;
-double homozygote_limit   =  2.71;
-const int barcode_size    = 5;
 
 int main (int argc, char* argv[]) {
     IF_NDEBUG_TRY

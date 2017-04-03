@@ -50,7 +50,6 @@ int      oligo_len_2   = 0;
 //
 // These variables are required for other linked objects, but we won't use them in clone_filter.
 //
-int    barcode_size;
 uint   truncate_seq;
 bool   ill_barcode;
 bool   recover;
