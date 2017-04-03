@@ -59,6 +59,8 @@ BamCLocReader::BamCLocReader(const string& bam_path)
 
 inline
 bool BamCLocReader::read_one_locus(CLocReadSet& readset) {
+    assert(&readset.mpopi() == &mpopi_); // Otherwise sample indexes may be misleading.
+
     readset.clear();
     if (bam_f_ == NULL)
         // EOF was hit at the end of the previous locus.
