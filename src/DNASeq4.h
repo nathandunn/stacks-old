@@ -7,55 +7,77 @@
 // These definitions are compatible with those of htslib--htslib supports
 // partially ambiguous nucleotides ('R', etc.) but we convert everything to 15
 // (i.e. 0xF, 'N').
-struct Nt4 {
+class Nt4 {
+    size_t nt_;
+
+public:
+    Nt4(char c) : nt_(from_ch[size_t(c)]) {}
+    Nt4(size_t i) : nt_(i) {}
+    Nt4(int i) : nt_(i) {}
+    Nt4(const Nt4& other) : nt_(other.nt_) {}
+    Nt4& operator=(const Nt4& other) {nt_ = other.nt_; return *this;}
+
+    Nt4 rev_compl() const {return rev_compl_[size_t(nt_)];}
+
+    explicit operator size_t () const {return nt_;}
+    explicit operator char () const {return to_ch[nt_];}
+    bool operator== (Nt4 other) const {return nt_ == other.nt_;}
+    bool operator< (Nt4 other) const {return nt_ < other.nt_;}
+
     static const size_t nbits = 4;
-
-    static const size_t a = 1; //0001
-    static const size_t c = 2; //0010
-    static const size_t g = 4; //0100
-    static const size_t t = 8; //1000
-    static const size_t n = 15;//1111
-    static const vector<size_t> all; // All of the above.
-
-    static size_t from(char c) {return ch_to_nt4[size_t(c)];}
-    static char to_ch(size_t nt4) {return nt4_to_ch[nt4];}
-    static size_t rev_compl(size_t nt4) {return rev_compl_nt4[nt4];}
+    static const Nt4 a; // 0001 (1)
+    static const Nt4 c; // 0010 (2)
+    static const Nt4 g; // 0100 (4)
+    static const Nt4 t; // 1000 (8)
+    static const Nt4 n; // 1111 (15)
+    static const vector<Nt4> all; // All of the above.
 
 private:
     // Trivial ASCII-like hash table giving the 4-bits value of a nucleotide letter.
     // e.g. ch_to_nt [ (int)'G' ] == 4
     // Adapted from `htslib::seq_nt16_table` (hts.cc).
-    static const size_t ch_to_nt4[256];
+    static const Nt4 from_ch[256];
 
     // Trivial hash table giving the nucleotide letter of a 4-bits value.
     // e.g. nt_to_ch[4] == 'C'
-    static const char nt4_to_ch[16];
+    static const char to_ch[16];
 
     // Table giving the reverse complement of the nucleotide.
-    static const size_t rev_compl_nt4[16];
+    static const Nt4 rev_compl_[16];
 };
 
 // Definitions for nucleotides coded on 2 bits.
-struct Nt2 {
+class Nt2 {
+    size_t nt_;
+
+public:
+    Nt2(char c) : nt_(from_ch[size_t(c)]) {}
+    Nt2(Nt4 nt4) : nt_(from_nt4[size_t(nt4)]) {}
+    Nt2(size_t i) : nt_(i) {}
+    Nt2(int i) : nt_(i) {}
+    Nt2(const Nt2& other) : nt_(other.nt_) {}
+    Nt2& operator=(const Nt2& other) {nt_ = other.nt_; return *this;}
+
+    Nt2 rev_compl() const {return rev_compl_[nt_];}
+
+    explicit operator size_t () const {return nt_;}
+    explicit operator char () const {return to_ch[nt_];}
+    bool operator== (Nt2 other) const {return nt_ == other.nt_;}
+    bool operator< (Nt2 other) const {return nt_ < other.nt_;}
+
     static const size_t nbits = 2;
-
-    static const size_t a = 0;
-    static const size_t c = 1;
-    static const size_t g = 2;
-    static const size_t t = 3;
-    static const vector<size_t> all;
-
-    static size_t from(char c) {return ch_to_nt2[size_t(c)];}
-    static size_t from_nt4(size_t nt4) {return nt4_to_nt2[nt4];}
-    static char to_ch(size_t nt2) {return nt2_to_ch[nt2];}
-    static size_t rev_compl(size_t nt2) {return rev_compl_nt2[nt2];}
+    static const Nt2 a;
+    static const Nt2 c;
+    static const Nt2 g;
+    static const Nt2 t;
+    static const vector<Nt2> all;
 
 private:
-    static const size_t ch_to_nt2[256];
-    static const size_t nt4_to_nt2[16];
-    static const char nt2_to_ch[4];
+    static const Nt2 from_ch[256];
+    static const Nt2 from_nt4[16];
+    static const char to_ch[4];
 
-    static const size_t rev_compl_nt2[4];
+    static const Nt2 rev_compl_[4];
 };
 
 class Nt4Counts {
@@ -66,19 +88,19 @@ class Nt4Counts {
 
 public:
     Nt4Counts()
-        : sorted_{counts_+Nt4::a, counts_+Nt4::c, counts_+Nt4::g, counts_+Nt4::t}
+        : sorted_{counts_+size_t(Nt4::a), counts_+size_t(Nt4::c), counts_+size_t(Nt4::g), counts_+size_t(Nt4::t)}
         {memset(counts_, 0xFF, 16 * sizeof(size_t)); reset();}
 
-    void reset() {for (size_t nt4 : Nt4::all) counts_[nt4]=0;}
-    void increment(size_t nt4) {++counts_[nt4];}
+    void reset() {for (Nt4 nt : Nt4::all) counts_[size_t(nt)]=0;}
+    void increment(Nt4 nt) {++counts_[size_t(nt)];}
     void sort();
 
-    size_t count(size_t nt4) const {return counts_[nt4];}
+    size_t count(Nt4 nt) const {return counts_[size_t(nt)];}
     const size_t* rank1() const {return sorted_[3];}
     const size_t* rank2() const {return sorted_[2];}
     const size_t* rank3() const {return sorted_[1];}
     const size_t* rank4() const {return sorted_[0];}
-    size_t nt4_of(const size_t* count_ptr) const {return count_ptr-counts_;} // Returns e.g. Nt4::a.
+    Nt4 nt4_of(const size_t* count_ptr) const {return Nt4(size_t(count_ptr-counts_));}
 
     friend ostream& operator<< (ostream& os, const Nt4Counts& loc);
 };
@@ -95,16 +117,16 @@ public:
     NtArray(const NtArray<Nt>& other) : a_(other.a_) {}
     NtArray<Nt>& operator= (const NtArray<Nt>& other) {a_ = other.a_; return *this;}
 
-    void set(size_t i, size_t nt) {a_ |= nt << (i*Nt::nbits);}
+    void set(size_t i, Nt nt) {a_ |= uint64_t(size_t(nt)) << (i*Nt::nbits);}
     void clear(size_t i) {a_ &= ~(lowbits << (i*Nt::nbits));}
 
-    size_t operator[] (size_t i) const {return (a_ >> (i*Nt::nbits)) & lowbits;}
+    Nt operator[] (size_t i) const {return Nt(size_t((a_ >> (i*Nt::nbits)) & lowbits));}
     bool operator== (const NtArray<Nt>& other) const {return a_ == other.a_;}
     bool operator<  (const NtArray<Nt>& other) const {return a_ < other.a_;}
     friend class std::hash<NtArray>;
 
     // Methods for kmers
-    void push_front(size_t nt) {a_ <<= Nt::nbits; a_ |= nt;}
+    void push_front(Nt nt) {a_ <<= Nt::nbits; a_ |= uint64_t(size_t(nt));}
     void pop_front() {a_ >>= Nt::nbits;}
 
     static const size_t n_nts = sizeof a_ * 8 / Nt::nbits;
@@ -122,19 +144,19 @@ public:
     DiNuc() : x_(0) {}
     DiNuc(const DiNuc& other) : x_(other.x_) {}
     DiNuc(uchar x) : x_(x) {}
-    DiNuc(size_t u1, size_t u2) : x_(0) {set_first(u1); set_second(u2);}
-    DiNuc(char c1, char c2) : DiNuc(Nt4::from(c1), Nt4::from(c2)) {}
+    DiNuc(Nt4 nt1, Nt4 nt2) : x_(0) {set_first(nt1); set_second(nt2);}
+    DiNuc(char nt1, char nt2) : DiNuc(Nt4(nt1), Nt4(nt2)) {}
     DiNuc& operator= (const DiNuc& other) {x_ = other.x_; return *this;}
 
-    size_t first() const {return x_ >>4;}
-    size_t second() const {return x_ & 15;}
+    Nt4 first() const {return Nt4(size_t(x_ >>4));}
+    Nt4 second() const {return Nt4(size_t(x_ & 15));}
 
     bool operator== (const DiNuc& other) const {return x_ == other.x_;}
     bool operator<  (const DiNuc& other) const {return x_ < other.x_;}
 
 private:
-    void set_first(size_t u) {x_ |= u <<4;}
-    void set_second(size_t u) {x_ |= u;}
+    void set_first(Nt4 nt) {x_ |= uchar(size_t(nt)) <<4;}
+    void set_second(Nt4 nt) {x_ |= uchar(size_t(nt));}
 
     void clear_first() {x_ &= 15;}
     void clear_second() {x_ &= ~15;}
@@ -163,7 +185,7 @@ public:
     string str() const;
     DNASeq4 rev_compl() const;
 
-    size_t operator[] (size_t i) const {return i%2==0 ? v_[i/2].first() : v_[i/2].second();}
+    Nt4 operator[] (size_t i) const {return i%2==0 ? v_[i/2].first() : v_[i/2].second();}
     bool  operator== (const DNASeq4& other) const {return l_ == other.l_ && v_ == other.v_;}
     bool  operator<  (const DNASeq4& other) const {return l_ < other.l_ ? true : v_ < other.v_;}
     friend class std::hash<DNASeq4>;
@@ -180,7 +202,7 @@ public:
         iterator& operator-- () {if (first_) {--vi_; first_ = false;} else {first_ = true;} return *this; }
 
         // Get the (Nt4) nucleotide.
-        size_t operator* () const {return first_ ? vi_->first() : vi_->second();}
+        Nt4 operator* () const {return first_ ? vi_->first() : vi_->second();}
     };
     iterator begin() const {return iterator(v_.begin(), true);}
     iterator end()   const {return length()%2==0 ? iterator(v_.end(), true) : iterator(--v_.end(), false);}
@@ -208,10 +230,10 @@ ostream& operator<< (ostream& os, const Nt4Counts& cnts) {
     const size_t* r2 = cnts.rank2();
     const size_t* r3 = cnts.rank3();
     const size_t* r4 = cnts.rank4();
-    os << Nt4::to_ch(cnts.nt4_of(r1)) << ":" << *r1 << " "
-       << Nt4::to_ch(cnts.nt4_of(r2)) << ":" << *r2 << " "
-       << Nt4::to_ch(cnts.nt4_of(r3)) << ":" << *r4 << " "
-       << Nt4::to_ch(cnts.nt4_of(r4)) << ":" << *r4;
+    os << char(cnts.nt4_of(r1)) << ":" << *r1 << " "
+       << char(cnts.nt4_of(r2)) << ":" << *r2 << " "
+       << char(cnts.nt4_of(r3)) << ":" << *r4 << " "
+       << char(cnts.nt4_of(r4)) << ":" << *r4;
     return os;
 }
 

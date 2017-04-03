@@ -20,12 +20,14 @@ void process_one_locus(CLocReadSet&& loc);
 struct SampleCall {
     array<size_t, 4> depths;
     snp_type call;
-    array<size_t, 2> nts; // hom {nt, Nt4::n} | het {min_nt, max_nt} | unk {Nt4::n, Nt4::n}
+    array<Nt4, 2> nts; // hom {nt, Nt4::n} | het {min_nt, max_nt} | unk {Nt4::n, Nt4::n}
+
+    SampleCall() : depths{0, 0, 0, 0}, call(snp_type_unk), nts{0, 0} {}
 };
 
 struct SiteCall {
     size_t tot_depth;
-    map<size_t, size_t> alleles; // Map of {nt4, allele_count}
+    map<Nt4, size_t> alleles;
     vector<SampleCall> sample_calls;
 
     SiteCall(const CLocAlnSet::site_iterator& site);

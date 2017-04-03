@@ -24,10 +24,10 @@ public:
     void assign(const DNASeq4& seq, Cigar&& cigar) {seq_ = &seq; cig_ = move(cigar);}
 
     // N.B. Inefficient; prefer iteration.
-    size_t operator[] (size_t ref_i) const;
+    Nt4 operator[] (size_t ref_i) const;
 
     const Cigar& cigar() const {return cig_;}
-    string str() const {string s; for(iterator it (*this); it; ++it) s.push_back(Nt4::to_ch(*it)); return s;}
+    string str() const {string s; for(iterator it (*this); it; ++it) s.push_back(char(*it)); return s;}
 
 private:
     bool check_cigar() const;
@@ -51,7 +51,7 @@ public:
         iterator& operator++ ();
         operator bool() const {return cig_it_ != cig_past_;}
 
-        size_t operator* () const {if (cig_it_->first=='M') return *seq_it_; else {assert(cig_it_->first=='D'); return Nt4::n;}}
+        Nt4 operator* () const {if (cig_it_->first=='M') return *seq_it_; else {assert(cig_it_->first=='D'); return Nt4::n;}}
 
     private:
         void skip_insertion();
@@ -76,7 +76,7 @@ struct AlnRead : Read {
 //
 
 inline
-size_t Alignment::operator[] (size_t ref_i) const {
+Nt4 Alignment::operator[] (size_t ref_i) const {
     size_t seq_i = 0;
     auto op = cig_.begin();
     while (ref_i >= op->second || op->first == 'I') {
