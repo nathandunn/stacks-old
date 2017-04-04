@@ -1,6 +1,9 @@
 #include <getopt.h>
 
+#include "zlib.h"
+
 #include "constants.h"
+#include "utils.h"
 #include "log_utils.h"
 #include "catalog_utils.h"
 #include "locus.h"
@@ -13,9 +16,12 @@
 
 using namespace std;
 
+struct SampleCall;
+struct SiteCall;
 void parse_command_line(int argc, char* argv[]);
 void report_options(ostream& os);
 void process_one_locus(CLocReadSet&& loc);
+void write(const MetaPopInfo& mpopi, int loc_id, const DNASeq4& ref, const vector<SiteCall>& calls);
 
 struct SampleCall {
     array<size_t, 4> depths;
@@ -31,9 +37,30 @@ struct SiteCall {
     vector<SampleCall> sample_calls;
 
     SiteCall(const CLocAlnSet::site_iterator& site);
+
+    //Nt4 most_frequent_nt() const;
 };
 
-const string prog_name = "rystacks";
+/*
+Nt4 SiteCall::most_frequent_nt() const {
+    assert(!alleles.empty());
+
+    auto iter = alleles.begin();
+    Nt4 nt = iter->first;
+    size_t count = iter->second;
+    ++iter;
+
+    while (iter != alleles.end()) {
+        if (iter->second > count) {
+            nt = iter->first;
+            count = iter->second;
+        }
+        ++iter;
+    }
+
+    return nt;
+}
+*/
 
 //
 // Argument globs.
@@ -45,14 +72,17 @@ double gt_alpha = 0.05;
 set<int> locus_wl;
 size_t km_length = 31;
 size_t min_km_count = 2;
-bool fasta_out = false;
 bool gfa_out = false;
 bool aln_out = false;
 
 //
 // Extra globs.
 //
+const string prog_name = "rystacks";
 LogAlterator* lg = NULL;
+gzFile o_gzfasta_f = NULL;
+VcfWriter* o_vcf_f = NULL;
+ofstream o_models_f;
 
 int main(int argc, char** argv) {
 
@@ -73,10 +103,28 @@ int main(int argc, char** argv) {
 
     // Open the BAM file and parse the header.
     BamCLocReader bam_fh (in_dir + "batch_" + to_string(batch_id) + ".catalog.bam");
-    const MetaPopInfo& mpopi = bam_fh.mpopi();
+
+    // Open the output files.
+    string o_gzfasta_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".fa.gz";
+    o_gzfasta_f = gzopen(o_gzfasta_path.c_str(), "wb");
+    check_open(o_gzfasta_f, o_gzfasta_path);
+
+    string o_vcf_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".vcf";
+    VcfHeader vcf_header;
+    vcf_header.add_meta(VcfMeta::predefs::info_AF);
+    vcf_header.add_meta(VcfMeta::predefs::format_GT);
+    vcf_header.add_meta(VcfMeta::predefs::format_DP);
+    vcf_header.add_meta(VcfMeta::predefs::format_AD);
+    for(auto& s : bam_fh.mpopi().samples())
+        vcf_header.add_sample(s.name);
+    o_vcf_f = new VcfWriter(o_vcf_path, move(vcf_header));
+
+    string o_models_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".tsv";
+    o_models_f.open(o_models_path);
+    check_open(o_models_f, o_models_path);
 
     // Process every locus
-    CLocReadSet loc (mpopi);
+    CLocReadSet loc (bam_fh.mpopi());
     size_t n_loci = 0;
     if (locus_wl.empty()) {
         // No whitelist.
@@ -96,7 +144,7 @@ int main(int argc, char** argv) {
     }
     cout << "Processed " << n_loci << " loci.\n";
 
-    cout << "assemble_pe is done.\n";
+    cout << prog_name << " is done.\n";
     return 0;
 }
 
@@ -174,6 +222,25 @@ void process_one_locus(CLocReadSet&& loc) {
         calls.push_back(SiteCall(site));
         ++site;
     }
+
+    /*
+    // Update the consensus sequence, if necessary.
+    // TODO Do the cases below happen? Add print statements...?
+    DNASeq4 new_ref = aln_loc.ref();
+    assert(calls.size() == new_ref.length());
+    for (size_t i=0; i<calls.size(); ++i) {
+        const SiteCall& c = calls[i];
+        if (c.alleles.size() > 0) {
+            Nt4 most_frequent = c.most_frequent_nt();
+            if (new_ref[i] != most_frequent)
+                new_ref.set(i, most_frequent);
+        }
+        // else if (new_ref[i] != Nt4::n) {}
+    }
+    aln_loc.ref(move(new_ref));
+    */
+
+    write(aln_loc.mpopi(), aln_loc.id(), aln_loc.ref(), calls);
 }
 
 SiteCall::SiteCall(const CLocAlnSet::site_iterator& site)
@@ -182,9 +249,6 @@ SiteCall::SiteCall(const CLocAlnSet::site_iterator& site)
 
     // N.B. For now we use the old binomial model.
 
-    //
-    //
-    //
     vector<SampleCall> sample_calls;
     for (size_t s=0; s<site.mpopi().samples().size(); ++s) {
         site.counts(counts, s);
@@ -244,6 +308,172 @@ SiteCall::SiteCall(const CLocAlnSet::site_iterator& site)
                 }
             }
         }
+    }
+}
+
+void write(const MetaPopInfo& mpopi, int loc_id, const DNASeq4& ref, const vector<SiteCall>& calls) {
+    //
+    // Fasta output.
+    //
+    string fa_record = string(">") + to_string(loc_id) + "\n" + ref.str() + "\n";
+    gzputs(o_gzfasta_f, fa_record.c_str());
+
+    //
+    // Vcf output.
+    //
+    assert(calls.size() == ref.length());
+    for (size_t i=0; i<ref.length(); ++i) {
+        const SiteCall& sitecall = calls[i];
+        if (sitecall.alleles.empty())
+            // No data at this site. xxx Reconsider?
+            continue;
+
+        // Determine which alleles exist, and their order.
+        // (n.b. As of Apr4,2017 the ref allele might not be the most frequent one.)
+        vector<Nt4> vcf_alleles;
+        map<Nt4, size_t> vcf_allele_indexes;
+        {
+            vcf_alleles.push_back(ref[i]);
+            vcf_allele_indexes.insert({ref[i], 0});
+
+            // Sort the alleles by frequency.
+            vector<pair<size_t, Nt4>> sorted_alleles;
+            for (auto& a : sitecall.alleles)
+                sorted_alleles.push_back({a.second, a.first});
+            sort(sorted_alleles.rbegin(), sorted_alleles.rend()); // (decreasing)
+
+            // The reference allele has already been added to vcf_alleles; exclude it.
+            for (auto iter=sorted_alleles.begin(); iter!=sorted_alleles.end(); ++iter) {
+                if (iter->second == vcf_alleles[0]) {
+                    sorted_alleles.erase(iter);
+                    break;
+                }
+            }
+
+            // Record the alternative alleles.
+            for (auto& alt_allele : sorted_alleles) {
+                vcf_allele_indexes.insert({alt_allele.second, vcf_alleles.size()});
+                vcf_alleles.push_back(alt_allele.second);
+            }
+        }
+
+        // Create the VCF record.
+        VcfRecord rec;
+        rec.type = Vcf::RType::expl;
+        rec.chrom = loc_id;
+        rec.pos = i+1;
+
+        // Alleles.
+        for (Nt4 nt : vcf_alleles)
+            rec.alleles.push_back(string(1, char(nt)));
+
+        if (vcf_alleles.size() > 1) {
+            // INFO/AF field.
+            size_t tot_count = 0;
+            for (auto& a : sitecall.alleles)
+                tot_count += a.second;
+
+            vector<double> alt_freqs;
+            for (auto nt=++vcf_alleles.begin(); nt!=vcf_alleles.end(); ++nt) // rem. always >1 alleles.
+                alt_freqs.push_back((double)sitecall.alleles.at(*nt) / tot_count);
+
+            rec.info.push_back(VcfRecord::util::fmt_info_af(alt_freqs));
+        }
+
+        // Genotypes.
+        rec.format.push_back("GT");
+        rec.format.push_back("DP");
+        rec.format.push_back("AD");
+        rec.samples.reserve(mpopi.samples().size());
+        for (size_t s=0; s<mpopi.samples().size(); ++s) {
+            const SampleCall& s_call = sitecall.sample_calls[s];
+
+            size_t dp = s_call.depths[0] + s_call.depths[1] + s_call.depths[2] + s_call.depths[3];
+            if (dp == 0) {
+                // No data for this sample.
+                rec.samples.push_back(".");
+                continue;
+            }
+
+            stringstream genotype;
+
+            // GT field.
+            vector<size_t> gt;
+            switch (s_call.call) {
+            case snp_type_hom:
+                gt.push_back(vcf_allele_indexes.at(s_call.nts[0]));
+                genotype << gt[0] << '/' << gt[0];
+                break;
+            case snp_type_het:
+                gt.push_back(vcf_allele_indexes.at(s_call.nts[0]));
+                gt.push_back(vcf_allele_indexes.at(s_call.nts[0]));
+                sort(gt.begin(), gt.end()); // (Prevents '1/0'.)
+                genotype << gt[0] << '/' << gt[1];
+                break;
+            default:
+                genotype << '.';
+                break;
+            }
+
+            // DP field.
+            genotype << ':' << dp;
+
+            // AD field.
+            vector<size_t> ad;
+            ad.reserve(vcf_alleles.size());
+            for (Nt4 nt : vcf_alleles)
+                ad.push_back(s_call.depths[size_t(Nt2(nt))]);
+            join(ad, ',', genotype);
+
+            rec.samples.push_back(genotype.str());
+        }
+
+        // Write the record.
+        o_vcf_f->write_record(rec);
+    }
+
+    //
+    // Models/tsv output.
+    // LOCID \t LINETYPE \t SAMPLEID \t CONTENTS
+    //
+
+    // Consensus.
+    o_models_f << loc_id << "\tconsensus\t\t" << ref << "\n";
+
+    // Model.
+    o_models_f << loc_id << "\tmodel\t\t";
+    for (auto& c : calls)
+        o_models_f << c.alleles.size();
+    o_models_f << "\n";
+
+    // Depths. Max 255.
+    o_models_f << loc_id << "\tdepth\t\t" << std::hex;
+    for (auto& c : calls)
+        o_models_f << uchar(c.tot_depth);
+    o_models_f << std::dec << "\n";
+
+    // For each sample.
+    for (size_t s=0; s<mpopi.samples().size(); ++s) {
+        int sample_id = mpopi.samples()[s].id;
+
+        // Model.
+        o_models_f << loc_id << "\ts_model\t" << sample_id << "\t";
+        for (auto& c : calls) {
+            switch (c.sample_calls[s].call) {
+            case snp_type_hom: o_models_f << "O"; break;
+            case snp_type_het: o_models_f << "E"; break;
+            case snp_type_unk: o_models_f << "U"; break;
+            }
+        }
+        o_models_f << "\n";
+
+        // Depths. ACTG; max 255.
+        o_models_f << loc_id << "\ts_depths\t" << sample_id << "\t" << std::hex;
+        for (auto& c : calls) {
+            const array<size_t, 4>& depths = c.sample_calls[s].depths;
+            o_models_f << uchar(depths[0]) << uchar(depths[1]) << uchar(depths[2]) << uchar(depths[3]);
+        }
+        o_models_f << std::dec << "\n";
     }
 }
 

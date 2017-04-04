@@ -154,6 +154,8 @@ public:
 
     Nt4 first() const {return Nt4(size_t(x_ >>4));}
     Nt4 second() const {return Nt4(size_t(x_ & 15));}
+    void first(Nt4 nt) {clear_first(); set_first(nt);}
+    void second(Nt4 nt) {clear_second(); set_second(nt);}
 
     bool operator== (const DiNuc& other) const {return x_ == other.x_;}
     bool operator<  (const DiNuc& other) const {return x_ < other.x_;}
@@ -188,11 +190,13 @@ public:
     size_t length() const {return l_;}
     string str() const;
     DNASeq4 rev_compl() const;
+    void set(size_t i, Nt4 nt) {i%2==0 ? v_[i/2].first(nt) : v_[i/2].second(nt);}
 
     Nt4 operator[] (size_t i) const {return i%2==0 ? v_[i/2].first() : v_[i/2].second();}
     bool  operator== (const DNASeq4& other) const {return l_ == other.l_ && v_ == other.v_;}
     bool  operator<  (const DNASeq4& other) const {return l_ < other.l_ ? true : v_ < other.v_;}
     friend class std::hash<DNASeq4>;
+    friend ostream& operator<< (ostream& os, const DNASeq4& seq) {for (Nt4 nt : seq) os << char(nt); return os;}
 
     // Iterator.
     class iterator {
