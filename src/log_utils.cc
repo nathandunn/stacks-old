@@ -45,7 +45,7 @@ init_log(ostream &fh, int argc, char **argv)
     // Write the command line that was executed.
     //
     string exe (argv[0]);
-    fh << exe.substr(exe.find_last_of('/')) << " v" << VERSION << ", executed " << date << "\n";
+    fh << exe.substr(exe.find_last_of('/')+1) << " v" << VERSION << ", executed " << date << "\n";
     for (int i = 0; i < argc; i++) {
         fh << argv[i];
         if (i < argc - 1) fh << " ";
