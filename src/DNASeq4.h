@@ -95,13 +95,17 @@ public:
     void increment(Nt4 nt) {++counts_[size_t(nt)];}
     void sort();
 
-    size_t count(Nt4 nt) const {return counts_[size_t(nt)];}
-    const size_t* rank1() const {return sorted_[3];}
-    const size_t* rank2() const {return sorted_[2];}
-    const size_t* rank3() const {return sorted_[1];}
-    const size_t* rank4() const {return sorted_[0];}
-    Nt4 nt4_of(const size_t* count_ptr) const {return Nt4(size_t(count_ptr-counts_));}
+    // Get the count for a given nucleotide.
+    size_t at(Nt4 nt) const {return counts_[size_t(nt)];}
 
+    // Get the count for the nucleotide of the given rank. Rank 0 has the
+    // highest count.
+    size_t at_rank(size_t rank) const {return *sorted_[rank];}
+
+    // Get the the nucleotide of the given (0-based) rank.
+    Nt4 nt_of_rank(size_t rank) const {return Nt4(size_t(sorted_[rank]-counts_));}
+
+    // Print the counts.
     friend ostream& operator<< (ostream& os, const Nt4Counts& loc);
 };
 
@@ -212,6 +216,11 @@ public:
     const uchar* vdata() const {return (uchar*) v_.data();}
 };
 
+//
+// Inline definitions.
+// ==========
+//
+
 inline
 void Nt4Counts::sort() {
     std::sort(
@@ -226,14 +235,10 @@ void Nt4Counts::sort() {
 
 inline
 ostream& operator<< (ostream& os, const Nt4Counts& cnts) {
-    const size_t* r1 = cnts.rank1();
-    const size_t* r2 = cnts.rank2();
-    const size_t* r3 = cnts.rank3();
-    const size_t* r4 = cnts.rank4();
-    os << char(cnts.nt4_of(r1)) << ":" << *r1 << " "
-       << char(cnts.nt4_of(r2)) << ":" << *r2 << " "
-       << char(cnts.nt4_of(r3)) << ":" << *r4 << " "
-       << char(cnts.nt4_of(r4)) << ":" << *r4;
+    os << char(cnts.nt_of_rank(0)) << ":" << cnts.at_rank(0) << " "
+       << char(cnts.nt_of_rank(1)) << ":" << cnts.at_rank(1) << " "
+       << char(cnts.nt_of_rank(2)) << ":" << cnts.at_rank(2) << " "
+       << char(cnts.nt_of_rank(3)) << ":" << cnts.at_rank(3);
     return os;
 }
 
