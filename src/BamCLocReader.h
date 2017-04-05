@@ -19,7 +19,7 @@ public:
     BamCLocReader(const string& bam_path);
     ~BamCLocReader() {if (bam_f_) delete bam_f_;}
 
-    const MetaPopInfo mpopi() const {return mpopi_;}
+    const MetaPopInfo& mpopi() const {return mpopi_;}
 
     // Reads one locus. Returns false on EOF.
     bool read_one_locus(CLocReadSet& readset);
