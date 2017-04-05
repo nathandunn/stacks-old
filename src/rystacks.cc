@@ -478,7 +478,7 @@ void write(const MetaPopInfo& mpopi, int loc_id, const DNASeq4& ref, const vecto
 }
 
 const string help_string = string() +
-        prog_name + VERSION  + "\n" +
+        prog_name + " " + VERSION  + "\n" +
         prog_name + " -P in_dir\n"
         "\n"
         "  -P: input directory (must contain a batch_X.catalog.bam file)\n"
@@ -487,7 +487,7 @@ const string help_string = string() +
         "  --gt-alpha: alpha threshold for calling genotypes\n"
         "\n"
         "Alignment options:\n"
-        "  -k: kmer length (default: 31)\n"
+        "  --kmer-length: kmer length (default: 31)\n"
         "  --min-cov: minimum coverage to consider a kmer (default: 2)\n"
         "  --gfa: output a GFA file for each locus\n"
         "  --aln: output a file showing the contig & read alignments for each locus\n"
@@ -506,6 +506,7 @@ void parse_command_line(int argc, char* argv[]) {
         {"help",         no_argument,       NULL,  'h'},
         {"quiet",        no_argument,       NULL,  'q'},
         {"in-dir",       required_argument, NULL,  'P'},
+        {"batch-id",     required_argument, NULL,  'b'},
         {"gt-alpha",     required_argument, NULL,  1005},
         {"whitelist",    required_argument, NULL,  'W'},
         {"kmer-length",  required_argument, NULL,  1001},
@@ -521,14 +522,14 @@ void parse_command_line(int argc, char* argv[]) {
     int long_options_i;
     while (true) {
 
-        c = getopt_long(argc, argv, "hqb:O:k:W:", long_options, &long_options_i);
+        c = getopt_long(argc, argv, "hqP:b:W:", long_options, &long_options_i);
 
         if (c == -1)
             break;
 
         switch (c) {
         case 1000: //version
-            cout << "pstacks_pe " << VERSION << "\n";
+            cout << prog_name << " " << VERSION << "\n";
             exit(0);
             break;
         case 'h':
@@ -574,11 +575,12 @@ void parse_command_line(int argc, char* argv[]) {
 
     // Check command consistency.
     if (optind < argc) {
-        cerr << "Error: Failed to parse command line: '" << argv[optind] << "' is seen as a positional argument. Expected no positional arguments.\n";
+        cerr << "Error: Failed to parse command line: '" << argv[optind]
+             << "' is seen as a positional argument. Expected no positional arguments.\n";
         bad_args();
     }
     if (in_dir.empty()) {
-        cerr << "Error: An output directory must be provided (-O).\n";
+        cerr << "Error: An input directory must be provided (-P).\n";
         bad_args();
     }
 
