@@ -97,18 +97,15 @@ DNASeq4 DNASeq4::rev_compl() const {
     rev.v_.reserve(v_.size());
 
     iterator nt = end();
-    --nt;
-    for (size_t i=0; i<l_/2; ++i) {
+    for (size_t i=0; i<l_/2; ++i)
         // Push two nucleotides, l_/2 times.
         rev.v_.push_back(
-                DiNuc((*nt).rev_compl(), (*--nt).rev_compl())
+                DiNuc((*--nt).rev_compl(), (*--nt).rev_compl())
                 );
-        --nt;
-    }
 
     if (l_ % 2 == 1)
-        rev.v_.push_back(DiNuc((*nt).rev_compl(), Nt4(0)));
+        rev.v_.push_back(DiNuc((*--nt).rev_compl(), Nt4(0)));
 
-    assert(rev.v_.size() == v_.size() && !(--nt != begin()));
+    assert(rev.v_.size() == v_.size() && !(nt != begin()));
     return rev;
 }
