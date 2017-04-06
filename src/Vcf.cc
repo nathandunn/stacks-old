@@ -461,7 +461,7 @@ void VcfWriter::write_record(const VcfRecord& r) {
     //FILTER
     file_ << "\t";
     if (r.filter.empty()) {
-        file_ << "\t.";
+        file_ << ".";
     } else {
         auto filter = r.filter.begin();
         file_ << *filter;
