@@ -144,7 +144,11 @@ int main(int argc, char** argv) {
     }
     cout << "Processed " << n_loci << " loci.\n";
 
+    gzclose(o_gzfasta_f);
+    delete o_vcf_f;
+
     cout << prog_name << " is done.\n";
+    delete lg;
     return 0;
 }
 
@@ -249,7 +253,6 @@ SiteCall::SiteCall(const CLocAlnSet::site_iterator& site)
 
     // N.B. For now we use the old binomial model.
 
-    vector<SampleCall> sample_calls;
     for (size_t s=0; s<site.mpopi().samples().size(); ++s) {
         site.counts(counts, s);
         if (counts.at_rank(0) == 0) {
