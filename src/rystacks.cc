@@ -16,12 +16,27 @@
 
 using namespace std;
 
+class SiteCall;
 struct SampleCall;
-struct SiteCall;
 void parse_command_line(int argc, char* argv[]);
 void report_options(ostream& os);
 void process_one_locus(CLocReadSet&& loc);
 void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls);
+
+class SiteCall {
+    size_t tot_depth_;
+    map<Nt4, size_t> alleles_;
+    vector<SampleCall> sample_calls_;
+
+public:
+    SiteCall(const CLocAlnSet::site_iterator& site);
+
+    size_t tot_depth() const {return tot_depth_;}
+    const map<Nt4, size_t>& alleles() const {return alleles_;}
+    const vector<SampleCall>& sample_calls() const {return sample_calls_;}
+
+    //Nt4 most_frequent_nt() const;
+};
 
 struct SampleCall {
     array<size_t, 4> depths;
@@ -31,16 +46,6 @@ struct SampleCall {
     SampleCall() : depths{0, 0, 0, 0}, call(snp_type_unk), nts{0, 0} {}
 
     size_t tot_depth() const {return depths[0]+depths[1]+depths[2]+depths[3];}
-};
-
-struct SiteCall {
-    size_t tot_depth;
-    map<Nt4, size_t> alleles;
-    vector<SampleCall> sample_calls;
-
-    SiteCall(const CLocAlnSet::site_iterator& site);
-
-    //Nt4 most_frequent_nt() const;
 };
 
 /*
@@ -250,7 +255,7 @@ void process_one_locus(CLocReadSet&& loc) {
 }
 
 SiteCall::SiteCall(const CLocAlnSet::site_iterator& site)
-        : tot_depth(0), alleles(), sample_calls()
+        : tot_depth_(0), alleles_(), sample_calls_()
         {
 
     // N.B. For now we use the old binomial model.
@@ -267,12 +272,12 @@ SiteCall::SiteCall(const CLocAlnSet::site_iterator& site)
             s_call.depths = {0, 0, 0, 0};
             s_call.call = snp_type_unk;
             s_call.nts = {Nt4::n, Nt4::n};
-            sample_calls.push_back(s_call);
+            sample_calls_.push_back(s_call);
             continue;
         }
 
         s_call.depths = {counts.at(Nt4::a), counts.at(Nt4::c), counts.at(Nt4::g), counts.at(Nt4::t)};
-        tot_depth += s_call.tot_depth();
+        tot_depth_ += s_call.tot_depth();
 
         s_call.call = call_snp(lr_multinomial_model(counts.at_rank(0), counts.at_rank(1), counts.at_rank(2), counts.at_rank(3)));
         switch (s_call.call) {
@@ -287,7 +292,7 @@ SiteCall::SiteCall(const CLocAlnSet::site_iterator& site)
             s_call.nts = {Nt4::n, Nt4::n};
             break;
         }
-        sample_calls.push_back(s_call);
+        sample_calls_.push_back(s_call);
 
     }
 
@@ -295,7 +300,7 @@ SiteCall::SiteCall(const CLocAlnSet::site_iterator& site)
     // Iterate over the SampleCalls & record the genotypes that were found.
     //
     counts.reset();
-    for (const SampleCall& sc : sample_calls) {
+    for (const SampleCall& sc : sample_calls_) {
         switch (sc.call) {
         case snp_type_hom : counts.increment(sc.nts[0]); counts.increment(sc.nts[0]); break;
         case snp_type_het : counts.increment(sc.nts[0]); counts.increment(sc.nts[1]); break;
@@ -305,18 +310,18 @@ SiteCall::SiteCall(const CLocAlnSet::site_iterator& site)
     counts.sort();
     if (counts.at_rank(0) > 0) {
         // At least one allele was observed.
-        alleles.insert({counts.nt_of_rank(0), counts.at_rank(0)});
+        alleles_.insert({counts.nt_of_rank(0), counts.at_rank(0)});
 
         if (counts.at_rank(1) > 0) {
             // SNP with at least two alleles.
-            alleles.insert({counts.nt_of_rank(1), counts.at_rank(1)});
+            alleles_.insert({counts.nt_of_rank(1), counts.at_rank(1)});
 
             if (counts.at_rank(2) > 0) {
-                alleles.insert({counts.nt_of_rank(2), counts.at_rank(2)});
+                alleles_.insert({counts.nt_of_rank(2), counts.at_rank(2)});
 
                 if (counts.at_rank(3) > 0) {
                     // Quaternary SNP.
-                    alleles.insert({counts.nt_of_rank(3), counts.at_rank(3)});
+                    alleles_.insert({counts.nt_of_rank(3), counts.at_rank(3)});
                 }
             }
         }
@@ -351,7 +356,7 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
     assert(calls.size() == ref.length());
     for (size_t i=0; i<ref.length(); ++i) {
         const SiteCall& sitecall = calls[i];
-        if (sitecall.alleles.empty())
+        if (sitecall.alleles().empty())
             // No data at this site. xxx Reconsider?
             continue;
 
@@ -365,7 +370,7 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
 
             // Sort the alleles by frequency.
             vector<pair<size_t, Nt4>> sorted_alleles;
-            for (auto& a : sitecall.alleles)
+            for (auto& a : sitecall.alleles())
                 sorted_alleles.push_back({a.second, a.first});
             sort(sorted_alleles.rbegin(), sorted_alleles.rend()); // (decreasing)
 
@@ -395,17 +400,17 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
             rec.alleles.push_back(string(1, char(nt)));
 
         // INFO/DP.
-        rec.info.push_back({"DP", to_string(sitecall.tot_depth)});
+        rec.info.push_back({"DP", to_string(sitecall.tot_depth())});
 
         // INFO/AF.
         if (vcf_alleles.size() > 1) {
             size_t tot_count = 0;
-            for (auto& a : sitecall.alleles)
+            for (auto& a : sitecall.alleles())
                 tot_count += a.second;
 
             vector<double> alt_freqs;
             for (auto nt=++vcf_alleles.begin(); nt!=vcf_alleles.end(); ++nt) // rem. always >1 alleles.
-                alt_freqs.push_back((double)sitecall.alleles.at(*nt) / tot_count);
+                alt_freqs.push_back((double)sitecall.alleles().at(*nt) / tot_count);
 
             rec.info.push_back(VcfRecord::util::fmt_info_af(alt_freqs));
         }
@@ -416,7 +421,7 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
         rec.format.push_back("AD");
         rec.samples.reserve(mpopi.samples().size());
         for (size_t s=0; s<mpopi.samples().size(); ++s) {
-            const SampleCall& s_call = sitecall.sample_calls[s];
+            const SampleCall& s_call = sitecall.sample_calls()[s];
 
             size_t dp = s_call.depths[0] + s_call.depths[1] + s_call.depths[2] + s_call.depths[3];
             if (dp == 0) {
@@ -474,14 +479,14 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
     // Model.
     o_models_f << loc_id << "\tmodel\t\t";
     for (auto& c : calls)
-        o_models_f << c.alleles.size();
+        o_models_f << c.alleles().size();
     o_models_f << "\n";
 
     // Depth.
     // One two-digit hex number per position (max 0xFF).
     o_models_f << loc_id << "\tdepth\t\t" << std::hex;
     for (auto& c : calls) {
-        size_t dp = c.tot_depth;
+        size_t dp = c.tot_depth();
         if (dp <= 0xF)
             o_models_f << "0" << dp;
         else if (dp <= 0xFF)
@@ -498,7 +503,7 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
         // Model.
         o_models_f << loc_id << "\ts_model\t" << sample_id << "\t";
         for (auto& c : calls) {
-            switch (c.sample_calls[s].call) {
+            switch (c.sample_calls()[s].call) {
             case snp_type_hom: o_models_f << "O"; break;
             case snp_type_het: o_models_f << "E"; break;
             case snp_type_unk: o_models_f << "U"; break;
@@ -512,7 +517,7 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
         for (auto& c : calls) {
             // For each site/position.
             for (size_t nt=0; nt<4; ++nt) {
-                size_t dp = c.sample_calls[s].depths[nt];
+                size_t dp = c.sample_calls()[s].depths[nt];
                 if (dp <= 0xF)
                     o_models_f << "0" << dp;
                 else if (dp <= 0xFF)
