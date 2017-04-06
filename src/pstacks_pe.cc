@@ -41,20 +41,12 @@ bool quiet = false;
 
 modelt model_type         = snp;
 double alpha              = 0.05;
-double bound_low          = 0.0;
-double bound_high         = 1.0;
-double barcode_err_freq   = 0.0;
 
 //
 // Extra globs.
 //
 LogAlterator* lg = NULL;
 int    sql_id             = -1;
-double heterozygote_limit;
-double homozygote_limit;
-
-const int barcode_size    = 5;
-double p_freq             = 0.5; // const
 
 set<string> debug_flags;
 #define DEBUG_FWREADS "FWREADS"

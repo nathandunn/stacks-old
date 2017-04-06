@@ -30,6 +30,9 @@
 #include <string>
 
 #include <dirent.h>
+
+#include <zlib.h>
+
 #include "constants.h"
 #include "stacks.h"
 
@@ -71,6 +74,35 @@ struct int_decreasing {
         return lhs > rhs;
     }
 };
+
+//
+// Join a range of elements into a stream.
+//
+template<typename IterableT, typename SepT>
+void join(IterableT elements, const SepT& sep, ostream& os) {
+    auto first = elements.begin();
+    if (first != elements.end()) {
+        os << *first;
+        ++first;
+        while (first != elements.end()) {
+            os << sep << *first;
+            ++first;
+        }
+    }
+}
+
+//
+// Routines to check that files are open.
+//
+inline
+void check_open (const std::ifstream& fs, const string& path)
+    {if (!fs.is_open()) {cerr << "Error: Failed to open '" << path << "' for reading.\n"; throw exception();}}
+inline
+void check_open (const std::ofstream& fs, const string& path)
+    {if (!fs.is_open()) {cerr << "Error: Failed to open '" << path << "' for writing.\n"; throw exception();}}
+inline
+void check_open (const gzFile fs, const string& path)
+    {if (fs == NULL) {cerr << "Error: Failed to gz-open file '" << path << "'.\n"; throw exception();}}
 
 //
 // Wrapper for directory parsing functions.

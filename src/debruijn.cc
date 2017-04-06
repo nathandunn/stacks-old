@@ -24,22 +24,22 @@ SPath::SPath(Node* first) : first_(first), last_(NULL), d_(), visitdata(NULL) {
     last_ = n;
 }
 
-void Graph::rebuild(const CLocReadSet& readset, size_t min_kmer_count) {
+void Graph::rebuild(const vector<const DNASeq4*>& reads, size_t min_kmer_count) {
 
     //cerr << "Building graph...\n"; //debug
 
     clear();
 
     //
-    // Count all kmers.
+    // Fill the kmer map & count all kmers.
     //
-    for (const Read& r : readset.reads()) {
+    for (const DNASeq4* s : reads) {
 
         // Build the first kmer.
-        DNASeq4::iterator next_nt = r.seq.begin();
-        Kmer km = Kmer(km_len_, next_nt, r.seq.end());
+        DNASeq4::iterator next_nt = s->begin();
+        Kmer km = Kmer(km_len_, next_nt, s->end());
         if (km.empty()) {
-            cerr << "Oops, no " << km_len_ << "-mers in " << r.seq.str() << "\n"; //
+            cerr << "Oops, no " << km_len_ << "-mers in " << s->str() << "\n"; //
             continue;
         }
 
@@ -47,16 +47,16 @@ void Graph::rebuild(const CLocReadSet& readset, size_t min_kmer_count) {
         ++map_[km].count;
 
         // Walk the sequence.
-        while (next_nt != r.seq.end()) {
-            size_t nt4 = next_nt.nt();
+        while (next_nt != s->end()) {
+            Nt4 nt4 = *next_nt;
             if (nt4 == Nt4::n) {
                 ++next_nt;
-                km = Kmer(km_len_, next_nt, r.seq.end());
+                km = Kmer(km_len_, next_nt, s->end());
                 if (km.empty())
                     // Not enough sequence remaining to make another kmer.
                     break;
             } else {
-                km = km.succ(km_len_, Nt2::from_nt4(nt4));
+                km = km.succ(km_len_, Nt2(nt4));
                 ++next_nt;
             }
             ++map_[km].count;

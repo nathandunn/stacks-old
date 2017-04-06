@@ -1443,11 +1443,11 @@ void write_matches_bam(const string& sample_prefix, map<int, QLocus *>& sloci) {
                     // For each reverse read.
                     rec.assign(
                             name,
-                            BAM_FREAD2,
+                            BAM_FREAD2 | BAM_FREVERSE,
                             loc_i,
                             4096,
                             {{'S', stack.first.length()}},
-                            stack.first,
+                            stack.first.rev_compl(),
                             sample_id
                             );
                     rec.write_to(bam_f);
