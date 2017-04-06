@@ -29,6 +29,8 @@ struct SampleCall {
     array<Nt4, 2> nts; // hom {nt, Nt4::n} | het {min_nt, max_nt} | unk {Nt4::n, Nt4::n}
 
     SampleCall() : depths{0, 0, 0, 0}, call(snp_type_unk), nts{0, 0} {}
+
+    size_t tot_depth() const {return depths[0]+depths[1]+depths[2]+depths[3];}
 };
 
 struct SiteCall {
@@ -248,24 +250,30 @@ void process_one_locus(CLocReadSet&& loc) {
 }
 
 SiteCall::SiteCall(const CLocAlnSet::site_iterator& site)
-{
-    Nt4Counts counts;
+        : tot_depth(0), alleles(), sample_calls()
+        {
 
     // N.B. For now we use the old binomial model.
 
+    //
+    // Look at this site in each sample; make genotype calls.
+    //
+    Nt4Counts counts;
     for (size_t s=0; s<site.mpopi().samples().size(); ++s) {
+        SampleCall s_call;
+
         site.counts(counts, s);
         if (counts.at_rank(0) == 0) {
-            SampleCall missing;
-            missing.depths = {0, 0, 0, 0};
-            missing.call = snp_type_unk;
-            missing.nts = {Nt4::n, Nt4::n};
-            sample_calls.push_back(missing);
+            s_call.depths = {0, 0, 0, 0};
+            s_call.call = snp_type_unk;
+            s_call.nts = {Nt4::n, Nt4::n};
+            sample_calls.push_back(s_call);
             continue;
         }
 
-        SampleCall s_call;
         s_call.depths = {counts.at(Nt4::a), counts.at(Nt4::c), counts.at(Nt4::g), counts.at(Nt4::t)};
+        tot_depth += s_call.tot_depth();
+
         s_call.call = call_snp(lr_multinomial_model(counts.at_rank(0), counts.at_rank(1), counts.at_rank(2), counts.at_rank(3)));
         switch (s_call.call) {
         case snp_type_hom:
@@ -280,12 +288,14 @@ SiteCall::SiteCall(const CLocAlnSet::site_iterator& site)
             break;
         }
         sample_calls.push_back(s_call);
+
     }
 
-    tot_depth = 0;
+    //
+    // Iterate over the SampleCalls & record the genotypes that were found.
+    //
     counts.reset();
     for (const SampleCall& sc : sample_calls) {
-        tot_depth += sc.depths[0] + sc.depths[1] + sc.depths[2] + sc.depths[3];
         switch (sc.call) {
         case snp_type_hom : counts.increment(sc.nts[0]); counts.increment(sc.nts[0]); break;
         case snp_type_het : counts.increment(sc.nts[0]); counts.increment(sc.nts[1]); break;
@@ -293,7 +303,6 @@ SiteCall::SiteCall(const CLocAlnSet::site_iterator& site)
         }
     }
     counts.sort();
-
     if (counts.at_rank(0) > 0) {
         // At least one allele was observed.
         alleles.insert({counts.nt_of_rank(0), counts.at_rank(0)});
