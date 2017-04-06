@@ -468,10 +468,18 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
         o_models_f << c.alleles.size();
     o_models_f << "\n";
 
-    // Depths. Max 255.
+    // Depth.
+    // One two-digit hex number per position (max 0xFF).
     o_models_f << loc_id << "\tdepth\t\t" << std::hex;
-    for (auto& c : calls)
-        o_models_f << uchar(c.tot_depth);
+    for (auto& c : calls) {
+        size_t dp = c.tot_depth;
+        if (dp <= 0xF)
+            o_models_f << "0" << dp;
+        else if (dp <= 0xFF)
+            o_models_f << dp;
+        else
+            o_models_f << 0xFF;
+    }
     o_models_f << std::dec << "\n";
 
     // For each sample.
@@ -489,11 +497,20 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
         }
         o_models_f << "\n";
 
-        // Depths. ACTG; max 255.
+        // Depths.
+        // Four two-digit hex numbers (A,C,T,G) per position.
         o_models_f << loc_id << "\ts_depths\t" << sample_id << "\t" << std::hex;
         for (auto& c : calls) {
-            const array<size_t, 4>& depths = c.sample_calls[s].depths;
-            o_models_f << uchar(depths[0]) << uchar(depths[1]) << uchar(depths[2]) << uchar(depths[3]);
+            // For each site/position.
+            for (size_t nt=0; nt<4; ++nt) {
+                size_t dp = c.sample_calls[s].depths[nt];
+                if (dp <= 0xF)
+                    o_models_f << "0" << dp;
+                else if (dp <= 0xFF)
+                    o_models_f << dp;
+                else
+                    o_models_f << 0xFF;
+            }
         }
         o_models_f << std::dec << "\n";
     }
