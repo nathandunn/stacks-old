@@ -363,7 +363,7 @@ void write(const MetaPopInfo& mpopi, int loc_id, const DNASeq4& ref, const vecto
         // Create the VCF record.
         VcfRecord rec;
         rec.type = Vcf::RType::expl;
-        rec.chrom = loc_id;
+        rec.chrom = to_string(loc_id);
         rec.pos = i+1;
 
         // Alleles.
@@ -409,7 +409,7 @@ void write(const MetaPopInfo& mpopi, int loc_id, const DNASeq4& ref, const vecto
                 break;
             case snp_type_het:
                 gt.push_back(vcf_allele_indexes.at(s_call.nts[0]));
-                gt.push_back(vcf_allele_indexes.at(s_call.nts[0]));
+                gt.push_back(vcf_allele_indexes.at(s_call.nts[1]));
                 sort(gt.begin(), gt.end()); // (Prevents '1/0'.)
                 genotype << gt[0] << '/' << gt[1];
                 break;
@@ -426,6 +426,7 @@ void write(const MetaPopInfo& mpopi, int loc_id, const DNASeq4& ref, const vecto
             ad.reserve(vcf_alleles.size());
             for (Nt4 nt : vcf_alleles)
                 ad.push_back(s_call.depths[size_t(Nt2(nt))]);
+            genotype << ':';
             join(ad, ',', genotype);
 
             rec.samples.push_back(genotype.str());
