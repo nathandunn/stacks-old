@@ -88,7 +88,7 @@ class Nt4Counts {
 
 public:
     Nt4Counts()
-        : sorted_{counts_+size_t(Nt4::a), counts_+size_t(Nt4::c), counts_+size_t(Nt4::g), counts_+size_t(Nt4::t)}
+        : sorted_{counts_+size_t(Nt4::t), counts_+size_t(Nt4::g), counts_+size_t(Nt4::c), counts_+size_t(Nt4::a)}
         {memset(counts_, 0xFF, 16 * sizeof(size_t)); reset();}
 
     void reset() {for (Nt4 nt : Nt4::all) counts_[size_t(nt)]=0;}
@@ -230,9 +230,9 @@ void Nt4Counts::sort() {
     std::sort(
         sorted_, sorted_+4,
         [] (const size_t* cnt1, const size_t* cnt2) {
-            // Primarily on the count.
-            // Secondarily on the pointer (i.e. array index/Nt4 value).
-            return std::tie(*cnt1, cnt1) < std::tie(*cnt2, cnt2);
+            // Sort by decreasing value. Primarily on the count, secondarily on
+            // the pointer address (i.e. on the array index/Nt4 value).
+            return std::tie(*cnt1, cnt1) > std::tie(*cnt2, cnt2);
         }
     );
 }
