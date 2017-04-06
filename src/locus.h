@@ -221,8 +221,7 @@ public:
     void ref(DNASeq4&& ref) {ref_ = move(ref);}
     void add(SAlnRead&& r);
 
-    friend ostream& operator<< (ostream& os, const CLocAlnSet& loc)
-        {os << loc.ref_.str(); for (auto& r : loc.reads_) os << "\n" << r.aln.str(); return os;}
+    friend ostream& operator<< (ostream& os, const CLocAlnSet& loc);
 
     //
     // Class to iterate over sites.
