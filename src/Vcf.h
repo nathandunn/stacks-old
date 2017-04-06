@@ -141,11 +141,15 @@ public:
 
     struct predefs {
         static const VcfMeta info_NS;
+        static const VcfMeta info_DP;
         static const VcfMeta info_AF;
-        static const VcfMeta format_GT;
-        static const VcfMeta format_DP;
+
         static const VcfMeta format_AD;
+        static const VcfMeta format_DP;
         static const VcfMeta format_GL;
+        static const VcfMeta format_GQ;
+        static const VcfMeta format_GT;
+        static const VcfMeta format_HQ;
 
         // Custom.
         static const VcfMeta info_locori;
