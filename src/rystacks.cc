@@ -21,7 +21,7 @@ struct SiteCall;
 void parse_command_line(int argc, char* argv[]);
 void report_options(ostream& os);
 void process_one_locus(CLocReadSet&& loc);
-void write(const MetaPopInfo& mpopi, int loc_id, const DNASeq4& ref, const vector<SiteCall>& calls);
+void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls);
 
 struct SampleCall {
     array<size_t, 4> depths;
@@ -244,7 +244,7 @@ void process_one_locus(CLocReadSet&& loc) {
     aln_loc.ref(move(new_ref));
     */
 
-    write(aln_loc.mpopi(), aln_loc.id(), aln_loc.ref(), calls);
+    write_one_locus(aln_loc, calls);
 }
 
 SiteCall::SiteCall(const CLocAlnSet::site_iterator& site)
@@ -314,12 +314,27 @@ SiteCall::SiteCall(const CLocAlnSet::site_iterator& site)
     }
 }
 
-void write(const MetaPopInfo& mpopi, int loc_id, const DNASeq4& ref, const vector<SiteCall>& calls) {
+void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
+
+    size_t loc_id = aln_loc.id();
+    const DNASeq4& ref = aln_loc.ref();
+    const MetaPopInfo& mpopi = aln_loc.mpopi();
+
     //
     // Fasta output.
     //
-    string fa_record = string(">") + to_string(loc_id) + "\n" + ref.str() + "\n";
-    gzputs(o_gzfasta_f, fa_record.c_str());
+
+    // Determine the number of samples that have reads for this locus.
+    set<size_t> loc_samples;
+    for (const SAlnRead& r : aln_loc.reads())
+        loc_samples.insert(r.sample);
+
+    // Write the fasta record.
+    gzputs(o_gzfasta_f, ">");
+    gzputs(o_gzfasta_f, (to_string(loc_id) + " NS=" + to_string(loc_samples.size())).c_str());
+    gzputs(o_gzfasta_f, "\n");
+    gzputs(o_gzfasta_f, ref.str().c_str());
+    gzputs(o_gzfasta_f, "\n");
 
     //
     // Vcf output.
