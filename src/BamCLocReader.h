@@ -12,21 +12,23 @@
 
 class BamCLocReader {
     Bam* bam_f_;
-    const MetaPopInfo& mpopi_;
+    MetaPopInfo mpopi_;
     map<string, size_t> rg_to_sample_;
 
 public:
-    BamCLocReader(const string& bam_path, MetaPopInfo& mpopi);
+    BamCLocReader(const string& bam_path);
     ~BamCLocReader() {if (bam_f_) delete bam_f_;}
+
+    const MetaPopInfo& mpopi() const {return mpopi_;}
 
     // Reads one locus. Returns false on EOF.
     bool read_one_locus(CLocReadSet& readset);
 };
 
 inline
-BamCLocReader::BamCLocReader(const string& bam_path, MetaPopInfo& mpopi)
+BamCLocReader::BamCLocReader(const string& bam_path)
         : bam_f_(NULL),
-          mpopi_(mpopi),
+          mpopi_(),
           rg_to_sample_()
         {
 
@@ -39,11 +41,18 @@ BamCLocReader::BamCLocReader(const string& bam_path, MetaPopInfo& mpopi)
     vector<string> samples;
     for (auto& rg : read_groups)
         samples.push_back(rg.second.at("SM"));
-    mpopi.init_names(samples);
+    mpopi_.init_names(samples);
+
+    // Parse sample IDs, if any.
+    for (auto& rg : read_groups) {
+        auto id = rg.second.find("id");
+        if (id != rg.second.end())
+            mpopi_.set_sample_id(mpopi_.get_sample_index(rg.second.at("SM")), stoi(id->second));
+    }
 
     // Fill the (read group : sample) map.
     for (auto& rg : read_groups)
-        rg_to_sample_.insert({rg.first, mpopi.get_sample_index(rg.second.at("SM"))});
+        rg_to_sample_.insert({rg.first, mpopi_.get_sample_index(rg.second.at("SM"))});
 
     // Read the very first record.
     if (!bam_f_->next_record()) {
@@ -57,6 +66,8 @@ BamCLocReader::BamCLocReader(const string& bam_path, MetaPopInfo& mpopi)
 
 inline
 bool BamCLocReader::read_one_locus(CLocReadSet& readset) {
+    assert(&readset.mpopi() == &mpopi_); // Otherwise sample indexes may be misleading.
+
     readset.clear();
     if (bam_f_ == NULL)
         // EOF was hit at the end of the previous locus.
@@ -76,7 +87,12 @@ bool BamCLocReader::read_one_locus(CLocReadSet& readset) {
 
     // Read all the reads of the locus, and one more.
     do {
-        readset.add(SRead(Read(rec.seq(), rec.qname()), rg_to_sample_.at(rec.read_group())));
+        if (rec.is_read2())
+            readset.add_pe(SRead(Read(rec.seq(), rec.qname()), rg_to_sample_.at(rec.read_group())));
+        else
+            // Note: BAM_FREAD1 needs not be set.
+            readset.add(SRead(Read(rec.seq(), rec.qname()), rg_to_sample_.at(rec.read_group())));
+
         if(!bam_f_->next_record()) {
             // EOF
             delete bam_f_;

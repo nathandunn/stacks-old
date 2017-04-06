@@ -7,19 +7,24 @@
 
 using namespace std;
 
-const map<string, VcfMeta> VcfMeta::predefined = {
-        {"INFO/NS", VcfMeta("INFO","<ID=NS,Number=1,Type=Integer,Description=\"Number of Samples With Data\">")},
-        {"INFO/AF", VcfMeta("INFO","<ID=AF,Number=.,Type=Float,Description=\"Allele Frequency\">")},
-        {"FORMAT/GT", VcfMeta("FORMAT","<ID=GT,Number=1,Type=String,Description=\"Genotype\">")},
-        {"FORMAT/DP", VcfMeta("FORMAT","<ID=DP,Number=1,Type=Integer,Description=\"Read Depth\">")},
-        {"FORMAT/AD", VcfMeta("FORMAT","<ID=AD,Number=1,Type=Integer,Description=\"Allele Depth\">")},
-        {"FORMAT/GL", VcfMeta("FORMAT","<ID=GL,Number=.,Type=Float,Description=\"Genotype Likelihood\">")},
-        // Custom fields.
-        {"INFO/locori", VcfMeta("INFO","<ID=locori,Number=1,Type=Character,Description=\"Orientation the corresponding Stacks locus aligns in\">")},
-    };
+pair<string,string> VcfRecord::util::fmt_info_af(const vector<double>& alt_freqs) {
+    stringstream ss;
+    ss << std::fixed << std::setprecision(3);
+    join(alt_freqs, ',', ss);
+    return {"AF", ss.str()};
+}
 
-void VcfHeader::init_meta(const string& fileformat) {
-    add_meta(VcfMeta("fileformat", fileformat));
+const VcfMeta VcfMeta::predefs::info_NS ("INFO","<ID=NS,Number=1,Type=Integer,Description=\"Number of Samples With Data\">");
+const VcfMeta VcfMeta::predefs::info_AF ("INFO","<ID=AF,Number=.,Type=Float,Description=\"Allele Frequency\">");
+const VcfMeta VcfMeta::predefs::format_GT ("FORMAT","<ID=GT,Number=1,Type=String,Description=\"Genotype\">");
+const VcfMeta VcfMeta::predefs::format_DP ("FORMAT","<ID=DP,Number=1,Type=Integer,Description=\"Read Depth\">");
+const VcfMeta VcfMeta::predefs::format_AD ("FORMAT","<ID=AD,Number=1,Type=Integer,Description=\"Allele Depth\">");
+const VcfMeta VcfMeta::predefs::format_GL ("FORMAT","<ID=GL,Number=.,Type=Float,Description=\"Genotype Likelihood\">");
+
+const VcfMeta VcfMeta::predefs::info_locori ("INFO","<ID=locori,Number=1,Type=Character,Description=\"Orientation the corresponding Stacks locus aligns in\">");
+
+void VcfHeader::init_meta(const string& version) {
+    add_meta(VcfMeta("fileformat", version));
 
     time_t t;
     time(&t);
@@ -414,19 +419,19 @@ VcfAbstractParser::next_record(VcfRecord& record)
     return true;
 }
 
-void VcfWriter::write_header(const VcfHeader& header) {
-    for(const VcfMeta& m : header.meta())
+void VcfWriter::write_header() {
+    for(const VcfMeta& m : header_.meta())
         file_ << "##" << m.key() << "=" << m.value() << "\n";
 
     file_ << Vcf::base_header;
-    if(not header.samples().empty())
+    if(not header_.samples().empty())
         file_ << "\tFORMAT";
-    for(const string& s : header.samples())
+    for(const string& s : header_.samples())
         file_ << "\t" << s;
     file_ << "\n";
 }
 
-void VcfWriter::write_record(const VcfRecord& r, const VcfHeader& h) {
+void VcfWriter::write_record(const VcfRecord& r) {
 
     if (r.type != Vcf::RType::expl)
         // This is not implemented.
@@ -456,7 +461,7 @@ void VcfWriter::write_record(const VcfRecord& r, const VcfHeader& h) {
     //FILTER
     file_ << "\t";
     if (r.filter.empty()) {
-        file_ << "\t.";
+        file_ << ".";
     } else {
         auto filter = r.filter.begin();
         file_ << *filter;
@@ -481,7 +486,7 @@ void VcfWriter::write_record(const VcfRecord& r, const VcfHeader& h) {
         }
     }
 
-    if (not h.samples().empty()) {
+    if (not header_.samples().empty()) {
         //FORMAT
         file_ << "\t";
         if (r.format.empty()) {
@@ -497,7 +502,7 @@ void VcfWriter::write_record(const VcfRecord& r, const VcfHeader& h) {
         }
 
         //SAMPLES
-        if (r.samples.size() != h.samples().size())
+        if (r.samples.size() != header_.samples().size())
             throw exception();
 
         for (const string& s : r.samples)

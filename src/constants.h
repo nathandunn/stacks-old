@@ -34,6 +34,7 @@
 #include <cmath>
 #include <cassert>
 #include <vector>
+#include <array>
 #include <string>
 #include <set>
 #include <map>
@@ -73,6 +74,7 @@
 #endif
 
 using std::vector;
+using std::array;
 using std::string;
 using std::set;
 using std::map;
