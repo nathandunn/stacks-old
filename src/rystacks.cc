@@ -370,8 +370,11 @@ void write(const MetaPopInfo& mpopi, int loc_id, const DNASeq4& ref, const vecto
         for (Nt4 nt : vcf_alleles)
             rec.alleles.push_back(string(1, char(nt)));
 
+        // INFO/DP.
+        rec.info.push_back({"DP", to_string(sitecall.tot_depth)});
+
+        // INFO/AF.
         if (vcf_alleles.size() > 1) {
-            // INFO/AF field.
             size_t tot_count = 0;
             for (auto& a : sitecall.alleles)
                 tot_count += a.second;
