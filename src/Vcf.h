@@ -40,6 +40,7 @@
 #endif
 
 #include "constants.h"
+#include "utils.h"
 
 using std::out_of_range;
 
@@ -118,6 +119,10 @@ struct VcfRecord {
     inline pair<int, int> parse_genotype(const string& sample) const;
 
     inline bool is_snp() const;
+
+    struct util {
+        static pair<string,string> fmt_info_af(const vector<double>& alt_freqs);
+    };
 };
 
 /*
@@ -134,9 +139,18 @@ public:
     const string& key() const {return key_;}
     const string& value() const {return value_;}
 
-    static const map<string, VcfMeta> predefined;
+    struct predefs {
+        static const VcfMeta info_NS;
+        static const VcfMeta info_AF;
+        static const VcfMeta format_GT;
+        static const VcfMeta format_DP;
+        static const VcfMeta format_AD;
+        static const VcfMeta format_GL;
+
+        // Custom.
+        static const VcfMeta info_locori;
+    };
 };
-//class Info : public Meta {...};
 
 /*
  * VcfHeader
@@ -150,16 +164,20 @@ class VcfHeader {
     map<string, size_t> sample_indexes_;
     // map<string, vector<size_t> > meta_indexes;
 public:
-    VcfHeader() : samples_(), meta_() {}
+    VcfHeader(const string& version = "VCFv4.2")
+        : samples_(), meta_()
+        {init_meta(version);}
 
     const vector<VcfMeta>& meta() const {return meta_;}
     const vector<string>& samples() const {return samples_;}
     const map<string, size_t>& sample_indexes() const {return sample_indexes_;}
 
     // Adds the meta lines VERSION, FILEDATE and SOURCE
-    void init_meta(const string& fileformat = "VCFv4.2");
     void add_meta(const VcfMeta& m) {meta_.push_back(m);}
     void add_sample(const string& s) {samples_.push_back(s); sample_indexes_.insert({s, samples_.size()-1});}
+
+private:
+    void init_meta(const string& version);
 };
 
 /*
@@ -262,13 +280,18 @@ class VcfWriter {
 private:
     const string path_;
     ofstream file_;
+    const VcfHeader header_;
 
 public:
-    VcfWriter(const string& path) : path_(path), file_(path) {}
-    bool fail() {return file_.fail();}
+    VcfWriter(const string& path, VcfHeader&& header)
+        : path_(path), file_(path), header_(header)
+        {check_open(file_, path_); write_header();}
 
-    void write_header(const VcfHeader& h);
-    void write_record(const VcfRecord& r, const VcfHeader& h);
+    const VcfHeader& header() const {return header_;}
+    void write_record(const VcfRecord& r);
+
+private:
+    void write_header();
 };
 
 /*

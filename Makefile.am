@@ -1,6 +1,6 @@
 bin_PROGRAMS = ustacks pstacks estacks cstacks sstacks rxstacks hstacks process_radtags process_shortreads \
 	kmer_filter clone_filter genotypes populations phasedstacks \
-	pstacks_pe assemble_pe
+	pstacks_pe rystacks
 
 noinst_LIBRARIES = libcore.a libclean.a libpop.a
 
@@ -76,7 +76,9 @@ rxstacks_SOURCES    = libcore.a libpop.a src/rxstacks.h src/rxstacks.cc
 
 # n_pe
 pstacks_pe_SOURCES  = libcore.a src/pstacks_pe.h src/pstacks_pe.cc src/pstacks_base.h src/pstacks_base.cc
-assemble_pe_SOURCES = libcore.a src/assemble_pe.cc src/debruijn.h src/debruijn.cc src/Alignment.h
+
+# rystacks
+rystacks_SOURCES = libcore.a src/rystacks.cc src/debruijn.h src/debruijn.cc src/Alignment.h
 
 estacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS) $(BAM_CFLAGS)
 estacks_LDFLAGS  = $(OPENMP_CFLAGS)
@@ -98,7 +100,7 @@ cstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
 cstacks_LDFLAGS  = $(OPENMP_CFLAGS)
 cstacks_LDADD    = libcore.a
 sstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS) $(BAM_CFLAGS)
-sstacks_LDFLAGS  = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
+sstacks_LDFLAGS  = $(OPENMP_CFLAGS)
 sstacks_LDADD    = $(BAM_LIBS) libcore.a
 
 process_radtags_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS) $(BAM_CFLAGS)
@@ -128,9 +130,11 @@ rxstacks_LDADD    = $(OPENMP_CFLAGS) libcore.a libpop.a
 pstacks_pe_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS) $(SPARSEHASH_CFLAGS)
 pstacks_pe_LDFLAGS  = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
 pstacks_pe_LDADD    = $(BAM_LIBS) libcore.a
-assemble_pe_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
-assemble_pe_LDFLAGS  = $(OPENMP_CFLAGS)
-assemble_pe_LDADD    = $(BAM_LIBS) libcore.a
+
+# rystacks
+rystacks_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
+rystacks_LDFLAGS  = $(OPENMP_CFLAGS)
+rystacks_LDADD    = $(BAM_LIBS) libcore.a
 
 dist_bin_SCRIPTS = scripts/denovo_map.pl scripts/ref_map.pl	scripts/export_sql.pl \
 	scripts/sort_read_pairs.pl scripts/exec_velvet.pl scripts/load_sequences.pl \

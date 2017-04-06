@@ -82,8 +82,6 @@ class HVal {
     }
 };
 
-const int barcode_size   = 5;
-
 #ifdef HAVE_SPARSEHASH
 typedef sparse_hash_map<DNANSeq, HVal> DNASeqHashMap;
 #else

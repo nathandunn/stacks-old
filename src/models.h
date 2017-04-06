@@ -43,19 +43,20 @@ enum modelt {fixed, snp, bounded};
 //
 // For use with the multinomial model to call fixed nucleotides.
 //
-extern const int barcode_size;
-extern double p_freq;
+extern int barcode_size;
 extern double barcode_err_freq;
-extern double bound_low;
-extern double bound_high;
+
 extern double heterozygote_limit;
 extern double homozygote_limit;
+extern double bound_low;  // For the bounded-snp model.
+extern double bound_high; // For the bounded-snp model.
+extern double p_freq;     // For the fixed model.
 
 void     set_model_thresholds (double alpha);
 snp_type call_snp (double l_ratio);
 
-double   multinomial_model         (double nuc_1, double nuc_2, double nuc_3, double nuc_4);
-double   bounded_multinomial_model (double nuc_1, double nuc_2, double nuc_3, double nuc_4);
+double   lr_multinomial_model         (double nuc_1, double nuc_2, double nuc_3, double nuc_4);
+double   lr_bounded_multinomial_model (double nuc_1, double nuc_2, double nuc_3, double nuc_4);
 
 void call_bounded_multinomial_snp(MergedStack *, int, map<char, int> &, bool);
 void call_bounded_multinomial_snp(Locus *, int, map<char, int> &);
