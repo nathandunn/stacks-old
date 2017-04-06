@@ -179,19 +179,23 @@ struct SAlnRead : AlnRead {
 class CLocReadSet {
     const MetaPopInfo& mpopi_;
     int id_; // Catalog locus ID
-    vector<SRead> reads_; // All the reads. Order is arbitrary.
+    vector<SRead> reads_; // Forward reads. Order is arbitrary.
+    vector<SRead> pe_reads_; // Paired-end reads. Order and size are arbitrary.
 
 public:
-    CLocReadSet(const MetaPopInfo& mpopi) : mpopi_(mpopi), id_(-1), reads_() {}
+    CLocReadSet(const MetaPopInfo& mpopi) : mpopi_(mpopi), id_(-1), reads_(), pe_reads_() {}
 
     const MetaPopInfo& mpopi() const {return mpopi_;}
     int id() const {return id_;}
     const vector<SRead>& reads() const {return reads_;}
           vector<SRead>& reads()       {return reads_;}
+          const vector<SRead>& pe_reads() const {return pe_reads_;}
+                vector<SRead>& pe_reads()       {return pe_reads_;}
 
-    void clear() {id_= -1; reads_.clear();}
+    void clear() {id_= -1; reads_.clear(); pe_reads_.clear();}
     void id(int id) {id_ = id;}
     void add(SRead&& r) {reads_.push_back(move(r));}
+    void add_pe(SRead&& r) {pe_reads_.push_back(move(r));}
 };
 
 class CLocAlnSet {
@@ -217,8 +221,7 @@ public:
     void ref(DNASeq4&& ref) {ref_ = move(ref);}
     void add(SAlnRead&& r);
 
-    friend ostream& operator<< (ostream& os, const CLocAlnSet& loc)
-        {os << loc.ref_.str(); for (auto& r : loc.reads_) os << "\n" << r.aln.str(); return os;}
+    friend ostream& operator<< (ostream& os, const CLocAlnSet& loc);
 
     //
     // Class to iterate over sites.
@@ -246,10 +249,12 @@ public:
         site_iterator& operator++ ();
 
         // Site interface.
-        size_t ref_nt() const {return ref_it_.nt();} // Get the contig nt.
+        Nt4 ref_nt() const {return *ref_it_;} // Get the contig nt4.
         void counts(Nt4Counts& counts) const; // Get the nt counts across all samples.
         void counts(Nt4Counts& counts, size_t sample) const; // Get the nt counts for a given sample.
-    };
+
+        const MetaPopInfo& mpopi() const {return loc_aln_.mpopi();}
+};
 };
 
 //
@@ -286,7 +291,7 @@ inline
 void CLocAlnSet::site_iterator::counts(Nt4Counts& counts) const {
     counts.reset();
     for (auto& read: its_)
-        counts.increment(read.nt());
+        counts.increment(*read);
     counts.sort();
 }
 
@@ -294,7 +299,7 @@ inline
 void CLocAlnSet::site_iterator::counts(Nt4Counts& counts, size_t sample) const {
     counts.reset();
     for (size_t read_i : loc_aln_.sample_reads(sample))
-        counts.increment(its_[read_i].nt());
+        counts.increment(*its_[read_i]);
     counts.sort();
 }
 

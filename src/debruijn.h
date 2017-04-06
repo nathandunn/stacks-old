@@ -33,19 +33,19 @@ public:
     Kmer(size_t km_len, DNASeq4::iterator& first, DNASeq4::iterator past);
 
     // The first nucleotide.
-    size_t front() const {return a_[0];}
-    size_t back(size_t km_len) const {return a_[km_len-1];}
+    Nt2 front() const {return a_[0];}
+    Nt2 back(size_t km_len) const {return a_[km_len-1];}
 
     // Create the predecessor/successor kmer given an edge/nucleotide.
-    Kmer pred(size_t km_len, size_t nt) const {Kmer k (*this); k.a_.clear(km_len-1); k.a_.push_front(nt); return k;}
-    Kmer succ(size_t km_len, size_t nt) const {Kmer k (*this); k.a_.pop_front(); k.a_.set(km_len-1, nt); return k;}
+    Kmer pred(size_t km_len, Nt2 nt) const {Kmer k (*this); k.a_.clear(km_len-1); k.a_.push_front(nt); return k;}
+    Kmer succ(size_t km_len, Nt2 nt) const {Kmer k (*this); k.a_.pop_front(); k.a_.set(km_len-1, nt); return k;}
 
     bool empty() const {return *this == Kmer();}
     string str(size_t km_len) const {
         string s;
         s.reserve(km_len);
         for (size_t i=0; i<km_len; ++i)
-            s.push_back(Nt2::to_ch(a_[i]));
+            s.push_back(char(a_[i]));
         return s;
     }
 
@@ -179,7 +179,7 @@ class Graph {
 
 public:
     Graph(size_t km_length) : km_len_(km_length) {}
-    void rebuild(const CLocReadSet& readset, size_t min_kmer_count);
+    void rebuild(const vector<const DNASeq4*>& reads, size_t min_kmer_count);
 
     size_t empty() const {return simple_paths_.empty();}
 
@@ -213,7 +213,7 @@ Kmer::Kmer(size_t km_len, DNASeq4::iterator& first, DNASeq4::iterator past) : a_
     DNASeq4::iterator km_start = first;
     size_t n_good = 0;
     while(first != past && n_good != km_len) {
-        if (first.nt() == Nt4::n) {
+        if (*first == Nt4::n) {
             // start again
             km_start = first;
             n_good = 0;
@@ -226,7 +226,7 @@ Kmer::Kmer(size_t km_len, DNASeq4::iterator& first, DNASeq4::iterator past) : a_
     // Build the kmer.
     if (n_good == km_len) {
         for (size_t i=0; i<km_len; ++i) {
-            a_.set(i, Nt2::from_nt4(km_start.nt()));
+            a_.set(i, Nt2(*km_start));
             ++km_start;
         }
     }
@@ -250,10 +250,10 @@ string SPath::contig_str(SPathIt first, SPathIt past, size_t km_len) {
     while (first != past) {
         Node* n = (*first)->first_;
         while (n != (*first)->last_) {
-            ctg.push_back(Nt2::to_ch(n->km().back(km_len)));
+            ctg.push_back(char(n->km().back(km_len)));
             n = n->first_succ();
         }
-        ctg.push_back(Nt2::to_ch(n->km().back(km_len)));
+        ctg.push_back(char(n->km().back(km_len)));
         ++first;
     }
 

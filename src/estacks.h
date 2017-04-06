@@ -55,8 +55,6 @@ using google::sparse_hash_map;
 #include "FastqI.h"     // Reading input files in FASTQ format
 #include "DNANSeq.h"
 
-const int barcode_size = 5;
-
 #ifdef HAVE_SPARSEHASH
 typedef sparse_hash_map<const char *, vector<Seq *>, hash_charptr, eqstr> HashMap;
 #else

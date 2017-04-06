@@ -255,37 +255,21 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
     // Order SNPs by genomic position (and handle overlapping loci).
     //
 
-    string file = out_path + out_prefix + ".vcf";
-    cerr << "Writing ordered population data to VCF file '" << file << "'\n";
+    string path = out_path + out_prefix + ".vcf";
+    cerr << "Writing ordered population data to VCF file '" << path << "'\n";
     log_fh << "\n#\n# Generating SNP-based VCF export.\n#\n";
-    VcfWriter writer (file);
-    if (writer.fail()) {
-        cerr << "Error opening VCF file '" << file << "'\n";
-        exit(-1);
-    }
-
-    //
-    // Obtain the current date.
-    //
-    time_t     rawtime;
-    struct tm *timeinfo;
-    char       date[32];
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(date, 32, "%Y%m%d", timeinfo);
 
     VcfHeader header;
-    header.init_meta();
-    header.add_meta(VcfMeta::predefined.at("INFO/NS"));
-    header.add_meta(VcfMeta::predefined.at("INFO/AF"));
-    header.add_meta(VcfMeta::predefined.at("FORMAT/GT"));
-    header.add_meta(VcfMeta::predefined.at("FORMAT/DP"));
-    header.add_meta(VcfMeta::predefined.at("FORMAT/AD"));
-    header.add_meta(VcfMeta::predefined.at("FORMAT/GL"));
-    for(auto& s : mpopi.samples()) {
+    header.add_meta(VcfMeta::predefs::info_NS);
+    header.add_meta(VcfMeta::predefs::info_AF);
+    header.add_meta(VcfMeta::predefs::format_GT);
+    header.add_meta(VcfMeta::predefs::format_DP);
+    header.add_meta(VcfMeta::predefs::format_AD);
+    header.add_meta(VcfMeta::predefs::format_GL);
+    for(auto& s : mpopi.samples())
         header.add_sample(s.name);
-    }
-    writer.write_header(header);
+
+    VcfWriter writer (path, move(header));
 
     // We need to order the SNPs taking into account overlapping loci.
     OLocTally<NucTally> *ord = new OLocTally<NucTally>(psum, log_fh);
@@ -366,7 +350,7 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
                 }
                 rec.samples.push_back(sample.str());
             }
-            writer.write_record(rec, header);
+            writer.write_record(rec);
         }
     }
 
@@ -382,39 +366,21 @@ write_vcf(map<int, CSLocus *> &catalog,
     // Write a VCF file as defined here: http://www.1000genomes.org/node/101
     //
 
-    string file = out_path + out_prefix + ".vcf";
-    cerr << "Writing population data to VCF file '" << file << "'\n";
-    VcfWriter writer (file);
-    if (writer.fail()) {
-        cerr << "Error opening VCF file '" << file << "'\n";
-        exit(-1);
-    }
-
-    //
-    // Output the header.
-    //
-
-    // Obtain the current date.
-    time_t     rawtime;
-    struct tm *timeinfo;
-    char       date[32];
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(date, 32, "%Y%m%d", timeinfo);
+    string path = out_path + out_prefix + ".vcf";
+    cerr << "Writing population data to VCF file '" << path << "'\n";
 
     VcfHeader header;
-    header.init_meta();
-    header.add_meta(VcfMeta::predefined.at("INFO/NS"));
-    header.add_meta(VcfMeta::predefined.at("INFO/AF"));
-    header.add_meta(VcfMeta::predefined.at("FORMAT/GT"));
-    header.add_meta(VcfMeta::predefined.at("FORMAT/DP"));
-    header.add_meta(VcfMeta::predefined.at("FORMAT/AD"));
-    header.add_meta(VcfMeta::predefined.at("FORMAT/GL"));
-    header.add_meta(VcfMeta::predefined.at("INFO/locori"));
-    for(auto& s : mpopi.samples()) {
+    header.add_meta(VcfMeta::predefs::info_NS);
+    header.add_meta(VcfMeta::predefs::info_AF);
+    header.add_meta(VcfMeta::predefs::info_locori);
+    header.add_meta(VcfMeta::predefs::format_GT);
+    header.add_meta(VcfMeta::predefs::format_DP);
+    header.add_meta(VcfMeta::predefs::format_AD);
+    header.add_meta(VcfMeta::predefs::format_GL);
+    for(auto& s : mpopi.samples())
         header.add_sample(s.name);
-    }
-    writer.write_header(header);
+
+    VcfWriter writer (path, move(header));
 
     map<string, vector<CSLocus *> >::iterator it;
     CSLocus *loc;
@@ -507,7 +473,7 @@ write_vcf(map<int, CSLocus *> &catalog,
                 }
                 rec.samples.push_back(sample.str());
             }
-            writer.write_record(rec, header);
+            writer.write_record(rec);
         }
     }
 
@@ -524,35 +490,19 @@ write_vcf_haplotypes(map<int, CSLocus *> &catalog,
     //XXX Datum::obshap *is not* ordered, I think. See Bitbucket. @Nick (June 2016)
     //
 
-    string file = out_path + out_prefix + ".haplotypes.vcf";
-    cerr << "Writing population data haplotypes to VCF file '" << file << "'\n";
-    VcfWriter writer (file);
-    if (writer.fail()) {
-        cerr << "Error opening VCF file '" << file << "'\n";
-        exit(-1);
-    }
-
-    //
-    // Obtain the current date.
-    //
-    time_t     rawtime;
-    struct tm *timeinfo;
-    char       date[32];
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(date, 32, "%Y%m%d", timeinfo);
+    string path = out_path + out_prefix + ".haplotypes.vcf";
+    cerr << "Writing population data haplotypes to VCF file '" << path << "'\n";
 
     VcfHeader header;
-    header.init_meta();
-    header.add_meta(VcfMeta::predefined.at("INFO/NS"));
-    header.add_meta(VcfMeta::predefined.at("INFO/AF"));
-    header.add_meta(VcfMeta::predefined.at("FORMAT/GT"));
-    header.add_meta(VcfMeta::predefined.at("FORMAT/DP"));
-    header.add_meta(VcfMeta::predefined.at("INFO/locori"));
-    for(auto& s : mpopi.samples()) {
+    header.add_meta(VcfMeta::predefs::info_NS);
+    header.add_meta(VcfMeta::predefs::info_AF);
+    header.add_meta(VcfMeta::predefs::info_locori);
+    header.add_meta(VcfMeta::predefs::format_GT);
+    header.add_meta(VcfMeta::predefs::format_DP);
+    for(auto& s : mpopi.samples())
         header.add_sample(s.name);
-    }
-    writer.write_header(header);
+
+    VcfWriter writer (path, move(header));
 
     CSLocus  *loc;
     Datum   **d;
@@ -647,7 +597,7 @@ write_vcf_haplotypes(map<int, CSLocus *> &catalog,
                 }
                 rec.samples.push_back(sample.str());
             }
-            writer.write_record(rec, header);
+            writer.write_record(rec);
         }
     }
     return 0;
