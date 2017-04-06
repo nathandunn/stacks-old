@@ -84,8 +84,10 @@ void join(IterableT elements, const SepT& sep, ostream& os) {
     if (first != elements.end()) {
         os << *first;
         ++first;
-        while (first != elements.end())
+        while (first != elements.end()) {
             os << sep << *first;
+            ++first;
+        }
     }
 }
 
