@@ -43,6 +43,13 @@ BamCLocReader::BamCLocReader(const string& bam_path)
         samples.push_back(rg.second.at("SM"));
     mpopi_.init_names(samples);
 
+    // Parse sample IDs, if any.
+    for (auto& rg : read_groups) {
+        auto id = rg.second.find("id");
+        if (id != rg.second.end())
+            mpopi_.set_sample_id(mpopi_.get_sample_index(rg.second.at("SM")), stoi(id->second));
+    }
+
     // Fill the (read group : sample) map.
     for (auto& rg : read_groups)
         rg_to_sample_.insert({rg.first, mpopi_.get_sample_index(rg.second.at("SM"))});
