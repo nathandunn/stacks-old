@@ -83,6 +83,6 @@ int    generate_query_haplotypes(Locus *, QLocus *, set<string> &);
 int    impute_haplotype(string, vector<pair<allele_type, string> > &, string &);
 bool   compare_dist(pair<int, int>, pair<int, int>);
 int    write_matches(string, map<int, QLocus *> &);
-void   write_matches_bam(const string&, map<int, QLocus*>&);
+void   write_matches_bam(const string&, map<int, QLocus*>&, const map<int, Locus*>&);
 
 #endif // __SSTACKS_H__

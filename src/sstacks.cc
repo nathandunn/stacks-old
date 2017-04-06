@@ -142,7 +142,7 @@ int main (int argc, char* argv[]) {
 
         write_matches(sample_path, sample);
         if (write_bam)
-            write_matches_bam(sample_path, sample);
+            write_matches_bam(sample_path, sample, catalog);
         i++;
 
         //
@@ -1303,7 +1303,8 @@ write_matches(string sample_path, map<int, QLocus *> &sample)
     return 0;
 }
 
-void write_matches_bam(const string& sample_prefix, map<int, QLocus *>& sloci) {
+void write_matches_bam(const string& sample_prefix, map<int, QLocus *>& sloci, const map<int, Locus*>& catalog) {
+
     //
     // Get the list of bijective loci.
     //
@@ -1406,13 +1407,14 @@ void write_matches_bam(const string& sample_prefix, map<int, QLocus *>& sloci) {
     htsFile* bam_f = hts_open(matches_bam_path.c_str(), "wb");
 
     // Write the header.
+    // We must write /all/ the existing catalog loci to be able to merge.
+    // All loci declare a length of 10000bp.
     int sample_id = sorted_loci.front().sloc->sample_id;
     string header_text = string() +
             "@HD\tVN:1.5\tSO:coordinate\n"
             "@RG\tID:" + to_string(sample_id) + "\tSM:" + sample_name + "\tid:" + to_string(sample_id) + "\n";
-    const string chrlen = to_string(pow<size_t>(2,31)-1);
-    for (auto& loc : sorted_loci)
-        header_text += string() + "@SQ\tSN:" + to_string(loc.cloc_id) + "\tLN:" + chrlen + "\n";
+    for (auto& cat_loc : catalog)
+        header_text += string() + "@SQ\tSN:" + to_string(cat_loc.second->id) + "\tLN:10000\n";
 
     write_bam_header(bam_f, header_text);
 
