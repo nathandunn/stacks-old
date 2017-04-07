@@ -932,7 +932,7 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 1002:
             min_mapping_qual = is_integer(optarg);
-            if (min_mapping_qual) {
+            if (min_mapping_qual < 0) {
                 cerr << "Unable to parse the minimum mapping quality.\n";
                 help();
             }
