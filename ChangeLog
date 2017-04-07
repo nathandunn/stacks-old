@@ -1,6 +1,7 @@
 Stacks 1.46 - Apr 07, 2017
 --------------------------
     Bugfix: Corrected memory leaks in rxstacks.
+    Bugfix: Corrected non-functioning --min_mapq parameter for pstacks.
 
 Stacks 1.45 - Feb 24, 2017
 --------------------------
