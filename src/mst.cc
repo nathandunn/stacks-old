@@ -45,6 +45,9 @@ bool min_span_tree_cmp(const Node *lhs, const Node *rhs) {
 Node *MinSpanTree::add_node(int id) {
     Node *n = new Node(id);
 
+    if (this->nodes.count(id) > 0)
+        delete this->nodes[id];
+
     this->nodes[id] = n;
 
     return n;
@@ -55,6 +58,11 @@ Node *MinSpanTree::add_node(string label) {
     // Obtain an ID for this node.
     //
     uint id = this->id_cnt;
+
+    if (this->nodes.count(id) > 0) {
+        cerr << "Error constructing minimum spanning tree.\n";
+        delete this->nodes[id];
+    }
 
     Node *n = new Node(id);
     n->label = label;
