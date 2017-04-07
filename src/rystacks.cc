@@ -20,7 +20,7 @@ class SiteCall;
 struct SampleCall;
 void parse_command_line(int argc, char* argv[]);
 void report_options(ostream& os);
-void process_one_locus(CLocReadSet&& loc);
+bool process_one_locus(CLocReadSet&& loc);
 void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls);
 
 class SiteCall {
@@ -134,23 +134,26 @@ int main(int argc, char** argv) {
     // Process every locus
     CLocReadSet loc (bam_fh.mpopi());
     size_t n_loci = 0;
+    size_t n_discarded = 0;
     if (locus_wl.empty()) {
         // No whitelist.
         while (bam_fh.read_one_locus(loc)) {
-            process_one_locus(move(loc));
             ++n_loci;
+            if (!process_one_locus(move(loc)))
+                ++n_discarded;
         }
 
     } else {
         while (bam_fh.read_one_locus(loc) && !locus_wl.empty()) {
             if (locus_wl.count(loc.id())) {
-                process_one_locus(move(loc));
                 ++n_loci;
+                if (!process_one_locus(move(loc)))
+                    ++n_discarded;
                 locus_wl.erase(loc.id());
             }
         }
     }
-    cout << "Processed " << n_loci << " loci.\n";
+    cout << "Processed " << n_loci << " loci; retained " << (n_loci-n_discarded) << " of them.\n";
 
     gzclose(o_gzfasta_f);
     delete o_vcf_f;
@@ -160,9 +163,9 @@ int main(int argc, char** argv) {
     return 0;
 }
 
-void process_one_locus(CLocReadSet&& loc) {
+bool process_one_locus(CLocReadSet&& loc) {
     if (loc.reads().empty() || loc.pe_reads().empty())
-        return; //xxx
+        return false; //xxx
 
     //
     // Assemble the reads.
@@ -174,7 +177,7 @@ void process_one_locus(CLocReadSet&& loc) {
     Graph graph (km_length);
     graph.rebuild(seqs_to_assemble, min_km_count);
     if (graph.empty())
-        return;
+        return false;
 
     if (gfa_out)
         graph.dump_gfa(in_dir + to_string(loc.id()) + ".gfa");
@@ -182,14 +185,14 @@ void process_one_locus(CLocReadSet&& loc) {
     vector<const SPath*> best_path;
     if (!graph.find_best_path(best_path))
         // Not a DAG.
-        return;
+        return false; // xxx (Could still use fw-reads.)
 
     string pe_ctg = SPath::contig_str(best_path.begin(), best_path.end(), km_length);
 
     //
     // Get the contig of the locus.
     //
-    string ctg = loc.reads().at(0).seq.str() + string(10, 'N') + pe_ctg; //xxx
+    string ctg = loc.reads().at(0).seq.str() + string(10, 'N') + pe_ctg; //xxx (Assemble fw & pe together.)
 
     //
     // Align each read to the contig.
@@ -218,7 +221,7 @@ void process_one_locus(CLocReadSet&& loc) {
     }
 
     if (aln_loc.reads().empty())
-        return;
+        return false;
 
     if (aln_out) {
         ofstream aln_f (in_dir + to_string(loc.id()) + ".aln");
@@ -253,6 +256,8 @@ void process_one_locus(CLocReadSet&& loc) {
     */
 
     write_one_locus(aln_loc, calls);
+
+    return true;
 }
 
 SiteCall::SiteCall(const CLocAlnSet::site_iterator& site)
