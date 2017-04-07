@@ -395,6 +395,7 @@ int main (int argc, char* argv[]) {
         map<int, Locus *>::iterator stack_it;
         for (stack_it = stacks.begin(); stack_it != stacks.end(); stack_it++)
             delete stack_it->second;
+        stacks.clear();
         cerr << "done.\n";
     }
 
@@ -405,6 +406,19 @@ int main (int argc, char* argv[]) {
         log_hap_fh.close();
     }
 
+    //
+    // Free memory associated with the catalog and matches to the catalog.
+    //
+    for (map<int, CSLocus *>::iterator cat_it = catalog.begin(); cat_it != catalog.end(); cat_it++)
+        delete cat_it->second;
+    catalog.clear();
+
+    for (uint i = 0; i < catalog_matches.size(); i++) {
+        for (uint j = 0; j < catalog_matches[i].size(); j++)
+            delete catalog_matches[i][j];
+        catalog_matches[i].clear();
+    }
+    
     cerr << "rxstacks is done.\n";
     return 0;
     IF_NDEBUG_CATCH_ALL_EXCEPTIONS
@@ -551,14 +565,12 @@ prune_mst_haplotypes(CSLocus *cloc, Datum *d, Locus *loc, unsigned long &pruned_
     MinSpanTree *mst = new MinSpanTree;
 
     map<string, int>::iterator it;
-    vector<uint>   keys;
     vector<string> haps;
     Node *n;
 
     for (it = cloc->hap_cnts.begin(); it != cloc->hap_cnts.end(); it++) {
-        n = mst->add_node(it->first);
+        mst->add_node(it->first);
         haps.push_back(it->first);
-        keys.push_back(n->id);
     }
 
     //
@@ -609,8 +621,10 @@ prune_mst_haplotypes(CSLocus *cloc, Datum *d, Locus *loc, unsigned long &pruned_
     //
     sort(haplotypes.begin(), haplotypes.end(), compare_pair_haplotype_rev);
 
-    if (size <= 2)
+    if (size <= 2) {
+        delete mst;
         return 0;
+    }
 
     //
     // Pull out the two most frequently occuring haplotypes.
@@ -719,6 +733,8 @@ prune_mst_haplotypes(CSLocus *cloc, Datum *d, Locus *loc, unsigned long &pruned_
     // operate on newly generated, spurious haplotypes.
     //
     generate_matched_haplotypes(cloc, loc, d);
+
+    delete mst;
 
     return 0;
 }

@@ -1,3 +1,7 @@
+Stacks 1.46 - Apr 07, 2017
+--------------------------
+    Bugfix: Corrected memory leaks in rxstacks.
+
 Stacks 1.45 - Feb 24, 2017
 --------------------------
     Feature: Tweaked the interfaces of most programs:

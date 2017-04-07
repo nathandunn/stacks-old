@@ -76,6 +76,8 @@ int load_catalog_matches(string sample,  vector<CatMatch *> &matches) {
     else
         fh.close();
 
+    free(line);
+
     return 0;
 }
 
@@ -194,7 +196,7 @@ int load_model_results(string sample,  map<int, ModRes *> &modres) {
     else
         fh.close();
 
-    delete [] line;
+    free(line);
 
     return 1;
 }
@@ -293,7 +295,7 @@ int load_snp_calls(string sample,  map<int, SNPRes *> &snpres) {
     else
         fh.close();
 
-    delete [] line;
+    free(line);
 
     return 1;
 }
