@@ -203,8 +203,10 @@ void link_reads_to_loci(
 
         for (const char* fwread_name : sloc.comp) {
             string pread_name (fwread_name);
-            if (! debug_flags.count(DEBUG_FWREADS))
-                convert_fw_read_name_to_paired(pread_name);
+            if (! debug_flags.count(DEBUG_FWREADS)) {
+                strip_read_number(pread_name);
+                pread_name += "/2";
+            }
             pread_name_to_loc.insert( {pread_name, loc_info.size()-1} );
         }
     }
