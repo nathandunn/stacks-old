@@ -65,7 +65,7 @@
 #define IF_NDEBUG_CATCH_ALL_EXCEPTIONS \
     } catch (const std::exception& e) { \
         std::cerr << "Aborted."; \
-        if (e.what() != std::exception().what()) \
+        if (typeid(e) != typeid(std::exception)) \
             std::cerr << " (" << e.what() << ")"; \
         std::cerr << "\n"; \
         return 13; \

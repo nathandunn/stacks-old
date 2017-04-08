@@ -1,8 +1,8 @@
 #include <regex>
-#include <cassert>
-#include <map>
+#include <cctype>
 
 #include "constants.h"
+#include "utils.h"
 
 using namespace std;
 
@@ -45,22 +45,18 @@ string remove_suffix(FileT type, const string& orig) {
 }
 
 regex init_file_ext_regex () {
-    string s = "(";
+    vector<string> exts;
+    for (auto& filet : known_extensions)
+        exts.push_back(filet.first);
 
-    auto i = known_extensions.begin();
-    assert(!known_extensions.empty());
-    string ext = i->first;
-    escape_char('.', ext);
-    s += ext;
-    ++i;
-    while(i != known_extensions.end()) {
-        ext = i->first;
-        escape_char('.', ext);
-        s += "|" + ext;
-        ++i;
-    }
+    stringstream ss;
+    ss << "(";
+    join(exts, '|', ss);
+    ss << ")$";
 
-    s += ")$";
+    string s = ss.str();
+    escape_char('.', s);
+
     return regex(s);
 }
 
@@ -68,8 +64,13 @@ FileT guess_file_type (const string& path) {
 
     static const regex reg = init_file_ext_regex();
 
+    // Apply std::tolower.
+    string copy = path;
+    for (char& c : copy)
+        c = tolower(c);
+
     smatch m;
-    regex_search(path, m, reg);
+    regex_search(copy, m, reg);
 
     if (m.empty())
         return FileT::unknown;
