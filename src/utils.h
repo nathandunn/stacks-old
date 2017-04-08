@@ -149,4 +149,25 @@ void convert_fw_read_name_to_paired(string& read_name) {
     read_name.back() = '2';
 }
 
+// strip_read_number
+// ----------
+// Given a read name, removes the trailing /1, /2, _1 or _1.
+inline
+void strip_read_number(string& read_name) {
+    if (read_name.size() >= 2) {
+        char last = read_name[read_name.size()-1];
+        char ante = read_name[read_name.size()-2];
+        if ((last == '1' || last == '2') && (ante == '/' || ante == '_')) {
+            // Remove the suffix & return.
+            read_name.resize(read_name.size()-2);
+            return;
+        }
+    }
+
+    // Unexpected suffix.
+    cerr << "Error: Unrecognized read name format: expected '"
+         << read_name << "' to end with /1, /2, _1 or _2.\n";
+    throw exception();
+}
+
 #endif // __UTILS_H__
