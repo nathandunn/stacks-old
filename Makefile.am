@@ -1,6 +1,6 @@
 bin_PROGRAMS = ustacks pstacks estacks cstacks sstacks rxstacks hstacks process_radtags process_shortreads \
 	kmer_filter clone_filter genotypes populations phasedstacks \
-	pstacks_pe tsv2bam rystacks
+	tsv2bam rystacks
 
 noinst_LIBRARIES = libcore.a libclean.a libpop.a
 
@@ -74,9 +74,6 @@ populations_SOURCES = libcore.a libpop.a src/populations.h src/populations.cc
 genotypes_SOURCES   = libcore.a libpop.a src/genotypes.h src/genotypes.cc
 rxstacks_SOURCES    = libcore.a libpop.a src/rxstacks.h src/rxstacks.cc
 
-# n_pe
-pstacks_pe_SOURCES  = libcore.a src/pstacks_pe.h src/pstacks_pe.cc src/pstacks_base.h src/pstacks_base.cc
-
 # tsv2bam & rystacks
 tsv2bam_SOURCES = libcore.a src/tsv2bam.cc
 rystacks_SOURCES = libcore.a src/rystacks.cc src/debruijn.h src/debruijn.cc src/Alignment.h
@@ -126,11 +123,6 @@ populations_LDADD    = $(OPENMP_CFLAGS) libcore.a libpop.a
 rxstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
 rxstacks_LDFLAGS  = $(OPENMP_CFLAGS)
 rxstacks_LDADD    = $(OPENMP_CFLAGS) libcore.a libpop.a
-
-# n_pe
-pstacks_pe_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS) $(SPARSEHASH_CFLAGS)
-pstacks_pe_LDFLAGS  = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
-pstacks_pe_LDADD    = $(BAM_LIBS) libcore.a
 
 # tsv2bam & rystacks
 tsv2bam_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
