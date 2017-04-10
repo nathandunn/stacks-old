@@ -79,7 +79,7 @@ public:
 
     bool is_unmapped() const {return c_.flag & BAM_FUNMAP;}
     bool is_rev_compl() const {return c_.flag & BAM_FREVERSE;}
-    bool is_paired() const {return c_.flag & BAM_FPAIRED;}
+    bool is_read1() const {return c_.flag & BAM_FREAD1;}
     bool is_read2() const {return c_.flag & BAM_FREAD2;}
 
     AlnT aln_type() const;
