@@ -88,10 +88,14 @@ bool BamCLocReader::read_one_locus(CLocReadSet& readset) {
     // Read all the reads of the locus, and one more.
     do {
         if (rec.is_read2())
-            readset.add_pe(SRead(Read(rec.seq(), rec.qname()), rg_to_sample_.at(rec.read_group())));
+            readset.add_pe(SRead(Read(rec.seq(), rec.qname()+"/2"), rg_to_sample_.at(rec.read_group())));
+        else if (rec.is_read1())
+            readset.add(SRead(Read(rec.seq(), rec.qname()+"/1"), rg_to_sample_.at(rec.read_group())));
         else
-            // Note: BAM_FREAD1 needs not be set.
-            readset.add(SRead(Read(rec.seq(), rec.qname()), rg_to_sample_.at(rec.read_group())));
+            // If tsv2bam wasn't given paired-end reads, no flag was set and the
+            // read names were left unchanged, so we also don't touch them.
+            //readset.add(SRead(Read(rec.seq(), rec.qname()), rg_to_sample_.at(rec.read_group())));
+            throw exception();
 
         if(!bam_f_->next_record()) {
             // EOF
