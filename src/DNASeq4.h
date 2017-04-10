@@ -180,17 +180,18 @@ class DNASeq4 {
 public:
     DNASeq4() : l_(0), v_() {}
     DNASeq4(const DNASeq4& other) : l_(other.l_), v_(other.v_) {}
-    DNASeq4(DNASeq4&& other) : l_(other.l_), v_(move(other.v_)) {}
+    DNASeq4(DNASeq4&& other) : l_(other.l_), v_(move(other.v_)) {other.clear();}
     DNASeq4(const char* s, size_t len);
     DNASeq4(const uchar* arr, size_t len) : l_(len), v_(arr, arr+len/2+len%2) {} // `len` is the length of the sequence (not of the array)
     DNASeq4(const string& s) : DNASeq4(s.c_str(), s.size()) {}
     DNASeq4& operator= (const DNASeq4& other) {l_ = other.l_; v_ = other.v_; return *this;}
-    DNASeq4& operator= (DNASeq4&& other) {l_ = other.l_; v_ = move(other.v_); return *this;}
+    DNASeq4& operator= (DNASeq4&& other) {l_ = other.l_; v_ = move(other.v_); other.clear(); return *this;}
 
     size_t length() const {return l_;}
     string str() const;
     DNASeq4 rev_compl() const;
     void set(size_t i, Nt4 nt) {i%2==0 ? v_[i/2].first(nt) : v_[i/2].second(nt);}
+    void clear() {l_ = 0; v_ = vector<DiNuc>();}
 
     Nt4 operator[] (size_t i) const {return i%2==0 ? v_[i/2].first() : v_[i/2].second();}
     bool  operator== (const DNASeq4& other) const {return l_ == other.l_ && v_ == other.v_;}
