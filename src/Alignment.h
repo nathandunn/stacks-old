@@ -65,27 +65,35 @@ struct AlnRead : Read {
 
 inline
 Nt4 Alignment::operator[] (size_t ref_i) const {
+
     size_t seq_i = 0;
-    auto op = cig_->begin();
-    while (ref_i >= op->second || op->first == 'I') {
-        if(op->first == 'M') {
-            // Consumes ref & seq.
+    for (auto op=cig_->begin(); op!=cig_->end(); ++op) {
+        if (op->first == 'M') {
+            if (ref_i < op->second)
+                // This is the relevant cigar operation.
+                return (*seq_)[seq_i+ref_i];
+
+            // Consume ref & seq.
             seq_i += op->second;
             ref_i -= op->second;
+
         } else if (op->first == 'D') {
-            // Consumes ref.
+            if (ref_i < op->second)
+                // This is the relevant cigar operation.
+                return Nt4::n;
+
+            // Consume ref.
             ref_i -= op->second;
         } else if (op->first == 'I') {
-            // Consumes seq.
+            // Consume seq.
             seq_i += op->second;
+        } else {
+            assert(false);
         }
-        ++op;
-        if (op == cig_->end())
-            throw std::out_of_range(string("out_of_range in Alignment::op[]: +")+to_string(ref_i));
     }
-
-    seq_i += ref_i;
-    return (*seq_)[seq_i];
+    // `ref_i` wasn't entirely consumed.
+    throw std::out_of_range("Alignment::op[]: out_of_range");
+    return Nt4::n;
 }
 
 inline
