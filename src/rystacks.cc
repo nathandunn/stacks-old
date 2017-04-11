@@ -305,7 +305,7 @@ SiteCall::SiteCall(const CLocAlnSet::site_iterator& site)
             continue;
         }
 
-        s_call.depths = {counts.at(Nt4::a), counts.at(Nt4::c), counts.at(Nt4::g), counts.at(Nt4::t)};
+        s_call.depths = {counts[Nt4::a], counts[Nt4::c], counts[Nt4::g], counts[Nt4::t]};
         tot_depth_ += s_call.tot_depth();
 
         s_call.call = call_snp(lr_multinomial_model(counts.at_rank(0), counts.at_rank(1), counts.at_rank(2), counts.at_rank(3)));
