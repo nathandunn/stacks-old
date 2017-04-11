@@ -192,6 +192,8 @@ public:
     DNASeq4 rev_compl() const;
     void set(size_t i, Nt4 nt) {i%2==0 ? v_[i/2].first(nt) : v_[i/2].second(nt);}
     void clear() {l_ = 0; v_ = vector<DiNuc>();}
+    void reserve(size_t len) {v_.reserve(len/2+len%2);}
+    void append(const DNASeq4& other);
 
     Nt4 operator[] (size_t i) const {return i%2==0 ? v_[i/2].first() : v_[i/2].second();}
     bool  operator== (const DNASeq4& other) const {return l_ == other.l_ && v_ == other.v_;}
