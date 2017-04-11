@@ -180,7 +180,7 @@ bool process_one_locus(CLocReadSet&& loc) {
     CLocAlnSet pe_aln_loc (loc.mpopi());
     pe_aln_loc.id(loc.id());
     do { // (Avoiding nested ifs.)
-        if (!loc.pe_reads().empty())
+        if (loc.pe_reads().empty())
             break;
 
         //
