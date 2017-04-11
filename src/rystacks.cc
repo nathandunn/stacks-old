@@ -39,13 +39,12 @@ public:
 };
 
 struct SampleCall {
-    array<size_t, 4> depths;
+    Nt2Counts depths;
     snp_type call;
     array<Nt4, 2> nts; // hom {nt, Nt4::n} | het {min_nt, max_nt} | unk {Nt4::n, Nt4::n}
 
-    SampleCall() : depths{0, 0, 0, 0}, call(snp_type_unk), nts{0, 0} {}
-
-    size_t tot_depth() const {return depths[0]+depths[1]+depths[2]+depths[3];}
+    SampleCall() : depths(), call(snp_type_unk), nts{Nt4::n,Nt4::n} {}
+    SampleCall(const Nt4Counts& counts, snp_type gt_call, Nt4 rank0_nt, Nt4 rank1_nt);
 };
 
 /*
@@ -294,35 +293,20 @@ SiteCall::SiteCall(const CLocAlnSet::site_iterator& site)
     //
     Nt4Counts counts;
     for (size_t s=0; s<site.mpopi().samples().size(); ++s) {
-        SampleCall s_call;
-
         site.counts(counts, s);
+
         if (counts.at_rank(0) == 0) {
-            s_call.depths = {0, 0, 0, 0};
-            s_call.call = snp_type_unk;
-            s_call.nts = {Nt4::n, Nt4::n};
-            sample_calls_.push_back(s_call);
-            continue;
+            sample_calls_.push_back(SampleCall());
+        } else {
+            snp_type gt_call = call_snp(lr_multinomial_model(counts.at_rank(0), counts.at_rank(1), counts.at_rank(2), counts.at_rank(3)));
+            sample_calls_.push_back(SampleCall(
+                    counts,
+                    gt_call,
+                    counts.nt_of_rank(0),
+                    counts.nt_of_rank(1)
+                    ));
+            tot_depth_ += sample_calls_.back().depths.sum();
         }
-
-        s_call.depths = {counts[Nt4::a], counts[Nt4::c], counts[Nt4::g], counts[Nt4::t]};
-        tot_depth_ += s_call.tot_depth();
-
-        s_call.call = call_snp(lr_multinomial_model(counts.at_rank(0), counts.at_rank(1), counts.at_rank(2), counts.at_rank(3)));
-        switch (s_call.call) {
-        case snp_type_hom:
-            s_call.nts = {counts.nt_of_rank(0), Nt4::n};
-            break;
-        case snp_type_het:
-            s_call.nts = {counts.nt_of_rank(0), counts.nt_of_rank(1)};
-            sort(s_call.nts.begin(), s_call.nts.end());
-            break;
-        default:
-            s_call.nts = {Nt4::n, Nt4::n};
-            break;
-        }
-        sample_calls_.push_back(s_call);
-
     }
 
     //
@@ -331,9 +315,17 @@ SiteCall::SiteCall(const CLocAlnSet::site_iterator& site)
     counts.reset();
     for (const SampleCall& sc : sample_calls_) {
         switch (sc.call) {
-        case snp_type_hom : counts.increment(sc.nts[0]); counts.increment(sc.nts[0]); break;
-        case snp_type_het : counts.increment(sc.nts[0]); counts.increment(sc.nts[1]); break;
-        default: break;
+        case snp_type_hom :
+            counts.increment(sc.nts[0]);
+            counts.increment(sc.nts[0]);
+            break;
+        case snp_type_het :
+            counts.increment(sc.nts[0]);
+            counts.increment(sc.nts[1]);
+            break;
+        default:
+            // snp_type_unk
+            break;
         }
     }
     counts.sort();
@@ -354,6 +346,20 @@ SiteCall::SiteCall(const CLocAlnSet::site_iterator& site)
                 }
             }
         }
+    }
+}
+
+SampleCall::SampleCall(const Nt4Counts& counts, snp_type gt_call, Nt4 rank0_nt, Nt4 rank1_nt)
+: depths(counts), call(gt_call), nts{Nt4::n, Nt4::n}
+{
+    if (call == snp_type_hom) {
+        nts[0] = rank0_nt;
+    } else if (call == snp_type_het) {
+        if (rank0_nt < rank1_nt)
+            nts = {rank0_nt, rank1_nt};
+        else
+            // Reorder e.g. {G, C} to {C, G}.
+            nts = {rank1_nt, rank0_nt};
     }
 }
 
@@ -452,8 +458,7 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
         for (size_t s=0; s<mpopi.samples().size(); ++s) {
             const SampleCall& s_call = sitecall.sample_calls()[s];
 
-            size_t dp = s_call.depths[0] + s_call.depths[1] + s_call.depths[2] + s_call.depths[3];
-            if (dp == 0) {
+            if (s_call.depths.sum() == 0) {
                 // No data for this sample.
                 rec.samples.push_back(".");
                 continue;
@@ -480,13 +485,13 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
             }
 
             // DP field.
-            genotype << ':' << dp;
+            genotype << ':' << s_call.depths.sum();
 
             // AD field.
             vector<size_t> ad;
             ad.reserve(vcf_alleles.size());
             for (Nt4 nt : vcf_alleles)
-                ad.push_back(s_call.depths[size_t(Nt2(nt))]);
+                ad.push_back(s_call.depths[nt]);
             genotype << ':';
             join(ad, ',', genotype);
 
@@ -545,7 +550,7 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
         o_models_f << loc_id << "\ts_depths\t" << sample_id << "\t" << std::hex;
         for (auto& c : calls) {
             // For each site/position.
-            for (size_t nt=0; nt<4; ++nt) {
+            for (Nt2 nt : Nt2::all) {
                 size_t dp = c.sample_calls()[s].depths[nt];
                 if (dp <= 0xF)
                     o_models_f << "0" << dp;
