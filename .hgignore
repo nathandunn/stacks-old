@@ -20,6 +20,10 @@ htslib/*.o
 htslib/cram/*.o
 stamp-h1
 
+htslib/libhts.a
+libcore.a
+libclean.a
+libpop.a
 cstacks
 estacks
 genotypes
@@ -33,9 +37,5 @@ pstacks
 rxstacks
 sstacks
 ustacks
-htslib/libhts.a
-pstacks_pe
-cstacks_pe
-ustacks_pe
-sstacks_pe
-rxstacks_pe
+tsv2bam
+rystacks
