@@ -174,6 +174,7 @@ struct SRead : Read {
 struct SAlnRead : AlnRead {
     size_t sample; // index in MetaPopInfo::samples_
     SAlnRead(AlnRead&& r, size_t spl) : AlnRead(move(r)), sample(spl) {}
+    SAlnRead(Read&& r, Cigar&& c, size_t spl) : AlnRead(move(r), move(c)), sample(spl) {}
 };
 
 class CLocReadSet {
@@ -206,9 +207,10 @@ class CLocAlnSet {
     vector<vector<size_t>> reads_per_sample_; // `at(sample)` is a vector of indexes in `reads_`.
 
 public:
-    CLocAlnSet(const MetaPopInfo& mpopi)
-        : mpopi_(&mpopi), id_(-1), ref_(), reads_(), reads_per_sample_(mpopi_->samples().size())
+    CLocAlnSet(const MetaPopInfo& mpopi, int id)
+        : mpopi_(&mpopi), id_(id), ref_(), reads_(), reads_per_sample_(mpopi_->samples().size())
         {}
+    CLocAlnSet(const MetaPopInfo& mpopi) : CLocAlnSet(mpopi, -1) {}
     CLocAlnSet(CLocAlnSet&&) = default;
     CLocAlnSet& operator= (CLocAlnSet&&) = default;
 

@@ -164,64 +164,79 @@ int main(int argc, char** argv) {
 }
 
 bool process_one_locus(CLocReadSet&& loc) {
-    if (loc.reads().empty() || loc.pe_reads().empty())
-        return false; //xxx
+    assert(!loc.reads().empty());
 
     //
-    // Assemble the reads.
+    // Process the paired-end reads.
     //
-    vector<const DNASeq4*> seqs_to_assemble;
-    for (const Read& r : loc.pe_reads())
-        seqs_to_assemble.push_back(&r.seq);
+    CLocAlnSet pe_aln_loc (loc.mpopi());
+    pe_aln_loc.id(loc.id());
+    do { // (Avoiding nested ifs.)
+        if (!loc.pe_reads().empty())
+            break;
 
-    Graph graph (km_length);
-    graph.rebuild(seqs_to_assemble, min_km_count);
-    if (graph.empty())
-        return false;
+        //
+        // Assemble the reads.
+        //
+        string pe_contig;
+        vector<const DNASeq4*> seqs_to_assemble;
+        for (const Read& r : loc.pe_reads())
+            seqs_to_assemble.push_back(&r.seq);
 
-    if (gfa_out)
-        graph.dump_gfa(in_dir + to_string(loc.id()) + ".gfa");
+        Graph graph (km_length);
+        graph.rebuild(seqs_to_assemble, min_km_count);
+        if (graph.empty())
+            break;
 
-    vector<const SPath*> best_path;
-    if (!graph.find_best_path(best_path))
-        // Not a DAG.
-        return false; // xxx (Could still use fw-reads.)
+        if (gfa_out)
+            graph.dump_gfa(in_dir + to_string(loc.id()) + ".gfa");
 
-    string pe_ctg = SPath::contig_str(best_path.begin(), best_path.end(), km_length);
+        vector<const SPath*> best_path;
+        if (!graph.find_best_path(best_path))
+            // Not a DAG.
+            break;
 
-    //
-    // Get the contig of the locus.
-    //
-    string ctg = loc.reads().at(0).seq.str() + string(10, 'N') + pe_ctg; //xxx (Assemble fw & pe together.)
+         //
+        // Align each read to the contig.
+        //
+        string ctg = SPath::contig_str(best_path.begin(), best_path.end(), km_length);
+        pe_aln_loc.ref(DNASeq4(ctg));
 
-    //
-    // Align each read to the contig.
-    //
-    CLocAlnSet aln_loc (loc.mpopi());
-    aln_loc.id(loc.id());
-    aln_loc.ref(DNASeq4(ctg));
+        GappedAln aligner;
+        for (SRead& r : loc.pe_reads()) {
+            string seq = r.seq.str();
+            aligner.init(r.seq.length(), ctg.length());
+            aligner.align(seq, ctg);
+            Cigar cigar;
+            parse_cigar(aligner.result().cigar.c_str(), cigar);
+            if (cigar.size() > 10)
+                // Read didn't align, discard it. xxx Refine this.
+                continue;
+            pe_aln_loc.add(SAlnRead(move((Read&)r), move(cigar), r.sample));
+        }
+    } while (false);
 
-    vector<SRead*> reads_to_align; // Both fw & pe.
+    // Build the foward-reads object.
+
+    CLocAlnSet fw_aln_loc (loc.mpopi(), loc.id());
+    fw_aln_loc.ref(DNASeq4(loc.reads().at(0).seq));
     for (SRead& r : loc.reads())
-        reads_to_align.push_back(&r);
-    for (SRead& r : loc.pe_reads())
-        reads_to_align.push_back(&r);
+        fw_aln_loc.add(SAlnRead(move((Read&)r), {{'M',r.seq.length()}}, r.sample));
 
-    GappedAln aligner;
-    for (SRead* r : reads_to_align) {
-        string seq = r->seq.str();
-        aligner.init(r->seq.length(), ctg.length());
-        aligner.align(seq, ctg);
-        Cigar cigar;
-        parse_cigar(aligner.result().cigar.c_str(), cigar);
-        if (cigar.size() > 10)
-            // Read didn't align, discard it. xxx Refine this.
-            continue;
-        aln_loc.add(SAlnRead(AlnRead(move(*(Read*)r), move(cigar)), r->sample));
+    //
+    // Merge the forward & paired-end contigs.
+    //
+    CLocAlnSet aln_loc (loc.mpopi(), loc.id());
+    if (pe_aln_loc.reads().empty()) {
+        aln_loc = move(fw_aln_loc);
+    } else {
+        CLocAlnSet dummy (loc.mpopi(), loc.id());
+        dummy.ref(DNASeq4(string(10, 'N')));
+        aln_loc = CLocAlnSet::juxtapose(
+                move(fw_aln_loc),
+                CLocAlnSet::juxtapose(move(dummy), move(pe_aln_loc))
+                );
     }
-
-    if (aln_loc.reads().empty())
-        return false;
 
     if (aln_out) {
         ofstream aln_f (in_dir + to_string(loc.id()) + ".aln");
