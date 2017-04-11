@@ -9,24 +9,16 @@ typedef vector<pair<char, uint>> Cigar;
 
 class Alignment {
     const DNASeq4* seq_;
-    Cigar cig_;
+    const Cigar* cig_;
 
 public:
-    Alignment(const DNASeq4& seq, Cigar&& cigar)
-        : seq_(&seq), cig_(move(cigar))
+    Alignment(const DNASeq4& seq, const Cigar& cigar)
+        : seq_(&seq), cig_(&cigar)
         {assert(check_cigar());}
-
-    // N.B. Copying of course copies the pointer as well; this is not always
-    // what we want, c.f. AlnRead
-    Alignment(Alignment&&) = default;
-    Alignment& operator= (Alignment&&) = default;
-    Cigar&& move_cigar() {return move(cig_);}
-    void assign(const DNASeq4& seq, Cigar&& cigar) {seq_ = &seq; cig_ = move(cigar);}
 
     // N.B. Inefficient; prefer iteration.
     Nt4 operator[] (size_t ref_i) const;
 
-    const Cigar& cigar() const {return cig_;}
     string str() const {string s; for(iterator it (*this); it; ++it) s.push_back(char(*it)); return s;}
 
 private:
@@ -46,7 +38,7 @@ public:
 
     public:
         iterator(const Alignment& a)
-            : cig_it_(a.cig_.begin()), cig_past_(a.cig_.end()), pos_(0), seq_it_(a.seq_->begin()), seq_past_(a.seq_->end())
+            : cig_it_(a.cig_->begin()), cig_past_(a.cig_->end()), pos_(0), seq_it_(a.seq_->begin()), seq_past_(a.seq_->end())
             {skip_insertion();}
         iterator& operator++ ();
         operator bool() const {return cig_it_ != cig_past_;}
@@ -59,14 +51,10 @@ public:
 };
 
 struct AlnRead : Read {
-    Alignment aln;
-    AlnRead(Read&& r, Cigar&& c) : Read(move(r)), aln(seq, move(c)) {}
+    Cigar cigar;
+    AlnRead(Read&& r, Cigar&& c) : Read(move(r)), cigar(move(c)) {}
 
-    AlnRead(AlnRead&& other)
-        : Read(move(other)), aln(seq, other.aln.move_cigar()) //n.b. `seq` is `this->seq`.
-        {}
-    AlnRead& operator= (AlnRead&& other)
-        {Read::operator=(move(other)); aln.assign(seq, other.aln.move_cigar()); return *this;}
+    Alignment aln() const {return Alignment(seq, cigar);}
 };
 
 //
@@ -78,7 +66,7 @@ struct AlnRead : Read {
 inline
 Nt4 Alignment::operator[] (size_t ref_i) const {
     size_t seq_i = 0;
-    auto op = cig_.begin();
+    auto op = cig_->begin();
     while (ref_i >= op->second || op->first == 'I') {
         if(op->first == 'M') {
             // Consumes ref & seq.
@@ -92,7 +80,7 @@ Nt4 Alignment::operator[] (size_t ref_i) const {
             seq_i += op->second;
         }
         ++op;
-        if (op == cig_.end())
+        if (op == cig_->end())
             throw std::out_of_range(string("out_of_range in Alignment::op[]: +")+to_string(ref_i));
     }
 
@@ -104,11 +92,18 @@ inline
 Alignment::iterator& Alignment::iterator::operator++ () {
     assert(cig_it_ != cig_past_);
 
+    //
+    // If the current cigar operation is M, advance in the sequence.
+    // (rem. The current operation is never I, as they're skipped.)
+    //
     if (cig_it_->first == 'M') {
         assert(seq_it_ != seq_past_);
         ++seq_it_;
     }
 
+    //
+    // Advance in the cigar.
+    //
     ++pos_;
     if (pos_ == cig_it_->second) {
         // Enter the next CIGAR operation.
@@ -116,7 +111,6 @@ Alignment::iterator& Alignment::iterator::operator++ () {
         ++cig_it_;
         skip_insertion();
     }
-
     // Upon reaching the end of the CIGAR, check that the entire sequence was
     // also consumed.
     assert(cig_it_ == cig_past_ ? !(seq_it_ != seq_past_) : true);
@@ -139,7 +133,7 @@ void Alignment::iterator::skip_insertion() {
 inline
 bool Alignment::check_cigar() const {
     size_t seq_i = 0;
-    for (auto& op : cig_) {
+    for (auto& op : *cig_) {
         if (op.first == 'M' || op.first == 'I')
             // M and I consume the sequence.
             seq_i += op.second;

@@ -243,7 +243,7 @@ public:
                 {
             its_.reserve(loc_aln.reads().size());
             for (const SAlnRead& r: loc_aln.reads())
-                its_.push_back(Alignment::iterator(r.aln));
+                its_.push_back(Alignment::iterator(r.aln()));
         }
         operator bool () const {return ref_it_ != ref_past_;}
         site_iterator& operator++ ();
@@ -265,7 +265,7 @@ public:
 
 inline
 void CLocAlnSet::add(SAlnRead&& r) {
-    assert(std::get<1>(cigar_lengths(r.aln.cigar())) == ref_.length());
+    assert(std::get<1>(cigar_lengths(r.cigar)) == ref_.length());
     reads_per_sample_.at(r.sample).push_back(reads_.size());
     reads_.push_back(move(r));
 }
