@@ -291,3 +291,74 @@ homozygous_likelihood(int col, map<char, int> &nuc)
 
     return lnl;
 }
+
+SiteCall call_site(const CLocAlnSet::site_iterator& site) {
+
+    // N.B. For now we use the old binomial model.
+
+    //
+    // Look at this site in each sample; make genotype calls.
+    //
+    size_t tot_depth = 0;
+    vector<SampleCall> sample_calls;
+    sample_calls.reserve(site.mpopi().samples().size());
+    Nt4Counts counts;
+    for (size_t s=0; s<site.mpopi().samples().size(); ++s) {
+        site.counts(counts, s);
+
+        if (counts.at_rank(0) == 0) {
+            sample_calls.push_back(SampleCall());
+        } else {
+            snp_type gt_call = call_snp(lr_multinomial_model(counts.at_rank(0), counts.at_rank(1), counts.at_rank(2), counts.at_rank(3)));
+            sample_calls.push_back(SampleCall(
+                    counts,
+                    gt_call,
+                    counts.nt_of_rank(0),
+                    counts.nt_of_rank(1)
+                    ));
+            tot_depth += sample_calls.back().depths().sum();
+        }
+    }
+
+    //
+    // Iterate over the SampleCalls & record the genotypes that were found.
+    //
+    map<Nt4, size_t> alleles;
+    counts.reset();
+    for (const SampleCall& sc : sample_calls) {
+        switch (sc.call()) {
+        case snp_type_hom :
+            counts.increment(sc.nt0());
+            counts.increment(sc.nt0());
+            break;
+        case snp_type_het :
+            counts.increment(sc.nt0());
+            counts.increment(sc.nt1());
+            break;
+        default:
+            // snp_type_unk
+            break;
+        }
+    }
+    counts.sort();
+    if (counts.at_rank(0) > 0) {
+        // At least one allele was observed.
+        alleles.insert({counts.nt_of_rank(0), counts.at_rank(0)});
+
+        if (counts.at_rank(1) > 0) {
+            // SNP with at least two alleles.
+            alleles.insert({counts.nt_of_rank(1), counts.at_rank(1)});
+
+            if (counts.at_rank(2) > 0) {
+                alleles.insert({counts.nt_of_rank(2), counts.at_rank(2)});
+
+                if (counts.at_rank(3) > 0) {
+                    // Quaternary SNP.
+                    alleles.insert({counts.nt_of_rank(3), counts.at_rank(3)});
+                }
+            }
+        }
+    }
+
+    return SiteCall(tot_depth, move(alleles), move(sample_calls));
+}
