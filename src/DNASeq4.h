@@ -96,7 +96,7 @@ public:
     void sort();
 
     // Get the count for a given nucleotide.
-    size_t at(Nt4 nt) const {return counts_[size_t(nt)];}
+    size_t operator[] (Nt4 nt) const {return counts_[size_t(nt)];}
 
     // Get the count for the nucleotide of the given rank. Rank 0 has the
     // highest count.
@@ -106,7 +106,33 @@ public:
     Nt4 nt_of_rank(size_t rank) const {return Nt4(size_t(sorted_[rank]-counts_));}
 
     // Print the counts.
-    friend ostream& operator<< (ostream& os, const Nt4Counts& loc);
+    friend ostream& operator<< (ostream& os, const Nt4Counts& cnts);
+};
+
+//
+// Nt2Counts
+// Simple interface to store counts of A, C, G, T. Lighter than Nt4Counts but
+// not as flexible.
+//
+class Nt2Counts {
+    size_t counts_[4];
+
+public:
+    Nt2Counts()
+        : counts_{0, 0, 0, 0}
+        {}
+    Nt2Counts(const Nt4Counts& counts)
+        : counts_{counts[Nt4::a], counts[Nt4::c], counts[Nt4::g], counts[Nt4::t]}
+        {}
+
+    // Get the count for a given nucleotide.
+    size_t operator[] (Nt2 nt) const {return counts_[size_t(nt)];}
+    size_t operator[] (Nt4 nt4) const {return counts_[size_t(Nt2(nt4))];}
+
+    size_t sum() const {return counts_[0]+counts_[1]+counts_[2]+counts_[3];}
+
+    // Print the counts.
+    friend ostream& operator<< (ostream& os, const Nt2Counts& cnts);
 };
 
 // A sequence of nucleotides on a uint64_t, where the first nucleotide uses the
@@ -246,6 +272,13 @@ ostream& operator<< (ostream& os, const Nt4Counts& cnts) {
        << char(cnts.nt_of_rank(1)) << ":" << cnts.at_rank(1) << " "
        << char(cnts.nt_of_rank(2)) << ":" << cnts.at_rank(2) << " "
        << char(cnts.nt_of_rank(3)) << ":" << cnts.at_rank(3);
+    return os;
+}
+
+inline
+ostream& operator<< (ostream& os, const Nt2Counts& cnts) {
+    os << "A:" << cnts[Nt2::a] << " C:" << cnts[Nt2::c]
+       << " G:" << cnts[Nt2::g]  << " T:" << cnts[Nt2::t];
     return os;
 }
 
