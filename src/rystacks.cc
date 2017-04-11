@@ -90,6 +90,7 @@ LogAlterator* lg = NULL;
 gzFile o_gzfasta_f = NULL;
 VcfWriter* o_vcf_f = NULL;
 ofstream o_models_f;
+ofstream o_aln_f;
 
 int main(int argc, char** argv) {
 
@@ -130,6 +131,13 @@ int main(int argc, char** argv) {
     string o_models_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".tsv";
     o_models_f.open(o_models_path);
     check_open(o_models_f, o_models_path);
+
+    if (aln_out) {
+        string o_aln_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".aln";
+        o_aln_f.open(o_aln_path);
+        check_open(o_aln_f, o_aln_path);
+        o_aln_f << "# id=123; sed -n \"/^BEGIN $id$/,/^END $id$/p\" batch_" << batch_id << ".rystacks.aln | less -x25\n";
+    }
 
     // Process every locus
     CLocReadSet loc (bam_fh.mpopi());
@@ -238,10 +246,10 @@ bool process_one_locus(CLocReadSet&& loc) {
                 );
     }
 
-    if (aln_out) {
-        ofstream aln_f (in_dir + to_string(loc.id()) + ".aln");
-        aln_f << aln_loc << "\n";
-    }
+    if (aln_out)
+        o_aln_f << "BEGIN " << aln_loc.id() << "\n"
+                << aln_loc
+                << "\nEND " << aln_loc.id() << "\n";
 
     //
     // Call SNPs.
@@ -564,7 +572,7 @@ const string help_string = string() +
         "  --kmer-length: kmer length (default: 31)\n"
         "  --min-cov: minimum coverage to consider a kmer (default: 2)\n"
         "  --gfa: output a GFA file for each locus\n"
-        "  --aln: output a file showing the contig & read alignments for each locus\n"
+        "  --aln: output a file showing the contigs & alignments\n"
         "\n"
         ;
 
