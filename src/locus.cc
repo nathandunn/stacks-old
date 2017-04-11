@@ -181,8 +181,36 @@ QLocus::clear_matches()
 }
 
 ostream& operator<< (ostream& os, const CLocAlnSet& loc) {
-    os << "ref\t\t" << loc.ref_.str();
+    os << "ref\t\t" << loc.ref().str();
     for (auto& r : loc.reads_)
-        os << "\n" << r.name << "\t" << loc.mpopi_.samples()[r.sample].name << "\t" << r.aln().str();
+        os << "\n" << r.name << "\t" << loc.mpopi().samples()[r.sample].name << "\t" << r.aln().str();
     return os;
+}
+
+CLocAlnSet CLocAlnSet::juxtapose(CLocAlnSet&& left, CLocAlnSet&& right) {
+
+    assert(&left.mpopi() == &right.mpopi());
+    assert(left.id() == right.id());
+
+    CLocAlnSet merged (move(left));
+    size_t left_ref_len = merged.ref().length();
+
+    // Extend the reference sequence.
+    merged.ref_.append(right.ref());
+
+    // Extend the left reads.
+    for (SAlnRead& r : merged.reads_) {
+        cigar_extend_right(r.cigar, right.ref().length());
+        assert(std::get<1>(cigar_lengths(r.cigar)) == merged.ref().length());
+    }
+
+    // Extend & add the right reads.
+    for (SAlnRead& r : right.reads_) {
+        cigar_extend_left(r.cigar, left_ref_len);
+        merged.add(move(r));
+    }
+    right.reads_ = vector<SAlnRead>();
+    right.reads_per_sample_ = vector<vector<size_t>>(right.mpopi().samples().size());
+
+    return merged;
 }

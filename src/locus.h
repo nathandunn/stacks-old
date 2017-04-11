@@ -199,18 +199,20 @@ public:
 };
 
 class CLocAlnSet {
-    const MetaPopInfo& mpopi_;
+    const MetaPopInfo* mpopi_;
     int id_; // Catalog locus ID
     DNASeq4 ref_;
     vector<SAlnRead> reads_;
-    vector<vector<size_t>> reads_per_sample_;
+    vector<vector<size_t>> reads_per_sample_; // `at(sample)` is a vector of indexes in `reads_`.
 
 public:
     CLocAlnSet(const MetaPopInfo& mpopi)
-        : mpopi_(mpopi), id_(-1), ref_(), reads_(), reads_per_sample_(mpopi_.samples().size())
+        : mpopi_(&mpopi), id_(-1), ref_(), reads_(), reads_per_sample_(mpopi_->samples().size())
         {}
+    CLocAlnSet(CLocAlnSet&&) = default;
+    CLocAlnSet& operator= (CLocAlnSet&&) = default;
 
-    const MetaPopInfo& mpopi() const {return mpopi_;}
+    const MetaPopInfo& mpopi() const {return *mpopi_;}
     int id() const {return id_;}
     const DNASeq4& ref() const {return ref_;}
     const vector<SAlnRead>& reads() const {return reads_;}
@@ -222,6 +224,8 @@ public:
     void add(SAlnRead&& r);
 
     friend ostream& operator<< (ostream& os, const CLocAlnSet& loc);
+
+    static CLocAlnSet juxtapose(CLocAlnSet&& left, CLocAlnSet&& right);
 
     //
     // Class to iterate over sites.
@@ -254,7 +258,7 @@ public:
         void counts(Nt4Counts& counts, size_t sample) const; // Get the nt counts for a given sample.
 
         const MetaPopInfo& mpopi() const {return loc_aln_.mpopi();}
-};
+    };
 };
 
 //

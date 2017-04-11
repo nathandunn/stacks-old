@@ -37,10 +37,33 @@ string apply_cigar_to_model_seq(const char *, vector<pair<char, uint> > &);
 int    apply_cigar_to_seq(char *, uint, const char *, vector<pair<char, uint> > &);
 int    apply_cigar_to_model_seq(char *, uint, const char *, vector<pair<char, uint> > &);
 std::tuple<uint,uint,uint> cigar_lengths(const vector<pair<char, uint>>&);
+void cigar_extend_right(vector<pair<char, uint>>&, size_t);
+void cigar_extend_left(vector<pair<char, uint>>&, size_t);
 
 #include "locus.h"
 int    adjust_snps_for_gaps(vector<pair<char, uint> > &, Locus *);
 int    adjust_and_add_snps_for_gaps(vector<pair<char, uint> > &, Locus *);
 int    remove_snps_from_gaps(vector<pair<char, uint> > &, Locus *);
+
+//
+// Inline definitions.
+// ==========
+//
+
+inline
+void cigar_extend_right(vector<pair<char, uint>>& cig, size_t len) {
+    if (cig.back().first == 'D')
+        cig.back().second += len;
+    else
+        cig.push_back({'D', len});
+}
+
+inline
+void cigar_extend_left(vector<pair<char, uint>>& cig, size_t len) {
+    if (cig.front().first == 'D')
+        cig.front().second += len;
+    else
+        cig.insert(cig.begin(), {'D', len});
+}
 
 #endif  // __ALN_UTILS_H__
