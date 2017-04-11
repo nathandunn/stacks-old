@@ -21,19 +21,11 @@
 #ifndef __MODELS_H__
 #define __MODELS_H__
 
-#include <string.h>
-#include <math.h>
-#include <string>
-#include <vector>
-#include <map>
-#include <utility>
-#include <algorithm>
-#include <iostream>
-
 #include "constants.h"
 #include "utils.h"
-#include "mstack.h"
+#include "DNASeq4.h"
 #include "locus.h"
+#include "mstack.h"
 
 //
 // Possible models for calling nucleotide positions as fixed or variable
@@ -66,6 +58,41 @@ void call_multinomial_fixed(MergedStack *, int, map<char, int> &);
 
 double   heterozygous_likelihood(int, map<char, int> &);
 double   homozygous_likelihood(int, map<char, int> &);
+
+class SiteCall;
+class SampleCall;
+SiteCall call_site(const CLocAlnSet::site_iterator& site);
+
+class SiteCall {
+    size_t tot_depth_;
+    map<Nt4, size_t> alleles_;
+    vector<SampleCall> sample_calls_;
+public:
+    SiteCall(size_t tot_depth, map<Nt4, size_t>&& alleles, vector<SampleCall>&& sample_calls)
+        : tot_depth_(tot_depth), alleles_(move(alleles)), sample_calls_(move(sample_calls))
+        {}
+
+    size_t tot_depth() const {return tot_depth_;}
+    const map<Nt4, size_t>& alleles() const {return alleles_;}
+    const vector<SampleCall>& sample_calls() const {return sample_calls_;}
+};
+
+class SampleCall {
+    Nt2Counts depths_;
+    snp_type call_;
+    // The nucleotide(s) corresponding to the genotype.
+    // hom {nt, Nt4::n} | het {min_nt, max_nt} | unk {Nt4::n, Nt4::n}
+    // For hets, the two nucleotides are sorted lexically (A<C<G<T).
+    array<Nt4, 2> nts_;
+public:
+    SampleCall() : depths_(), call_(snp_type_unk), nts_{Nt4::n,Nt4::n} {}
+    SampleCall(const Nt4Counts& counts, snp_type gt_call, Nt4 rank0_nt, Nt4 rank1_nt);
+
+    const Nt2Counts depths() const {return depths_;}
+    snp_type call() const {return call_;}
+    Nt4 nt0() const {assert(call_!=snp_type_unk); return nts_[0];}
+    Nt4 nt1() const {assert(call_==snp_type_het); return nts_[1];}
+};
 
 //
 // ==================
@@ -166,6 +193,20 @@ double lr_bounded_multinomial_model (double nuc_1, double nuc_2, double nuc_3, d
     //   << " Likelihood ratio: " << l_ratio << "\n";
 
     return l_ratio;
+}
+
+inline
+SampleCall::SampleCall(const Nt4Counts& counts, snp_type gt_call, Nt4 rank0_nt, Nt4 rank1_nt)
+: depths_(counts), call_(gt_call), nts_{Nt4::n, Nt4::n}
+{
+    if (call_ == snp_type_hom) {
+        nts_[0] = rank0_nt;
+    } else if (call_ == snp_type_het) {
+        if (rank0_nt < rank1_nt)
+            nts_ = {rank0_nt, rank1_nt};
+        else
+            nts_ = {rank1_nt, rank0_nt};
+    }
 }
 
 #endif // __MODELS_H__

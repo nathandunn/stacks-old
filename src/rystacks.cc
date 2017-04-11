@@ -16,60 +16,10 @@
 
 using namespace std;
 
-class SiteCall;
-struct SampleCall;
 void parse_command_line(int argc, char* argv[]);
 void report_options(ostream& os);
 bool process_one_locus(CLocReadSet&& loc);
-SiteCall call_site(const CLocAlnSet::site_iterator& site);
 void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls);
-
-class SiteCall {
-    size_t tot_depth_;
-    map<Nt4, size_t> alleles_;
-    vector<SampleCall> sample_calls_;
-
-public:
-    SiteCall(size_t tot_depth, map<Nt4, size_t>&& alleles, vector<SampleCall>&& sample_calls)
-        : tot_depth_(tot_depth), alleles_(move(alleles)), sample_calls_(move(sample_calls))
-        {}
-
-    size_t tot_depth() const {return tot_depth_;}
-    const map<Nt4, size_t>& alleles() const {return alleles_;}
-    const vector<SampleCall>& sample_calls() const {return sample_calls_;}
-
-    //Nt4 most_frequent_nt() const;
-};
-
-struct SampleCall {
-    Nt2Counts depths;
-    snp_type call;
-    array<Nt4, 2> nts; // hom {nt, Nt4::n} | het {min_nt, max_nt} | unk {Nt4::n, Nt4::n}
-
-    SampleCall() : depths(), call(snp_type_unk), nts{Nt4::n,Nt4::n} {}
-    SampleCall(const Nt4Counts& counts, snp_type gt_call, Nt4 rank0_nt, Nt4 rank1_nt);
-};
-
-/*
-Nt4 SiteCall::most_frequent_nt() const {
-    assert(!alleles.empty());
-
-    auto iter = alleles.begin();
-    Nt4 nt = iter->first;
-    size_t count = iter->second;
-    ++iter;
-
-    while (iter != alleles.end()) {
-        if (iter->second > count) {
-            nt = iter->first;
-            count = iter->second;
-        }
-        ++iter;
-    }
-
-    return nt;
-}
-*/
 
 //
 // Argument globs.
@@ -285,91 +235,6 @@ bool process_one_locus(CLocReadSet&& loc) {
     return true;
 }
 
-SiteCall call_site(const CLocAlnSet::site_iterator& site) {
-
-    // N.B. For now we use the old binomial model.
-
-    //
-    // Look at this site in each sample; make genotype calls.
-    //
-    size_t tot_depth = 0;
-    vector<SampleCall> sample_calls;
-    sample_calls.reserve(site.mpopi().samples().size());
-    Nt4Counts counts;
-    for (size_t s=0; s<site.mpopi().samples().size(); ++s) {
-        site.counts(counts, s);
-
-        if (counts.at_rank(0) == 0) {
-            sample_calls.push_back(SampleCall());
-        } else {
-            snp_type gt_call = call_snp(lr_multinomial_model(counts.at_rank(0), counts.at_rank(1), counts.at_rank(2), counts.at_rank(3)));
-            sample_calls.push_back(SampleCall(
-                    counts,
-                    gt_call,
-                    counts.nt_of_rank(0),
-                    counts.nt_of_rank(1)
-                    ));
-            tot_depth += sample_calls.back().depths.sum();
-        }
-    }
-
-    //
-    // Iterate over the SampleCalls & record the genotypes that were found.
-    //
-    map<Nt4, size_t> alleles;
-    counts.reset();
-    for (const SampleCall& sc : sample_calls) {
-        switch (sc.call) {
-        case snp_type_hom :
-            counts.increment(sc.nts[0]);
-            counts.increment(sc.nts[0]);
-            break;
-        case snp_type_het :
-            counts.increment(sc.nts[0]);
-            counts.increment(sc.nts[1]);
-            break;
-        default:
-            // snp_type_unk
-            break;
-        }
-    }
-    counts.sort();
-    if (counts.at_rank(0) > 0) {
-        // At least one allele was observed.
-        alleles.insert({counts.nt_of_rank(0), counts.at_rank(0)});
-
-        if (counts.at_rank(1) > 0) {
-            // SNP with at least two alleles.
-            alleles.insert({counts.nt_of_rank(1), counts.at_rank(1)});
-
-            if (counts.at_rank(2) > 0) {
-                alleles.insert({counts.nt_of_rank(2), counts.at_rank(2)});
-
-                if (counts.at_rank(3) > 0) {
-                    // Quaternary SNP.
-                    alleles.insert({counts.nt_of_rank(3), counts.at_rank(3)});
-                }
-            }
-        }
-    }
-
-    return SiteCall(tot_depth, move(alleles), move(sample_calls));
-}
-
-SampleCall::SampleCall(const Nt4Counts& counts, snp_type gt_call, Nt4 rank0_nt, Nt4 rank1_nt)
-: depths(counts), call(gt_call), nts{Nt4::n, Nt4::n}
-{
-    if (call == snp_type_hom) {
-        nts[0] = rank0_nt;
-    } else if (call == snp_type_het) {
-        if (rank0_nt < rank1_nt)
-            nts = {rank0_nt, rank1_nt};
-        else
-            // Reorder e.g. {G, C} to {C, G}.
-            nts = {rank1_nt, rank0_nt};
-    }
-}
-
 void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
 
     size_t loc_id = aln_loc.id();
@@ -465,7 +330,7 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
         for (size_t s=0; s<mpopi.samples().size(); ++s) {
             const SampleCall& s_call = sitecall.sample_calls()[s];
 
-            if (s_call.depths.sum() == 0) {
+            if (s_call.depths().sum() == 0) {
                 // No data for this sample.
                 rec.samples.push_back(".");
                 continue;
@@ -475,14 +340,14 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
 
             // GT field.
             vector<size_t> gt;
-            switch (s_call.call) {
+            switch (s_call.call()) {
             case snp_type_hom:
-                gt.push_back(vcf_allele_indexes.at(s_call.nts[0]));
+                gt.push_back(vcf_allele_indexes.at(s_call.nt0()));
                 genotype << gt[0] << '/' << gt[0];
                 break;
             case snp_type_het:
-                gt.push_back(vcf_allele_indexes.at(s_call.nts[0]));
-                gt.push_back(vcf_allele_indexes.at(s_call.nts[1]));
+                gt.push_back(vcf_allele_indexes.at(s_call.nt0()));
+                gt.push_back(vcf_allele_indexes.at(s_call.nt1()));
                 sort(gt.begin(), gt.end()); // (Prevents '1/0'.)
                 genotype << gt[0] << '/' << gt[1];
                 break;
@@ -492,13 +357,13 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
             }
 
             // DP field.
-            genotype << ':' << s_call.depths.sum();
+            genotype << ':' << s_call.depths().sum();
 
             // AD field.
             vector<size_t> ad;
             ad.reserve(vcf_alleles.size());
             for (Nt4 nt : vcf_alleles)
-                ad.push_back(s_call.depths[nt]);
+                ad.push_back(s_call.depths()[nt]);
             genotype << ':';
             join(ad, ',', genotype);
 
@@ -544,7 +409,7 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
         // Model.
         o_models_f << loc_id << "\ts_model\t" << sample_id << "\t";
         for (auto& c : calls) {
-            switch (c.sample_calls()[s].call) {
+            switch (c.sample_calls()[s].call()) {
             case snp_type_hom: o_models_f << "O"; break;
             case snp_type_het: o_models_f << "E"; break;
             case snp_type_unk: o_models_f << "U"; break;
@@ -558,7 +423,7 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
         for (auto& c : calls) {
             // For each site/position.
             for (Nt2 nt : Nt2::all) {
-                size_t dp = c.sample_calls()[s].depths[nt];
+                size_t dp = c.sample_calls()[s].depths()[nt];
                 if (dp <= 0xF)
                     o_models_f << "0" << dp;
                 else if (dp <= 0xFF)
