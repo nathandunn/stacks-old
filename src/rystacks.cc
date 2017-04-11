@@ -21,6 +21,7 @@ struct SampleCall;
 void parse_command_line(int argc, char* argv[]);
 void report_options(ostream& os);
 bool process_one_locus(CLocReadSet&& loc);
+SiteCall call_site(const CLocAlnSet::site_iterator& site);
 void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls);
 
 class SiteCall {
@@ -29,7 +30,9 @@ class SiteCall {
     vector<SampleCall> sample_calls_;
 
 public:
-    SiteCall(const CLocAlnSet::site_iterator& site);
+    SiteCall(size_t tot_depth, map<Nt4, size_t>&& alleles, vector<SampleCall>&& sample_calls)
+        : tot_depth_(tot_depth), alleles_(move(alleles)), sample_calls_(move(sample_calls))
+        {}
 
     size_t tot_depth() const {return tot_depth_;}
     const map<Nt4, size_t>& alleles() const {return alleles_;}
@@ -256,7 +259,7 @@ bool process_one_locus(CLocReadSet&& loc) {
     vector<SiteCall> calls;
     CLocAlnSet::site_iterator site (aln_loc);
     while(site) {
-        calls.push_back(SiteCall(site));
+        calls.push_back(call_site(site));
         ++site;
     }
 
@@ -282,38 +285,40 @@ bool process_one_locus(CLocReadSet&& loc) {
     return true;
 }
 
-SiteCall::SiteCall(const CLocAlnSet::site_iterator& site)
-        : tot_depth_(0), alleles_(), sample_calls_()
-        {
+SiteCall call_site(const CLocAlnSet::site_iterator& site) {
 
     // N.B. For now we use the old binomial model.
 
     //
     // Look at this site in each sample; make genotype calls.
     //
+    size_t tot_depth = 0;
+    vector<SampleCall> sample_calls;
+    sample_calls.reserve(site.mpopi().samples().size());
     Nt4Counts counts;
     for (size_t s=0; s<site.mpopi().samples().size(); ++s) {
         site.counts(counts, s);
 
         if (counts.at_rank(0) == 0) {
-            sample_calls_.push_back(SampleCall());
+            sample_calls.push_back(SampleCall());
         } else {
             snp_type gt_call = call_snp(lr_multinomial_model(counts.at_rank(0), counts.at_rank(1), counts.at_rank(2), counts.at_rank(3)));
-            sample_calls_.push_back(SampleCall(
+            sample_calls.push_back(SampleCall(
                     counts,
                     gt_call,
                     counts.nt_of_rank(0),
                     counts.nt_of_rank(1)
                     ));
-            tot_depth_ += sample_calls_.back().depths.sum();
+            tot_depth += sample_calls.back().depths.sum();
         }
     }
 
     //
     // Iterate over the SampleCalls & record the genotypes that were found.
     //
+    map<Nt4, size_t> alleles;
     counts.reset();
-    for (const SampleCall& sc : sample_calls_) {
+    for (const SampleCall& sc : sample_calls) {
         switch (sc.call) {
         case snp_type_hom :
             counts.increment(sc.nts[0]);
@@ -331,22 +336,24 @@ SiteCall::SiteCall(const CLocAlnSet::site_iterator& site)
     counts.sort();
     if (counts.at_rank(0) > 0) {
         // At least one allele was observed.
-        alleles_.insert({counts.nt_of_rank(0), counts.at_rank(0)});
+        alleles.insert({counts.nt_of_rank(0), counts.at_rank(0)});
 
         if (counts.at_rank(1) > 0) {
             // SNP with at least two alleles.
-            alleles_.insert({counts.nt_of_rank(1), counts.at_rank(1)});
+            alleles.insert({counts.nt_of_rank(1), counts.at_rank(1)});
 
             if (counts.at_rank(2) > 0) {
-                alleles_.insert({counts.nt_of_rank(2), counts.at_rank(2)});
+                alleles.insert({counts.nt_of_rank(2), counts.at_rank(2)});
 
                 if (counts.at_rank(3) > 0) {
                     // Quaternary SNP.
-                    alleles_.insert({counts.nt_of_rank(3), counts.at_rank(3)});
+                    alleles.insert({counts.nt_of_rank(3), counts.at_rank(3)});
                 }
             }
         }
     }
+
+    return SiteCall(tot_depth, move(alleles), move(sample_calls));
 }
 
 SampleCall::SampleCall(const Nt4Counts& counts, snp_type gt_call, Nt4 rank0_nt, Nt4 rank1_nt)
