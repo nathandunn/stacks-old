@@ -292,9 +292,7 @@ homozygous_likelihood(int col, map<char, int> &nuc)
     return lnl;
 }
 
-SiteCall call_site(const CLocAlnSet::site_iterator& site) {
-
-    // N.B. For now we use the old binomial model.
+SiteCall MultinomialModel::call(const CLocAlnSet::site_iterator& site) const {
 
     //
     // Look at this site in each sample; make genotype calls.
