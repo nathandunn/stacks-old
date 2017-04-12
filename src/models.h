@@ -61,7 +61,6 @@ double   homozygous_likelihood(int, map<char, int> &);
 
 class SiteCall;
 class SampleCall;
-SiteCall call_site(const CLocAlnSet::site_iterator& site);
 
 class SiteCall {
     size_t tot_depth_;
@@ -92,6 +91,20 @@ public:
     snp_type call() const {return call_;}
     Nt4 nt0() const {assert(call_!=snp_type_unk); return nts_[0];}
     Nt4 nt1() const {assert(call_==snp_type_het); return nts_[1];}
+};
+
+class Model {
+public:
+    virtual ~Model() {}
+    virtual SiteCall call(const CLocAlnSet::site_iterator& site) const = 0;
+};
+
+//
+// MultinomialModel: the standard Stacks v.1 model described in Hohenloe2010.
+//
+class MultinomialModel : public Model {
+public:
+    SiteCall call(const CLocAlnSet::site_iterator& site) const;
 };
 
 //

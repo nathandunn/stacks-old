@@ -22,11 +22,12 @@ bool process_one_locus(CLocReadSet&& loc);
 void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls);
 
 //
-// Argument globs.
+// Argument globals.
 //
 bool quiet = false;
 string in_dir;
 int batch_id = -1;
+modelt model_type = snp;
 double gt_alpha = 0.05;
 set<int> locus_wl;
 size_t km_length = 31;
@@ -35,10 +36,11 @@ bool gfa_out = false;
 bool aln_out = false;
 
 //
-// Extra globs.
+// Extra globals.
 //
 const string prog_name = "rystacks";
 LogAlterator* lg = NULL;
+const Model* model = NULL;
 gzFile o_gzfasta_f = NULL;
 VcfWriter* o_vcf_f = NULL;
 ofstream o_models_f;
@@ -58,8 +60,13 @@ int main(int argc, char** argv) {
     report_options(cout);
     cout << "\n" << flush;
 
-    // Initialize the model globs.
+    // Initialize the model.
     set_model_thresholds(gt_alpha);
+    if (model_type == snp) {
+        model = new MultinomialModel();
+    } else {
+        assert(false);
+    }
 
     // Open the BAM file and parse the header.
     BamCLocReader bam_fh (in_dir + "batch_" + to_string(batch_id) + ".catalog.bam");
@@ -117,6 +124,7 @@ int main(int argc, char** argv) {
 
     gzclose(o_gzfasta_f);
     delete o_vcf_f;
+    delete model;
 
     cout << prog_name << " is done.\n";
     delete lg;
@@ -209,7 +217,7 @@ bool process_one_locus(CLocReadSet&& loc) {
     vector<SiteCall> calls;
     CLocAlnSet::site_iterator site (aln_loc);
     while(site) {
-        calls.push_back(call_site(site));
+        calls.push_back(model->call(site));
         ++site;
     }
 
