@@ -2102,6 +2102,9 @@ int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
         exit(1);
     }
 
+    uint rcnt = enz.length() ? renz_cnt[enz] : 0;
+    uint rlen = enz.length() ? renz_len[enz] : 0;
+
     //
     // Count the number of markers that have enough samples to output.
     //
@@ -2112,7 +2115,14 @@ int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
     for (cit = catalog.begin(); cit != catalog.end(); cit++) {
         loc = cit->second;
 
-        num_loci += loc->len - renz_len[enz];
+        uint start = 0;
+        uint end   = loc->len;
+        if (end > rlen) {
+            for (uint n = 0; n < rcnt; n++)
+                if (strncmp(loc->con, renz[enz][n], rlen) == 0)
+                    start += renz_len[enz];
+        }
+        num_loci += end - start;
     }
     cerr << "Writing " << num_loci << " nucleotide positions to genomic file, '" << file << "'\n";
 
@@ -2126,10 +2136,6 @@ int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
     //
     map<string, vector<CSLocus *> >::iterator it;
     int  a, b;
-
-    uint  rcnt = enz.length() ? renz_cnt[enz] : 0;
-    uint  rlen = enz.length() ? renz_len[enz] : 0;
-    char *p;
 
     for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
         for (uint i = 0; i < it->second.size(); i++) {
@@ -2148,14 +2154,10 @@ int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
             // Check for the existence of the restriction enzyme cut site, mask off
             // its output.
             //
-            for (uint n = 0; n < rcnt; n++)
-                if (strncmp(loc->con, renz[enz][n], rlen) == 0)
-                    start += renz_len[enz];
-            if (start == 0) {
-                p = loc->con + (loc->len - rlen);
-                for (uint n = rcnt; n < rcnt + rcnt; n++)
-                    if (strncmp(p, renz[enz][n], rlen) == 0)
-                        end -= renz_len[enz];
+            if (end > rlen) {
+                for (uint n = 0; n < rcnt; n++)
+                    if (strncmp(loc->con, renz[enz][n], rlen) == 0)
+                        start += renz_len[enz];
             }
 
             uint k = 0;
