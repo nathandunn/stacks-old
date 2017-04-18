@@ -140,9 +140,10 @@ public:
     const string& value() const {return value_;}
 
     struct predefs {
-        static const VcfMeta info_NS;
-        static const VcfMeta info_DP;
+        static const VcfMeta info_AD;
         static const VcfMeta info_AF;
+        static const VcfMeta info_DP;
+        static const VcfMeta info_NS;
 
         static const VcfMeta format_AD;
         static const VcfMeta format_DP;
