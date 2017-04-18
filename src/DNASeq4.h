@@ -131,6 +131,8 @@ public:
 
     size_t sum() const {return counts_[0]+counts_[1]+counts_[2]+counts_[3];}
 
+    Nt2Counts& operator+= (const Nt2Counts& other);
+
     // Print the counts.
     friend ostream& operator<< (ostream& os, const Nt2Counts& cnts);
 };
@@ -273,6 +275,15 @@ ostream& operator<< (ostream& os, const Nt4Counts& cnts) {
        << char(cnts.nt_of_rank(2)) << ":" << cnts.at_rank(2) << " "
        << char(cnts.nt_of_rank(3)) << ":" << cnts.at_rank(3);
     return os;
+}
+
+inline
+Nt2Counts& Nt2Counts::operator+= (const Nt2Counts& other) {
+    counts_[0] += other.counts_[0];
+    counts_[1] += other.counts_[1];
+    counts_[2] += other.counts_[2];
+    counts_[3] += other.counts_[3];
+    return *this;
 }
 
 inline
