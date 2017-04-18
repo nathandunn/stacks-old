@@ -78,8 +78,10 @@ int main(int argc, char** argv) {
 
     string o_vcf_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".vcf";
     VcfHeader vcf_header;
+    vcf_header.add_meta(VcfMeta("misc","\"less -x9,15,20,25,30,35,42,60,75 batch_1.rystacks.vcf\""));
     vcf_header.add_meta(VcfMeta::predefs::info_DP);
     vcf_header.add_meta(VcfMeta::predefs::info_AF);
+    vcf_header.add_meta(VcfMeta::predefs::info_AD);
     vcf_header.add_meta(VcfMeta::predefs::format_GT);
     vcf_header.add_meta(VcfMeta::predefs::format_DP);
     vcf_header.add_meta(VcfMeta::predefs::format_AD);
@@ -314,11 +316,17 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
         for (Nt4 nt : vcf_alleles)
             rec.alleles.push_back(string(1, char(nt)));
 
-        // INFO/DP.
+        // INFO
         rec.info.push_back({"DP", to_string(sitecall.tot_depth())});
-
-        // INFO/AF.
-        if (vcf_alleles.size() > 1) {
+        if(rec.alleles.size() == 1) {
+            size_t ad = 0;
+            Nt4 ref_nt = sitecall.alleles().begin()->first;
+            for (const SampleCall& s_call : sitecall.sample_calls())
+                ad += s_call.depths()[ref_nt];
+            if (ad != sitecall.tot_depth())
+                rec.info.push_back({"AD", to_string(ad)});
+        } else {
+            // INFO/AF.
             size_t tot_count = 0;
             for (auto& a : sitecall.alleles())
                 tot_count += a.second;
@@ -331,12 +339,17 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
         }
 
         // Genotypes.
-        rec.format.push_back("GT");
-        rec.format.push_back("DP");
-        rec.format.push_back("AD");
+        if(rec.alleles.size() == 1) {
+            // Fixed.
+            rec.format.push_back("DP");
+        } else {
+            rec.format.push_back("GT");
+            rec.format.push_back("DP");
+            rec.format.push_back("AD");
+        }
         rec.samples.reserve(mpopi.samples().size());
-        for (size_t s=0; s<mpopi.samples().size(); ++s) {
-            const SampleCall& s_call = sitecall.sample_calls()[s];
+        assert(sitecall.sample_calls().size() == mpopi.samples().size());
+        for (const SampleCall& s_call : sitecall.sample_calls()) {
 
             if (s_call.depths().sum() == 0) {
                 // No data for this sample.
@@ -344,38 +357,41 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
                 continue;
             }
 
-            stringstream genotype;
-
-            // GT field.
-            vector<size_t> gt;
-            switch (s_call.call()) {
-            case snp_type_hom:
-                gt.push_back(vcf_allele_indexes.at(s_call.nt0()));
-                genotype << gt[0] << '/' << gt[0];
-                break;
-            case snp_type_het:
-                gt.push_back(vcf_allele_indexes.at(s_call.nt0()));
-                gt.push_back(vcf_allele_indexes.at(s_call.nt1()));
-                sort(gt.begin(), gt.end()); // (Prevents '1/0'.)
-                genotype << gt[0] << '/' << gt[1];
-                break;
-            default:
-                genotype << '.';
-                break;
+            if(rec.alleles.size() == 1) {
+                // Fixed.
+                rec.samples.push_back(to_string(s_call.depths().sum()));
+            } else {
+                stringstream genotype;
+                // GT field.
+                vector<size_t> gt;
+                switch (s_call.call()) {
+                case snp_type_hom:
+                    gt.push_back(vcf_allele_indexes.at(s_call.nt0()));
+                    genotype << gt[0] << '/' << gt[0];
+                    break;
+                case snp_type_het:
+                    gt.push_back(vcf_allele_indexes.at(s_call.nt0()));
+                    gt.push_back(vcf_allele_indexes.at(s_call.nt1()));
+                    sort(gt.begin(), gt.end()); // (Prevents '1/0'.)
+                    genotype << gt[0] << '/' << gt[1];
+                    break;
+                default:
+                    genotype << '.';
+                    break;
+                }
+                // DP field.
+                genotype << ':' << s_call.depths().sum();
+                // AD field.
+                vector<size_t> ad;
+                ad.reserve(vcf_alleles.size());
+                for (Nt4 nt : vcf_alleles)
+                    ad.push_back(s_call.depths()[nt]);
+                genotype << ':';
+                join(ad, ',', genotype);
+                // Push it.
+                rec.samples.push_back(genotype.str());
             }
 
-            // DP field.
-            genotype << ':' << s_call.depths().sum();
-
-            // AD field.
-            vector<size_t> ad;
-            ad.reserve(vcf_alleles.size());
-            for (Nt4 nt : vcf_alleles)
-                ad.push_back(s_call.depths()[nt]);
-            genotype << ':';
-            join(ad, ',', genotype);
-
-            rec.samples.push_back(genotype.str());
         }
 
         // Write the record.
