@@ -30,7 +30,7 @@ public:
     static const Nt4 g; // 0100 (4)
     static const Nt4 t; // 1000 (8)
     static const Nt4 n; // 1111 (15)
-    static const vector<Nt4> all; // All of the above.
+    static const array<Nt4,5> all; // All of the above.
 
 private:
     // Trivial ASCII-like hash table giving the 4-bits value of a nucleotide letter.
@@ -70,7 +70,7 @@ public:
     static const Nt2 c;
     static const Nt2 g;
     static const Nt2 t;
-    static const vector<Nt2> all;
+    static const array<Nt2,4> all;
 
 private:
     static const Nt2 from_ch[256];

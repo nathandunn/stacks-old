@@ -108,6 +108,14 @@ public:
 };
 
 //
+// MarukiHighModel: the model of Maruki & Lynch (2017) for high-coverage data.
+//
+class MarukiHighModel : public Model {
+public:
+    SiteCall call(const CLocAlnSet::site_iterator& site) const;
+};
+
+//
 // ==================
 // Inline definitions
 // ==================
