@@ -256,8 +256,8 @@ public:
 
         // Site interface.
         Nt4 ref_nt() const {return *ref_it_;} // Get the contig nt4.
-        void counts(Nt4Counts& counts) const; // Get the nt counts across all samples.
-        void counts(Nt4Counts& counts, size_t sample) const; // Get the nt counts for a given sample.
+        void counts(Counts<Nt4>& counts) const; // Get the nt counts across all samples.
+        void counts(Counts<Nt4>& counts, size_t sample) const; // Get the nt counts for a given sample.
 
         const MetaPopInfo& mpopi() const {return loc_aln_.mpopi();}
     };
@@ -294,19 +294,17 @@ CLocAlnSet::site_iterator& CLocAlnSet::site_iterator::operator++ () {
 }
 
 inline
-void CLocAlnSet::site_iterator::counts(Nt4Counts& counts) const {
-    counts.reset();
+void CLocAlnSet::site_iterator::counts(Counts<Nt4>& counts) const {
+    counts.clear();
     for (auto& read: its_)
         counts.increment(*read);
-    counts.sort();
 }
 
 inline
-void CLocAlnSet::site_iterator::counts(Nt4Counts& counts, size_t sample) const {
-    counts.reset();
+void CLocAlnSet::site_iterator::counts(Counts<Nt4>& counts, size_t sample) const {
+    counts.clear();
     for (size_t read_i : loc_aln_.sample_reads(sample))
         counts.increment(*its_[read_i]);
-    counts.sort();
 }
 
 #endif // __LOCUS_H__

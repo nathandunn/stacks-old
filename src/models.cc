@@ -300,19 +300,26 @@ SiteCall MultinomialModel::call(const CLocAlnSet::site_iterator& site) const {
     size_t tot_depth = 0;
     vector<SampleCall> sample_calls;
     sample_calls.reserve(site.mpopi().samples().size());
-    Nt4Counts counts;
+    Counts<Nt4> counts;
+    array<pair<size_t,Nt4>,4> sorted;
     for (size_t s=0; s<site.mpopi().samples().size(); ++s) {
         site.counts(counts, s);
+        sorted = counts.sorted();
 
-        if (counts.at_rank(0) == 0) {
+        if (sorted[0].first == 0) {
             sample_calls.push_back(SampleCall());
         } else {
-            snp_type gt_call = call_snp(lr_multinomial_model(counts.at_rank(0), counts.at_rank(1), counts.at_rank(2), counts.at_rank(3)));
+            snp_type gt_call = call_snp(lr_multinomial_model(
+                    sorted[0].first,
+                    sorted[1].first,
+                    sorted[2].first,
+                    sorted[3].first
+                    ));
             sample_calls.push_back(SampleCall(
                     counts,
                     gt_call,
-                    counts.nt_of_rank(0),
-                    counts.nt_of_rank(1)
+                    sorted[0].second,
+                    sorted[1].second
                     ));
             tot_depth += sample_calls.back().depths().sum();
         }
@@ -322,7 +329,7 @@ SiteCall MultinomialModel::call(const CLocAlnSet::site_iterator& site) const {
     // Iterate over the SampleCalls & record the genotypes that were found.
     //
     map<Nt4, size_t> alleles;
-    counts.reset();
+    counts.clear();
     for (const SampleCall& sc : sample_calls) {
         switch (sc.call()) {
         case snp_type_hom :
@@ -338,21 +345,21 @@ SiteCall MultinomialModel::call(const CLocAlnSet::site_iterator& site) const {
             break;
         }
     }
-    counts.sort();
-    if (counts.at_rank(0) > 0) {
+    sorted = counts.sorted();
+    if (sorted[0].first > 0) {
         // At least one allele was observed.
-        alleles.insert({counts.nt_of_rank(0), counts.at_rank(0)});
+        alleles.insert({sorted[0].second, sorted[0].first});
 
-        if (counts.at_rank(1) > 0) {
+        if (sorted[1].first > 0) {
             // SNP with at least two alleles.
-            alleles.insert({counts.nt_of_rank(1), counts.at_rank(1)});
+            alleles.insert({sorted[0].second, sorted[0].first});
 
-            if (counts.at_rank(2) > 0) {
-                alleles.insert({counts.nt_of_rank(2), counts.at_rank(2)});
+            if (sorted[2].first > 0) {
+                alleles.insert({sorted[0].second, sorted[0].first});
 
-                if (counts.at_rank(3) > 0) {
+                if (sorted[3].first > 0) {
                     // Quaternary SNP.
-                    alleles.insert({counts.nt_of_rank(3), counts.at_rank(3)});
+                    alleles.insert({sorted[0].second, sorted[0].first});
                 }
             }
         }

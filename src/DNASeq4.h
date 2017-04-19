@@ -3,6 +3,8 @@
 
 #include "constants.h"
 
+class Nt2;
+
 // Definitions for nucleotides coded on 4 bits.
 // These definitions are compatible with those of htslib--htslib supports
 // partially ambiguous nucleotides ('R', etc.) but we convert everything to 15
@@ -11,10 +13,12 @@ class Nt4 {
     size_t nt_;
 
 public:
+    Nt4() : nt_(Nt4::n) {}
     Nt4(char c) : nt_(from_ch[size_t(c)]) {}
     Nt4(size_t i) : nt_(i) {}
     Nt4(int i) : nt_(i) {}
     Nt4(const Nt4& other) : nt_(other.nt_) {}
+    Nt4(const Nt2 nt2);
     Nt4& operator=(const Nt4& other) {nt_ = other.nt_; return *this;}
 
     Nt4 rev_compl() const {return rev_compl_[size_t(nt_)];}
@@ -24,7 +28,7 @@ public:
     bool operator== (Nt4 other) const {return nt_ == other.nt_;}
     bool operator< (Nt4 other) const {return nt_ < other.nt_;}
 
-    static const size_t nbits = 4;
+    static constexpr size_t nbits = 4;
     static const Nt4 a; // 0001 (1)
     static const Nt4 c; // 0010 (2)
     static const Nt4 g; // 0100 (4)
@@ -32,11 +36,16 @@ public:
     static const Nt4 n; // 1111 (15)
     static const array<Nt4,5> all; // All of the above.
 
+    static constexpr size_t max() {return (1 << nbits) - 1;}
+
 private:
     // Trivial ASCII-like hash table giving the 4-bits value of a nucleotide letter.
     // e.g. ch_to_nt [ (int)'G' ] == 4
     // Adapted from `htslib::seq_nt16_table` (hts.cc).
     static const Nt4 from_ch[256];
+
+    // Trivial hash table to convert Nt2 nucleotides to Nt4.
+    static const Nt4 from_nt2[4];
 
     // Trivial hash table giving the nucleotide letter of a 4-bits value.
     // e.g. nt_to_ch[4] == 'C'
@@ -51,8 +60,9 @@ class Nt2 {
     size_t nt_;
 
 public:
+    Nt2() : nt_(Nt2::a) {}
     Nt2(char c) : nt_(from_ch[size_t(c)]) {}
-    Nt2(Nt4 nt4) : nt_(from_nt4[size_t(nt4)]) {}
+    Nt2(Nt4 nt4) : nt_(from_nt4[size_t(nt4)]) {assert(!(nt4==Nt4::n));}
     Nt2(size_t i) : nt_(i) {}
     Nt2(int i) : nt_(i) {}
     Nt2(const Nt2& other) : nt_(other.nt_) {}
@@ -65,12 +75,14 @@ public:
     bool operator== (Nt2 other) const {return nt_ == other.nt_;}
     bool operator< (Nt2 other) const {return nt_ < other.nt_;}
 
-    static const size_t nbits = 2;
+    static constexpr size_t nbits = 2;
     static const Nt2 a;
     static const Nt2 c;
     static const Nt2 g;
     static const Nt2 t;
     static const array<Nt2,4> all;
+
+    static constexpr size_t max() {return (1 << nbits) - 1;}
 
 private:
     static const Nt2 from_ch[256];
@@ -80,61 +92,37 @@ private:
     static const Nt2 rev_compl_[4];
 };
 
-class Nt4Counts {
-    // Array of counts, containing the count of A's at index Nt4::a, of C's at
-    // Nt4::c, G's at Nt4::g, T's at Nt4::t and N's at Nt4::n.
-    size_t counts_[16];
-    size_t* sorted_[4]; // Pointers to the counts of A, C, G, and T above.
+template<typename Nt>
+class Counts {
+    // Array of counts, containing the count of A's at index Nt::a,of C's at
+    // index Nt::c, etc.
+    array<size_t,Nt::max()+1> counts_;
 
 public:
-    Nt4Counts()
-        : sorted_{counts_+size_t(Nt4::t), counts_+size_t(Nt4::g), counts_+size_t(Nt4::c), counts_+size_t(Nt4::a)}
-        {memset(counts_, 0xFF, 16 * sizeof(size_t)); reset();}
+    Counts() {
+        for (size_t& c : counts_)
+            c=-1;
+        for (Nt nt : Nt::all)
+            counts_[size_t(nt)] = 0;
+    }
+    Counts(const Counts<Nt4>& nt4counts);
+    Counts(const Counts<Nt2>& nt2counts);
 
-    void reset() {for (Nt4 nt : Nt4::all) counts_[size_t(nt)]=0;}
-    void increment(Nt4 nt) {++counts_[size_t(nt)];}
-    void sort();
-
-    // Get the count for a given nucleotide.
-    size_t operator[] (Nt4 nt) const {return counts_[size_t(nt)];}
-
-    // Get the count for the nucleotide of the given rank. Rank 0 has the
-    // highest count.
-    size_t at_rank(size_t rank) const {return *sorted_[rank];}
-
-    // Get the the nucleotide of the given (0-based) rank.
-    Nt4 nt_of_rank(size_t rank) const {return Nt4(size_t(sorted_[rank]-counts_));}
-
-    // Print the counts.
-    friend ostream& operator<< (ostream& os, const Nt4Counts& cnts);
-};
-
-//
-// Nt2Counts
-// Simple interface to store counts of A, C, G, T. Lighter than Nt4Counts but
-// not as flexible.
-//
-class Nt2Counts {
-    size_t counts_[4];
-
-public:
-    Nt2Counts()
-        : counts_{0, 0, 0, 0}
-        {}
-    Nt2Counts(const Nt4Counts& counts)
-        : counts_{counts[Nt4::a], counts[Nt4::c], counts[Nt4::g], counts[Nt4::t]}
-        {}
+    void clear() {for (Nt nt : Nt::all) counts_[size_t(nt)]=0;}
+    void increment(Nt nt) {++counts_[size_t(nt)];}
 
     // Get the count for a given nucleotide.
-    size_t operator[] (Nt2 nt) const {return counts_[size_t(nt)];}
-    size_t operator[] (Nt4 nt4) const {return counts_[size_t(Nt2(nt4))];}
+    size_t operator[] (Nt nt) const {return counts_[size_t(nt)];}
 
-    size_t sum() const {return counts_[0]+counts_[1]+counts_[2]+counts_[3];}
+    size_t sum() const {return (*this)[Nt::a] + (*this)[Nt::c] + (*this)[Nt::g] + (*this)[Nt::t];}
+    array<pair<size_t,Nt>,4> sorted();
 
-    Nt2Counts& operator+= (const Nt2Counts& other);
+    Counts& operator+= (const Counts& other)
+        {for (Nt nt : Nt::all) counts_[size_t(nt)] += other.counts_[size_t(nt)]; return *this;}
 
     // Print the counts.
-    friend ostream& operator<< (ostream& os, const Nt2Counts& cnts);
+    friend ostream& operator<< (ostream& os, const Counts& cnts)
+        {for (Nt nt : Nt::all) os << char(nt) << ":" << cnts[nt] << " "; return os;}
 };
 
 // A sequence of nucleotides on a uint64_t, where the first nucleotide uses the
@@ -257,40 +245,35 @@ public:
 //
 
 inline
-void Nt4Counts::sort() {
-    std::sort(
-        sorted_, sorted_+4,
-        [] (const size_t* cnt1, const size_t* cnt2) {
-            // Sort by decreasing value. Primarily on the count, secondarily on
-            // the pointer address (i.e. on the array index/Nt4 value).
-            return std::tie(*cnt1, cnt1) > std::tie(*cnt2, cnt2);
-        }
-    );
+Nt4::Nt4(const Nt2 nt2) : nt_(from_nt2[size_t(nt2)]) {}
+
+template<> inline
+Counts<Nt2>::Counts(const Counts<Nt2>& nt2counts) : counts_(nt2counts.counts_) {}
+template<> inline
+Counts<Nt2>::Counts(const Counts<Nt4>& nt4counts) : Counts() {
+    for (Nt2 nt2 : Nt2::all) // We thus ignore Nt4::n.
+        counts_[size_t(nt2)] = nt4counts[Nt4(nt2)];
+}
+template<> inline
+Counts<Nt4>::Counts(const Counts<Nt4>& nt4counts) : counts_(nt4counts.counts_) {}
+template<> inline
+Counts<Nt4>::Counts(const Counts<Nt2>& nt2counts) : Counts() {
+    for (Nt2 nt2 : Nt2::all)
+        counts_[size_t(Nt4(nt2))] = nt2counts[nt2];
 }
 
-inline
-ostream& operator<< (ostream& os, const Nt4Counts& cnts) {
-    os << char(cnts.nt_of_rank(0)) << ":" << cnts.at_rank(0) << " "
-       << char(cnts.nt_of_rank(1)) << ":" << cnts.at_rank(1) << " "
-       << char(cnts.nt_of_rank(2)) << ":" << cnts.at_rank(2) << " "
-       << char(cnts.nt_of_rank(3)) << ":" << cnts.at_rank(3);
-    return os;
-}
-
-inline
-Nt2Counts& Nt2Counts::operator+= (const Nt2Counts& other) {
-    counts_[0] += other.counts_[0];
-    counts_[1] += other.counts_[1];
-    counts_[2] += other.counts_[2];
-    counts_[3] += other.counts_[3];
-    return *this;
-}
-
-inline
-ostream& operator<< (ostream& os, const Nt2Counts& cnts) {
-    os << "A:" << cnts[Nt2::a] << " C:" << cnts[Nt2::c]
-       << " G:" << cnts[Nt2::g]  << " T:" << cnts[Nt2::t];
-    return os;
+template<typename Nt>
+array<pair<size_t,Nt>,4> Counts<Nt>::sorted() {
+    array<pair<size_t,Nt>,4> arr {{
+        {(*this)[Nt::t], Nt::t},
+        {(*this)[Nt::g], Nt::g},
+        {(*this)[Nt::c], Nt::c},
+        {(*this)[Nt::a], Nt::a}
+    }};
+    // Sort by decreasing value. Primarily on the count, secondarily on
+    // the Nt4 value.
+    std::sort(arr.rbegin(), arr.rend());
+    return arr;
 }
 
 namespace std { template<class Nt>
