@@ -46,6 +46,7 @@ extern double p_freq;     // For the fixed model.
 
 void     set_model_thresholds (double alpha);
 snp_type call_snp (double l_ratio);
+snp_type call_snp (double lnl_hom, double lnl_het);
 
 double   lnl_multinomial_model_hom (double total, double n1);
 double   lnl_multinomial_model_het (double total, double n1n2);
@@ -97,16 +98,18 @@ public:
 
 class SampleCall {
     Counts<Nt2> depths_;
+    GtLiks lnls_;
     snp_type call_;
     // The nucleotide(s) corresponding to the genotype.
     // hom {nt, Nt4::n} | het {min_nt, max_nt} | unk {Nt4::n, Nt4::n}
     // For hets, the two nucleotides are sorted lexically (A<C<G<T).
     array<Nt4, 2> nts_;
 public:
-    SampleCall() : depths_(), call_(snp_type_unk), nts_{Nt4::n,Nt4::n} {}
-    SampleCall(const Counts<Nt4>& counts, snp_type gt_call, Nt4 rank0_nt, Nt4 rank1_nt);
+    SampleCall() : depths_(), lnls_(), call_(snp_type_unk), nts_{Nt4::n,Nt4::n} {}
+    SampleCall(const Counts<Nt2>& counts, const GtLiks& liks, snp_type gt_call, Nt4 rank0_nt, Nt4 rank1_nt);
 
     const Counts<Nt2>& depths() const {return depths_;}
+    const GtLiks& lnls() const {return lnls_;}
     snp_type call() const {return call_;}
     Nt4 nt0() const {assert(call_!=snp_type_unk); return nts_[0];}
     Nt4 nt1() const {assert(call_==snp_type_het); return nts_[1];}
@@ -148,6 +151,11 @@ snp_type call_snp (double l_ratio) {
         return snp_type_hom;
     else
         return snp_type_unk;
+}
+
+inline
+snp_type call_snp (double lnl_hom, double lnl_het) {
+    return call_snp(2.0 * (lnl_hom - lnl_het));
 }
 
 inline
@@ -267,8 +275,8 @@ double lr_bounded_multinomial_model (double nuc_1, double nuc_2, double nuc_3, d
 }
 
 inline
-SampleCall::SampleCall(const Counts<Nt4>& counts, snp_type gt_call, Nt4 rank0_nt, Nt4 rank1_nt)
-: depths_(counts), call_(gt_call), nts_{Nt4::n, Nt4::n}
+SampleCall::SampleCall(const Counts<Nt2>& counts, const GtLiks& liks, snp_type gt_call, Nt4 rank0_nt, Nt4 rank1_nt)
+: depths_(counts), lnls_(liks), call_(gt_call), nts_{{Nt4::n, Nt4::n}}
 {
     if (call_ == snp_type_hom) {
         nts_[0] = rank0_nt;
