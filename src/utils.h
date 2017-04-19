@@ -48,6 +48,12 @@ double reduced_factorial(double, double);
 
 double log_factorial(double);
 double reduced_log_factorial(double, double);
+
+inline
+bool almost_equal(double x, double y) {
+    return abs(x-y) < 1e-12 * std::abs(std::min(x,y));
+}
+
 //
 // Comparison functions for the STL sort routine
 //
