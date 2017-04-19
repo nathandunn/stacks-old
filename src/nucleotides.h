@@ -24,7 +24,7 @@ public:
     Nt4& operator=(const Nt4& other) {nt_ = other.nt_; return *this;}
 
     Nt4 rev_compl() const {return rev_compl_[size_t(nt_)];}
-
+    size_t index() const {return to_index[size_t(nt_)];}
     explicit operator size_t () const {return nt_;}
     explicit operator int () const {return nt_;}
     explicit operator char () const {return to_ch[nt_];}
@@ -57,6 +57,9 @@ private:
 
     // Table giving the reverse complement of the nucleotide.
     static const Nt4 rev_compl_[16];
+
+    // Convert $,a,c,g,t,n into a 0-5 index for arrays of objects indexed by possible Nt4 characters.
+    static const size_t to_index[16];
 };
 
 //
