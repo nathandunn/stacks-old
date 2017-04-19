@@ -321,8 +321,8 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
         if(rec.alleles.size() == 1) {
             size_t ad = 0;
             Nt4 ref_nt = sitecall.alleles().begin()->first;
-            for (const SampleCall& s_call : sitecall.sample_calls())
-                ad += s_call.depths()[ref_nt];
+            for (const SampleSiteData& sdata : sitecall.sample_data())
+                ad += sdata.depths()[ref_nt];
             if (ad != sitecall.tot_depth())
                 rec.info.push_back({"AD", to_string(ad)});
         } else {
@@ -348,10 +348,10 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
             rec.format.push_back("AD");
         }
         rec.samples.reserve(mpopi.samples().size());
-        assert(sitecall.sample_calls().size() == mpopi.samples().size());
-        for (const SampleCall& s_call : sitecall.sample_calls()) {
+        assert(sitecall.sample_data().size() == mpopi.samples().size());
+        for (const SampleSiteData& sdata : sitecall.sample_data()) {
 
-            if (s_call.depths().sum() == 0) {
+            if (sdata.depths().sum() == 0) {
                 // No data for this sample.
                 rec.samples.push_back(".");
                 continue;
@@ -359,19 +359,19 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
 
             if(rec.alleles.size() == 1) {
                 // Fixed.
-                rec.samples.push_back(to_string(s_call.depths().sum()));
+                rec.samples.push_back(to_string(sdata.depths().sum()));
             } else {
                 stringstream genotype;
                 // GT field.
                 vector<size_t> gt;
-                switch (s_call.call()) {
+                switch (sdata.call()) {
                 case snp_type_hom:
-                    gt.push_back(vcf_allele_indexes.at(s_call.nt0()));
+                    gt.push_back(vcf_allele_indexes.at(sdata.nt0()));
                     genotype << gt[0] << '/' << gt[0];
                     break;
                 case snp_type_het:
-                    gt.push_back(vcf_allele_indexes.at(s_call.nt0()));
-                    gt.push_back(vcf_allele_indexes.at(s_call.nt1()));
+                    gt.push_back(vcf_allele_indexes.at(sdata.nt0()));
+                    gt.push_back(vcf_allele_indexes.at(sdata.nt1()));
                     sort(gt.begin(), gt.end()); // (Prevents '1/0'.)
                     genotype << gt[0] << '/' << gt[1];
                     break;
@@ -380,12 +380,12 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
                     break;
                 }
                 // DP field.
-                genotype << ':' << s_call.depths().sum();
+                genotype << ':' << sdata.depths().sum();
                 // AD field.
                 vector<size_t> ad;
                 ad.reserve(vcf_alleles.size());
                 for (Nt4 nt : vcf_alleles)
-                    ad.push_back(s_call.depths()[nt]);
+                    ad.push_back(sdata.depths()[nt]);
                 genotype << ':';
                 join(ad, ',', genotype);
                 // Push it.
@@ -433,7 +433,7 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
         // Model.
         o_models_f << loc_id << "\ts_model\t" << sample_id << "\t";
         for (auto& c : calls) {
-            switch (c.sample_calls()[s].call()) {
+            switch (c.sample_data()[s].call()) {
             case snp_type_hom: o_models_f << "O"; break;
             case snp_type_het: o_models_f << "E"; break;
             case snp_type_unk: o_models_f << "U"; break;
@@ -447,7 +447,7 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
         for (auto& c : calls) {
             // For each site/position.
             for (Nt2 nt : Nt2::all) {
-                size_t dp = c.sample_calls()[s].depths()[nt];
+                size_t dp = c.sample_data()[s].depths()[nt];
                 if (dp <= 0xF)
                     o_models_f << "0" << dp;
                 else if (dp <= 0xFF)
