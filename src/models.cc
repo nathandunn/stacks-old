@@ -357,6 +357,14 @@ SiteCall MultinomialModel::call(const CLocAlnSet::site_iterator& site) const {
     return SiteCall(tot_depths, move(alleles), move(sample_data));
 }
 
+double MarukiHighModel::calc_hom_lnl(double n, double n1) const {
+    //TODO
+}
+
+double MarukiHighModel::calc_het_lnl(double n, double n1n2) const {
+    //TODO
+}
+
 SiteCall MarukiHighModel::call(const CLocAlnSet::site_iterator& site) const {
 
     /*
@@ -381,8 +389,10 @@ SiteCall MarukiHighModel::call(const CLocAlnSet::site_iterator& site) const {
     Counts<Nt2> tot_depths;
 
     //
-    // Count the observed nucleotides of the site for all samples.
-    // Set the SampleSiteData::depths_
+    // I.
+    // Count the observed nucleotides of the site for all samples; set
+    // `SampleSiteData::depths_`.
+    // Then find the most common nucleotide across the population.
     //
     Counts<Nt4> counts;
     for (size_t sample=0; sample<n_samples; ++sample) {
@@ -392,14 +402,121 @@ SiteCall MarukiHighModel::call(const CLocAlnSet::site_iterator& site) const {
         tot_depths += sd.depths();
     }
 
-    //
-    // Find the most common nucleotide across the population.
-    //
-    Nt2 ref_nt = tot_depths.sorted()[0].second;
+    Nt2 nt_ref = tot_depths.sorted()[0].second;
 
     //
-    // Look for alternative alleles.
+    // II.
+    // Look for alternative alleles; start filling SampleSiteData::lnls_.
     //
+    set<Nt2> alleles;
+    alleles.insert(nt_ref); // Note: There are limit cases (esp. low coverage over many
+                            // individuals) where ref_nt would not appear in any of the
+                            // significant genotypes; we record it as an allele anyway.
+    array<pair<size_t,Nt2>,4> sorted;
+    for (size_t sample=0; sample<n_samples; ++sample) {
+        SampleSiteData& sd = sample_data[sample];
+        if (!sd.has_coverage())
+            continue;
 
-    //...TODO
+        // Find the best genotype for the sample -- this is either the homzygote
+        // for the rank0 nucleotide or the heterozygote for the rank0 and rank1
+        // nucleotides.
+        sorted = sd.depths().sorted();
+        Nt2 nt0 = sorted[0].second;
+        Nt2 nt1 = sorted[1].second;
+        size_t dp0 = sorted[0].first;
+        size_t dp1 = sorted[1].first;
+
+        if (dp1 == 0 && nt0 == nt_ref)
+            // We can wait until we know whether the site is fixed.
+            continue;
+
+        double lnl_hom = calc_hom_lnl(sd.depths().sum(), dp0);
+        double lnl_het = calc_het_lnl(sd.depths().sum(), dp0+dp1);
+        sd.lnls().set(nt0, nt0, lnl_hom);
+        sd.lnls().set(nt0, nt1, lnl_het);
+
+        // Compare this likelihood to that of the ref,ref homozygote.
+        static const double& polymorphism_signif_thr = homozygote_limit; //xxx Hack.
+        if (nt0 == nt_ref) {
+            if (lrtest(lnl_het, lnl_hom, polymorphism_signif_thr))
+                // Record the alternative allele.
+                alleles.insert(nt1);
+        } else {
+            double lnl_ref = calc_hom_lnl(sd.depths().sum(), sd.depths()[nt_ref]);
+            sd.lnls().set(nt_ref, nt_ref, lnl_ref);
+            double lnl_best = std::max(lnl_hom, lnl_het);
+            if (lrtest(lnl_best, lnl_ref, polymorphism_signif_thr)) {
+                // Record one alternative allele.
+                alleles.insert(nt0);
+                if (!(nt1==nt_ref) && lrtest(lnl_het, lnl_hom, polymorphism_signif_thr))
+                    // Record a second alternative allele (the SNP is at least ternary).
+                    alleles.insert(nt1);
+            }
+        }
+    }
+
+    //
+    // III.
+    // Compute the likelihoods for all possible genotypes & call genotypes.
+    //
+    if (alleles.size() > 1) {
+        for (size_t sample=0; sample<n_samples; ++sample) {
+            SampleSiteData& sd = sample_data[sample];
+            if (!sd.has_coverage())
+                continue;
+
+            for (auto nt1=alleles.begin(); nt1!=alleles.end(); ++nt1) {
+                if (!sd.lnls().has_lik(*nt1, *nt1))
+                    sd.lnls().set(*nt1, *nt1, calc_hom_lnl(sd.depths().sum(), sd.depths()[*nt1]));
+
+                auto nt2 = nt1;
+                ++nt2;
+                for (; nt2!=alleles.end(); ++nt2)
+                    if (!sd.lnls().has_lik(*nt1, *nt2))
+                        sd.lnls().set(*nt1, *nt2, calc_het_lnl(sd.depths().sum(), sd.depths()[*nt1]+sd.depths()[*nt2]));
+            }
+
+            // Call the genotype.
+            sorted = sd.depths().sorted();
+            Nt2 nt0 = sorted[0].second;
+            Nt2 nt1 = sorted[1].second;
+            double lnl_hom = sd.lnls().at(nt0, nt0);
+            double lnl_het = sd.lnls().at(nt0, nt1);
+            sd.add_call(call_snp(lnl_hom, lnl_het), nt0, nt1);
+        }
+    }
+
+    //
+    // Finally, compute allele frequencies.
+    //
+    map<Nt4,size_t> allele_freqs;
+    if (alleles.size() == 1) {
+        allele_freqs.insert({*alleles.begin(),-1});
+    } else {
+        counts.clear();
+        for (const SampleSiteData& sd : sample_data) {
+            switch (sd.call()) {
+            case snp_type_hom :
+                counts.increment(sd.nt0());
+                counts.increment(sd.nt0());
+                break;
+            case snp_type_het :
+                counts.increment(sd.nt0());
+                counts.increment(sd.nt1());
+                break;
+            default:
+                // snp_type_unk
+                break;
+            }
+        }
+        array<pair<size_t,Nt4>,4> sorted_alleles = counts.sorted();
+        size_t i = 0;
+        while (i<4 && sorted_alleles[i].first != 0) {
+            allele_freqs.insert({sorted_alleles[i].second, sorted_alleles[i].first});
+            ++i;
+        }
+    }
+
+    return SiteCall(tot_depths, move(allele_freqs), move(sample_data));
 }

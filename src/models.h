@@ -44,6 +44,8 @@ extern double bound_low;  // For the bounded-snp model.
 extern double bound_high; // For the bounded-snp model.
 extern double p_freq;     // For the fixed model.
 
+bool lrtest(double lnl_althyp, double lnl_nullhyp, double threshold); // Where threshold is a value in the Chi2 distribution.
+
 void     set_model_thresholds (double alpha);
 snp_type call_snp (double l_ratio);
 snp_type call_snp (double lnl_hom, double lnl_het);
@@ -68,7 +70,7 @@ double   homozygous_likelihood(int, map<char, int> &);
 class GtLiks {
     array<double,10> lnliks_; // {AA,AC,CC,AG,CG,GG,AT,CT,GT,TT} similar to VCF.
     static size_t get_index(Nt2 n1, Nt2 n2)
-        {assert(n1<n2 || n1==n2); return size_t(n1) + (size_t(n2)*(size_t(n2)+1)) / 2;}
+        {if(n1<n2) return size_t(n1) + (size_t(n2)*(size_t(n2)+1)) / 2; else return size_t(n2) + (size_t(n1)*(size_t(n1)+1)) / 2;}
 public:
     GtLiks() : lnliks_{{0,0,0,0,0,0,0,0,0,0}} {}
     double at(Nt2 n1, Nt2 n2) const
@@ -95,9 +97,12 @@ public:
     const GtLiks& lnls() const {return lnls_;}
           GtLiks& lnls()       {return lnls_;}
 
+    bool has_coverage() const {return depths_.sum() != 0;}
+
     snp_type call() const {return call_;}
-    Nt4 nt0() const {assert(call_!=snp_type_unk); return nts_[0];}
+    Nt4 nt0() const {assert(call_==snp_type_hom || call_==snp_type_het); return nts_[0];}
     Nt4 nt1() const {assert(call_==snp_type_het); return nts_[1];}
+
     void add_call(snp_type c, Nt4 rank0_nt, Nt4 rank1_nt);
 };
 
@@ -133,6 +138,8 @@ public:
 // MarukiHighModel: the model of Maruki & Lynch (2017) for high-coverage data.
 //
 class MarukiHighModel : public Model {
+    double calc_hom_lnl(double n, double n1) const;
+    double calc_het_lnl(double n, double n1n2) const;
 public:
     SiteCall call(const CLocAlnSet::site_iterator& site) const;
 };
@@ -142,6 +149,11 @@ public:
 // Inline definitions
 // ==================
 //
+
+inline
+bool lrtest(double lnl_althyp, double lnl_nullhyp, double threshold) {
+    return 2.0 * (lnl_althyp - lnl_nullhyp) > threshold;
+}
 
 inline
 snp_type call_snp (double l_ratio) {
