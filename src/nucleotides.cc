@@ -1,6 +1,7 @@
 #include "constants.h"
 #include "nucleotides.h"
 
+const Nt4 Nt4::$ (0);  // 0000 (0)
 const Nt4 Nt4::a (1);  // 0001 (1)
 const Nt4 Nt4::c (2);  // 0010 (2)
 const Nt4 Nt4::g (4);  // 0100 (4)

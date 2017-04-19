@@ -32,6 +32,7 @@ public:
     bool operator< (Nt4 other) const {return nt_ < other.nt_;}
 
     static constexpr size_t nbits = 4;
+    static const Nt4 $; // 0000 (0)
     static const Nt4 a; // 0001 (1)
     static const Nt4 c; // 0010 (2)
     static const Nt4 g; // 0100 (4)
