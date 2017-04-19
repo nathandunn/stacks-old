@@ -47,6 +47,8 @@ extern double p_freq;     // For the fixed model.
 void     set_model_thresholds (double alpha);
 snp_type call_snp (double l_ratio);
 
+double   lnl_multinomial_model_hom (double total, double n1);
+double   lnl_multinomial_model_het (double total, double n1n2);
 double   lr_multinomial_model         (double nuc_1, double nuc_2, double nuc_3, double nuc_4);
 double   lr_bounded_multinomial_model (double nuc_1, double nuc_2, double nuc_3, double nuc_4);
 
@@ -149,16 +151,26 @@ snp_type call_snp (double l_ratio) {
 }
 
 inline
-double lr_multinomial_model (double nuc_1, double nuc_2, double nuc_3, double nuc_4) {
+double lnl_multinomial_model_hom (double total, double n1) {
+    if (n1 == total)
+        return 0.0;
+    else
+        return n1 * log(n1/total) + (total-n1) * log( (total-n1)/(3.0*total) );
+}
 
+inline
+double lnl_multinomial_model_het (double total, double n1n2) {
+    if (n1n2 == total)
+        return n1n2 * log(0.5);
+    else
+        return n1n2 * log( n1n2/(2.0*total) ) + (total-n1n2) * log( (total-n1n2)/(2.0*total) );
+}
+
+inline
+double lr_multinomial_model_legacy (double nuc_1, double nuc_2, double nuc_3, double nuc_4) {
     //
-    // Method of Paul Hohenlohe <hohenlohe@uidaho.edu>, personal communication.
-    //
-    // For a diploid individual, there are ten possible genotypes
-    // (four homozygous and six heterozygous genotypes).  We calculate
-    // the likelihood of each possible genotype by using a multinomial
-    // sampling distribution, which gives the probability of observing
-    // a set of read counts (n1,n2,n3,n4) given a particular genotype.
+    // This function is to check that the refactored function gives the same
+    // results as the original code (i.e. this code).
     //
 
     double total = nuc_1 + nuc_2 + nuc_3 + nuc_4;
@@ -177,6 +189,27 @@ double lr_multinomial_model (double nuc_1, double nuc_2, double nuc_3, double nu
 
     l_ratio *= 2.0;
 
+    return l_ratio;
+}
+
+inline
+double lr_multinomial_model (double nuc_1, double nuc_2, double nuc_3, double nuc_4) {
+    //
+    // Method of Paul Hohenlohe <hohenlohe@uidaho.edu>, personal communication.
+    //
+    // For a diploid individual, there are ten possible genotypes
+    // (four homozygous and six heterozygous genotypes).  We calculate
+    // the likelihood of each possible genotype by using a multinomial
+    // sampling distribution, which gives the probability of observing
+    // a set of read counts (n1,n2,n3,n4) given a particular genotype.
+    //
+
+    double total = nuc_1 + nuc_2 + nuc_3 + nuc_4;
+    assert(total > 0.0);
+
+    double l_ratio = 2.0 * (lnl_multinomial_model_hom(total, nuc_1) - lnl_multinomial_model_het(total, nuc_1+nuc_2));
+
+    assert(almost_equal(l_ratio, lr_multinomial_model_legacy(nuc_1,nuc_2,nuc_3,nuc_4)));
     return l_ratio;
 }
 
