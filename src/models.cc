@@ -367,3 +367,48 @@ SiteCall MultinomialModel::call(const CLocAlnSet::site_iterator& site) const {
 
     return SiteCall(tot_depth, move(alleles), move(sample_calls));
 }
+
+SiteCall MarukiHighModel::call(const CLocAlnSet::site_iterator& site) const {
+
+    /*
+     * For this model the procedure is:
+     * I. Obtain the most commonly seen nucleotide M.
+     * II. Look for alternative alleles, if any:
+     *     For each sample:
+     *         If there is a genotype significantly better than MM:
+     *             (This genotype can be Mm, mm or mn.)
+     *             The site is polymorphic.
+     *             Record m as an alternative allele.
+     *             If the genotype is mn AND is significantly better than mm:
+     *                 Record n as an allele.
+     * III. Given the known alleles, compute the likelihoods for all possible
+     *      genotypes (n.b. most of the non-trivial ones have already been
+     *      computed), and call genotypes.
+     */
+
+    const size_t n_samples = site.mpopi().samples().size();
+
+    //
+    // Count the observed nucleotides of the site for all samples.
+    //
+    Counts<Nt2> tot_depths;
+    vector<Counts<Nt2>> sample_depths;
+    sample_depths.reserve(n_samples);
+    Counts<Nt4> counts;
+    for (size_t sample=0; sample<n_samples; ++sample) {
+        site.counts(counts, sample);
+        sample_depths.push_back(Counts<Nt2>(counts));
+        tot_depths += sample_depths.back();
+    }
+
+    //
+    // Find the most common nucleotide across the population.
+    //
+    Nt2 ref_nt = tot_depths.sorted()[0].second;
+
+    //
+    // Look for alternative alleles.
+    //
+
+    //...TODO
+}
