@@ -326,7 +326,8 @@ SiteCall MultinomialModel::call(const CLocAlnSet::site_iterator& site) const {
     }
 
     //
-    // Iterate over the SampleCalls & record the genotypes that were found.
+    // Iterate over the SampleCalls & record the existing alleles and their
+    // frequencies.
     //
     map<Nt4, size_t> alleles;
     counts.clear();
@@ -346,23 +347,10 @@ SiteCall MultinomialModel::call(const CLocAlnSet::site_iterator& site) const {
         }
     }
     sorted = counts.sorted();
-    if (sorted[0].first > 0) {
-        // At least one allele was observed.
-        alleles.insert({sorted[0].second, sorted[0].first});
-
-        if (sorted[1].first > 0) {
-            // SNP with at least two alleles.
-            alleles.insert({sorted[0].second, sorted[0].first});
-
-            if (sorted[2].first > 0) {
-                alleles.insert({sorted[0].second, sorted[0].first});
-
-                if (sorted[3].first > 0) {
-                    // Quaternary SNP.
-                    alleles.insert({sorted[0].second, sorted[0].first});
-                }
-            }
-        }
+    size_t i = 0;
+    while (i<4 && sorted[i].first != 0) {
+        alleles.insert({sorted[i].second, sorted[i].first});
+        ++i;
     }
 
     return SiteCall(tot_depth, move(alleles), move(sample_calls));
