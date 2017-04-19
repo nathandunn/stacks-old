@@ -309,14 +309,19 @@ SiteCall MultinomialModel::call(const CLocAlnSet::site_iterator& site) const {
         if (sorted[0].first == 0) {
             sample_calls.push_back(SampleCall());
         } else {
-            snp_type gt_call = call_snp(lr_multinomial_model(
-                    sorted[0].first,
-                    sorted[1].first,
-                    sorted[2].first,
-                    sorted[3].first
-                    ));
+            double lnl_hom = lnl_multinomial_model_hom(counts.sum(), sorted[0].first);
+            double lnl_het = lnl_multinomial_model_het(counts.sum(), sorted[0].first+sorted[1].first);
+
+            GtLiks lnls;
+            Nt2 n0 = sorted[0].second;
+            Nt2 n1 = sorted[1].second;
+            lnls.set(n0, n0, lnl_hom);
+            lnls.set(n0, n1, lnl_het);
+
+            snp_type gt_call = call_snp(lnl_hom, lnl_het);
             sample_calls.push_back(SampleCall(
-                    counts,
+                    Counts<Nt2>(counts),
+                    lnls,
                     gt_call,
                     sorted[0].second,
                     sorted[1].second
