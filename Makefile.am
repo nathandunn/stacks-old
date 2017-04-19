@@ -29,6 +29,7 @@ libcore_a_SOURCES = \
 	src/models.h src/models.cc \
 	src/mstack.h src/mstack.cc \
 	src/mst.h src/mst.cc \
+	src/nucleotides.h src/nucleotides.cc \
 	src/renz.h src/renz.cc \
 	src/SamI.h \
 	src/Seq.h src/Seq.cc \
