@@ -294,40 +294,36 @@ homozygous_likelihood(int col, map<char, int> &nuc)
 
 SiteCall MultinomialModel::call(const CLocAlnSet::site_iterator& site) const {
 
+    size_t n_samples = site.mpopi().samples().size();
+
+    vector<SampleSiteData> sample_data (n_samples);
+    Counts<Nt2> tot_depths;
+
     //
     // Look at this site in each sample; make genotype calls.
     //
-    size_t tot_depth = 0;
-    vector<SampleCall> sample_calls;
-    sample_calls.reserve(site.mpopi().samples().size());
     Counts<Nt4> counts;
     array<pair<size_t,Nt4>,4> sorted;
-    for (size_t s=0; s<site.mpopi().samples().size(); ++s) {
-        site.counts(counts, s);
+    for (size_t sample=0; sample<n_samples; ++sample) {
+        site.counts(counts, sample);
         sorted = counts.sorted();
+        if (sorted[0].first == 0)
+            continue;
 
-        if (sorted[0].first == 0) {
-            sample_calls.push_back(SampleCall());
-        } else {
-            double lnl_hom = lnl_multinomial_model_hom(counts.sum(), sorted[0].first);
-            double lnl_het = lnl_multinomial_model_het(counts.sum(), sorted[0].first+sorted[1].first);
+        // Depths.
+        SampleSiteData& sd = sample_data[sample];
+        sd.depths() = Counts<Nt2>(counts);
+        tot_depths += sd.depths();
 
-            GtLiks lnls;
-            Nt2 n0 = sorted[0].second;
-            Nt2 n1 = sorted[1].second;
-            lnls.set(n0, n0, lnl_hom);
-            lnls.set(n0, n1, lnl_het);
+        // Lnls.
+        double lnl_hom = lnl_multinomial_model_hom(counts.sum(), sorted[0].first);
+        double lnl_het = lnl_multinomial_model_het(counts.sum(), sorted[0].first+sorted[1].first);
+        sd.lnls().set(sorted[0].second, sorted[0].second, lnl_hom);
+        sd.lnls().set(sorted[0].second, sorted[1].second, lnl_het);
 
-            snp_type gt_call = call_snp(lnl_hom, lnl_het);
-            sample_calls.push_back(SampleCall(
-                    Counts<Nt2>(counts),
-                    lnls,
-                    gt_call,
-                    sorted[0].second,
-                    sorted[1].second
-                    ));
-            tot_depth += sample_calls.back().depths().sum();
-        }
+        // Call.
+        snp_type gt_call = call_snp(lnl_hom, lnl_het);
+        sd.add_call(gt_call, sorted[0].second, sorted[1].second);
     }
 
     //
@@ -336,15 +332,15 @@ SiteCall MultinomialModel::call(const CLocAlnSet::site_iterator& site) const {
     //
     map<Nt4, size_t> alleles;
     counts.clear();
-    for (const SampleCall& sc : sample_calls) {
-        switch (sc.call()) {
+    for (const SampleSiteData& sd : sample_data) {
+        switch (sd.call()) {
         case snp_type_hom :
-            counts.increment(sc.nt0());
-            counts.increment(sc.nt0());
+            counts.increment(sd.nt0());
+            counts.increment(sd.nt0());
             break;
         case snp_type_het :
-            counts.increment(sc.nt0());
-            counts.increment(sc.nt1());
+            counts.increment(sd.nt0());
+            counts.increment(sd.nt1());
             break;
         default:
             // snp_type_unk
@@ -358,7 +354,7 @@ SiteCall MultinomialModel::call(const CLocAlnSet::site_iterator& site) const {
         ++i;
     }
 
-    return SiteCall(tot_depth, move(alleles), move(sample_calls));
+    return SiteCall(tot_depths, move(alleles), move(sample_data));
 }
 
 SiteCall MarukiHighModel::call(const CLocAlnSet::site_iterator& site) const {
@@ -381,17 +377,19 @@ SiteCall MarukiHighModel::call(const CLocAlnSet::site_iterator& site) const {
 
     const size_t n_samples = site.mpopi().samples().size();
 
+    vector<SampleSiteData> sample_data (n_samples);
+    Counts<Nt2> tot_depths;
+
     //
     // Count the observed nucleotides of the site for all samples.
+    // Set the SampleSiteData::depths_
     //
-    Counts<Nt2> tot_depths;
-    vector<Counts<Nt2>> sample_depths;
-    sample_depths.reserve(n_samples);
     Counts<Nt4> counts;
     for (size_t sample=0; sample<n_samples; ++sample) {
         site.counts(counts, sample);
-        sample_depths.push_back(Counts<Nt2>(counts));
-        tot_depths += sample_depths.back();
+        SampleSiteData& sd = sample_data[sample];
+        sd.depths() = Counts<Nt2>(counts);
+        tot_depths += sd.depths();
     }
 
     //

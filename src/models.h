@@ -79,37 +79,40 @@ public:
         {assert(std::isfinite(lnl) && lnl<0); assert(!has_lik(n1,n2)); lnliks_[get_index(n1,n2)] = lnl;}
 };
 
-class SampleCall {
+class SampleSiteData {
     Counts<Nt2> depths_;
     GtLiks lnls_;
-    snp_type call_;
-    // The nucleotide(s) corresponding to the genotype.
+    // The genotype call and the corresponding nucleotides.
     // hom {nt, Nt4::n} | het {min_nt, max_nt} | unk {Nt4::n, Nt4::n}
     // For hets, the two nucleotides are sorted lexically (A<C<G<T).
+    snp_type call_;
     array<Nt4, 2> nts_;
 public:
-    SampleCall() : depths_(), lnls_(), call_(snp_type_unk), nts_{Nt4::n,Nt4::n} {}
-    SampleCall(const Counts<Nt2>& counts, const GtLiks& liks, snp_type gt_call, Nt4 rank0_nt, Nt4 rank1_nt);
+    SampleSiteData() : depths_(), lnls_(), call_(snp_type_unk), nts_{Nt4::n,Nt4::n} {}
 
     const Counts<Nt2>& depths() const {return depths_;}
+          Counts<Nt2>& depths()       {return depths_;}
     const GtLiks& lnls() const {return lnls_;}
+          GtLiks& lnls()       {return lnls_;}
+
     snp_type call() const {return call_;}
     Nt4 nt0() const {assert(call_!=snp_type_unk); return nts_[0];}
     Nt4 nt1() const {assert(call_==snp_type_het); return nts_[1];}
+    void add_call(snp_type c, Nt4 rank0_nt, Nt4 rank1_nt);
 };
 
 class SiteCall {
-    size_t tot_depth_;
+    Counts<Nt2> tot_depths_;
     map<Nt4, size_t> alleles_;
-    vector<SampleCall> sample_calls_;
+    vector<SampleSiteData> sample_data_;
 public:
-    SiteCall(size_t tot_depth, map<Nt4, size_t>&& alleles, vector<SampleCall>&& sample_calls)
-        : tot_depth_(tot_depth), alleles_(move(alleles)), sample_calls_(move(sample_calls))
+    SiteCall(const Counts<Nt2>& tot_depths, map<Nt4, size_t>&& alleles, vector<SampleSiteData>&& sample_data)
+        : tot_depths_(tot_depths), alleles_(move(alleles)), sample_data_(move(sample_data))
         {}
-
-    size_t tot_depth() const {return tot_depth_;}
+    const Counts<Nt2>& tot_depths() const {return tot_depths_;}
+    size_t tot_depth() const {return tot_depths_.sum();}
     const map<Nt4, size_t>& alleles() const {return alleles_;}
-    const vector<SampleCall>& sample_calls() const {return sample_calls_;}
+    const vector<SampleSiteData>& sample_data() const {return sample_data_;}
 };
 
 class Model {
@@ -272,9 +275,8 @@ double lr_bounded_multinomial_model (double nuc_1, double nuc_2, double nuc_3, d
 }
 
 inline
-SampleCall::SampleCall(const Counts<Nt2>& counts, const GtLiks& liks, snp_type gt_call, Nt4 rank0_nt, Nt4 rank1_nt)
-: depths_(counts), lnls_(liks), call_(gt_call), nts_{{Nt4::n, Nt4::n}}
-{
+void SampleSiteData::add_call(snp_type c, Nt4 rank0_nt, Nt4 rank1_nt) {
+    call_ = c;
     if (call_ == snp_type_hom) {
         nts_[0] = rank0_nt;
     } else if (call_ == snp_type_het) {
