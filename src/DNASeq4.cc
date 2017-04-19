@@ -29,6 +29,10 @@ const Nt4 Nt4::from_ch[256] = {
     n,n,n,n, n,n,n,n, n,n,n,n, n,n,n,n
 };
 
+const Nt4 Nt4::from_nt2[4] = {
+    a,c,g,t
+};
+
 const char Nt4::to_ch[16] {
     '=','A','C','?','G','?','?','?','T','?','?','?','?','?','?','N'
 };
@@ -110,8 +114,6 @@ DNASeq4 DNASeq4::rev_compl() const {
     return rev;
 }
 
-void append(const DNASeq4& other) {
-}
 void DNASeq4::append(const DNASeq4& other) {
 
     if (other.l_ == 0)
