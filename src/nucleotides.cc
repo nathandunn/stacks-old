@@ -41,6 +41,10 @@ const Nt4 Nt4::rev_compl_[16] {
     n,t,g,n,c,n,n,n,a,n,n,n,n,n,n,n
 };
 
+const size_t Nt4::to_index[16] {
+    0,1,2,0,3,0,0,0,4,0,0,0,0,0,0,5
+};
+
 const Nt2 Nt2::a (0);
 const Nt2 Nt2::c (1);
 const Nt2 Nt2::g (2);
