@@ -79,23 +79,6 @@ public:
         {assert(std::isfinite(lnl) && lnl<0); assert(!has_lik(n1,n2)); lnliks_[get_index(n1,n2)] = lnl;}
 };
 
-class SiteCall;
-class SampleCall;
-
-class SiteCall {
-    size_t tot_depth_;
-    map<Nt4, size_t> alleles_;
-    vector<SampleCall> sample_calls_;
-public:
-    SiteCall(size_t tot_depth, map<Nt4, size_t>&& alleles, vector<SampleCall>&& sample_calls)
-        : tot_depth_(tot_depth), alleles_(move(alleles)), sample_calls_(move(sample_calls))
-        {}
-
-    size_t tot_depth() const {return tot_depth_;}
-    const map<Nt4, size_t>& alleles() const {return alleles_;}
-    const vector<SampleCall>& sample_calls() const {return sample_calls_;}
-};
-
 class SampleCall {
     Counts<Nt2> depths_;
     GtLiks lnls_;
@@ -113,6 +96,20 @@ public:
     snp_type call() const {return call_;}
     Nt4 nt0() const {assert(call_!=snp_type_unk); return nts_[0];}
     Nt4 nt1() const {assert(call_==snp_type_het); return nts_[1];}
+};
+
+class SiteCall {
+    size_t tot_depth_;
+    map<Nt4, size_t> alleles_;
+    vector<SampleCall> sample_calls_;
+public:
+    SiteCall(size_t tot_depth, map<Nt4, size_t>&& alleles, vector<SampleCall>&& sample_calls)
+        : tot_depth_(tot_depth), alleles_(move(alleles)), sample_calls_(move(sample_calls))
+        {}
+
+    size_t tot_depth() const {return tot_depth_;}
+    const map<Nt4, size_t>& alleles() const {return alleles_;}
+    const vector<SampleCall>& sample_calls() const {return sample_calls_;}
 };
 
 class Model {
