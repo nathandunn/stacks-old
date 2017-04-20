@@ -337,31 +337,25 @@ map<Nt2,size_t> SiteCall::tally_allele_freqs(const vector<SampleCall>& spldata) 
     return allele_freqs;
 }
 
-SiteCall MultinomialModel::call(const CLocAlnSet::site_iterator& site) const {
+SiteCall MultinomialModel::call(vector<Counts<Nt2>>&& sample_depths) const {
 
-    size_t n_samples = site.mpopi().samples().size();
+    size_t n_samples = sample_depths.size();
 
     Counts<Nt2> tot_depths;
-    vector<Counts<Nt2>> sample_depths (n_samples);
-    vector<SampleCall> sample_calls (n_samples);
+    for (const Counts<Nt2>& depths : sample_depths)
+        tot_depths += depths;
 
     //
-    // Look at this site in each sample; make genotype calls.
+    // Make genotype calls.
     //
-    Counts<Nt4> counts;
+    vector<SampleCall> sample_calls (n_samples);
     array<pair<size_t,Nt2>,4> sorted;
     for (size_t sample=0; sample<n_samples; ++sample) {
-        site.counts(counts, sample);
-
-        // Depths.
-        Counts<Nt2>& depths = sample_depths[sample];
-        depths = Counts<Nt2>(counts);
-        tot_depths += depths;
+        const Counts<Nt2>& depths = sample_depths[sample];
         size_t dp = depths.sum();
-
-        // Genotype likelihoods & call.
         if (dp == 0)
             continue;
+
         sorted = depths.sorted();
         SampleCall& c = sample_calls[sample];
         double lnl_hom = lnl_multinomial_model_hom(dp, sorted[0].first);
@@ -423,7 +417,7 @@ double MarukiHighModel::calc_het_lnl(double n, double n1n2) const {
     //TODO
 }
 
-SiteCall MarukiHighModel::call(const CLocAlnSet::site_iterator& site) const {
+SiteCall MarukiHighModel::call(vector<Counts<Nt2>>&& sample_depths) const {
 
     /*
      * For this model the procedure is:
@@ -441,10 +435,14 @@ SiteCall MarukiHighModel::call(const CLocAlnSet::site_iterator& site) const {
      *      computed), and call genotypes.
      */
 
-    const size_t n_samples = site.mpopi().samples().size();
+    const size_t n_samples = sample_depths.size();
 
     Counts<Nt2> tot_depths;
-    vector<Counts<Nt2>> sample_depths (n_samples);
+    for (const Counts<Nt2>& depths : sample_depths)
+        tot_depths += depths;
+
+    if (tot_depths.sum() == 0)
+        return SiteCall(tot_depths, move(sample_depths), map<Nt2,size_t>(), vector<SampleCall>());
 
     //
     // I.
@@ -452,16 +450,6 @@ SiteCall MarukiHighModel::call(const CLocAlnSet::site_iterator& site) const {
     // `SampleCall::depths_`.
     // Then find the most common nucleotide across the population.
     //
-    Counts<Nt4> counts;
-    for (size_t sample=0; sample<n_samples; ++sample) {
-        site.counts(counts, sample);
-        sample_depths[sample] = Counts<Nt2>(counts);
-        tot_depths += sample_depths[sample];
-    }
-
-    if (tot_depths.sum() == 0)
-        return SiteCall(tot_depths, move(sample_depths), map<Nt2,size_t>(), vector<SampleCall>());
-
     Nt2 nt_ref = tot_depths.sorted()[0].second;
 
     //
