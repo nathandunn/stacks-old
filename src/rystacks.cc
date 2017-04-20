@@ -218,10 +218,16 @@ bool process_one_locus(CLocReadSet&& loc) {
     // Call SNPs.
     //
     vector<SiteCall> calls;
-    CLocAlnSet::site_iterator site (aln_loc);
-    while(site) {
-        calls.push_back(model->call(site));
-        ++site;
+    calls.reserve(aln_loc.ref().length());
+    for(CLocAlnSet::site_iterator site (aln_loc); bool(site); ++site) {
+        vector<Counts<Nt2>> sample_counts;
+        sample_counts.reserve(aln_loc.mpopi().samples().size());
+        Counts<Nt4> tmp;
+        for (size_t sample=0; sample<aln_loc.mpopi().samples().size(); ++sample) {
+            site.counts(tmp, sample);
+            sample_counts.push_back(Counts<Nt2>(tmp));
+        }
+        calls.push_back(model->call(move(sample_counts)));
     }
 
     // Update the consensus sequence.

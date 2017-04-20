@@ -112,7 +112,7 @@ public:
 class Model {
 public:
     virtual ~Model() {}
-    virtual SiteCall call(const CLocAlnSet::site_iterator& site) const = 0;
+    virtual SiteCall call(vector<Counts<Nt2>>&& sample_depths) const = 0;
 };
 
 //
@@ -120,7 +120,7 @@ public:
 //
 class MultinomialModel : public Model {
 public:
-    SiteCall call(const CLocAlnSet::site_iterator& site) const;
+    SiteCall call(vector<Counts<Nt2>>&& sample_depths) const;
 };
 
 //
@@ -130,7 +130,7 @@ class MarukiHighModel : public Model {
     double calc_hom_lnl(double n, double n1) const;
     double calc_het_lnl(double n, double n1n2) const;
 public:
-    SiteCall call(const CLocAlnSet::site_iterator& site) const;
+    SiteCall call(vector<Counts<Nt2>>&& sample_depths) const;
 };
 
 //
