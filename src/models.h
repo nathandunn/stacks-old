@@ -71,9 +71,9 @@ class SampleCall {
     // hom {nt, Nt4::n} | het {min_nt, max_nt} | unk {Nt4::n, Nt4::n}
     // For hets, the two nucleotides are sorted lexically (A<C<G<T).
     snp_type call_;
-    array<Nt4, 2> nts_;
+    array<Nt2,2> nts_;
 public:
-    SampleCall() : lnls_(), call_(snp_type_unk), nts_{Nt4::n,Nt4::n} {}
+    SampleCall() : lnls_(), call_(snp_type_unk), nts_{Nt2(),Nt2()} {}
 
     const GtLiks& lnls() const {return lnls_;}
           GtLiks& lnls()       {return lnls_;}
@@ -82,31 +82,31 @@ public:
     Nt4 nt0() const {assert(call_==snp_type_hom || call_==snp_type_het); return nts_[0];}
     Nt4 nt1() const {assert(call_==snp_type_het); return nts_[1];}
 
-    void add_call(snp_type c, Nt4 rank0_nt, Nt4 rank1_nt);
+    void set_call(snp_type c, Nt2 rank0_nt, Nt2 rank1_nt);
 };
 
 class SiteCall {
     Counts<Nt2> tot_depths_;
     vector<Counts<Nt2>> sample_depths_;
-    map<Nt4, size_t> alleles_;
+    map<Nt2,size_t> alleles_;
     vector<SampleCall> sample_calls_; // Empty if alleles_.size() < 2.
 public:
     SiteCall(const Counts<Nt2>& tot_depths,
              vector<Counts<Nt2>>&& sample_depths,
-             map<Nt4, size_t>&& alleles,
+             map<Nt2, size_t>&& alleles,
              vector<SampleCall>&& sample_calls
              )
         : tot_depths_(tot_depths), alleles_(move(alleles)), sample_calls_(move(sample_calls))
         {}
     const Counts<Nt2>& tot_depths() const {return tot_depths_;}
     const vector<Counts<Nt2>>& sample_depths() const {return sample_depths_;}
-    const map<Nt4, size_t>& alleles() const {return alleles_;}
+    const map<Nt2,size_t>& alleles() const {return alleles_;}
     const vector<SampleCall>& sample_calls() const {return sample_calls_;}
 
     size_t tot_depth() const {return tot_depths_.sum();}
-    Nt4 most_frequent_allele() const;
+    Nt2 most_frequent_allele() const;
 
-    static map<Nt4,size_t> tally_allele_freqs(const vector<SampleCall>& spldata);
+    static map<Nt2,size_t> tally_allele_freqs(const vector<SampleCall>& spldata);
 };
 
 class Model {
@@ -280,7 +280,7 @@ double lr_bounded_multinomial_model (double nuc_1, double nuc_2, double nuc_3, d
 }
 
 inline
-void SampleCall::add_call(snp_type c, Nt4 rank0_nt, Nt4 rank1_nt) {
+void SampleCall::set_call(snp_type c, Nt2 rank0_nt, Nt2 rank1_nt) {
     call_ = c;
     if (call_ == snp_type_hom) {
         nts_[0] = rank0_nt;
