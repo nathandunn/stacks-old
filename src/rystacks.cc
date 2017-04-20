@@ -223,22 +223,16 @@ bool process_one_locus(CLocReadSet&& loc) {
         ++site;
     }
 
-    /*
-    // Update the consensus sequence, if necessary.
-    // TODO Do the cases below happen? Add print statements...?
+    // Update the consensus sequence.
     DNASeq4 new_ref = aln_loc.ref();
     assert(calls.size() == new_ref.length());
     for (size_t i=0; i<calls.size(); ++i) {
-        const SiteCall& c = calls[i];
-        if (c.alleles.size() > 0) {
-            Nt4 most_frequent = c.most_frequent_nt();
-            if (new_ref[i] != most_frequent)
-                new_ref.set(i, most_frequent);
-        }
-        // else if (new_ref[i] != Nt4::n) {}
+        if (calls[i].alleles().empty())
+            new_ref.set(i, Nt4::n);
+        else
+            new_ref.set(i, calls[i].most_frequent_allele());
     }
     aln_loc.ref(move(new_ref));
-    */
 
     write_one_locus(aln_loc, calls);
 
@@ -274,7 +268,7 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
     for (size_t i=0; i<ref.length(); ++i) {
         const SiteCall& sitecall = calls[i];
         if (sitecall.alleles().empty())
-            // No data at this site. xxx Reconsider?
+            // No useful data at this site.
             continue;
 
         // Determine which alleles exist, and their order.
