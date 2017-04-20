@@ -316,8 +316,8 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
         if(rec.alleles.size() == 1) {
             size_t ad = 0;
             Nt4 ref_nt = sitecall.alleles().begin()->first;
-            for (const SampleSiteData& sdata : sitecall.sample_data())
-                ad += sdata.depths()[ref_nt];
+            for (const Counts<Nt2>& depths : sitecall.sample_depths())
+                ad += depths[ref_nt];
             if (ad != sitecall.tot_depth())
                 rec.info.push_back({"AD", to_string(ad)});
         } else {
@@ -344,10 +344,12 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
             rec.format.push_back("GL");
         }
         rec.samples.reserve(mpopi.samples().size());
-        assert(sitecall.sample_data().size() == mpopi.samples().size());
-        for (const SampleSiteData& sdata : sitecall.sample_data()) {
+        assert(sitecall.sample_data().size() == mpopi.samples().size()); //TODO Won't work when SiteCall::sample_calls_ is left empty.
+        for (size_t sample=0; sample<mpopi.samples().size(); ++sample) {
+            const Counts<Nt2>& sdepths = sitecall.sample_depths()[sample];
+            const SampleSiteData& sdata = sitecall.sample_data()[sample];
 
-            if (sdata.depths().sum() == 0) {
+            if (sdepths.sum() == 0) {
                 // No data for this sample.
                 rec.samples.push_back(".");
                 continue;
@@ -355,7 +357,7 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
 
             if(rec.alleles.size() == 1) {
                 // Fixed.
-                rec.samples.push_back(to_string(sdata.depths().sum()));
+                rec.samples.push_back(to_string(sdepths.sum()));
             } else {
                 stringstream genotype;
                 // GT field.
@@ -376,12 +378,12 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
                     break;
                 }
                 // DP field.
-                genotype << ':' << sdata.depths().sum();
+                genotype << ':' << sdepths.sum();
                 // AD field.
                 vector<size_t> ad;
                 ad.reserve(vcf_alleles.size());
                 for (Nt4 nt : vcf_alleles)
-                    ad.push_back(sdata.depths()[nt]);
+                    ad.push_back(sdepths[nt]);
                 genotype << ':';
                 join(ad, ',', genotype);
                 // GL field.
@@ -445,7 +447,7 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
         for (auto& c : calls) {
             // For each site/position.
             for (Nt2 nt : Nt2::all) {
-                size_t dp = c.sample_data()[s].depths()[nt];
+                size_t dp = c.sample_depths()[s][nt];
                 if (dp <= 0xF)
                     o_models_f << "0" << dp;
                 else if (dp <= 0xFF)

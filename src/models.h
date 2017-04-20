@@ -66,7 +66,6 @@ double   heterozygous_likelihood(int, map<char, int> &);
 double   homozygous_likelihood(int, map<char, int> &);
 
 class SampleSiteData {
-    Counts<Nt2> depths_;
     GtLiks lnls_;
     // The genotype call and the corresponding nucleotides.
     // hom {nt, Nt4::n} | het {min_nt, max_nt} | unk {Nt4::n, Nt4::n}
@@ -74,14 +73,10 @@ class SampleSiteData {
     snp_type call_;
     array<Nt4, 2> nts_;
 public:
-    SampleSiteData() : depths_(), lnls_(), call_(snp_type_unk), nts_{Nt4::n,Nt4::n} {}
+    SampleSiteData() : lnls_(), call_(snp_type_unk), nts_{Nt4::n,Nt4::n} {}
 
-    const Counts<Nt2>& depths() const {return depths_;}
-          Counts<Nt2>& depths()       {return depths_;}
     const GtLiks& lnls() const {return lnls_;}
           GtLiks& lnls()       {return lnls_;}
-
-    bool has_coverage() const {return depths_.sum() != 0;}
 
     snp_type call() const {return call_;}
     Nt4 nt0() const {assert(call_==snp_type_hom || call_==snp_type_het); return nts_[0];}
@@ -92,13 +87,19 @@ public:
 
 class SiteCall {
     Counts<Nt2> tot_depths_;
+    vector<Counts<Nt2>> sample_depths_;
     map<Nt4, size_t> alleles_;
-    vector<SampleSiteData> sample_data_;
+    vector<SampleSiteData> sample_data_; // Empty if alleles_.size() < 2.
 public:
-    SiteCall(const Counts<Nt2>& tot_depths, map<Nt4, size_t>&& alleles, vector<SampleSiteData>&& sample_data)
+    SiteCall(const Counts<Nt2>& tot_depths,
+             vector<Counts<Nt2>>&& sample_depths,
+             map<Nt4, size_t>&& alleles,
+             vector<SampleSiteData>&& sample_data
+             )
         : tot_depths_(tot_depths), alleles_(move(alleles)), sample_data_(move(sample_data))
         {}
     const Counts<Nt2>& tot_depths() const {return tot_depths_;}
+    const vector<Counts<Nt2>>& sample_depths() const {return sample_depths_;}
     const map<Nt4, size_t>& alleles() const {return alleles_;}
     const vector<SampleSiteData>& sample_data() const {return sample_data_;}
 

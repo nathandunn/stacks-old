@@ -27,7 +27,7 @@ public:
     size_t operator[] (Nt nt) const {return counts_[size_t(nt)];}
 
     size_t sum() const {return (*this)[Nt::a] + (*this)[Nt::c] + (*this)[Nt::g] + (*this)[Nt::t];}
-    array<pair<size_t,Nt>,4> sorted();
+    array<pair<size_t,Nt>,4> sorted() const;
 
     Counts& operator+= (const Counts& other)
         {for (Nt nt : Nt::all) counts_[size_t(nt)] += other.counts_[size_t(nt)]; return *this;}
@@ -172,7 +172,7 @@ Counts<Nt4>::Counts(const Counts<Nt2>& nt2counts) : Counts() {
 }
 
 template<typename Nt>
-array<pair<size_t,Nt>,4> Counts<Nt>::sorted() {
+array<pair<size_t,Nt>,4> Counts<Nt>::sorted() const {
     array<pair<size_t,Nt>,4> arr {{
         {(*this)[Nt::t], Nt::t},
         {(*this)[Nt::g], Nt::g},
