@@ -410,11 +410,27 @@ SiteCall MultinomialModel::call(vector<Counts<Nt2>>&& sample_depths) const {
 }
 
 double MarukiHighModel::calc_hom_lnl(double n, double n1) const {
-    //TODO
+    // This returns the same value as the Hohenlohe ('snp/binomial') model except
+    // when the error rate estimate is bounded at 1.0 (i.e. `n1 < 0.25*n` c.f.
+    // Hohenlohe equations).
+    if (n1 == n)
+        return 0.0;
+    else if (n1 == 0.0)
+        return n * log(1.0/3.0);
+    else
+        return n1 * log(n1/n) + (n-n1) * log( (n-n1)/(3.0*n) );
 }
 
 double MarukiHighModel::calc_het_lnl(double n, double n1n2) const {
-    //TODO
+    // This returns the same value as the Hohenlohe ('snp/binomial') model except
+    // when the error rate estimate is bounded at 1.0 (i.e. `n1n2 < 0.5*n` c.f.
+    // Hohenlohe equations).
+    if (n1n2 == n)
+        return n * log(0.5);
+    else if (n1n2 < (1.0/3.0) * n)
+        return n1n2 * log(1.0/6.0) + (n-n1n2) * log(1.0/3.0);
+    else
+        return n1n2 * log( n1n2/(2.0*n) ) + (n-n1n2) * log(1.0 - n1n2/(2.0*n) );
 }
 
 SiteCall MarukiHighModel::call(vector<Counts<Nt2>>&& sample_depths) const {
