@@ -253,6 +253,23 @@ struct Read {
 };
 
 //
+// GtLiks: A class to store the likelihoods of SNP genotypes.
+//
+class GtLiks {
+    array<double,10> lnliks_; // {AA,AC,CC,AG,CG,GG,AT,CT,GT,TT} similar to VCF.
+    static size_t get_index(Nt2 n1, Nt2 n2)
+        {if(n1<n2) return size_t(n1) + (size_t(n2)*(size_t(n2)+1)) / 2; else return size_t(n2) + (size_t(n1)*(size_t(n1)+1)) / 2;}
+public:
+    GtLiks() : lnliks_{{1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0}} {}
+    double at(Nt2 n1, Nt2 n2) const
+        {assert(has_lik(n1,n2)); return lnliks_[get_index(n1,n2)];}
+    bool has_lik(Nt2 n1, Nt2 n2) const
+        {return lnliks_[get_index(n1,n2)] != 1.0;}
+    void set(Nt2 n1, Nt2 n2, double lnl)
+        {assert(std::isfinite(lnl) && lnl<=0.0); assert(!has_lik(n1,n2)); lnliks_[get_index(n1,n2)] = lnl;}
+};
+
+//
 // Inline definitions
 // ----------
 //
