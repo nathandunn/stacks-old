@@ -174,6 +174,8 @@ inline
 double lnl_multinomial_model_hom (double total, double n1) {
     if (n1 == total)
         return 0.0;
+    else if (n1 < 0.25 * total)
+        return total * log(0.25); // With epsilon estimate bounded at 1.0
     else
         return n1 * log(n1/total) + (total-n1) * log( (total-n1)/(3.0*total) );
 }
@@ -181,7 +183,9 @@ double lnl_multinomial_model_hom (double total, double n1) {
 inline
 double lnl_multinomial_model_het (double total, double n1n2) {
     if (n1n2 == total)
-        return n1n2 * log(0.5);
+        return total * log(0.5);
+    else if (n1n2 < 0.5 * total)
+        return total * log(0.25); // With epsilon estimate bounded at 1.0
     else
         return n1n2 * log( n1n2/(2.0*total) ) + (total-n1n2) * log( (total-n1n2)/(2.0*total) );
 }
@@ -229,7 +233,7 @@ double lr_multinomial_model (double nuc_1, double nuc_2, double nuc_3, double nu
 
     double l_ratio = 2.0 * (lnl_multinomial_model_hom(total, nuc_1) - lnl_multinomial_model_het(total, nuc_1+nuc_2));
 
-    assert(almost_equal(l_ratio, lr_multinomial_model_legacy(nuc_1,nuc_2,nuc_3,nuc_4)));
+    assert(nuc_1+nuc_2 == 0 || almost_equal(l_ratio, lr_multinomial_model_legacy(nuc_1,nuc_2,nuc_3,nuc_4)));
     return l_ratio;
 }
 
