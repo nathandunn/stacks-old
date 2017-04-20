@@ -78,13 +78,14 @@ int main(int argc, char** argv) {
 
     string o_vcf_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".vcf";
     VcfHeader vcf_header;
-    vcf_header.add_meta(VcfMeta("misc","\"less -x9,15,20,25,30,35,42,60,75 batch_1.rystacks.vcf\""));
+    vcf_header.add_meta(VcfMeta("misc","\"less -x9,15,20,25,30,35,42,60,75,112 batch_1.rystacks.vcf\""));
     vcf_header.add_meta(VcfMeta::predefs::info_DP);
     vcf_header.add_meta(VcfMeta::predefs::info_AF);
     vcf_header.add_meta(VcfMeta::predefs::info_AD);
     vcf_header.add_meta(VcfMeta::predefs::format_GT);
     vcf_header.add_meta(VcfMeta::predefs::format_DP);
     vcf_header.add_meta(VcfMeta::predefs::format_AD);
+    vcf_header.add_meta(VcfMeta::predefs::format_GL);
     for(auto& s : bam_fh.mpopi().samples())
         vcf_header.add_sample(s.name);
     o_vcf_f = new VcfWriter(o_vcf_path, move(vcf_header));
