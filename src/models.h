@@ -44,9 +44,14 @@ extern double bound_low;  // For the bounded-snp model.
 extern double bound_high; // For the bounded-snp model.
 extern double p_freq;     // For the fixed model.
 
+bool lrtest(double lnl_althyp, double lnl_nullhyp, double threshold); // Where threshold is a value in the Chi2 distribution.
+
 void     set_model_thresholds (double alpha);
 snp_type call_snp (double l_ratio);
+snp_type call_snp (double lnl_hom, double lnl_het);
 
+double   lnl_multinomial_model_hom (double total, double n1);
+double   lnl_multinomial_model_het (double total, double n1n2);
 double   lr_multinomial_model         (double nuc_1, double nuc_2, double nuc_3, double nuc_4);
 double   lr_bounded_multinomial_model (double nuc_1, double nuc_2, double nuc_3, double nuc_4);
 
@@ -59,38 +64,62 @@ void call_multinomial_fixed(MergedStack *, int, map<char, int> &);
 double   heterozygous_likelihood(int, map<char, int> &);
 double   homozygous_likelihood(int, map<char, int> &);
 
-class SiteCall;
-class SampleCall;
-
-class SiteCall {
-    size_t tot_depth_;
-    map<Nt4, size_t> alleles_;
-    vector<SampleCall> sample_calls_;
+//
+// GtLiks: A class to store the likelihoods of SNP genotypes.
+//
+class GtLiks {
+    array<double,10> lnliks_; // {AA,AC,CC,AG,CG,GG,AT,CT,GT,TT} similar to VCF.
+    static size_t get_index(Nt2 n1, Nt2 n2)
+        {if(n1<n2) return size_t(n1) + (size_t(n2)*(size_t(n2)+1)) / 2; else return size_t(n2) + (size_t(n1)*(size_t(n1)+1)) / 2;}
 public:
-    SiteCall(size_t tot_depth, map<Nt4, size_t>&& alleles, vector<SampleCall>&& sample_calls)
-        : tot_depth_(tot_depth), alleles_(move(alleles)), sample_calls_(move(sample_calls))
-        {}
-
-    size_t tot_depth() const {return tot_depth_;}
-    const map<Nt4, size_t>& alleles() const {return alleles_;}
-    const vector<SampleCall>& sample_calls() const {return sample_calls_;}
+    GtLiks() : lnliks_{{1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0}} {}
+    double at(Nt2 n1, Nt2 n2) const
+        {assert(has_lik(n1,n2)); return lnliks_[get_index(n1,n2)];}
+    bool has_lik(Nt2 n1, Nt2 n2) const
+        {return lnliks_[get_index(n1,n2)] != 1.0;}
+    void set(Nt2 n1, Nt2 n2, double lnl)
+        {assert(std::isfinite(lnl) && lnl<=0.0); assert(!has_lik(n1,n2)); lnliks_[get_index(n1,n2)] = lnl;}
 };
 
-class SampleCall {
+class SampleSiteData {
     Counts<Nt2> depths_;
-    snp_type call_;
-    // The nucleotide(s) corresponding to the genotype.
+    GtLiks lnls_;
+    // The genotype call and the corresponding nucleotides.
     // hom {nt, Nt4::n} | het {min_nt, max_nt} | unk {Nt4::n, Nt4::n}
     // For hets, the two nucleotides are sorted lexically (A<C<G<T).
+    snp_type call_;
     array<Nt4, 2> nts_;
 public:
-    SampleCall() : depths_(), call_(snp_type_unk), nts_{Nt4::n,Nt4::n} {}
-    SampleCall(const Counts<Nt4>& counts, snp_type gt_call, Nt4 rank0_nt, Nt4 rank1_nt);
+    SampleSiteData() : depths_(), lnls_(), call_(snp_type_unk), nts_{Nt4::n,Nt4::n} {}
 
     const Counts<Nt2>& depths() const {return depths_;}
+          Counts<Nt2>& depths()       {return depths_;}
+    const GtLiks& lnls() const {return lnls_;}
+          GtLiks& lnls()       {return lnls_;}
+
+    bool has_coverage() const {return depths_.sum() != 0;}
+
     snp_type call() const {return call_;}
-    Nt4 nt0() const {assert(call_!=snp_type_unk); return nts_[0];}
+    Nt4 nt0() const {assert(call_==snp_type_hom || call_==snp_type_het); return nts_[0];}
     Nt4 nt1() const {assert(call_==snp_type_het); return nts_[1];}
+
+    void add_call(snp_type c, Nt4 rank0_nt, Nt4 rank1_nt);
+};
+
+class SiteCall {
+    Counts<Nt2> tot_depths_;
+    map<Nt4, size_t> alleles_;
+    vector<SampleSiteData> sample_data_;
+public:
+    SiteCall(const Counts<Nt2>& tot_depths, map<Nt4, size_t>&& alleles, vector<SampleSiteData>&& sample_data)
+        : tot_depths_(tot_depths), alleles_(move(alleles)), sample_data_(move(sample_data))
+        {}
+    const Counts<Nt2>& tot_depths() const {return tot_depths_;}
+    size_t tot_depth() const {return tot_depths_.sum();}
+    const map<Nt4, size_t>& alleles() const {return alleles_;}
+    const vector<SampleSiteData>& sample_data() const {return sample_data_;}
+
+    static map<Nt4,size_t> tally_allele_freqs(const vector<SampleSiteData>& spldata);
 };
 
 class Model {
@@ -111,6 +140,8 @@ public:
 // MarukiHighModel: the model of Maruki & Lynch (2017) for high-coverage data.
 //
 class MarukiHighModel : public Model {
+    double calc_hom_lnl(double n, double n1) const;
+    double calc_het_lnl(double n, double n1n2) const;
 public:
     SiteCall call(const CLocAlnSet::site_iterator& site) const;
 };
@@ -120,6 +151,11 @@ public:
 // Inline definitions
 // ==================
 //
+
+inline
+bool lrtest(double lnl_althyp, double lnl_nullhyp, double threshold) {
+    return 2.0 * (lnl_althyp - lnl_nullhyp) > threshold;
+}
 
 inline
 snp_type call_snp (double l_ratio) {
@@ -132,16 +168,35 @@ snp_type call_snp (double l_ratio) {
 }
 
 inline
-double lr_multinomial_model (double nuc_1, double nuc_2, double nuc_3, double nuc_4) {
+snp_type call_snp (double lnl_hom, double lnl_het) {
+    return call_snp(2.0 * (lnl_hom - lnl_het));
+}
 
+inline
+double lnl_multinomial_model_hom (double total, double n1) {
+    if (n1 == total)
+        return 0.0;
+    else if (n1 < 0.25 * total)
+        return total * log(0.25); // With epsilon estimate bounded at 1.0
+    else
+        return n1 * log(n1/total) + (total-n1) * log( (total-n1)/(3.0*total) );
+}
+
+inline
+double lnl_multinomial_model_het (double total, double n1n2) {
+    if (n1n2 == total)
+        return total * log(0.5);
+    else if (n1n2 < 0.5 * total)
+        return total * log(0.25); // With epsilon estimate bounded at 1.0
+    else
+        return n1n2 * log( n1n2/(2.0*total) ) + (total-n1n2) * log( (total-n1n2)/(2.0*total) );
+}
+
+inline
+double lr_multinomial_model_legacy (double nuc_1, double nuc_2, double nuc_3, double nuc_4) {
     //
-    // Method of Paul Hohenlohe <hohenlohe@uidaho.edu>, personal communication.
-    //
-    // For a diploid individual, there are ten possible genotypes
-    // (four homozygous and six heterozygous genotypes).  We calculate
-    // the likelihood of each possible genotype by using a multinomial
-    // sampling distribution, which gives the probability of observing
-    // a set of read counts (n1,n2,n3,n4) given a particular genotype.
+    // This function is to check that the refactored function gives the same
+    // results as the original code (i.e. this code).
     //
 
     double total = nuc_1 + nuc_2 + nuc_3 + nuc_4;
@@ -160,6 +215,27 @@ double lr_multinomial_model (double nuc_1, double nuc_2, double nuc_3, double nu
 
     l_ratio *= 2.0;
 
+    return l_ratio;
+}
+
+inline
+double lr_multinomial_model (double nuc_1, double nuc_2, double nuc_3, double nuc_4) {
+    //
+    // Method of Paul Hohenlohe <hohenlohe@uidaho.edu>, personal communication.
+    //
+    // For a diploid individual, there are ten possible genotypes
+    // (four homozygous and six heterozygous genotypes).  We calculate
+    // the likelihood of each possible genotype by using a multinomial
+    // sampling distribution, which gives the probability of observing
+    // a set of read counts (n1,n2,n3,n4) given a particular genotype.
+    //
+
+    double total = nuc_1 + nuc_2 + nuc_3 + nuc_4;
+    assert(total > 0.0);
+
+    double l_ratio = 2.0 * (lnl_multinomial_model_hom(total, nuc_1) - lnl_multinomial_model_het(total, nuc_1+nuc_2));
+
+    assert(nuc_1+nuc_2 == 0 || almost_equal(l_ratio, lr_multinomial_model_legacy(nuc_1,nuc_2,nuc_3,nuc_4)));
     return l_ratio;
 }
 
@@ -217,9 +293,8 @@ double lr_bounded_multinomial_model (double nuc_1, double nuc_2, double nuc_3, d
 }
 
 inline
-SampleCall::SampleCall(const Counts<Nt4>& counts, snp_type gt_call, Nt4 rank0_nt, Nt4 rank1_nt)
-: depths_(counts), call_(gt_call), nts_{Nt4::n, Nt4::n}
-{
+void SampleSiteData::add_call(snp_type c, Nt4 rank0_nt, Nt4 rank1_nt) {
+    call_ = c;
     if (call_ == snp_type_hom) {
         nts_[0] = rank0_nt;
     } else if (call_ == snp_type_het) {
