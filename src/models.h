@@ -118,6 +118,8 @@ public:
     size_t tot_depth() const {return tot_depths_.sum();}
     const map<Nt4, size_t>& alleles() const {return alleles_;}
     const vector<SampleSiteData>& sample_data() const {return sample_data_;}
+
+    static map<Nt4,size_t> tally_allele_freqs(const vector<SampleSiteData>& spldata);
 };
 
 class Model {
