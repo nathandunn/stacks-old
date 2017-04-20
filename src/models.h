@@ -99,9 +99,11 @@ public:
         : tot_depths_(tot_depths), alleles_(move(alleles)), sample_data_(move(sample_data))
         {}
     const Counts<Nt2>& tot_depths() const {return tot_depths_;}
-    size_t tot_depth() const {return tot_depths_.sum();}
     const map<Nt4, size_t>& alleles() const {return alleles_;}
     const vector<SampleSiteData>& sample_data() const {return sample_data_;}
+
+    size_t tot_depth() const {return tot_depths_.sum();}
+    Nt4 most_frequent_allele() const;
 
     static map<Nt4,size_t> tally_allele_freqs(const vector<SampleSiteData>& spldata);
 };

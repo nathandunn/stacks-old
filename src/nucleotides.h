@@ -29,6 +29,7 @@ public:
     explicit operator int () const {return nt_;}
     explicit operator char () const {return to_ch[nt_];}
     bool operator== (Nt4 other) const {return nt_ == other.nt_;}
+    bool operator!= (Nt4 other) const {return !operator==(other);}
     bool operator< (Nt4 other) const {return nt_ < other.nt_;}
 
     static constexpr size_t nbits = 4;
@@ -83,6 +84,7 @@ public:
     explicit operator int () const {return nt_;}
     explicit operator char () const {return to_ch[nt_];}
     bool operator== (Nt2 other) const {return nt_ == other.nt_;}
+    bool operator!= (Nt2 other) const {return !operator==(other);}
     bool operator< (Nt2 other) const {return nt_ < other.nt_;}
 
     static constexpr size_t nbits = 2;

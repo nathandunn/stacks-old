@@ -292,6 +292,16 @@ homozygous_likelihood(int col, map<char, int> &nuc)
     return lnl;
 }
 
+Nt4 SiteCall::most_frequent_allele() const {
+    assert(!alleles().empty());
+    auto a = alleles().begin();
+    auto best = a;
+    for(; a!=alleles().end(); ++a)
+        if (a->second > best->second)
+            best = a;
+    return best->first;
+}
+
 map<Nt4,size_t> SiteCall::tally_allele_freqs(const vector<SampleSiteData>& spldata) {
     //
     // Iterate over the SampleSiteData's & record the existing alleles and their
