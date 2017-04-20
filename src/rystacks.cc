@@ -346,6 +346,7 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
             rec.format.push_back("GT");
             rec.format.push_back("DP");
             rec.format.push_back("AD");
+            rec.format.push_back("GL");
         }
         rec.samples.reserve(mpopi.samples().size());
         assert(sitecall.sample_data().size() == mpopi.samples().size());
@@ -388,6 +389,8 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
                     ad.push_back(sdata.depths()[nt]);
                 genotype << ':';
                 join(ad, ',', genotype);
+                // GL field.
+                genotype << ':' << VcfRecord::util::fmt_gt_gl(rec.alleles, sdata.lnls());
                 // Push it.
                 rec.samples.push_back(genotype.str());
             }

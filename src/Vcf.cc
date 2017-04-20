@@ -14,6 +14,26 @@ pair<string,string> VcfRecord::util::fmt_info_af(const vector<double>& alt_freqs
     return {"AF", ss.str()};
 }
 
+string VcfRecord::util::fmt_gt_gl(const vector<string>& alleles, const GtLiks& liks) {
+    assert(!alleles.empty());
+
+    stringstream ss;
+    ss << std::setprecision(5);
+
+    for (size_t a2=0; a2<alleles.size(); ++a2) {
+        assert(alleles[a2].length() == 1); // GtLiks holds SNP genotype liks.
+        Nt2 a2nt (alleles[a2].front());
+        for (size_t a1=0; a1<=a2; ++a1) {
+            Nt2 a1nt (alleles[a1].front());
+            double log10lik = liks.at(a1nt, a2nt) / log(10);
+            ss << "," << log10lik;
+        }
+    }
+    char tmp;
+    ss >> tmp;
+    return ss.str();
+}
+
 const VcfMeta VcfMeta::predefs::info_AD ("INFO","<ID=AD,Number=R,Type=Integer,Description=\"Total Depth for Each Allele\">");
 const VcfMeta VcfMeta::predefs::info_AF ("INFO","<ID=AF,Number=A,Type=Float,Description=\"Allele Frequency\">");
 const VcfMeta VcfMeta::predefs::info_DP ("INFO","<ID=DP,Number=1,Type=Integer,Description=\"Total Depth\">");
