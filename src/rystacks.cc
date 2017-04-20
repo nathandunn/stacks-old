@@ -344,10 +344,10 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
             rec.format.push_back("GL");
         }
         rec.samples.reserve(mpopi.samples().size());
-        assert(sitecall.sample_data().size() == mpopi.samples().size()); //TODO Won't work when SiteCall::sample_calls_ is left empty.
+        assert(sitecall.sample_calls().size() == mpopi.samples().size()); //TODO Won't work when SiteCall::sample_calls_ is left empty.
         for (size_t sample=0; sample<mpopi.samples().size(); ++sample) {
             const Counts<Nt2>& sdepths = sitecall.sample_depths()[sample];
-            const SampleSiteData& sdata = sitecall.sample_data()[sample];
+            const SampleCall& scall = sitecall.sample_calls()[sample];
 
             if (sdepths.sum() == 0) {
                 // No data for this sample.
@@ -362,14 +362,14 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
                 stringstream genotype;
                 // GT field.
                 vector<size_t> gt;
-                switch (sdata.call()) {
+                switch (scall.call()) {
                 case snp_type_hom:
-                    gt.push_back(vcf_allele_indexes.at(sdata.nt0()));
+                    gt.push_back(vcf_allele_indexes.at(scall.nt0()));
                     genotype << gt[0] << '/' << gt[0];
                     break;
                 case snp_type_het:
-                    gt.push_back(vcf_allele_indexes.at(sdata.nt0()));
-                    gt.push_back(vcf_allele_indexes.at(sdata.nt1()));
+                    gt.push_back(vcf_allele_indexes.at(scall.nt0()));
+                    gt.push_back(vcf_allele_indexes.at(scall.nt1()));
                     sort(gt.begin(), gt.end()); // (Prevents '1/0'.)
                     genotype << gt[0] << '/' << gt[1];
                     break;
@@ -387,7 +387,7 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
                 genotype << ':';
                 join(ad, ',', genotype);
                 // GL field.
-                genotype << ':' << VcfRecord::util::fmt_gt_gl(rec.alleles, sdata.lnls());
+                genotype << ':' << VcfRecord::util::fmt_gt_gl(rec.alleles, scall.lnls());
                 // Push it.
                 rec.samples.push_back(genotype.str());
             }
@@ -433,7 +433,7 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
         // Model.
         o_models_f << loc_id << "\ts_model\t" << sample_id << "\t";
         for (auto& c : calls) {
-            switch (c.sample_data()[s].call()) {
+            switch (c.sample_calls()[s].call()) {
             case snp_type_hom: o_models_f << "O"; break;
             case snp_type_het: o_models_f << "E"; break;
             case snp_type_unk: o_models_f << "U"; break;

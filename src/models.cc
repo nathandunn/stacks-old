@@ -302,16 +302,16 @@ Nt4 SiteCall::most_frequent_allele() const {
     return best->first;
 }
 
-map<Nt4,size_t> SiteCall::tally_allele_freqs(const vector<SampleSiteData>& spldata) {
+map<Nt4,size_t> SiteCall::tally_allele_freqs(const vector<SampleCall>& spldata) {
     //
-    // Iterate over the SampleSiteData's & record the existing alleles and their
+    // Iterate over the SampleCall's & record the existing alleles and their
     // frequencies.
     //
 
     map<Nt4,size_t> allele_freqs;
 
     Counts<Nt4> counts;
-    for (const SampleSiteData& sd : spldata) {
+    for (const SampleCall& sd : spldata) {
         switch (sd.call()) {
         case snp_type_hom :
             counts.increment(sd.nt0());
@@ -343,7 +343,7 @@ SiteCall MultinomialModel::call(const CLocAlnSet::site_iterator& site) const {
 
     Counts<Nt2> tot_depths;
     vector<Counts<Nt2>> sample_depths (n_samples);
-    vector<SampleSiteData> sample_data (n_samples);
+    vector<SampleCall> sample_calls (n_samples);
 
     //
     // Look at this site in each sample; make genotype calls.
@@ -363,26 +363,26 @@ SiteCall MultinomialModel::call(const CLocAlnSet::site_iterator& site) const {
         if (dp == 0)
             continue;
         sorted = depths.sorted();
-        SampleSiteData& sd = sample_data[sample];
+        SampleCall& c = sample_calls[sample];
         double lnl_hom = lnl_multinomial_model_hom(dp, sorted[0].first);
         double lnl_het = lnl_multinomial_model_het(dp, sorted[0].first+sorted[1].first);
-        sd.lnls().set(sorted[0].second, sorted[0].second, lnl_hom);
-        sd.lnls().set(sorted[0].second, sorted[1].second, lnl_het);
+        c.lnls().set(sorted[0].second, sorted[0].second, lnl_hom);
+        c.lnls().set(sorted[0].second, sorted[1].second, lnl_het);
 
         snp_type gt_call = call_snp(lnl_hom, lnl_het);
-        sd.add_call(gt_call, sorted[0].second, sorted[1].second);
+        c.add_call(gt_call, sorted[0].second, sorted[1].second);
     }
 
     //
     // Record the existing alleles and their frequencies.
     //
-    map<Nt4, size_t> allele_freqs = SiteCall::tally_allele_freqs(sample_data);
+    map<Nt4, size_t> allele_freqs = SiteCall::tally_allele_freqs(sample_calls);
 
     //
     // Compute the missing genotype likelihoods, if any.
     //
     if (allele_freqs.size() < 2) {
-        sample_data = vector<SampleSiteData>();
+        sample_calls = vector<SampleCall>();
     } else {
         for (size_t sample=0; sample<n_samples; ++sample) {
             const Counts<Nt2>& depths = sample_depths[sample];
@@ -390,29 +390,29 @@ SiteCall MultinomialModel::call(const CLocAlnSet::site_iterator& site) const {
             if (dp == 0)
                 continue;
 
-            SampleSiteData& sd = sample_data[sample];
+            SampleCall& c = sample_calls[sample];
             for (auto nt1_it=allele_freqs.begin(); nt1_it!=allele_freqs.end(); ++nt1_it) {
                 Nt2 nt1 (nt1_it->first);
                 // Homozygote.
-                if (!sd.lnls().has_lik(nt1, nt1)) {
+                if (!c.lnls().has_lik(nt1, nt1)) {
                     double lnl = lnl_multinomial_model_hom(dp, depths[nt1]);
-                    sd.lnls().set(nt1, nt1, lnl);
+                    c.lnls().set(nt1, nt1, lnl);
                 }
                 // Heterozygote(s).
                 auto nt2_it = nt1_it;
                 ++nt2_it;
                 for (; nt2_it!=allele_freqs.end(); ++nt2_it) {
                     Nt2 nt2 (nt2_it->first);
-                    if (!sd.lnls().has_lik(nt1, nt2)) {
+                    if (!c.lnls().has_lik(nt1, nt2)) {
                         double lnl = lnl_multinomial_model_het(dp, depths[nt1]+depths[nt2]);
-                        sd.lnls().set(nt1, nt2, lnl);
+                        c.lnls().set(nt1, nt2, lnl);
                     }
                 }
             }
         }
     }
 
-    return SiteCall(tot_depths, move(sample_depths), move(allele_freqs), move(sample_data));
+    return SiteCall(tot_depths, move(sample_depths), move(allele_freqs), move(sample_calls));
 }
 
 double MarukiHighModel::calc_hom_lnl(double n, double n1) const {
@@ -449,7 +449,7 @@ SiteCall MarukiHighModel::call(const CLocAlnSet::site_iterator& site) const {
     //
     // I.
     // Count the observed nucleotides of the site for all samples; set
-    // `SampleSiteData::depths_`.
+    // `SampleCall::depths_`.
     // Then find the most common nucleotide across the population.
     //
     Counts<Nt4> counts;
@@ -460,16 +460,16 @@ SiteCall MarukiHighModel::call(const CLocAlnSet::site_iterator& site) const {
     }
 
     if (tot_depths.sum() == 0)
-        return SiteCall(tot_depths, move(sample_depths), map<Nt4, size_t>(), vector<SampleSiteData>());
+        return SiteCall(tot_depths, move(sample_depths), map<Nt4, size_t>(), vector<SampleCall>());
 
     Nt2 nt_ref = tot_depths.sorted()[0].second;
 
     //
     // II.
-    // Look for alternative alleles; start filling SampleSiteData::lnls_.
+    // Look for alternative alleles; start filling SampleCall::lnls_.
     //
     set<Nt2> alleles;
-    vector<SampleSiteData> sample_data (n_samples);
+    vector<SampleCall> sample_calls (n_samples);
     alleles.insert(nt_ref); // Note: There are limit cases (esp. low coverage over many
                             // individuals) where ref_nt would not appear in any of the
                             // significant genotypes; we record it as an allele anyway.
@@ -493,11 +493,11 @@ SiteCall MarukiHighModel::call(const CLocAlnSet::site_iterator& site) const {
             // We can wait until we know whether the site is fixed.
             continue;
 
-        SampleSiteData& sd = sample_data[sample];
+        SampleCall& c = sample_calls[sample];
         double lnl_hom = calc_hom_lnl(dp, dp0);
         double lnl_het = calc_het_lnl(dp, dp0+dp1);
-        sd.lnls().set(nt0, nt0, lnl_hom);
-        sd.lnls().set(nt0, nt1, lnl_het);
+        c.lnls().set(nt0, nt0, lnl_hom);
+        c.lnls().set(nt0, nt1, lnl_het);
 
         // Compare this likelihood to that of the ref,ref homozygote.
         static const double& polymorphism_signif_thr = homozygote_limit; //xxx Hack.
@@ -507,7 +507,7 @@ SiteCall MarukiHighModel::call(const CLocAlnSet::site_iterator& site) const {
                 alleles.insert(nt1);
         } else {
             double lnl_ref = calc_hom_lnl(dp, depths[nt_ref]);
-            sd.lnls().set(nt_ref, nt_ref, lnl_ref);
+            c.lnls().set(nt_ref, nt_ref, lnl_ref);
             double lnl_best = std::max(lnl_hom, lnl_het);
             if (lrtest(lnl_best, lnl_ref, polymorphism_signif_thr)) {
                 // Record one alternative allele.
@@ -524,7 +524,7 @@ SiteCall MarukiHighModel::call(const CLocAlnSet::site_iterator& site) const {
     // Compute the likelihoods for all possible genotypes & call genotypes.
     //
     if (alleles.size() == 1) {
-        sample_data = vector<SampleSiteData>();
+        sample_calls = vector<SampleCall>();
     } else {
         for (size_t sample=0; sample<n_samples; ++sample) {
             const Counts<Nt2>& depths = sample_depths[sample];
@@ -532,17 +532,17 @@ SiteCall MarukiHighModel::call(const CLocAlnSet::site_iterator& site) const {
             if (dp == 0)
                 continue;
 
-            SampleSiteData& sd = sample_data[sample];
+            SampleCall& c = sample_calls[sample];
             for (auto nt1=alleles.begin(); nt1!=alleles.end(); ++nt1) {
                 // Homozygote.
-                if (!sd.lnls().has_lik(*nt1, *nt1))
-                    sd.lnls().set(*nt1, *nt1, calc_hom_lnl(dp, depths[*nt1]));
+                if (!c.lnls().has_lik(*nt1, *nt1))
+                    c.lnls().set(*nt1, *nt1, calc_hom_lnl(dp, depths[*nt1]));
                 // Heterozygote(s).
                 auto nt2 = nt1;
                 ++nt2;
                 for (; nt2!=alleles.end(); ++nt2)
-                    if (!sd.lnls().has_lik(*nt1, *nt2))
-                        sd.lnls().set(*nt1, *nt2, calc_het_lnl(dp, depths[*nt1]+depths[*nt2]));
+                    if (!c.lnls().has_lik(*nt1, *nt2))
+                        c.lnls().set(*nt1, *nt2, calc_het_lnl(dp, depths[*nt1]+depths[*nt2]));
             }
 
             // Call the genotype -- skiping ignored alleles.
@@ -555,9 +555,9 @@ SiteCall MarukiHighModel::call(const CLocAlnSet::site_iterator& site) const {
             while(nt1 != sorted.end() && !alleles.count(Nt4(nt1->second)))
                 ++nt1;
             if (nt1 != sorted.end()) {
-                double lnl_hom = sd.lnls().at(nt0->second, nt0->second);
-                double lnl_het = sd.lnls().at(nt0->second, nt1->second);
-                sd.add_call(call_snp(lnl_hom, lnl_het), nt0->second, nt1->second);
+                double lnl_hom = c.lnls().at(nt0->second, nt0->second);
+                double lnl_het = c.lnls().at(nt0->second, nt1->second);
+                c.add_call(call_snp(lnl_hom, lnl_het), nt0->second, nt1->second);
             }
         }
     }
@@ -569,7 +569,8 @@ SiteCall MarukiHighModel::call(const CLocAlnSet::site_iterator& site) const {
     if (alleles.size() == 1)
         allele_freqs.insert({*alleles.begin(),-1});
     else
-        allele_freqs = SiteCall::tally_allele_freqs(sample_data);
+        allele_freqs = SiteCall::tally_allele_freqs(sample_calls);
+    assert(allele_freqs.size() == alleles.size());
 
-    return SiteCall(tot_depths, move(sample_depths), move(allele_freqs), move(sample_data));
+    return SiteCall(tot_depths, move(sample_depths), move(allele_freqs), move(sample_calls));
 }
