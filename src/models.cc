@@ -292,7 +292,7 @@ homozygous_likelihood(int col, map<char, int> &nuc)
     return lnl;
 }
 
-Nt4 SiteCall::most_frequent_allele() const {
+Nt2 SiteCall::most_frequent_allele() const {
     assert(!alleles().empty());
     auto a = alleles().begin();
     auto best = a;
@@ -302,15 +302,15 @@ Nt4 SiteCall::most_frequent_allele() const {
     return best->first;
 }
 
-map<Nt4,size_t> SiteCall::tally_allele_freqs(const vector<SampleCall>& spldata) {
+map<Nt2,size_t> SiteCall::tally_allele_freqs(const vector<SampleCall>& spldata) {
     //
     // Iterate over the SampleCall's & record the existing alleles and their
     // frequencies.
     //
 
-    map<Nt4,size_t> allele_freqs;
+    map<Nt2,size_t> allele_freqs;
 
-    Counts<Nt4> counts;
+    Counts<Nt2> counts;
     for (const SampleCall& sd : spldata) {
         switch (sd.call()) {
         case snp_type_hom :
@@ -327,7 +327,7 @@ map<Nt4,size_t> SiteCall::tally_allele_freqs(const vector<SampleCall>& spldata) 
         }
     }
 
-    array<pair<size_t,Nt4>,4> sorted_alleles = counts.sorted();
+    array<pair<size_t,Nt2>,4> sorted_alleles = counts.sorted();
     size_t i = 0;
     while (i<4 && sorted_alleles[i].first != 0) {
         allele_freqs.insert({sorted_alleles[i].second, sorted_alleles[i].first});
@@ -370,13 +370,13 @@ SiteCall MultinomialModel::call(const CLocAlnSet::site_iterator& site) const {
         c.lnls().set(sorted[0].second, sorted[1].second, lnl_het);
 
         snp_type gt_call = call_snp(lnl_hom, lnl_het);
-        c.add_call(gt_call, sorted[0].second, sorted[1].second);
+        c.set_call(gt_call, sorted[0].second, sorted[1].second);
     }
 
     //
     // Record the existing alleles and their frequencies.
     //
-    map<Nt4, size_t> allele_freqs = SiteCall::tally_allele_freqs(sample_calls);
+    map<Nt2,size_t> allele_freqs = SiteCall::tally_allele_freqs(sample_calls);
 
     //
     // Compute the missing genotype likelihoods, if any.
@@ -460,7 +460,7 @@ SiteCall MarukiHighModel::call(const CLocAlnSet::site_iterator& site) const {
     }
 
     if (tot_depths.sum() == 0)
-        return SiteCall(tot_depths, move(sample_depths), map<Nt4, size_t>(), vector<SampleCall>());
+        return SiteCall(tot_depths, move(sample_depths), map<Nt2,size_t>(), vector<SampleCall>());
 
     Nt2 nt_ref = tot_depths.sorted()[0].second;
 
@@ -548,16 +548,16 @@ SiteCall MarukiHighModel::call(const CLocAlnSet::site_iterator& site) const {
             // Call the genotype -- skiping ignored alleles.
             sorted = depths.sorted();
             auto nt0 = sorted.begin();
-            while(nt0 != sorted.end() && !alleles.count(Nt4(nt0->second)))
+            while(nt0 != sorted.end() && !alleles.count(nt0->second))
                 ++nt0;
             auto nt1 = nt0;
             ++nt1;
-            while(nt1 != sorted.end() && !alleles.count(Nt4(nt1->second)))
+            while(nt1 != sorted.end() && !alleles.count(nt1->second))
                 ++nt1;
             if (nt1 != sorted.end()) {
                 double lnl_hom = c.lnls().at(nt0->second, nt0->second);
                 double lnl_het = c.lnls().at(nt0->second, nt1->second);
-                c.add_call(call_snp(lnl_hom, lnl_het), nt0->second, nt1->second);
+                c.set_call(call_snp(lnl_hom, lnl_het), nt0->second, nt1->second);
             }
         }
     }
@@ -565,7 +565,7 @@ SiteCall MarukiHighModel::call(const CLocAlnSet::site_iterator& site) const {
     //
     // Finally, compute allele frequencies.
     //
-    map<Nt4,size_t> allele_freqs;
+    map<Nt2,size_t> allele_freqs;
     if (alleles.size() == 1)
         allele_freqs.insert({*alleles.begin(),-1});
     else
