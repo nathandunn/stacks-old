@@ -366,6 +366,33 @@ SiteCall MultinomialModel::call(const CLocAlnSet::site_iterator& site) const {
     //
     map<Nt4, size_t> allele_freqs = SiteCall::tally_allele_freqs(sample_data);
 
+    //
+    // Compute the missing genotype likelihoods, if any.
+    //
+    for (size_t sample=0; sample<n_samples; ++sample) {
+        SampleSiteData& sd = sample_data[sample];
+        if (!sd.has_coverage())
+            continue;
+
+        for (auto nt1_it=allele_freqs.begin(); nt1_it!=allele_freqs.end(); ++nt1_it) {
+            Nt2 nt1 (nt1_it->first);
+            if (!sd.lnls().has_lik(nt1, nt1)) {
+                double lnl = lnl_multinomial_model_hom(sd.depths().sum(), sd.depths()[nt1]);
+                sd.lnls().set(nt1, nt1, lnl);
+            }
+
+            auto nt2_it = nt1_it;
+            ++nt2_it;
+            for (; nt2_it!=allele_freqs.end(); ++nt2_it) {
+                Nt2 nt2 (nt2_it->first);
+                if (!sd.lnls().has_lik(nt1, nt2)) {
+                    double lnl = lnl_multinomial_model_het(sd.depths().sum(), sd.depths()[nt1]+sd.depths()[nt2]);
+                    sd.lnls().set(nt1, nt2, lnl);
+                }
+            }
+        }
+    }
+
     return SiteCall(tot_depths, move(allele_freqs), move(sample_data));
 }
 
