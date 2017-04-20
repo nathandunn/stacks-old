@@ -516,13 +516,20 @@ SiteCall MarukiHighModel::call(const CLocAlnSet::site_iterator& site) const {
                         sd.lnls().set(*nt1, *nt2, calc_het_lnl(sd.depths().sum(), sd.depths()[*nt1]+sd.depths()[*nt2]));
             }
 
-            // Call the genotype.
+            // Call the genotype -- skiping ignored alleles.
             sorted = sd.depths().sorted();
-            Nt2 nt0 = sorted[0].second;
-            Nt2 nt1 = sorted[1].second;
-            double lnl_hom = sd.lnls().at(nt0, nt0);
-            double lnl_het = sd.lnls().at(nt0, nt1);
-            sd.add_call(call_snp(lnl_hom, lnl_het), nt0, nt1);
+            auto nt0 = sorted.begin();
+            while(nt0 != sorted.end() && !alleles.count(Nt4(nt0->second)))
+                ++nt0;
+            auto nt1 = nt0;
+            ++nt1;
+            while(nt1 != sorted.end() && !alleles.count(Nt4(nt1->second)))
+                ++nt1;
+            if (nt1 != sorted.end()) {
+                double lnl_hom = sd.lnls().at(nt0->second, nt0->second);
+                double lnl_het = sd.lnls().at(nt0->second, nt1->second);
+                sd.add_call(call_snp(lnl_hom, lnl_het), nt0->second, nt1->second);
+            }
         }
     }
 
