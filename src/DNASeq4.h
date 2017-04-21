@@ -33,8 +33,8 @@ public:
         {for (Nt nt : Nt::all) counts_[size_t(nt)] += other.counts_[size_t(nt)]; return *this;}
 
     // Print the counts.
-    friend ostream& operator<< (ostream& os, const Counts& cnts)
-        {for (Nt nt : Nt::all) os << char(nt) << ":" << cnts[nt] << " "; return os;}
+    template<typename Nt_> friend ostream& operator<< (ostream& os, const Counts<Nt_>& cnts);
+    string str() const {stringstream ss; ss << *this; return ss.str();}
 };
 
 // A sequence of nucleotides on a uint64_t, where the first nucleotide uses the
@@ -127,7 +127,7 @@ public:
     bool  operator== (const DNASeq4& other) const {return l_ == other.l_ && v_ == other.v_;}
     bool  operator<  (const DNASeq4& other) const {return l_ < other.l_ ? true : v_ < other.v_;}
     friend class std::hash<DNASeq4>;
-    friend ostream& operator<< (ostream& os, const DNASeq4& seq) {for (Nt4 nt : seq) os << char(nt); return os;}
+    friend ostream& operator<< (ostream& os, const DNASeq4& seq) {for (Nt4 nt : seq) os << nt; return os;}
 
     // Iterator.
     class iterator {
@@ -183,6 +183,19 @@ array<pair<size_t,Nt>,4> Counts<Nt>::sorted() const {
     // the Nt4 value.
     std::sort(arr.rbegin(), arr.rend());
     return arr;
+}
+
+template<typename Nt>
+ostream& operator<< (ostream& os, const Counts<Nt>& cnts) {
+    bool first=true;
+    for (Nt nt : Nt::all) {
+        if (first)
+            first = false;
+        else
+            os << " ";
+        os << nt << ":" << cnts[nt];
+    }
+    return os;
 }
 
 namespace std { template<class Nt>
