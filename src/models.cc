@@ -649,3 +649,6 @@ SiteCall MarukiHighModel::call(vector<Counts<Nt2>>&& sample_depths) const {
 
     return SiteCall(tot_depths, move(sample_depths), move(allele_freqs), move(sample_calls));
 }
+
+SiteCall MarukiLowModel::call(vector<Counts<Nt2>>&& sample_depths) const {
+}

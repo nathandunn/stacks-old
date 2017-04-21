@@ -145,6 +145,14 @@ public:
 };
 
 //
+// MarukiLowModel: the model of Maruki & Lynch (2015,2017) for low-coverage data.
+//
+class MarukiLowModel : public Model {
+public:
+    SiteCall call(vector<Counts<Nt2>>&& sample_depths) const;
+};
+
+//
 // ==================
 // Inline definitions
 // ==================
