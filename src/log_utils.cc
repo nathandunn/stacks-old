@@ -24,6 +24,7 @@
 #include <iomanip>
 
 #include "constants.h"
+#include "utils.h"
 #include "log_utils.h"
 
 using namespace std;
@@ -97,21 +98,22 @@ string to_string(const FileT& ft) {
     return "?!";
 }
 
-LogAlterator::LogAlterator(const string& log_path, bool quiet)
+LogAlterator::LogAlterator(const string& log_path, bool quiet, int argc, char** argv)
         : l(log_path)
         , o(cout.rdbuf())
         , e(cerr.rdbuf())
         , lo_buf(cout.rdbuf(), l.rdbuf())
         , le_buf(cerr.rdbuf(), l.rdbuf())
         {
-    if (!l)
-        failed_to_open(log_path);
+    check_open(l, log_path);
+    init_log(l, argc, argv);
 
     if (quiet) {
         // Use the fstream buffer only, and not at all stdout and stderr.
         cout.rdbuf(l.rdbuf());
         cerr.rdbuf(l.rdbuf());
     } else {
+        cout << "Logging to '" << log_path << "'." << endl;
         cout.rdbuf(&lo_buf);
         cerr.rdbuf(&le_buf);
     }
