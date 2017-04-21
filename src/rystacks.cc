@@ -82,7 +82,7 @@ int main(int argc, char** argv) {
 
     string o_vcf_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".vcf";
     VcfHeader vcf_header;
-    vcf_header.add_meta(VcfMeta("misc","\"less -x9,15,20,25,30,35,42,60,75,112 batch_1.rystacks.vcf\""));
+    vcf_header.add_meta(VcfMeta("misc","\"alias lessvcf='less -x9,15,20,25,30,35,42,67,82,119 batch_1.rystacks.vcf'\""));
     vcf_header.add_meta(VcfMeta::predefs::info_DP);
     vcf_header.add_meta(VcfMeta::predefs::info_AF);
     vcf_header.add_meta(VcfMeta::predefs::info_AD);
@@ -293,7 +293,7 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
             // Sort the alleles by frequency.
             vector<pair<size_t, Nt4>> sorted_alleles;
             for (auto& a : sitecall.alleles())
-                sorted_alleles.push_back({a.second, a.first});
+                sorted_alleles.push_back({a.second, Nt4(a.first)});
             sort(sorted_alleles.rbegin(), sorted_alleles.rend()); // (decreasing)
 
             // The reference allele has already been added to vcf_alleles; exclude it.
@@ -327,11 +327,8 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
             // Info/DP.
             rec.info.push_back({"DP", to_string(sitecall.tot_depth())});
             // Info/AD.
-            size_t ad = 0;
             Nt4 ref_nt = sitecall.alleles().begin()->first;
-            for (const Counts<Nt2>& depths : sitecall.sample_depths())
-                ad += depths[ref_nt];
-            rec.info.push_back({"AD", to_string(ad)});
+            rec.info.push_back({"AD", to_string(sitecall.tot_depths()[Nt2(ref_nt)])});
             // Format.
             rec.format.push_back("DP");
             // Genotypes.
@@ -345,6 +342,13 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
 
             // Info/DP.
             rec.info.push_back({"DP", to_string(sitecall.tot_depth())});
+            // Info/AD.
+            vector<size_t> ad;
+            for (auto nt=vcf_alleles.begin(); nt!=vcf_alleles.end(); ++nt)
+                ad.push_back(sitecall.tot_depths()[Nt2(*nt)]);
+            stringstream ss;
+            join(ad, ',', ss);
+            rec.info.push_back({"AD", ss.str()});
             // Info/AF.
             size_t tot_count = 0;
             for (auto& a : sitecall.alleles())
