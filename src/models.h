@@ -84,6 +84,9 @@ public:
     Nt4 nt1() const {assert(call_==snp_type_het); return nts_[1];}
 
     void set_call(snp_type c, Nt2 rank0_nt, Nt2 rank1_nt);
+
+    // For debugging.
+    friend ostream& operator<<(ostream& os, const SampleCall& sc);
 };
 
 class SiteCall {
@@ -111,6 +114,10 @@ public:
     Nt2 most_frequent_allele() const;
 
     static map<Nt2,size_t> tally_allele_freqs(const vector<SampleCall>& spldata);
+
+    // For debugging.
+    friend ostream& operator<<(ostream& os, const SiteCall& sc);
+    string str() const {stringstream ss; ss << *this; return ss.str();}
 };
 
 class Model {

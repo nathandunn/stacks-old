@@ -354,6 +354,46 @@ map<Nt2,size_t> SiteCall::tally_allele_freqs(const vector<SampleCall>& spldata) 
     return allele_freqs;
 }
 
+ostream& operator<<(ostream& os, const SampleCall& c) {
+    ostream copy (os.rdbuf());
+    copy << std::setprecision(4);
+    // Genotype.
+    switch(c.call()) {
+    case snp_type_hom: os << c.nt0() << "/" << c.nt0(); break;
+    case snp_type_het: os << std::min(c.nt0(), c.nt1()) << "/" << std::max(c.nt0(), c.nt1()); break;
+    case snp_type_unk: os << "u"; break;
+    }
+    // Likelihoods.
+    os << "\t{" << c.lnls() << "}";
+    return os;
+}
+
+ostream& operator<<(ostream& os, const SiteCall& sc) {
+    // Total depths.
+    os << "tot depths {" << sc.tot_depths() << "}\n";
+    // Alleles.
+    os << "alleles";
+    for (auto& a : sc.alleles())
+        os << " " << a.first << "(" << a.second << ")";
+    os << "\n";
+    // Samples.
+    os << "samples";
+    for (size_t s=0; s<sc.sample_depths().size(); ++s) {
+        // Index.
+        os << "\n" << s;
+        auto& depths = sc.sample_depths()[s];
+        if (depths.sum() == 0) {
+            os << "\t.";
+        } else {
+            // Depths.
+            os << "\t{" << depths << "}";
+            if (sc.alleles().size() >= 2)
+                os << "\t" << sc.sample_calls()[s];
+        }
+    }
+    return os;
+}
+
 SiteCall MultinomialModel::call(vector<Counts<Nt2>>&& sample_depths) const {
 
     size_t n_samples = sample_depths.size();
