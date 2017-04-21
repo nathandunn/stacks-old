@@ -206,7 +206,7 @@ Bam::next_seq(Seq& s)
             seq += 'N';
             break;
         default:
-            // assert(false);
+            never_happens;
             break;
         }
     }
