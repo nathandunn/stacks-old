@@ -70,8 +70,11 @@
         std::cerr << "\n"; \
         return 13; \
     }
+#endif //DEBUG
 
-#endif
+#define never_happens \
+    do{cerr << "At " << __FILE__ << ":" << __LINE__ << " This should never happen.\n"; throw exception();} while(false) \
+    // n.b. do{..}while(false) requests a trailing ';' ({..} doesn't).
 
 using std::vector;
 using std::array;
