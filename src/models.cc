@@ -487,7 +487,7 @@ double MarukiHighModel::calc_het_lnl(double n, double n1n2) const {
     else if (n1n2 < (1.0/3.0) * n)
         return n1n2 * log(1.0/6.0) + (n-n1n2) * log(1.0/3.0);
     else
-        return n1n2 * log( n1n2/(2.0*n) ) + (n-n1n2) * log(1.0 - n1n2/(2.0*n) );
+        return n1n2 * log( n1n2/(2.0*n) ) + (n-n1n2) * log((n-n1n2)/(2.0*n) );
 }
 
 SiteCall MarukiHighModel::call(vector<Counts<Nt2>>&& sample_depths) const {
@@ -531,9 +531,7 @@ SiteCall MarukiHighModel::call(vector<Counts<Nt2>>&& sample_depths) const {
     //
     set<Nt2> alleles;
     vector<SampleCall> sample_calls (n_samples);
-    alleles.insert(nt_ref); // Note: There are limit cases (esp. low coverage over many
-                            // individuals) where ref_nt would not appear in any of the
-                            // significant genotypes; we record it as an allele anyway.
+    alleles.insert(nt_ref);
     array<pair<size_t,Nt2>,4> sorted;
     for (size_t sample=0; sample<n_samples; ++sample) {
         const Counts<Nt2>& depths = sample_depths[sample];
@@ -559,6 +557,16 @@ SiteCall MarukiHighModel::call(vector<Counts<Nt2>>&& sample_depths) const {
         double lnl_het = calc_het_lnl(dp, dp0+dp1);
         c.lnls().set(nt0, nt0, lnl_hom);
         c.lnls().set(nt0, nt1, lnl_het);
+
+        // Make sure the sample would have a significant genotype call provided
+        // the site was polymorphic (otherwise a genotype can be significant in
+        // comparison with the ref homozygote but not in comparison with the
+        // second best genotype). This is a slight modification to Maruki &
+        // Lynch's method to avoid low-coverage weirdnesses. Note that the
+        // polymorphism discovery alpha could be set lower than the genotype call
+        // alpha (e.g. to account for multiple testing).
+        if (call_snp(lnl_hom, lnl_het) == snp_type_unk)
+            continue;
 
         // Compare this likelihood to that of the ref,ref homozygote.
         static const double& polymorphism_signif_thr = homozygote_limit; //xxx Hack.
@@ -609,17 +617,19 @@ SiteCall MarukiHighModel::call(vector<Counts<Nt2>>&& sample_depths) const {
             // Call the genotype -- skiping ignored alleles.
             sorted = depths.sorted();
             auto nt0 = sorted.begin();
-            while(nt0 != sorted.end() && !alleles.count(nt0->second))
+            while(!alleles.count(nt0->second)) {
                 ++nt0;
+                assert(nt0 != sorted.end());
+            }
             auto nt1 = nt0;
             ++nt1;
-            while(nt1 != sorted.end() && !alleles.count(nt1->second))
+            while(!alleles.count(nt1->second)) {
                 ++nt1;
-            if (nt1 != sorted.end()) {
-                double lnl_hom = c.lnls().at(nt0->second, nt0->second);
-                double lnl_het = c.lnls().at(nt0->second, nt1->second);
-                c.set_call(call_snp(lnl_hom, lnl_het), nt0->second, nt1->second);
+                assert(nt1 != sorted.end());
             }
+            double lnl_hom = c.lnls().at(nt0->second, nt0->second);
+            double lnl_het = c.lnls().at(nt0->second, nt1->second);
+            c.set_call(call_snp(lnl_hom, lnl_het), nt0->second, nt1->second);
         }
     }
 
@@ -627,11 +637,15 @@ SiteCall MarukiHighModel::call(vector<Counts<Nt2>>&& sample_depths) const {
     // Finally, compute allele frequencies.
     //
     map<Nt2,size_t> allele_freqs;
-    if (alleles.size() == 1)
+    if (alleles.size() == 1) {
         allele_freqs.insert({*alleles.begin(),-1});
-    else
+    } else {
         allele_freqs = SiteCall::tally_allele_freqs(sample_calls);
-    assert(allele_freqs.size() == alleles.size());
+        assert(allele_freqs.size() == alleles.size()
+               || (allele_freqs.size() == alleles.size()-1 && !allele_freqs.count(nt_ref)));
+        // Note: There are limit cases (esp. low coverage) where nt_ref does
+        // not appear in any of the significant genotypes.
+    }
 
     return SiteCall(tot_depths, move(sample_depths), move(allele_freqs), move(sample_calls));
 }
