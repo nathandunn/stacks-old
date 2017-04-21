@@ -444,10 +444,16 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
         // Model.
         o_models_f << loc_id << "\ts_model\t" << sample_id << "\t";
         for (auto& c : calls) {
-            switch (c.sample_calls()[s].call()) {
-            case snp_type_hom: o_models_f << "O"; break;
-            case snp_type_het: o_models_f << "E"; break;
-            case snp_type_unk: o_models_f << "U"; break;
+            if (c.alleles().size() == 0) {
+                o_models_f << "U";
+            } else if (c.alleles().size() == 1) {
+                o_models_f << "O";
+            } else {
+                switch (c.sample_calls()[s].call()) {
+                case snp_type_hom: o_models_f << "O"; break;
+                case snp_type_het: o_models_f << "E"; break;
+                case snp_type_unk: o_models_f << "U"; break;
+                }
             }
         }
         o_models_f << "\n";
