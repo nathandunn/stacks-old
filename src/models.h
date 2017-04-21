@@ -47,8 +47,12 @@ extern double p_freq;     // For the fixed model.
 
 bool lrtest(double lnl_althyp, double lnl_nullhyp, double threshold); // Where threshold is a value in the Chi2 distribution.
 
-bool set_model_type(modelt& model, const string& arg);
-void     set_model_thresholds (double alpha);
+bool set_model_type(modelt& model_type, const string& arg);
+bool set_model_thresholds (double alpha);
+string report_model(modelt model_type);
+string report_alpha(double alpha);
+string to_string(modelt model_type);
+
 snp_type call_snp (double l_ratio);
 snp_type call_snp (double lnl_hom, double lnl_het);
 
