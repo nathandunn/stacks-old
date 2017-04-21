@@ -64,6 +64,10 @@ int main(int argc, char** argv) {
     set_model_thresholds(gt_alpha);
     if (model_type == snp) {
         model = new MultinomialModel();
+    } else if (model_type == marukihigh) {
+        model = new MarukiHighModel();
+    } else if (model_type == marukilow) {
+        //model = new MarukiLowModel(); //TODO
     } else {
         assert(false);
     }
@@ -496,6 +500,7 @@ void parse_command_line(int argc, char* argv[]) {
         {"quiet",        no_argument,       NULL,  'q'},
         {"in-dir",       required_argument, NULL,  'P'},
         {"batch-id",     required_argument, NULL,  'b'},
+        {"model",        required_argument, NULL,  1006},
         {"gt-alpha",     required_argument, NULL,  1005},
         {"whitelist",    required_argument, NULL,  'W'},
         {"kmer-length",  required_argument, NULL,  1001},
@@ -533,6 +538,12 @@ void parse_command_line(int argc, char* argv[]) {
             break;
         case 'b':
             batch_id = atoi(optarg);
+            break;
+        case 1006: //model
+            if(!set_model_type(model_type, optarg)) {
+                cerr << "Error: Unknown model '" << optarg << "'.\n";
+                bad_args();
+            }
             break;
         case 1005: //gt-alpha
             gt_alpha = atof(optarg);
