@@ -29,6 +29,10 @@
 //
 #include "models.h"
 
+vector<pair<char, int>> sort_acgt(const map<char, int>&);
+void record_snp(SNP& snp, snp_type type, uint col, double l_ratio, const vector<pair<char, int>>& nuc);
+void record_dummy_snp(SNP& snp, uint col);
+
 int    barcode_size     = 5;
 double barcode_err_freq = 0.0;
 
@@ -38,28 +42,24 @@ double bound_low          = 0.0;
 double bound_high         = 1.0;
 double p_freq             = 0.5;
 
-vector<pair<char, int>> sort_acgt(const map<char, int>&);
-void record_snp(SNP& snp, snp_type type, uint col, double l_ratio, const vector<pair<char, int>>& nuc);
-void record_dummy_snp(SNP& snp, uint col);
+const map<string,modelt> model_strings = {
+    {"snp", ::snp},
+    {"bounded", ::bounded},
+    {"fixed", ::fixed},
+    {"marukihigh", ::marukihigh},
+    {"marukilow", ::marukilow},
+};
 
-bool set_model_type(modelt& model, const string& arg) {
-    if (arg == "snp")
-        model = ::snp;
-    else if (arg == "fixed")
-        model = ::fixed;
-    else if (arg == "bounded")
-        model = ::bounded;
-    else if (arg == "marukihigh")
-        model = ::marukihigh;
-    else if (arg == "marukilow")
-        model = ::marukilow;
-    else
+bool set_model_type(modelt& model_type, const string& arg) {
+    if (model_strings.count(arg)) {
+        model_type = model_strings.at(arg);
+        return true;
+    } else {
         return false;
-
-    return true;
+    }
 }
 
-void set_model_thresholds(double alpha) {
+bool set_model_thresholds(double alpha) {
     if (alpha == 0.1) {
         heterozygote_limit = -2.71;
         homozygote_limit   =  2.71;
@@ -73,9 +73,28 @@ void set_model_thresholds(double alpha) {
         heterozygote_limit = -10.83;
         homozygote_limit   =  10.83;
     } else {
-        cerr << "Error: Unsupported alpha value '" << alpha << "'.\n";
-        throw exception();
+        return false;
     }
+    return true;
+}
+
+string report_model(modelt model_type) {
+    string s = "Model: " + to_string(model_type);
+    if (model_type == ::bounded)
+        s += "; epsilon in [" + to_string(bound_low) + ", " + to_string(bound_high) + "]";
+    return s;
+}
+
+string report_alpha(double alpha) {
+    return string("Genotype alpha: ") + to_string(alpha);
+}
+
+string to_string(modelt model_type) {
+    for (auto& m : model_strings)
+        if (model_type == m.second)
+            return m.first;
+    assert(false);
+    return string();
 }
 
 vector<pair<char, int>> sort_acgt(const map<char, int>& counts) {

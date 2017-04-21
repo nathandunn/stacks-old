@@ -28,6 +28,7 @@ bool quiet = false;
 string in_dir;
 int batch_id = -1;
 modelt model_type = snp;
+const Model* model = NULL;
 double gt_alpha = 0.05;
 set<int> locus_wl;
 size_t km_length = 31;
@@ -40,7 +41,6 @@ bool aln_out = false;
 //
 const string prog_name = "rystacks";
 LogAlterator* lg = NULL;
-const Model* model = NULL;
 gzFile o_gzfasta_f = NULL;
 VcfWriter* o_vcf_f = NULL;
 ofstream o_models_f;
@@ -59,18 +59,6 @@ int main(int argc, char** argv) {
     init_log(lg->l, argc, argv);
     report_options(cout);
     cout << "\n" << flush;
-
-    // Initialize the model.
-    set_model_thresholds(gt_alpha);
-    if (model_type == snp) {
-        model = new MultinomialModel();
-    } else if (model_type == marukihigh) {
-        model = new MarukiHighModel();
-    } else if (model_type == marukilow) {
-        //model = new MarukiLowModel(); //TODO
-    } else {
-        assert(false);
-    }
 
     // Open the BAM file and parse the header.
     BamCLocReader bam_fh (in_dir + "batch_" + to_string(batch_id) + ".catalog.bam");
@@ -558,10 +546,6 @@ void parse_command_line(int argc, char* argv[]) {
             break;
         case 1005: //gt-alpha
             gt_alpha = atof(optarg);
-            if (gt_alpha != 0.1 && gt_alpha != 0.05 && gt_alpha != 0.01 && gt_alpha != 0.001) {
-                cerr << "Error: Illegal --gt-alpha value; pick one of {0.1, 0.05, 0.01, 0.001}.\n";
-                bad_args();
-            }
             break;
         case 'W':
             wl_path = optarg;
@@ -592,6 +576,21 @@ void parse_command_line(int argc, char* argv[]) {
     }
     if (in_dir.empty()) {
         cerr << "Error: An input directory must be provided (-P).\n";
+        bad_args();
+    }
+
+    switch (model_type) {
+    case snp:        model = new MultinomialModel(); break;
+    case marukihigh: model = new MarukiHighModel();  break;
+    case marukilow:  model = new MarukiLowModel();   break;
+    default:
+        cerr << "Error: Model choice '" << to_string(model_type) << "' is not supported.\n";
+        bad_args();
+        break;
+    }
+
+    if(!set_model_thresholds(gt_alpha)) {
+        cerr << "Error: Unsupported alpha value '" << gt_alpha << "'; pick one of {0.1, 0.05, 0.01, 0.001}.\n";
         bad_args();
     }
 
@@ -626,12 +625,15 @@ void parse_command_line(int argc, char* argv[]) {
             throw exception();
         }
     }
+
 }
 
 void report_options(ostream& os) {
     os << "Configuration for this run:\n"
        << "  Input directory: '" << in_dir << "'\n"
        << "  Batch ID: " << batch_id << "\n"
+       << "  " << report_model(model_type) << "\n"
+       << "  " << report_alpha(gt_alpha) << "\n";
        ;
     if (!locus_wl.empty())
         os << "  Whitelist of " << locus_wl.size() << " loci.\n";
