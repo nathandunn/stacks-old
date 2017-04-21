@@ -97,7 +97,10 @@ public:
              map<Nt2, size_t>&& alleles,
              vector<SampleCall>&& sample_calls
              )
-        : tot_depths_(tot_depths), alleles_(move(alleles)), sample_calls_(move(sample_calls))
+        : tot_depths_(tot_depths),
+          sample_depths_(move(sample_depths)),
+          alleles_(move(alleles)),
+          sample_calls_(move(sample_calls))
         {}
     const Counts<Nt2>& tot_depths() const {return tot_depths_;}
     const vector<Counts<Nt2>>& sample_depths() const {return sample_depths_;}
