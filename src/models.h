@@ -94,27 +94,24 @@ public:
 };
 
 class SiteCall {
-    Counts<Nt2> tot_depths_;
-    vector<Counts<Nt2>> sample_depths_;
+    SiteCounts depths_;
     map<Nt2,size_t> alleles_;
     vector<SampleCall> sample_calls_; // Empty if alleles_.size() < 2.
 public:
-    SiteCall(const Counts<Nt2>& tot_depths,
-             vector<Counts<Nt2>>&& sample_depths,
+    SiteCall(SiteCounts&& depths,
              map<Nt2, size_t>&& alleles,
              vector<SampleCall>&& sample_calls
              )
-        : tot_depths_(tot_depths),
-          sample_depths_(move(sample_depths)),
+        : depths_(move(depths)),
           alleles_(move(alleles)),
           sample_calls_(move(sample_calls))
         {}
-    const Counts<Nt2>& tot_depths() const {return tot_depths_;}
-    const vector<Counts<Nt2>>& sample_depths() const {return sample_depths_;}
+    const Counts<Nt2>& tot_depths() const {return depths_.tot;}
+    const vector<Counts<Nt2>>& sample_depths() const {return depths_.samples;}
     const map<Nt2,size_t>& alleles() const {return alleles_;}
     const vector<SampleCall>& sample_calls() const {return sample_calls_;}
 
-    size_t tot_depth() const {return tot_depths_.sum();}
+    size_t tot_depth() const {return tot_depths().sum();}
     Nt2 most_frequent_allele() const;
 
     static map<Nt2,size_t> tally_allele_freqs(const vector<SampleCall>& spldata);
@@ -127,7 +124,7 @@ public:
 class Model {
 public:
     virtual ~Model() {}
-    virtual SiteCall call(vector<Counts<Nt2>>&& sample_depths) const = 0;
+    virtual SiteCall call(SiteCounts&& depths) const = 0;
 };
 
 //
@@ -135,7 +132,7 @@ public:
 //
 class MultinomialModel : public Model {
 public:
-    SiteCall call(vector<Counts<Nt2>>&& sample_depths) const;
+    SiteCall call(SiteCounts&& depths) const;
 };
 
 //
@@ -145,7 +142,7 @@ class MarukiHighModel : public Model {
     double calc_hom_lnl(double n, double n1) const;
     double calc_het_lnl(double n, double n1n2) const;
 public:
-    SiteCall call(vector<Counts<Nt2>>&& sample_depths) const;
+    SiteCall call(SiteCounts&& depths) const;
 };
 
 //
@@ -153,7 +150,7 @@ public:
 //
 class MarukiLowModel : public Model {
 public:
-    SiteCall call(vector<Counts<Nt2>>&& sample_depths) const;
+    SiteCall call(SiteCounts&& depths) const;
 };
 
 //

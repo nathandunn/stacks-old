@@ -209,14 +209,9 @@ bool process_one_locus(CLocReadSet&& loc) {
     vector<SiteCall> calls;
     calls.reserve(aln_loc.ref().length());
     for(CLocAlnSet::site_iterator site (aln_loc); bool(site); ++site) {
-        vector<Counts<Nt2>> sample_counts;
-        sample_counts.reserve(aln_loc.mpopi().samples().size());
-        Counts<Nt4> tmp;
-        for (size_t sample=0; sample<aln_loc.mpopi().samples().size(); ++sample) {
-            site.counts(tmp, sample);
-            sample_counts.push_back(Counts<Nt2>(tmp));
-        }
-        calls.push_back(model->call(move(sample_counts)));
+        SiteCounts counts;
+        site.counts(counts);
+        calls.push_back(model->call(move(counts)));
     }
 
     // Update the consensus sequence.
