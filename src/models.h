@@ -31,7 +31,7 @@
 //
 // Possible models for calling nucleotide positions as fixed or variable
 //
-enum modelt {fixed, snp, bounded};
+enum modelt {fixed, snp, bounded, marukihigh, marukilow};
 
 //
 // For use with the multinomial model to call fixed nucleotides.
@@ -47,6 +47,7 @@ extern double p_freq;     // For the fixed model.
 
 bool lrtest(double lnl_althyp, double lnl_nullhyp, double threshold); // Where threshold is a value in the Chi2 distribution.
 
+bool set_model_type(modelt& model, const string& arg);
 void     set_model_thresholds (double alpha);
 snp_type call_snp (double l_ratio);
 snp_type call_snp (double lnl_hom, double lnl_het);

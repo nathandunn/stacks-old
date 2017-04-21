@@ -42,6 +42,23 @@ vector<pair<char, int>> sort_acgt(const map<char, int>&);
 void record_snp(SNP& snp, snp_type type, uint col, double l_ratio, const vector<pair<char, int>>& nuc);
 void record_dummy_snp(SNP& snp, uint col);
 
+bool set_model_type(modelt& model, const string& arg) {
+    if (arg == "snp")
+        model = ::snp;
+    else if (arg == "fixed")
+        model = ::fixed;
+    else if (arg == "bounded")
+        model = ::bounded;
+    else if (arg == "marukihigh")
+        model = ::marukihigh;
+    else if (arg == "marukilow")
+        model = ::marukilow;
+    else
+        return false;
+
+    return true;
+}
+
 void set_model_thresholds(double alpha) {
     if (alpha == 0.1) {
         heterozygote_limit = -2.71;
