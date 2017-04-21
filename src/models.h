@@ -49,8 +49,8 @@ bool lrtest(double lnl_althyp, double lnl_nullhyp, double threshold); // Where t
 
 bool set_model_type(modelt& model_type, const string& arg);
 bool set_model_thresholds (double alpha);
-string report_model(modelt model_type);
-string report_alpha(double alpha);
+void report_model(ostream& os, modelt model_type);
+void report_alpha(ostream& os, double alpha);
 string to_string(modelt model_type);
 
 snp_type call_snp (double l_ratio);

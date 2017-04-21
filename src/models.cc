@@ -78,15 +78,14 @@ bool set_model_thresholds(double alpha) {
     return true;
 }
 
-string report_model(modelt model_type) {
-    string s = "Model: " + to_string(model_type);
+void report_model(ostream& os, modelt model_type) {
+    os << "Model: " << to_string(model_type);
     if (model_type == ::bounded)
-        s += "; epsilon in [" + to_string(bound_low) + ", " + to_string(bound_high) + "]";
-    return s;
+        os << "; epsilon in [" << bound_low << ", " << bound_high << "]";
 }
 
-string report_alpha(double alpha) {
-    return string("Genotype alpha: ") + to_string(alpha);
+void report_alpha(ostream& os, double alpha) {
+    os << "Genotype alpha: " << alpha;
 }
 
 string to_string(modelt model_type) {

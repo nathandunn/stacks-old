@@ -623,9 +623,12 @@ void parse_command_line(int argc, char* argv[]) {
 void report_options(ostream& os) {
     os << "Configuration for this run:\n"
        << "  Input directory: '" << in_dir << "'\n"
-       << "  Batch ID: " << batch_id << "\n"
-       << "  " << report_model(model_type) << "\n"
-       << "  " << report_alpha(gt_alpha) << "\n";
+       << "  Batch ID: " << batch_id << "\n";
+    os << "  ";
+    report_model(os, model_type);
+    os << "\n  ";
+    report_alpha(os, gt_alpha);
+    os << "\n";
        ;
     if (!locus_wl.empty())
         os << "  Whitelist of " << locus_wl.size() << " loci.\n";
