@@ -40,7 +40,7 @@ bool aln_out = false;
 // Extra globals.
 //
 const string prog_name = "rystacks";
-LogAlterator* lg = NULL;
+LogAlterator* logger = NULL;
 gzFile o_gzfasta_f = NULL;
 VcfWriter* o_vcf_f = NULL;
 ofstream o_models_f;
@@ -53,10 +53,7 @@ int main(int argc, char** argv) {
 
     // Open the log.
     string lg_path = in_dir + prog_name + ".log";
-    if(!quiet)
-        cout << "Logging to '" << lg_path << "'." << endl;
-    lg = new LogAlterator(lg_path, quiet);
-    init_log(lg->l, argc, argv);
+    logger = new LogAlterator(lg_path, quiet, argc, argv);
     report_options(cout);
     cout << "\n" << flush;
 
@@ -122,7 +119,7 @@ int main(int argc, char** argv) {
     delete model;
 
     cout << prog_name << " is done.\n";
-    delete lg;
+    delete logger;
     return 0;
 }
 

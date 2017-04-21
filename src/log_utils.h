@@ -29,12 +29,6 @@
 
 int init_log(ostream &fh, int argc, char **argv);
 
-inline
-void failed_to_open(const string& path) {
-    cerr << "Error: Failed to open file '" << path << "'.\n";
-    throw exception();
-}
-
 // Returns e.g. "23.2%".
 string as_percentage(double d);
 
@@ -77,7 +71,6 @@ private:
 
 // LogAlterator
 // ==========
-class TeeBuf;
 class LogAlterator {
 public:
     ofstream l; // The actual log file
@@ -88,7 +81,7 @@ public:
     // cout and cerr will also write to the log file (if quiet
 	// is true, output to stdout and stderr is suppressed i.e. they only
     // write to the log file).
-    LogAlterator(const string& log_path, bool quiet = false);
+    LogAlterator(const string& log_path, bool quiet, int argc, char ** argv);
 
     // Upon destruction, restore cout and cerr.
     ~LogAlterator() {
