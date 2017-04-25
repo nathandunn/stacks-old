@@ -892,10 +892,10 @@ SiteCall MarukiLowModel::call(SiteCounts&& depths) const {
     if (!lrtest(lnl_dimorph, lnl_fixed, polymorphism_signif_thr))
         return SiteCall(move(depths), {{nt_M, 1.0}}, vector<SampleCall>());
 
-    /*TODO map<Nt2,size_t> allele_freqs = {
+    map<Nt2,double> allele_freqs = {
         {nt_M, freq_MM+0.5*freq_Mm},
         {nt_m, freq_mm+0.5*freq_Mm},
-    };*/
+    };
 
     //
     // IV. Corrected likelihoods & genotypes.
@@ -947,6 +947,5 @@ SiteCall MarukiLowModel::call(SiteCounts&& depths) const {
         }
     }
 
-    map<Nt2,double> allele_freqs = SiteCall::tally_allele_freqs(sample_calls);
     return SiteCall(move(depths), move(allele_freqs), move(sample_calls));
 }
