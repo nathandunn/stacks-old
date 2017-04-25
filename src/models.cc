@@ -29,6 +29,8 @@
 //
 #include "models.h"
 
+using namespace std;
+
 vector<pair<char, int>> sort_acgt(const map<char, int>&);
 void record_snp(SNP& snp, snp_type type, uint col, double l_ratio, const vector<pair<char, int>>& nuc);
 void record_dummy_snp(SNP& snp, uint col);
@@ -685,6 +687,9 @@ double MarukiLowModel::calc_dimorph_lnl(double freq_MM, double freq_Mm, double f
     // Sum over samples.
     for (const LikData& s_liks : liks)
         lnl += calc_ln_weighted_sum(freq_MM, freq_Mm, freq_mm, s_liks);
+    assert(lnl < 0.0 + 1e-12);
+    if (lnl > 0.0)
+        lnl = 0.0;
     return lnl;
 }
 
@@ -706,16 +711,24 @@ double MarukiLowModel::calc_ln_weighted_sum_safe(double freq_MM, double freq_Mm,
         {s_liks.lnl_mm, freq_mm}
     }};
     std::sort(s.begin(), s.end()); // `s` is sorted by increasing lnl.
+    assert(!isinf(s[2].first));
     if (s[2].second > 0.0) {
         return s[2].first + log(s[2].second
                                 + s[1].second * exp(s[1].first-s[2].first)
                                 + s[0].second * exp(s[0].first-s[2].first)
                                 );
     } else if (s[1].second > 0.0) {
-        return s[1].first + log(s[1].second + s[0].second * exp(s[0].first-s[1].first));
+        if (isinf(s[1].first))
+            // The only genotype that has a non-null likelihood has a freq of 0.
+            return 0.0;
+        else
+            return s[1].first + log(s[1].second + s[0].second * exp(s[0].first-s[1].first));
     } else {
         assert(s[0].second > 0.0); // the sum of freqs is always ~1.0.
-        return s[0].first + log(s[0].second);
+        if (isinf(s[0].first))
+            return 0.0;
+        else
+            return s[0].first + log(s[0].second);
     }
 }
 
@@ -745,15 +758,15 @@ SiteCall MarukiLowModel::call(SiteCounts&& depths) const {
     if (dp_tot == 0)
         return SiteCall(move(depths), map<Nt2,size_t>(), vector<SampleCall>());
 
+    //
+    // I. Likelihood for the fixed-site hypothesis.
+    //
+
     array<pair<size_t,Nt2>,4> sorted = depths.tot.sorted();
     Nt2 nt_M = sorted[0].second;
     Nt2 nt_m = sorted[1].second;
     size_t n_M_tot = sorted[0].first;
     size_t n_m_tot = sorted[1].first;
-
-    //
-    // I. Likelihood for the fixed-site hypothesis.
-    //
 
     double lnl_fixed = calc_fixed_lnl(dp_tot, n_M_tot);
 
@@ -798,15 +811,24 @@ SiteCall MarukiLowModel::call(SiteCounts&& depths) const {
     double p = 0.5 * double(3*n_M_tot + n_m_tot - dp_tot) / (2*n_M_tot + 2*n_m_tot - dp_tot);
 
     // 4. Initial disequilibrium coefficient.
+    auto flush_freq = [](double& f) {
+        if (f < 1e-12)
+            f = 0.0;
+        else if (f > 1.0-1e-12)
+            f = 1.0;
+    };
     double d_a_best;
     double lnl_dimorph = std::numeric_limits<double>::lowest();
     {
-        double d_a_min = std::max(-p*p, -(1-p)*(1-p));
+        double d_a_min = max(-p*p, -(1-p)*(1-p));
         double d_a_max = p*(1-p);
-        for (double d_a = d_a_min; d_a < d_a_max + 1e-9; d_a += 1.0/n_samples) {
+        for (double d_a = d_a_min; d_a < d_a_max + 1e-12; d_a += 1.0/n_samples) {
             double f_MM = p*p + d_a;
             double f_Mm = 2 * (p*(1-p) - d_a);
             double f_mm = (1-p) * (1-p) + d_a;
+            flush_freq(f_MM);
+            flush_freq(f_Mm);
+            flush_freq(f_mm);
             double lnl = calc_dimorph_lnl(f_MM, f_Mm, f_mm, liks);
             if (lnl > lnl_dimorph) {
                 d_a_best = d_a;
@@ -820,6 +842,9 @@ SiteCall MarukiLowModel::call(SiteCounts&& depths) const {
     double freq_MM = p*p + d_a_best;
     double freq_Mm = 2 * (p*(1-p) - d_a_best);
     double freq_mm = (1-p) * (1-p) + d_a_best;
+    flush_freq(freq_MM);
+    flush_freq(freq_Mm);
+    flush_freq(freq_mm);
     {
         double lnl_prev;
         do {
@@ -837,11 +862,14 @@ SiteCall MarukiLowModel::call(SiteCounts&& depths) const {
                 double f_MM = n[0];
                 double f_Mm = n[1];
                 double f_mm = n[2];
-                if (f_MM < 0.0 || f_MM > 1.0
-                 || f_Mm < 0.0 || f_Mm > 1.0
-                 || f_mm < 0.0 || f_mm > 1.0)
+                if (f_MM < 0.0-1e-12 || f_MM > 1.0+1e-12
+                 || f_Mm < 0.0-1e-12 || f_Mm > 1.0+1e-12
+                 || f_mm < 0.0-1e-12 || f_mm > 1.0+1e-12)
                     // Out of bounds.
                     continue;
+                flush_freq(f_MM);
+                flush_freq(f_Mm);
+                flush_freq(f_mm);
 
                 double lnl = calc_dimorph_lnl(f_MM, f_Mm, f_mm, liks);
                 if (lnl > lnl_dimorph) {
@@ -887,6 +915,15 @@ SiteCall MarukiLowModel::call(SiteCounts&& depths) const {
             double lnl_MM = s_liks.lnl_MM + log_f_MM - w_sum;
             double lnl_Mm = s_liks.lnl_Mm + log_f_Mm - w_sum;
             double lnl_mm = s_liks.lnl_mm + log_f_mm - w_sum;
+            assert(lnl_MM < 0.0+1e-12);
+            assert(lnl_Mm < 0.0+1e-12);
+            assert(lnl_mm < 0.0+1e-12);
+            if (lnl_MM > 0.0)
+                lnl_MM = 0.0;
+            if (lnl_Mm > 0.0)
+                lnl_Mm = 0.0;
+            if (lnl_mm > 0.0)
+                lnl_mm = 0.0;
             s_call.lnls().set(nt_M, nt_M, lnl_MM);
             s_call.lnls().set(nt_M, nt_m, lnl_Mm);
             s_call.lnls().set(nt_m, nt_m, lnl_mm);
