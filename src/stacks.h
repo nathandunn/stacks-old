@@ -279,6 +279,7 @@ public:
 
     // Get the count for a given nucleotide.
     size_t operator[] (Nt nt) const {return counts_[size_t(nt)];}
+    const array<size_t,Nt::max()+1>& arr() const {return counts_;}
 
     size_t sum() const {return (*this)[Nt::a] + (*this)[Nt::c] + (*this)[Nt::g] + (*this)[Nt::t];}
     array<pair<size_t,Nt>,4> sorted() const;

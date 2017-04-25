@@ -35,6 +35,7 @@ size_t km_length = 31;
 size_t min_km_count = 2;
 bool gfa_out = false;
 bool aln_out = false;
+bool vcf_write_depths = false;
 
 //
 // Extra globals.
@@ -67,7 +68,10 @@ int main(int argc, char** argv) {
 
     string o_vcf_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".vcf";
     VcfHeader vcf_header;
-    vcf_header.add_meta(VcfMeta("misc","\"alias lessvcf='less -x9,15,20,25,30,35,42,67,82,119 batch_1.rystacks.vcf'\""));
+    vcf_header.add_meta(VcfMeta("misc", vcf_write_depths ?
+            "\"alias vcf='less -x9,15,20,25,30,35,42,85,100,150'\""
+            : "\"alias vcf='less -x9,15,20,25,30,35,42,67,82,119'\""
+            ));
     vcf_header.add_meta(VcfMeta::predefs::info_DP);
     vcf_header.add_meta(VcfMeta::predefs::info_AF);
     vcf_header.add_meta(VcfMeta::predefs::info_AD);
@@ -309,6 +313,12 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
             // Info/AD.
             Nt4 ref_nt = sitecall.alleles().begin()->first;
             rec.info.push_back({"AD", to_string(sitecall.tot_depths()[Nt2(ref_nt)])});
+            if (vcf_write_depths) {
+                // Info/cnts.
+                stringstream cnts;
+                join(sitecall.tot_depths().arr(), ',', cnts);
+                rec.info.push_back({"cnts", cnts.str()});
+            }
             // Format.
             rec.format.push_back("DP");
             // Genotypes.
@@ -334,6 +344,12 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
             for (auto nt=++vcf_alleles.begin(); nt!=vcf_alleles.end(); ++nt) // rem. always >1 alleles.
                 alt_freqs.push_back(sitecall.alleles().at(*nt));
             rec.info.push_back(VcfRecord::util::fmt_info_af(alt_freqs));
+            if (vcf_write_depths) {
+                // Info/cnts.
+                stringstream cnts;
+                join(sitecall.tot_depths().arr(), ',', cnts);
+                rec.info.push_back({"cnts", cnts.str()});
+            }
 
             // Format.
             rec.format.push_back("GT");
@@ -381,6 +397,11 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
                 join(ad, ',', genotype);
                 // GL field.
                 genotype << ':' << VcfRecord::util::fmt_gt_gl(rec.alleles, scall.lnls());
+                if (vcf_write_depths) {
+                    // cnts field.
+                    genotype << ":";
+                    join(sdepths.arr(), ',', genotype);
+                }
                 // Push it.
                 rec.samples.push_back(genotype.str());
             }
@@ -495,6 +516,7 @@ void parse_command_line(int argc, char* argv[]) {
         {"min-cov",      required_argument, NULL,  1002},
         {"gfa",          no_argument,       NULL,  1003},
         {"aln",          no_argument,       NULL,  1004},
+        {"depths",       no_argument,       NULL,  1007},
         {0, 0, 0, 0}
     };
 
@@ -550,6 +572,9 @@ void parse_command_line(int argc, char* argv[]) {
             break;
         case 1004://aln
             aln_out = true;
+            break;
+        case 1007://depths
+            vcf_write_depths = true;
             break;
         case '?':
             bad_args();
