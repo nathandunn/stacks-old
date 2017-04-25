@@ -47,8 +47,9 @@ extern double p_freq;     // For the fixed model.
 
 bool lrtest(double lnl_althyp, double lnl_nullhyp, double threshold); // Where threshold is a value in the Chi2 distribution.
 
-bool set_model_type(modelt& model_type, const string& arg);
-bool set_model_thresholds (double alpha);
+double qchisq(double alpha, size_t df);
+modelt parse_model_type(const string& arg);
+void set_model_thresholds(double alpha);
 void report_model(ostream& os, modelt model_type);
 void report_alpha(ostream& os, double alpha);
 string to_string(modelt model_type);
@@ -125,24 +126,40 @@ class Model {
 public:
     virtual ~Model() {}
     virtual SiteCall call(SiteCounts&& depths) const = 0;
+    virtual void print(ostream& os) const = 0;
+    friend ostream& operator<< (ostream& os, const Model& m) {m.print(os); return os;}
 };
 
 //
 // MultinomialModel: the standard Stacks v.1 model described in Hohenloe2010.
 //
 class MultinomialModel : public Model {
+    double alpha_;
 public:
+    MultinomialModel(double gt_alpha) : alpha_(gt_alpha) {set_model_thresholds(alpha_);}
     SiteCall call(SiteCounts&& depths) const;
+    void print(ostream& os) const
+        {os << to_string(modelt::snp) << " (alpha: "  << alpha_ << ")";}
 };
 
 //
 // MarukiHighModel: the model of Maruki & Lynch (2017) for high-coverage data.
 //
 class MarukiHighModel : public Model {
+    double gt_alpha_;
+    double gt_threshold_;
+    double var_alpha_;
+    double var_threshold_;
     double calc_hom_lnl(double n, double n1) const;
     double calc_het_lnl(double n, double n1n2) const;
 public:
+    MarukiHighModel(double gt_alpha, double var_alpha)
+        : gt_alpha_(gt_alpha), gt_threshold_(qchisq(gt_alpha_,1)),
+          var_alpha_(var_alpha), var_threshold_(qchisq(var_alpha_,1))
+        {}
     SiteCall call(SiteCounts&& depths) const;
+    void print(ostream& os) const
+        {os << to_string(modelt::marukihigh) << " (var_alpha: "  << var_alpha_ << ", gt_alpha: " << gt_alpha_ << ")";}
 };
 
 //
@@ -162,6 +179,10 @@ class MarukiLowModel : public Model {
             {}
     };
 
+    double gt_alpha_;
+    double gt_threshold_;
+    double var_alpha_;
+    double var_threshold_;
     mutable size_t n_underflows_;
     double calc_fixed_lnl(double n_tot, double n_M_tot) const;
     double calc_dimorph_lnl(double freq_MM, double freq_Mm, double freq_mm, const vector<LikData>& liks) const;
@@ -169,9 +190,15 @@ class MarukiLowModel : public Model {
     double calc_ln_weighted_sum_safe(double freq_MM, double freq_Mm, double freq_mm, const LikData& s_liks) const;
 
 public:
-    MarukiLowModel();
-    ~MarukiLowModel();
+    MarukiLowModel(double gt_alpha, double var_alpha)
+        : gt_alpha_(gt_alpha), gt_threshold_(qchisq(gt_alpha_,1)),
+          var_alpha_(var_alpha), var_threshold_(qchisq(var_alpha_,2)), // df=2
+          n_underflows_(0)
+        {}
+    ~MarukiLowModel() {cout << "marukilow: " << n_underflows_ << " underflows occurred.\n";}
     SiteCall call(SiteCounts&& depths) const;
+    void print(ostream& os) const
+        {os << to_string(modelt::marukilow) << " (var_alpha: "  << var_alpha_ << ", gt_alpha: " << gt_alpha_ << ")";}
 };
 
 //

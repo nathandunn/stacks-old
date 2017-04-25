@@ -29,7 +29,6 @@ string in_dir;
 int batch_id = -1;
 modelt model_type = snp;
 const Model* model = NULL;
-double gt_alpha = 0.05;
 set<int> locus_wl;
 size_t km_length = 31;
 size_t min_km_count = 2;
@@ -95,6 +94,7 @@ int main(int argc, char** argv) {
     }
 
     // Process every locus
+    cout << "Processing all loci...\n" << flush;
     CLocReadSet loc (bam_fh.mpopi());
     size_t n_loci = 0;
     size_t n_discarded = 0;
@@ -486,13 +486,17 @@ const string help_string = string() +
         "  -P: input directory (must contain a batch_X.catalog.bam file)\n"
         "  -b: batch ID (default: guess)\n"
         "  -W,--whitelist: a whitelist of locus IDs\n"
-        "  --gt-alpha: alpha threshold for calling genotypes\n"
+        "  --model: model to use to call variants and genotypes;\n"
+        "           one of snp (default), marukihigh, or marukilow\n"
+        "  --gt-alpha: alpha threshold for calling genotypes (default: 0.05)\n"
+        "  --var-alpha: alpha threshold for discovering variants (default: 0.05)\n"
         "\n"
         "Alignment options:\n"
         "  --kmer-length: kmer length (default: 31)\n"
         "  --min-cov: minimum coverage to consider a kmer (default: 2)\n"
         "  --gfa: output a GFA file for each locus\n"
         "  --aln: output a file showing the contigs & alignments\n"
+        "  --depths: write detailed depth data in the output VCF\n"
         "\n"
         ;
 
@@ -503,6 +507,8 @@ void parse_command_line(int argc, char* argv[]) {
         exit(13);
     };
 
+try {
+
     static const option long_options[] = {
         {"version",      no_argument,       NULL,  1000},
         {"help",         no_argument,       NULL,  'h'},
@@ -511,6 +517,7 @@ void parse_command_line(int argc, char* argv[]) {
         {"batch-id",     required_argument, NULL,  'b'},
         {"model",        required_argument, NULL,  1006},
         {"gt-alpha",     required_argument, NULL,  1005},
+        {"var-alpha",    required_argument, NULL,  1008},
         {"whitelist",    required_argument, NULL,  'W'},
         {"kmer-length",  required_argument, NULL,  1001},
         {"min-cov",      required_argument, NULL,  1002},
@@ -520,6 +527,8 @@ void parse_command_line(int argc, char* argv[]) {
         {0, 0, 0, 0}
     };
 
+    double gt_alpha = 0.05;
+    double var_alpha = 0.05;
     string wl_path;
 
     int c;
@@ -550,13 +559,13 @@ void parse_command_line(int argc, char* argv[]) {
             batch_id = atoi(optarg);
             break;
         case 1006: //model
-            if(!set_model_type(model_type, optarg)) {
-                cerr << "Error: Unknown model '" << optarg << "'.\n";
-                bad_args();
-            }
+            model_type = parse_model_type(optarg);
             break;
         case 1005: //gt-alpha
             gt_alpha = atof(optarg);
+            break;
+        case 1008: //var-alpha
+            var_alpha = atof(optarg);
             break;
         case 'W':
             wl_path = optarg;
@@ -594,18 +603,13 @@ void parse_command_line(int argc, char* argv[]) {
     }
 
     switch (model_type) {
-    case snp:        model = new MultinomialModel(); break;
-    case marukihigh: model = new MarukiHighModel();  break;
-    case marukilow:  model = new MarukiLowModel();   break;
+    case snp:        model = new MultinomialModel(gt_alpha); break;
+    case marukihigh: model = new MarukiHighModel(gt_alpha, var_alpha);  break;
+    case marukilow:  model = new MarukiLowModel(gt_alpha, var_alpha);   break;
     default:
         cerr << "Error: Model choice '" << to_string(model_type) << "' is not supported.\n";
         bad_args();
         break;
-    }
-
-    if(!set_model_thresholds(gt_alpha)) {
-        cerr << "Error: Unsupported alpha value '" << gt_alpha << "'; pick one of {0.1, 0.05, 0.01, 0.001}.\n";
-        bad_args();
     }
 
     // Process arguments.
@@ -640,18 +644,17 @@ void parse_command_line(int argc, char* argv[]) {
         }
     }
 
+} catch (std::invalid_argument&) {
+    bad_args();
+}
 }
 
 void report_options(ostream& os) {
     os << "Configuration for this run:\n"
        << "  Input directory: '" << in_dir << "'\n"
-       << "  Batch ID: " << batch_id << "\n";
-    os << "  ";
-    report_model(os, model_type);
-    os << "\n  ";
-    report_alpha(os, gt_alpha);
-    os << "\n";
-       ;
+       << "  Batch ID: " << batch_id << "\n"
+       << "  Model: " << *model << "\n";
+
     if (!locus_wl.empty())
         os << "  Whitelist of " << locus_wl.size() << " loci.\n";
     if (km_length != 31)
