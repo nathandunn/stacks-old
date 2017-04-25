@@ -271,7 +271,7 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
             vcf_allele_indexes.insert({ref[i], 0});
 
             // Sort the alleles by frequency.
-            vector<pair<size_t, Nt4>> sorted_alleles;
+            vector<pair<double, Nt4>> sorted_alleles;
             for (auto& a : sitecall.alleles())
                 sorted_alleles.push_back({a.second, Nt4(a.first)});
             sort(sorted_alleles.rbegin(), sorted_alleles.rend()); // (decreasing)
@@ -330,12 +330,9 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
             join(ad, ',', ss);
             rec.info.push_back({"AD", ss.str()});
             // Info/AF.
-            size_t tot_count = 0;
-            for (auto& a : sitecall.alleles())
-                tot_count += a.second;
             vector<double> alt_freqs;
             for (auto nt=++vcf_alleles.begin(); nt!=vcf_alleles.end(); ++nt) // rem. always >1 alleles.
-                alt_freqs.push_back((double)sitecall.alleles().at(*nt) / tot_count);
+                alt_freqs.push_back(sitecall.alleles().at(*nt));
             rec.info.push_back(VcfRecord::util::fmt_info_af(alt_freqs));
 
             // Format.

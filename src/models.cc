@@ -339,13 +339,13 @@ Nt2 SiteCall::most_frequent_allele() const {
     return best->first;
 }
 
-map<Nt2,size_t> SiteCall::tally_allele_freqs(const vector<SampleCall>& spldata) {
+map<Nt2,double> SiteCall::tally_allele_freqs(const vector<SampleCall>& spldata) {
     //
     // Iterate over the SampleCall's & record the existing alleles and their
     // frequencies.
     //
 
-    map<Nt2,size_t> allele_freqs;
+    map<Nt2,double> allele_freqs;
 
     Counts<Nt2> counts;
     for (const SampleCall& sd : spldata) {
@@ -365,10 +365,11 @@ map<Nt2,size_t> SiteCall::tally_allele_freqs(const vector<SampleCall>& spldata) 
     }
 
     array<pair<size_t,Nt2>,4> sorted_alleles = counts.sorted();
-    size_t i = 0;
-    while (i<4 && sorted_alleles[i].first != 0) {
-        allele_freqs.insert({sorted_alleles[i].second, sorted_alleles[i].first});
-        ++i;
+    size_t tot = counts.sum();
+    for (auto& a : sorted_alleles) {
+        if (a.first == 0)
+            break;
+        allele_freqs.insert({a.second, double(a.first)/tot});
     }
 
     return allele_freqs;
@@ -443,7 +444,7 @@ SiteCall MultinomialModel::call(SiteCounts&& depths) const {
     //
     // Record the existing alleles and their frequencies.
     //
-    map<Nt2,size_t> allele_freqs = SiteCall::tally_allele_freqs(sample_calls);
+    map<Nt2,double> allele_freqs = SiteCall::tally_allele_freqs(sample_calls);
 
     //
     // Compute the missing genotype likelihoods, if any.
@@ -527,7 +528,7 @@ SiteCall MarukiHighModel::call(SiteCounts&& depths) const {
     const size_t n_samples = depths.mpopi->samples().size();
 
     if (depths.tot.sum() == 0)
-        return SiteCall(move(depths), map<Nt2,size_t>(), vector<SampleCall>());
+        return SiteCall(move(depths), map<Nt2,double>(), vector<SampleCall>());
 
     //
     // I.
@@ -648,9 +649,9 @@ SiteCall MarukiHighModel::call(SiteCounts&& depths) const {
     //
     // Finally, compute allele frequencies.
     //
-    map<Nt2,size_t> allele_freqs;
+    map<Nt2,double> allele_freqs;
     if (alleles.size() == 1) {
-        allele_freqs.insert({*alleles.begin(),-1});
+        allele_freqs.insert({*alleles.begin(), 1.0});
     } else {
         allele_freqs = SiteCall::tally_allele_freqs(sample_calls);
         assert(allele_freqs.size() == alleles.size()
@@ -756,7 +757,7 @@ SiteCall MarukiLowModel::call(SiteCounts&& depths) const {
 
     size_t dp_tot = depths.tot.sum();
     if (dp_tot == 0)
-        return SiteCall(move(depths), map<Nt2,size_t>(), vector<SampleCall>());
+        return SiteCall(move(depths), map<Nt2,double>(), vector<SampleCall>());
 
     //
     // I. Likelihood for the fixed-site hypothesis.
@@ -775,7 +776,7 @@ SiteCall MarukiLowModel::call(SiteCounts&& depths) const {
         // at its maximum value of 0, dimorphism isn't significant. This happens
         // when there are either very few non-major-allele reads or very few reads
         // overall.
-        return SiteCall(move(depths), {{nt_M, -1}}, vector<SampleCall>());
+        return SiteCall(move(depths), {{nt_M, 1.0}}, vector<SampleCall>());
 
     //
     // II. Compute and optimize the likelihood for the dimorphic-site hypothesis
@@ -889,7 +890,7 @@ SiteCall MarukiLowModel::call(SiteCounts&& depths) const {
     //
 
     if (!lrtest(lnl_dimorph, lnl_fixed, polymorphism_signif_thr))
-        return SiteCall(move(depths), {{nt_M, -1}}, vector<SampleCall>());
+        return SiteCall(move(depths), {{nt_M, 1.0}}, vector<SampleCall>());
 
     /*TODO map<Nt2,size_t> allele_freqs = {
         {nt_M, freq_MM+0.5*freq_Mm},
@@ -946,6 +947,6 @@ SiteCall MarukiLowModel::call(SiteCounts&& depths) const {
         }
     }
 
-    map<Nt2,size_t> allele_freqs = SiteCall::tally_allele_freqs(sample_calls);
+    map<Nt2,double> allele_freqs = SiteCall::tally_allele_freqs(sample_calls);
     return SiteCall(move(depths), move(allele_freqs), move(sample_calls));
 }

@@ -9,7 +9,7 @@ using namespace std;
 
 pair<string,string> VcfRecord::util::fmt_info_af(const vector<double>& alt_freqs) {
     stringstream ss;
-    ss << std::fixed << std::setprecision(3);
+    ss << std::setprecision(3);
     join(alt_freqs, ',', ss);
     return {"AF", ss.str()};
 }
