@@ -149,7 +149,28 @@ public:
 // MarukiLowModel: the model of Maruki & Lynch (2015,2017) for low-coverage data.
 //
 class MarukiLowModel : public Model {
+    struct LikData {
+        double lnl_MM;
+        double lnl_Mm;
+        double lnl_mm;
+        double l_MM;
+        double l_Mm;
+        double l_mm;
+        LikData(double lnl_MM_, double lnl_Mm_, double lnl_mm_)
+            : lnl_MM(lnl_MM_), lnl_Mm(lnl_Mm_), lnl_mm(lnl_mm_),
+              l_MM(exp(lnl_MM)), l_Mm(exp(lnl_Mm)), l_mm(exp(lnl_mm))
+            {}
+    };
+
+    mutable size_t n_underflows_;
+    double calc_fixed_lnl(double n_tot, double n_M_tot) const;
+    double calc_dimorph_lnl(double freq_MM, double freq_Mm, double freq_mm, const vector<LikData>& liks) const;
+    double calc_ln_weighted_sum(double freq_MM, double freq_Mm, double freq_mm, const LikData& s_liks) const;
+    double calc_ln_weighted_sum_safe(double freq_MM, double freq_Mm, double freq_mm, const LikData& s_liks) const;
+
 public:
+    MarukiLowModel();
+    ~MarukiLowModel();
     SiteCall call(SiteCounts&& depths) const;
 };
 
