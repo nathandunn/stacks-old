@@ -312,7 +312,7 @@ public:
     bool has_lik(Nt2 n1, Nt2 n2) const
         {return lnliks_[get_index(n1,n2)] != 1.0;}
     void set(Nt2 n1, Nt2 n2, double lnl)
-        {assert(std::isfinite(lnl) && lnl<=0.0); assert(!has_lik(n1,n2)); lnliks_[get_index(n1,n2)] = lnl;}
+        {assert(!std::isnan(lnl)); assert(lnl<=0.0); assert(!has_lik(n1,n2)); lnliks_[get_index(n1,n2)] = lnl;}
 
     // For debugging.
     friend ostream& operator<<(ostream& os, const GtLiks& liks);
