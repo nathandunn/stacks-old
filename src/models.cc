@@ -660,6 +660,255 @@ SiteCall MarukiHighModel::call(SiteCounts&& depths) const {
     return SiteCall(move(depths), move(allele_freqs), move(sample_calls));
 }
 
+MarukiLowModel::MarukiLowModel()
+: n_underflows_(0)
+{}
+
+MarukiLowModel::~MarukiLowModel() {
+    if (n_underflows_ > 0)
+        cerr << "Warning: Underflows: " << n_underflows_ << "\n";
+    else
+        cout << "(No underflows occurred.)\n";
+}
+
+double MarukiLowModel::calc_fixed_lnl(double n_tot, double n_M_tot) const {
+    assert(n_tot > 0.0);
+    assert(n_M_tot > 0.0);
+    if (n_M_tot == n_tot)
+        return 0.0;
+    else
+        return n_M_tot * log(n_M_tot/n_tot) + (n_tot-n_M_tot) * log((n_tot-n_M_tot)/n_tot);
+}
+
+double MarukiLowModel::calc_dimorph_lnl(double freq_MM, double freq_Mm, double freq_mm, const vector<LikData>& liks) const {
+    double lnl = 0.0;
+    // Sum over samples.
+    for (const LikData& s_liks : liks)
+        lnl += calc_ln_weighted_sum(freq_MM, freq_Mm, freq_mm, s_liks);
+    return lnl;
+}
+
+double MarukiLowModel::calc_ln_weighted_sum(double freq_MM, double freq_Mm, double freq_mm, const LikData& s_liks) const {
+    double weighted_sum = freq_MM * s_liks.l_MM + freq_Mm * s_liks.l_Mm + freq_mm * s_liks.l_mm;
+    if (weighted_sum >= std::numeric_limits<double>::min()) {
+        return log(weighted_sum);
+    } else {
+        // `weigted_sum` is subnormal or zero.
+        ++n_underflows_;
+        return calc_ln_weighted_sum_safe(freq_MM, freq_Mm, freq_mm, s_liks);
+    }
+}
+
+double MarukiLowModel::calc_ln_weighted_sum_safe(double freq_MM, double freq_Mm, double freq_mm, const LikData& s_liks) const {
+    array<pair<double,double>,3> s = {{
+        {s_liks.lnl_MM, freq_MM},
+        {s_liks.lnl_Mm, freq_Mm},
+        {s_liks.lnl_mm, freq_mm}
+    }};
+    std::sort(s.begin(), s.end()); // `s` is sorted by increasing lnl.
+    if (s[2].second > 0.0) {
+        return s[2].first + log(s[2].second
+                                + s[1].second * exp(s[1].first-s[2].first)
+                                + s[0].second * exp(s[0].first-s[2].first)
+                                );
+    } else if (s[1].second > 0.0) {
+        return s[1].first + log(s[1].second + s[0].second * exp(s[0].first-s[1].first));
+    } else {
+        assert(s[0].second > 0.0); // the sum of freqs is always ~1.0.
+        return s[0].first + log(s[0].second);
+    }
+}
+
 SiteCall MarukiLowModel::call(SiteCounts&& depths) const {
 
+    /*
+     * For this model the procedure is:
+     * I. Compute the maximum likelihood for the fixed-site hypothesis (straightforward).
+     * II. Compute the maximum likelihood for the dimorphic-site hypothesis and
+     *     estimate the genotype frequencies:
+     *     1. Compute the error rate estimate.
+     *     2. Compute the base likelihoods for all samples, all genotypes.
+     *        (xxx Without log-transform; check underflow issues.)
+     *     3. Compute the starting major allele frequency (`p`) value.
+     *     4. Compute the likelihoods for the site for all possible disequilibrium
+     *         coefficients (`d_a`); keep the best one.
+     *     5. Optimize the genotype frequencies by finding a local maximum.
+     * III. Test whether the site is polymorphic.
+     * IV. Compute the likelihoods for all samples, all genotypes using Bayes'
+     *      theorem, and call genotypes.
+     */
+
+    const size_t n_samples = depths.mpopi->samples().size();
+    static const double& polymorphism_signif_thr = homozygote_limit; //TODO Hack + not the same number of DF!!
+
+    size_t dp_tot = depths.tot.sum();
+    if (dp_tot == 0)
+        return SiteCall(move(depths), map<Nt2,size_t>(), vector<SampleCall>());
+
+    array<pair<size_t,Nt2>,4> sorted = depths.tot.sorted();
+    Nt2 nt_M = sorted[0].second;
+    Nt2 nt_m = sorted[1].second;
+    size_t n_M_tot = sorted[0].first;
+    size_t n_m_tot = sorted[1].first;
+
+    //
+    // I. Likelihood for the fixed-site hypothesis.
+    //
+
+    double lnl_fixed = calc_fixed_lnl(dp_tot, n_M_tot);
+
+    if (!lrtest(0.0, lnl_fixed, polymorphism_signif_thr))
+        // Fixed: `lnl_fixed` is high enough than even when `lnl_dimorphic` is
+        // at its maximum value of 0, dimorphism isn't significant. This happens
+        // when there are either very few non-major-allele reads or very few reads
+        // overall.
+        return SiteCall(move(depths), {{nt_M, -1}}, vector<SampleCall>());
+
+    //
+    // II. Compute and optimize the likelihood for the dimorphic-site hypothesis
+    //
+
+    // 1. Error rate.
+    double e = 3.0 / 2.0 * (dp_tot - n_M_tot - n_m_tot) / double(dp_tot);
+
+    // 2. Base likelihoods.
+    vector<LikData> liks;
+    {
+        liks.reserve(n_samples);
+        double ln_err_hom = e == 0.0 ? 0.0 : log(e/3.0); //TODO e==0.0 ?!
+        double ln_hit_hom = log(1-e);
+        double ln_err_het = e == 0.0 ? 0.0 : log(e/3.0);
+        double ln_hit_het = log(0.5-e/3.0);
+        for (size_t sample=0; sample<n_samples; ++sample) {
+            const Counts<Nt2>& sdepths = depths.samples[sample];
+            size_t dp = sdepths.sum();
+            if (dp == 0) {
+                liks.push_back(LikData(0.0, 0.0, 0.0));
+                continue;
+            }
+
+            double lnl_MM = sdepths[nt_M] * ln_hit_hom + (dp-sdepths[nt_M]) * ln_err_hom;
+            double lnl_mm = sdepths[nt_m] * ln_hit_hom + (dp-sdepths[nt_m]) * ln_err_hom;
+            double lnl_Mm = (sdepths[nt_M]+sdepths[nt_m]) * ln_hit_het + (dp-sdepths[nt_M]-sdepths[nt_m]) * ln_err_het;
+            liks.push_back(LikData(lnl_MM, lnl_Mm, lnl_mm));
+        }
+    }
+
+    // 3. Initial major allele frequency.
+    double p = 0.5 * double(3*n_M_tot + n_m_tot - dp_tot) / (2*n_M_tot + 2*n_m_tot - dp_tot);
+
+    // 4. Initial disequilibrium coefficient.
+    double d_a_best;
+    double lnl_dimorph = std::numeric_limits<double>::lowest();
+    {
+        double d_a_min = std::max(-p*p, -(1-p)*(1-p));
+        double d_a_max = p*(1-p);
+        for (double d_a = d_a_min; d_a < d_a_max + 1e-9; d_a += 1.0/n_samples) {
+            double f_MM = p*p + d_a;
+            double f_Mm = 2 * (p*(1-p) - d_a);
+            double f_mm = (1-p) * (1-p) + d_a;
+            double lnl = calc_dimorph_lnl(f_MM, f_Mm, f_mm, liks);
+            if (lnl > lnl_dimorph) {
+                d_a_best = d_a;
+                lnl_dimorph = lnl;
+            }
+        }
+    }
+    assert(lnl_dimorph > std::numeric_limits<double>::lowest());
+
+    // 5. Find a local maximum.
+    double freq_MM = p*p + d_a_best;
+    double freq_Mm = 2 * (p*(1-p) - d_a_best);
+    double freq_mm = (1-p) * (1-p) + d_a_best;
+    {
+        double lnl_prev;
+        do {
+            lnl_prev = lnl_dimorph;
+            double x = 1.0/n_samples;
+            array<array<double,3>,6> neighbors = {{
+                {freq_MM+x, freq_Mm-x, freq_mm},
+                {freq_MM-x, freq_Mm+x, freq_mm},
+                {freq_MM+x, freq_Mm,   freq_mm-x},
+                {freq_MM-x, freq_Mm,   freq_mm+x},
+                {freq_MM,   freq_Mm+x, freq_mm-x},
+                {freq_MM,   freq_Mm-x, freq_mm+x}
+            }};
+            for(auto& n : neighbors) {
+                double f_MM = n[0];
+                double f_Mm = n[1];
+                double f_mm = n[2];
+                if (f_MM < 0.0 || f_MM > 1.0
+                 || f_Mm < 0.0 || f_Mm > 1.0
+                 || f_mm < 0.0 || f_mm > 1.0)
+                    // Out of bounds.
+                    continue;
+
+                double lnl = calc_dimorph_lnl(f_MM, f_Mm, f_mm, liks);
+                if (lnl > lnl_dimorph) {
+                    // Update the frequencies.
+                    freq_MM = f_MM;
+                    freq_Mm = f_Mm;
+                    freq_mm = f_mm;
+                    lnl_dimorph = lnl;
+                }
+            }
+        } while (lnl_dimorph > lnl_prev);
+    }
+    assert(almost_equal(freq_MM+freq_Mm+freq_mm, 1.0));
+
+    //
+    // III. Test whether the site is polymorphic.
+    //
+
+    if (!lrtest(lnl_dimorph, lnl_fixed, polymorphism_signif_thr))
+        return SiteCall(move(depths), {{nt_M, -1}}, vector<SampleCall>());
+
+    /*TODO map<Nt2,size_t> allele_freqs = {
+        {nt_M, freq_MM+0.5*freq_Mm},
+        {nt_m, freq_mm+0.5*freq_Mm},
+    };*/
+
+    //
+    // IV. Corrected likelihoods & genotypes.
+    //
+
+    vector<SampleCall> sample_calls (n_samples);
+    {
+        sample_calls.reserve(n_samples);
+        double log_f_MM = log(freq_MM);
+        double log_f_Mm = log(freq_Mm);
+        double log_f_mm = log(freq_mm);
+        for (size_t sample=0; sample<n_samples; ++sample) {
+            const LikData& s_liks = liks[sample];
+            SampleCall& s_call = sample_calls[sample];
+
+            double w_sum = calc_ln_weighted_sum(freq_MM, freq_Mm, freq_mm, s_liks);
+
+            double lnl_MM = s_liks.lnl_MM + log_f_MM - w_sum;
+            double lnl_Mm = s_liks.lnl_Mm + log_f_Mm - w_sum;
+            double lnl_mm = s_liks.lnl_mm + log_f_mm - w_sum;
+            s_call.lnls().set(nt_M, nt_M, lnl_MM);
+            s_call.lnls().set(nt_M, nt_m, lnl_Mm);
+            s_call.lnls().set(nt_m, nt_m, lnl_mm);
+
+            array<pair<double,pair<Nt2,Nt2>>,3> lnls {{
+                {lnl_MM, {nt_M,nt_M}},
+                {lnl_Mm, {nt_M,nt_m}},
+                {lnl_mm, {nt_m,nt_m}}
+            }};
+            sort(lnls.rbegin(), lnls.rend());
+
+            if (lrtest(lnls[0].first, lnls[1].first, homozygote_limit)) { //xxx Hack..?
+                if (lnls[0].second.first == lnls[0].second.second)
+                    // Homozygote.
+                    s_call.set_call(snp_type_hom, lnls[0].second.first, lnls[0].second.first);
+                else
+                    // Heterozygote.
+                    s_call.set_call(snp_type_het, nt_M, nt_m);
+            }
+        }
+    }
+
+    map<Nt2,size_t> allele_freqs = SiteCall::tally_allele_freqs(sample_calls);
+    return SiteCall(move(depths), move(allele_freqs), move(sample_calls));
 }
