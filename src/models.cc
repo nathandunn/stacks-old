@@ -38,8 +38,8 @@ void record_dummy_snp(SNP& snp, uint col);
 int    barcode_size     = 5;
 double barcode_err_freq = 0.0;
 
-double heterozygote_limit = -3.84;
-double homozygote_limit   = 3.84;
+double heterozygote_limit = -qchisq(0.05,1);
+double homozygote_limit   = qchisq(0.05,1);
 double bound_low          = 0.0;
 double bound_high         = 1.0;
 double p_freq             = 0.5;
@@ -52,42 +52,52 @@ const map<string,modelt> model_strings = {
     {"marukilow", ::marukilow},
 };
 
-bool set_model_type(modelt& model_type, const string& arg) {
-    if (model_strings.count(arg)) {
-        model_type = model_strings.at(arg);
-        return true;
-    } else {
-        return false;
+double qchisq(double alpha, size_t df) {
+    //
+    // Quantiles (1-alpha) of the Chi2 distribution, as given by
+    //$ alphas="1e-1,5e-2,1e-2,5e-3,1e-3,5e-4,1e-4,5e-5,1e-5,5e-6,1e-6"
+    //$ df=1
+    //$ R -e "for(a in c($alphas)) {q=qchisq(1-a, $df); cat(paste('{',a,',',q,'}, ',sep=''));}"
+    //
+    // The value for a=0.05,df=1 is 3.84 for backward compatiblity (instead of
+    // 3.84145882069412).
+    //
+    static const vector<map<double,double>> table = {
+        { //df=1
+            {0.1,2.70554345409542}, {0.05,3.84}, {0.01,6.63489660102121},
+            {0.005,7.87943857662241}, {0.001,10.8275661706627}, {0.0005,12.1156651463974},
+            {0.0001,15.1367052266236}, {0.00005,16.4481102100082}, {0.00001,19.5114209646663},
+            {0.000005,20.8372870225104}, {0.000001,23.9281269768795}
+        },{ //df=2
+            {0.1,4.60517018598809}, {0.05,5.99146454710798}, {0.01,9.21034037197618},
+            {0.005,10.5966347330961}, {0.001,13.8155105579643}, {0.0005,15.2018049190844},
+            {0.0001,18.4206807439526}, {0.00005,19.8069751050725}, {0.00001,23.0258509299496},
+            {0.000005,24.4121452910472}, {0.000001,27.631021115871}
+        }
+    };
+
+    assert(df > 0 && df <= table.size());
+    try {
+        return table[df-1].at(alpha);
+    } catch (std::out_of_range&) {
+        cerr << "Error: Unsupported alpha value '" << alpha << "'.\n";
+        throw std::invalid_argument("qchisq");
     }
 }
 
-bool set_model_thresholds(double alpha) {
-    if (alpha == 0.1) {
-        heterozygote_limit = -2.71;
-        homozygote_limit   =  2.71;
-    } else if (alpha == 0.05) {
-        heterozygote_limit = -3.84;
-        homozygote_limit   =  3.84;
-    } else if (alpha == 0.01) {
-        heterozygote_limit = -6.64;
-        homozygote_limit   =  6.64;
-    } else if (alpha == 0.001) {
-        heterozygote_limit = -10.83;
-        homozygote_limit   =  10.83;
-    } else {
-        return false;
+modelt parse_model_type(const string& arg) {
+    try {
+        return model_strings.at(arg);
+    } catch (std::out_of_range&) {
+        cerr << "Error: Unknown model '" << arg << "'.\n";
+        throw std::invalid_argument("set_model_type");
     }
-    return true;
 }
 
-void report_model(ostream& os, modelt model_type) {
-    os << "Model: " << to_string(model_type);
-    if (model_type == ::bounded)
-        os << "; epsilon in [" << bound_low << ", " << bound_high << "]";
-}
-
-void report_alpha(ostream& os, double alpha) {
-    os << "Genotype alpha: " << alpha;
+void set_model_thresholds(double alpha) {
+    double x = qchisq(alpha, 1);
+    homozygote_limit = x;
+    heterozygote_limit = -x;
 }
 
 string to_string(modelt model_type) {
@@ -578,23 +588,27 @@ SiteCall MarukiHighModel::call(SiteCounts&& depths) const {
         // Lynch's method to avoid low-coverage weirdnesses. Note that the
         // polymorphism discovery alpha could be set lower than the genotype call
         // alpha (e.g. to account for multiple testing).
-        if (call_snp(lnl_hom, lnl_het) == snp_type_unk)
-            continue;
+        if (lnl_hom > lnl_het) {
+            if(!lrtest(lnl_hom, lnl_het, gt_threshold_))
+                continue;
+        } else {
+            if(!lrtest(lnl_het, lnl_hom, gt_threshold_))
+                continue;
+        }
 
         // Compare this likelihood to that of the ref,ref homozygote.
-        static const double& polymorphism_signif_thr = homozygote_limit; //xxx Hack.
         if (nt0 == nt_ref) {
-            if (lrtest(lnl_het, lnl_hom, polymorphism_signif_thr))
+            if (lrtest(lnl_het, lnl_hom, var_threshold_))
                 // Record the alternative allele.
                 alleles.insert(nt1);
         } else {
             double lnl_ref = calc_hom_lnl(dp, sdepths[nt_ref]);
             c.lnls().set(nt_ref, nt_ref, lnl_ref);
             double lnl_best = std::max(lnl_hom, lnl_het);
-            if (lrtest(lnl_best, lnl_ref, polymorphism_signif_thr)) {
+            if (lrtest(lnl_best, lnl_ref, var_threshold_)) {
                 // Record one alternative allele.
                 alleles.insert(nt0);
-                if (nt1!=nt_ref && lrtest(lnl_het, lnl_hom, polymorphism_signif_thr))
+                if (nt1!=nt_ref && lrtest(lnl_het, lnl_hom, var_threshold_))
                     // Record a second alternative allele (the SNP is at least ternary).
                     alleles.insert(nt1);
             }
@@ -642,7 +656,13 @@ SiteCall MarukiHighModel::call(SiteCounts&& depths) const {
             }
             double lnl_hom = c.lnls().at(nt0->second, nt0->second);
             double lnl_het = c.lnls().at(nt0->second, nt1->second);
-            c.set_call(call_snp(lnl_hom, lnl_het), nt0->second, nt1->second);
+            snp_type call;
+            if (lnl_hom > lnl_het)
+                call = lrtest(lnl_hom, lnl_het, gt_threshold_) ? snp_type_hom : snp_type_unk;
+            else
+                call = lrtest(lnl_het, lnl_hom, gt_threshold_) ? snp_type_het : snp_type_unk;
+
+            c.set_call(call, nt0->second, nt1->second);
         }
     }
 
@@ -661,17 +681,6 @@ SiteCall MarukiHighModel::call(SiteCounts&& depths) const {
     }
 
     return SiteCall(move(depths), move(allele_freqs), move(sample_calls));
-}
-
-MarukiLowModel::MarukiLowModel()
-: n_underflows_(0)
-{}
-
-MarukiLowModel::~MarukiLowModel() {
-    if (n_underflows_ > 0)
-        cerr << "Warning: Underflows: " << n_underflows_ << "\n";
-    else
-        cout << "(No underflows occurred.)\n";
 }
 
 double MarukiLowModel::calc_fixed_lnl(double n_tot, double n_M_tot) const {
@@ -753,7 +762,6 @@ SiteCall MarukiLowModel::call(SiteCounts&& depths) const {
      */
 
     const size_t n_samples = depths.mpopi->samples().size();
-    static const double& polymorphism_signif_thr = homozygote_limit; //TODO Hack + not the same number of DF!!
 
     size_t dp_tot = depths.tot.sum();
     if (dp_tot == 0)
@@ -771,7 +779,7 @@ SiteCall MarukiLowModel::call(SiteCounts&& depths) const {
 
     double lnl_fixed = calc_fixed_lnl(dp_tot, n_M_tot);
 
-    if (!lrtest(0.0, lnl_fixed, polymorphism_signif_thr))
+    if (!lrtest(0.0, lnl_fixed, var_threshold_))
         // Fixed: `lnl_fixed` is high enough than even when `lnl_dimorphic` is
         // at its maximum value of 0, dimorphism isn't significant. This happens
         // when there are either very few non-major-allele reads or very few reads
@@ -889,13 +897,15 @@ SiteCall MarukiLowModel::call(SiteCounts&& depths) const {
     // III. Test whether the site is polymorphic.
     //
 
-    if (!lrtest(lnl_dimorph, lnl_fixed, polymorphism_signif_thr))
+    if (!lrtest(lnl_dimorph, lnl_fixed, var_threshold_))
         return SiteCall(move(depths), {{nt_M, 1.0}}, vector<SampleCall>());
 
     map<Nt2,double> allele_freqs = {
         {nt_M, freq_MM+0.5*freq_Mm},
         {nt_m, freq_mm+0.5*freq_Mm},
     };
+    for (auto& a : allele_freqs)
+        flush_freq(a.second);
 
     //
     // IV. Corrected likelihoods & genotypes.
@@ -936,13 +946,9 @@ SiteCall MarukiLowModel::call(SiteCounts&& depths) const {
             }};
             sort(lnls.rbegin(), lnls.rend());
 
-            if (lrtest(lnls[0].first, lnls[1].first, homozygote_limit)) { //xxx Hack..?
-                if (lnls[0].second.first == lnls[0].second.second)
-                    // Homozygote.
-                    s_call.set_call(snp_type_hom, lnls[0].second.first, lnls[0].second.first);
-                else
-                    // Heterozygote.
-                    s_call.set_call(snp_type_het, nt_M, nt_m);
+            if (lrtest(lnls[0].first, lnls[1].first, gt_threshold_)) {
+                pair<Nt2,Nt2>& nts = lnls[0].second;
+                s_call.set_call(nts.first == nts.second ? snp_type_hom : snp_type_het, nts.first, nts.second);
             }
         }
     }
