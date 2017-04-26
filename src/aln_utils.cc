@@ -508,7 +508,7 @@ std::tuple<uint,uint,uint> cigar_lengths(const vector<pair<char, uint>>& cigar) 
             ref_len += op.second;
             break;
         default:
-            never_happens;
+            DOES_NOT_HAPPEN;
             break;
         }
     }
