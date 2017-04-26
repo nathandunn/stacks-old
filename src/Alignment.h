@@ -88,7 +88,7 @@ Nt4 Alignment::operator[] (size_t ref_i) const {
             // Consume seq.
             seq_i += op->second;
         } else {
-            never_happens;
+            DOES_NOT_HAPPEN;
         }
     }
     // `ref_i` wasn't entirely consumed.

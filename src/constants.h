@@ -72,7 +72,7 @@
     }
 #endif //DEBUG
 
-#define never_happens \
+#define DOES_NOT_HAPPEN \
     do{cerr << "At " << __FILE__ << ":" << __LINE__ << " This should never happen.\n"; throw exception();} while(false) \
     // n.b. do{..}while(false) requests a trailing ';' ({..} doesn't).
 

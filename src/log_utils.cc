@@ -94,7 +94,7 @@ string to_string(const FileT& ft) {
         return "fastphase";
     if (ft == FileT::beagle)
         return "beagle";
-    never_happens;
+    DOES_NOT_HAPPEN;
     return "?!";
 }
 

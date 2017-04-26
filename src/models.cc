@@ -104,7 +104,7 @@ string to_string(modelt model_type) {
     for (auto& m : model_strings)
         if (model_type == m.second)
             return m.first;
-    never_happens;
+    DOES_NOT_HAPPEN;
     return string();
 }
 
