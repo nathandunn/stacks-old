@@ -289,7 +289,6 @@ public:
 
     // Print the counts.
     template<typename Nt_> friend ostream& operator<< (ostream& os, const Counts<Nt_>& cnts);
-    string str() const {stringstream ss; ss << *this; return ss.str();}
 };
 
 struct SiteCounts {
@@ -316,7 +315,6 @@ public:
 
     // For debugging.
     friend ostream& operator<<(ostream& os, const GtLiks& liks);
-    string str() const {stringstream ss; ss << *this; return ss.str();}
 };
 
 //

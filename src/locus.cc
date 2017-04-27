@@ -183,7 +183,7 @@ QLocus::clear_matches()
 ostream& operator<< (ostream& os, const CLocAlnSet& loc) {
     os << "ref\t\t" << loc.ref().str();
     for (auto& r : loc.reads_)
-        os << "\n" << r.name << "\t" << loc.mpopi().samples()[r.sample].name << "\t" << r.aln().str();
+        os << "\n" << r.name << "\t" << loc.mpopi().samples()[r.sample].name << "\t" << r.aln();
     return os;
 }
 
