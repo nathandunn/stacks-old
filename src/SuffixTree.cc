@@ -52,6 +52,13 @@ STNode::add_suffix_link(STNode *node)
 size_t
 SuffixTree::build_tree()
 {
+    //
+    // We will build the tree in O(n) time using Ukkonen's algorithm.
+    //   Algorithm guided by:
+    //    1) Gusfield, D. Algorithms on Strings, Trees, and Sequences: Computer Science and Computational Biology. 1997. Chapters 5-6.
+    //    2) Goller, J. (jogojapan). Accessed April 27, 2017. http://stackoverflow.com/questions/9452701/ukkonens-suffix-tree-algorithm-in-plain-english
+    //
+
     uint    slen        = this->seq_.length();
     STNode *active_node = this->root;
     Nt4     active_edge = Nt4::$;
