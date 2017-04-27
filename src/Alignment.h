@@ -19,7 +19,8 @@ public:
     // N.B. Inefficient; prefer iteration.
     Nt4 operator[] (size_t ref_i) const;
 
-    string str() const {string s; for(iterator it (*this); it; ++it) s.push_back(char(*it)); return s;}
+    friend ostream& operator<< (ostream& os, const Alignment& aln)
+        {for(iterator it (aln); it; ++it) os << char(*it); return os;}
 
 private:
     bool check_cigar() const;

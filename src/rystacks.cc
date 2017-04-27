@@ -67,10 +67,6 @@ int main(int argc, char** argv) {
 
     string o_vcf_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".vcf";
     VcfHeader vcf_header;
-    vcf_header.add_meta(VcfMeta("misc", vcf_write_depths ?
-            "\"alias vcf='less -x9,15,20,25,30,35,42,85,100,150'\""
-            : "\"alias vcf='less -x9,15,20,25,30,35,42,67,82,119'\""
-            ));
     vcf_header.add_meta(VcfMeta::predefs::info_DP);
     vcf_header.add_meta(VcfMeta::predefs::info_AF);
     vcf_header.add_meta(VcfMeta::predefs::info_AD);

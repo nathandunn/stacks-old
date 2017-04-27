@@ -751,7 +751,6 @@ SiteCall MarukiLowModel::call(SiteCounts&& depths) const {
      *     estimate the genotype frequencies:
      *     1. Compute the error rate estimate.
      *     2. Compute the base likelihoods for all samples, all genotypes.
-     *        (xxx Without log-transform; check underflow issues.)
      *     3. Compute the starting major allele frequency (`p`) value.
      *     4. Compute the likelihoods for the site for all possible disequilibrium
      *         coefficients (`d_a`); keep the best one.
@@ -791,15 +790,17 @@ SiteCall MarukiLowModel::call(SiteCounts&& depths) const {
     //
 
     // 1. Error rate.
-    double e = 3.0 / 2.0 * (dp_tot - n_M_tot - n_m_tot) / double(dp_tot);
+    //TODO Fix this after Maruki replied.
+    //double e = 3.0 / 2.0 * (dp_tot - n_M_tot - n_m_tot) / double(dp_tot);
+    double e = 0.01;
 
     // 2. Base likelihoods.
     vector<LikData> liks;
     {
         liks.reserve(n_samples);
-        double ln_err_hom = e == 0.0 ? 0.0 : log(e/3.0); //TODO e==0.0 ?!
+        double ln_err_hom = log(e/3.0);
         double ln_hit_hom = log(1-e);
-        double ln_err_het = e == 0.0 ? 0.0 : log(e/3.0);
+        double ln_err_het = log(e/3.0);
         double ln_hit_het = log(0.5-e/3.0);
         for (size_t sample=0; sample<n_samples; ++sample) {
             const Counts<Nt2>& sdepths = depths.samples[sample];
