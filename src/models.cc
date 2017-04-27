@@ -721,21 +721,21 @@ double MarukiLowModel::calc_ln_weighted_sum_safe(double freq_MM, double freq_Mm,
         {s_liks.lnl_mm, freq_mm}
     }};
     std::sort(s.begin(), s.end()); // `s` is sorted by increasing lnl.
-    assert(!isinf(s[2].first));
+    assert(!std::isinf(s[2].first));
     if (s[2].second > 0.0) {
         return s[2].first + log(s[2].second
                                 + s[1].second * exp(s[1].first-s[2].first)
                                 + s[0].second * exp(s[0].first-s[2].first)
                                 );
     } else if (s[1].second > 0.0) {
-        if (isinf(s[1].first))
+        if (std::isinf(s[1].first))
             // The only genotype that has a non-null likelihood has a freq of 0.
             return 0.0;
         else
             return s[1].first + log(s[1].second + s[0].second * exp(s[0].first-s[1].first));
     } else {
         assert(s[0].second > 0.0); // the sum of freqs is always ~1.0.
-        if (isinf(s[0].first))
+        if (std::isinf(s[0].first))
             return 0.0;
         else
             return s[0].first + log(s[0].second);
