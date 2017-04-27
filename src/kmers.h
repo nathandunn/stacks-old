@@ -23,8 +23,8 @@
 
 #include "constants.h"
 
-#include <math.h>
-#include <string.h>
+#include <cmath>
+#include <cstring>
 #include <string>
 #include <vector>
 #include <map>

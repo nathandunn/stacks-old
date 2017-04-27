@@ -29,7 +29,9 @@
 #ifdef HAVE_BAM
 
 #include "input.h"
+extern "C" {
 #include "sam.h"
+}
 
 class BamUnAln: public Input {
     htsFile   *bam_fh;
