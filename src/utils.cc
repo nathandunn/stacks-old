@@ -300,3 +300,7 @@ bool compare_pair_haplotype(pair<string, double> a, pair<string, double> b) {
 bool compare_pair_haplotype_rev(pair<string, double> a, pair<string, double> b) {
     return (a.second < b.second);
 }
+
+bool compare_str_len(string a, string b) {
+    return (a.length() < b.length());
+}
