@@ -21,8 +21,8 @@
 #ifndef __DNASeq_H__
 #define __DNASeq_H__
 
-#include <string.h>
-#include <limits.h>
+#include <cstring>
+#include <climits>
 
 #include "constants.h"
 

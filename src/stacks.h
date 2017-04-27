@@ -21,7 +21,7 @@
 #ifndef __STACKS_H__
 #define __STACKS_H__
 
-#include <string.h>
+#include <cstring>
 #include <string>
 #include <vector>
 #include <map>

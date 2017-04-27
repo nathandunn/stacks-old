@@ -21,10 +21,10 @@
 #ifndef __FILE_IO_H__
 #define __FILE_IO_H__
 
-#include <stdlib.h>
+#include <cstdlib>
 #include <getopt.h> // Process command-line options
 #include <dirent.h> // Open/Read contents of a directory
-#include <string.h>
+#include <cstring>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -35,7 +35,7 @@
 #include <iostream>
 #include <fstream>
 #include <zlib.h>
-#include <errno.h>
+#include <cerrno>
 
 #include "constants.h"
 #include "clean.h"

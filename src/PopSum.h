@@ -21,7 +21,7 @@
 #ifndef __POPSUM_H__
 #define __POPSUM_H__
 
-#include <string.h>
+#include <cstring>
 #include <string>
 #include <vector>
 #include <map>
@@ -29,7 +29,7 @@
 #include <algorithm>
 #include <utility>
 #include <cstdint>
-#include <math.h>
+#include <cmath>
 
 #include "stacks.h"
 #include "locus.h"

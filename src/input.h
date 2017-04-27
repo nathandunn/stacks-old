@@ -21,10 +21,10 @@
 #ifndef __INPUT_H__
 #define __INPUT_H__
 
-#include <errno.h>
+#include <cerrno>
 #include <zlib.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstdlib>
+#include <cstring>
 #include <string>
 #include <vector>
 #include <iostream>

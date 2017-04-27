@@ -26,10 +26,10 @@
 #endif
 #include <getopt.h> // Process command-line options
 #include <dirent.h> // Open/Read contents of a directory
-#include <math.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
 #include <utility>
 #include <string>
 #include <iostream>

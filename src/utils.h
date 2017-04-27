@@ -21,10 +21,10 @@
 #ifndef __UTILS_H__
 #define __UTILS_H__
 
-#include <stdlib.h>
-#include <errno.h>
-#include <limits.h>
-#include <math.h>
+#include <cstdlib>
+#include <cerrno>
+#include <climits>
+#include <cmath>
 #include <iostream>
 #include <utility>
 #include <string>

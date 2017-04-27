@@ -21,7 +21,7 @@
 #ifndef __MST_H__
 #define __MST_H__
 
-#include <stdio.h>
+#include <cstdio>
 #include <string>
 #include <map>
 #include <vector>

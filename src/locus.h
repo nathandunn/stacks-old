@@ -21,7 +21,7 @@
 #ifndef __LOCUS_H__
 #define __LOCUS_H__
 
-#include <string.h>
+#include <cstring>
 #include <string>
 #include <vector>
 #include <map>

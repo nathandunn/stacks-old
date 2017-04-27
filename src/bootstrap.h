@@ -21,7 +21,7 @@
 #ifndef __BOOTSTRAP_H__
 #define __BOOTSTRAP_H__
 
-#include <math.h>
+#include <cmath>
 #include <vector>
 
 #include "smoothing_utils.h"
