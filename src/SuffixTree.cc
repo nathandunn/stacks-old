@@ -67,6 +67,7 @@ SuffixTree::build_tree()
     int     remainder   = 0;
     int     next_pos    = 0;
     int     end_pos     = -1;
+    int     forward_len = 0;
     size_t  id          = 2;
 
     STNode *split_node, *prev_node;
@@ -113,7 +114,7 @@ SuffixTree::build_tree()
 	    //
 	    // If, after incrementing the active_len, we have reached an internal node, move the active point to this node.
 	    //
-            this->forward_nodes(&active_node, active_edge, active_len, seq_index, remainder, end_pos);
+            forward_len += this->forward_nodes(&active_node, active_edge, active_len, seq_index, remainder, end_pos);
 
 	} else {
 	    //
@@ -148,7 +149,7 @@ SuffixTree::build_tree()
 
 		} else if (active_len == 0 && active_node->edge(active_edge) != NULL) {
 		    active_len++;
-                    this->forward_nodes(&active_node, active_edge, active_len, seq_index, remainder, end_pos);
+                    forward_len += this->forward_nodes(&active_node, active_edge, active_len, seq_index, remainder, end_pos);
 		    stop_insertion = true;
                     cerr << "  Stopping, active_edge " << char(active_edge) << " is already in the tree.\n";
 		    continue;
@@ -198,8 +199,9 @@ SuffixTree::build_tree()
 			cerr << "      Following suffix link to node " << active_node->suffix_link()->id() << "\n";
 			active_node = active_node->suffix_link();
                         seq_index++;
-			cerr << "      Resetting the active node to the root, active edge: " << char(active_edge) << ".\n";
-                        this->forward_nodes(&active_node, active_edge, active_len, seq_index, remainder, end_pos);
+                        forward_len--;
+			cerr << "      Resetting the active node to " << active_node->id() << ", active edge: " << char(active_edge) << ".\n";
+                        forward_len += this->forward_nodes(&active_node, active_edge, active_len, seq_index + forward_len, remainder, end_pos);
 			cerr << "          Active node: " << active_node->id() << ", active len: " << active_len << ", actvie edge: " << char(active_edge) << ".\n";
 
 		    } else {
@@ -208,7 +210,7 @@ SuffixTree::build_tree()
 			//
                         seq_index++;
                         active_node = this->root;
-
+                        forward_len = 0;
                         if (active_node->edge(this->seq_[seq_index]) == NULL) {
                             active_edge = Nt4::$;
                         } else {
@@ -216,7 +218,7 @@ SuffixTree::build_tree()
                             active_len    = end_pos - seq_index;
                         }
 			cerr << "      Resetting the active node to the root, active edge: " << char(active_edge) << ".\n";
-                        this->forward_nodes(&active_node, active_edge, active_len, seq_index, remainder, end_pos);
+                        forward_len += this->forward_nodes(&active_node, active_edge, active_len, seq_index, remainder, end_pos);
 			cerr << "          Active node: " << active_node->id() << ", active len: " << active_len << ", actvie edge: " << char(active_edge) << ".\n";
 		    }
 
@@ -245,14 +247,15 @@ SuffixTree::build_tree()
              << "; active node: " << active_node->id()
              << ", active edge: " << char(active_edge)
              << ", active len: " << active_len
-             << "; remainder: " << remainder << "\n";
+             << "; remainder: " << remainder
+             << ", forward len: " << forward_len << "\n";
     }
 
     return 0;
 }
 
 inline int
-SuffixTree::forward_nodes(STNode **active_node, Nt4 &active_edge, int &active_len, int aedge_index, int &remainder, int end_pos)
+SuffixTree::forward_nodes(STNode **active_node, Nt4 &active_edge, int &active_len, int seq_index, int &remainder, int end_pos)
 {
     cerr << "      Adjusting the active point (node " << (*active_node)->id() << ", active len: " << active_len << ") to the proper internal node.\n";
 
@@ -264,14 +267,14 @@ SuffixTree::forward_nodes(STNode **active_node, Nt4 &active_edge, int &active_le
     
     while (active_len >= local_len && (*active_node)->edge(active_edge)->succ() != NULL) {
 	active_len    -= local_len;
-	aedge_index   += local_len;
+	seq_index     += local_len;
         forwarded_len += local_len;
 	*active_node = (*active_node)->edge(active_edge)->succ();
-	cerr << "      Forwarding active node to node " << (*active_node)->id() << ", active len: " << active_len << ", active edge: " << char(active_edge) << ", aedge_index: " << aedge_index << "\n";
+	cerr << "      Forwarding active node to node " << (*active_node)->id() << ", active len: " << active_len << ", active edge: " << char(active_edge) << ", seq_index: " << seq_index << "\n";
 	if (active_len == 0) {
 	    active_edge = Nt4::$;
 	} else {
-	    active_edge = this->seq_[aedge_index];
+	    active_edge = this->seq_[seq_index];
 	    local_len   = (*active_node)->edge(active_edge)->end() == -1 ? end_pos : (*active_node)->edge(active_edge)->end();
 	    local_len   = local_len - (*active_node)->edge(active_edge)->start() + 1;
 	}
