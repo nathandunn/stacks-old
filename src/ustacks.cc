@@ -87,6 +87,9 @@ int main (int argc, char* argv[]) {
     case bounded:
         cerr << "Bounded; lower epsilon bound: " << bound_low << "; upper bound: " << bound_high << "\n";
         break;
+    default:
+        DOES_NOT_HAPPEN;
+        break;
     }
     cerr << "  Alpha significance level for model: " << alpha << "\n"
          << "  Gapped alignments: " << (gapped_alignments ? "enabled" : "disabled") << "\n";
@@ -864,6 +867,9 @@ call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map<i
                         break;
                     case ::fixed:
                         call_multinomial_fixed(mtag, col, nuc);
+                        break;
+                    default:
+                        DOES_NOT_HAPPEN;
                         break;
                     }
             }

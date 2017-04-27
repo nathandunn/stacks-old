@@ -103,6 +103,9 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, PStack *> &unique, 
                     case ::fixed:
                         call_multinomial_fixed(mtag, col, nuc);
                         break;
+                    default:
+                        DOES_NOT_HAPPEN;
+                        break;
                     }
             }
 
