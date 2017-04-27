@@ -821,8 +821,9 @@ SiteCall MarukiLowModel::call(SiteCounts&& depths) const {
             double lnl_MM = sdepths[nt_M] * ln_hit_hom;
             if (sdepths[nt_M] < dp)
                 lnl_MM += (dp-sdepths[nt_M]) * ln_err_hom;
-            assert(sdepths[nt_m] < dp);
-            double lnl_mm = sdepths[nt_m] * ln_hit_hom + (dp-sdepths[nt_m]) * ln_err_hom;
+            double lnl_mm = sdepths[nt_m] * ln_hit_hom;
+            if (sdepths[nt_m] < dp)
+                lnl_mm += (dp-sdepths[nt_m]) * ln_err_hom;
             double lnl_Mm = (sdepths[nt_M]+sdepths[nt_m]) * ln_hit_het;
             if (sdepths[nt_M]+sdepths[nt_m] < dp)
                 lnl_Mm += (dp-(sdepths[nt_M]+sdepths[nt_m])) * ln_err_het;
