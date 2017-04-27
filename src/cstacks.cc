@@ -276,7 +276,7 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
     CLocus *ctag;
     QLocus *qtag;
     string  cseq, qseq, cigar_str;
-    int     cseq_len, match_index;
+    int     cseq_len, match_index=-1;
     vector<pair<char, uint> > cigar;
 
     GappedAln *aln = new GappedAln();

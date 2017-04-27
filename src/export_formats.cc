@@ -2538,7 +2538,7 @@ write_phylip(map<int, CSLocus *> &catalog,
     LocTally *t;
 
     int  pop_cnt = psum->pop_cnt();
-    char nuc;
+    char nuc = '?';
 
     //
     // A map storing, for each population, the concatenated list of interspecific nucleotides.

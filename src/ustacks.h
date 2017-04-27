@@ -28,9 +28,9 @@
 #endif
 
 #include <getopt.h> // Process command-line options
-#include <math.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
 #include <algorithm>
 #include <utility>
 

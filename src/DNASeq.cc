@@ -137,6 +137,9 @@ char DNASeq::operator[](int pos) {
     case 3:
         c = this->s[index] & 0x3;  // 00000011
         break;
+    default:
+        DOES_NOT_HAPPEN; // as bases_per_byte==4
+        break;
     }
 
     switch (c) {
@@ -187,6 +190,9 @@ char *DNASeq::subseq(char *seq, int start, int end) {
             break;
         case 3:
             c = this->s[index] & 0x3;  // 00000011
+            break;
+        default:
+            DOES_NOT_HAPPEN; // as bases_per_byte==4
             break;
         }
 

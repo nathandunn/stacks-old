@@ -25,11 +25,11 @@
 #include <omp.h>    // OpenMP library
 #endif
 #include <getopt.h> // Process command-line options
-#include <string.h>
-#include <math.h>
-#include <stdlib.h>
+#include <cstring>
+#include <cmath>
+#include <cstdlib>
 #include <dirent.h>
-#include <errno.h>
+#include <cerrno>
 #include <utility>
 #include <string>
 #include <iostream>

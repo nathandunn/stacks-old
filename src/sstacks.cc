@@ -1219,7 +1219,7 @@ write_matches(string sample_path, map<int, QLocus *> &sample)
     //
     // Open the output files for writing.
     //
-    gzFile   gz_matches;
+    gzFile   gz_matches=NULL;
     ofstream matches;
     if (in_file_type == FileT::gzsql) {
         gz_matches = gzopen(out_file.c_str(), "wb");

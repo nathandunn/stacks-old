@@ -23,7 +23,7 @@
 
 #ifdef HAVE_LIBZ
 
-#include <errno.h>
+#include <cerrno>
 #include <zlib.h>
 #include "input.h"
 

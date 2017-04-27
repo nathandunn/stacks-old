@@ -21,7 +21,7 @@
 #ifndef __STACKS_H__
 #define __STACKS_H__
 
-#include <string.h>
+#include <cstring>
 #include <string>
 #include <vector>
 #include <map>
@@ -32,10 +32,12 @@
 #include<sstream>
 
 #include "constants.h"
+#include "nucleotides.h"
 #include "Seq.h"
 #include "DNASeq.h"
 #include "DNANSeq.h"
 #include "DNASeq4.h"
+#include "MetaPopInfo.h"
 
 typedef unsigned int uint;
 typedef string allele_type;
@@ -253,6 +255,69 @@ struct Read {
 };
 
 //
+// Counts: A class to store nucleotide counts.
+// e.g. Counts<Nt2> is a std::array of {n_A, n_C, n_G, n_T}.
+//
+template<typename Nt>
+class Counts {
+    // Array of counts, containing the count of A's at index Nt::a,of C's at
+    // index Nt::c, etc.
+    array<size_t,Nt::max()+1> counts_;
+
+public:
+    Counts() {
+        for (size_t& c : counts_)
+            c=-1;
+        for (Nt nt : Nt::all)
+            counts_[size_t(nt)] = 0;
+    }
+    Counts(const Counts<Nt4>& nt4counts);
+    Counts(const Counts<Nt2>& nt2counts);
+
+    void clear() {for (Nt nt : Nt::all) counts_[size_t(nt)]=0;}
+    void increment(Nt nt) {++counts_[size_t(nt)];}
+
+    // Get the count for a given nucleotide.
+    size_t operator[] (Nt nt) const {return counts_[size_t(nt)];}
+    const array<size_t,Nt::max()+1>& arr() const {return counts_;}
+
+    size_t sum() const {return (*this)[Nt::a] + (*this)[Nt::c] + (*this)[Nt::g] + (*this)[Nt::t];}
+    array<pair<size_t,Nt>,4> sorted() const;
+
+    Counts& operator+= (const Counts& other)
+        {for (Nt nt : Nt::all) counts_[size_t(nt)] += other.counts_[size_t(nt)]; return *this;}
+
+    // Print the counts.
+    template<typename Nt_> friend ostream& operator<< (ostream& os, const Counts<Nt_>& cnts);
+};
+
+struct SiteCounts {
+    Counts<Nt2> tot; // The sum over all samples.
+    vector<Counts<Nt2>> samples; // With size() == mpopi->samples().size()/
+    const MetaPopInfo* mpopi;
+};
+
+//
+// GtLiks: A class to store the likelihoods of SNP genotypes.
+//
+class GtLiks {
+    array<double,10> lnliks_; // {AA,AC,CC,AG,CG,GG,AT,CT,GT,TT} similar to VCF.
+    static size_t get_index(Nt2 n1, Nt2 n2)
+        {if(n1<n2) return size_t(n1) + (size_t(n2)*(size_t(n2)+1)) / 2; else return size_t(n2) + (size_t(n1)*(size_t(n1)+1)) / 2;}
+public:
+    GtLiks() : lnliks_{{1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0}} {}
+    double at(Nt2 n1, Nt2 n2) const
+        {assert(has_lik(n1,n2)); return lnliks_[get_index(n1,n2)];}
+    bool has_lik(Nt2 n1, Nt2 n2) const
+        {return lnliks_[get_index(n1,n2)] != 1.0;}
+    void set(Nt2 n1, Nt2 n2, double lnl)
+        {assert(!std::isnan(lnl)); assert(lnl<=0.0); assert(!has_lik(n1,n2)); lnliks_[get_index(n1,n2)] = lnl;}
+
+    // For debugging.
+    friend ostream& operator<<(ostream& os, const GtLiks& liks);
+};
+
+//
 // Inline definitions
 // ----------
 //
@@ -343,6 +408,48 @@ bool PStack::operator< (const PStack& other) const {
     else
         // Same genomic loci, compare sequences.
         return *seq < *other.seq;
+}
+
+template<> inline
+Counts<Nt2>::Counts(const Counts<Nt2>& nt2counts) : counts_(nt2counts.counts_) {}
+template<> inline
+Counts<Nt2>::Counts(const Counts<Nt4>& nt4counts) : Counts() {
+    for (Nt2 nt2 : Nt2::all) // We thus ignore Nt4::n.
+        counts_[size_t(nt2)] = nt4counts[Nt4(nt2)];
+}
+template<> inline
+Counts<Nt4>::Counts(const Counts<Nt4>& nt4counts) : counts_(nt4counts.counts_) {}
+template<> inline
+Counts<Nt4>::Counts(const Counts<Nt2>& nt2counts) : Counts() {
+    for (Nt2 nt2 : Nt2::all)
+        counts_[size_t(Nt4(nt2))] = nt2counts[nt2];
+}
+
+template<typename Nt>
+array<pair<size_t,Nt>,4> Counts<Nt>::sorted() const {
+    array<pair<size_t,Nt>,4> arr {{
+        {(*this)[Nt::t], Nt::t},
+        {(*this)[Nt::g], Nt::g},
+        {(*this)[Nt::c], Nt::c},
+        {(*this)[Nt::a], Nt::a}
+    }};
+    // Sort by decreasing value. Primarily on the count, secondarily on
+    // the Nt4 value.
+    std::sort(arr.rbegin(), arr.rend());
+    return arr;
+}
+
+template<typename Nt>
+ostream& operator<< (ostream& os, const Counts<Nt>& cnts) {
+    bool first=true;
+    for (Nt nt : Nt::all) {
+        if (first)
+            first = false;
+        else
+            os << " ";
+        os << nt << ":" << cnts[nt];
+    }
+    return os;
 }
 
 #endif // __STACKS_H__

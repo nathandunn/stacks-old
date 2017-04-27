@@ -31,7 +31,7 @@ string pe_reads_path;
 // Extra globals.
 //
 const string prog_name = "tsv2bam";
-LogAlterator* lg = NULL;
+LogAlterator* logger = NULL;
 
 // main()
 // ==========
@@ -43,10 +43,7 @@ int main(int argc, char* argv[]) {
 
     // Open the log
     string lg_path = prefix_path + "." + prog_name + ".log";
-    if(!quiet)
-        cout << "Logging to '" << lg_path << "'." << endl;
-    lg = new LogAlterator(lg_path, quiet);
-    init_log(lg->l, argc, argv);
+    logger = new LogAlterator(lg_path, quiet, argc, argv);
     report_options(cout);
     cout << "\n";
 
@@ -55,7 +52,7 @@ int main(int argc, char* argv[]) {
 
     // Cleanup.
     cout << prog_name << " is done.\n";
-    delete lg;
+    delete logger;
     return 0;
     IF_NDEBUG_CATCH_ALL_EXCEPTIONS
 }

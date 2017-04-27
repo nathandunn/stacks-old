@@ -23,13 +23,13 @@
 
 #include "constants.h"
 
-#include <stdlib.h>
+#include <cstdlib>
 #include <getopt.h> // Process command-line options
 #include <dirent.h> // Open/Read contents of a directory
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <string.h>
-#include <math.h>
+#include <cstring>
+#include <cmath>
 #include <algorithm>
 #include <iostream>
 #include <fstream>

@@ -29,8 +29,9 @@ public:
     explicit operator int () const {return nt_;}
     explicit operator char () const {return to_ch[nt_];}
     bool operator== (Nt4 other) const {return nt_ == other.nt_;}
-    bool operator!= (Nt4 other) const {return nt_ != other.nt_;}
+    bool operator!= (Nt4 other) const {return !operator==(other);}
     bool operator< (Nt4 other) const {return nt_ < other.nt_;}
+    friend ostream& operator<< (ostream& os, Nt4 nt) {os << char(nt); return os;}
 
     static constexpr size_t nbits = 4;
     static const Nt4 $; // 0000 (0)
@@ -84,7 +85,9 @@ public:
     explicit operator int () const {return nt_;}
     explicit operator char () const {return to_ch[nt_];}
     bool operator== (Nt2 other) const {return nt_ == other.nt_;}
+    bool operator!= (Nt2 other) const {return !operator==(other);}
     bool operator< (Nt2 other) const {return nt_ < other.nt_;}
+    friend ostream& operator<< (ostream& os, Nt2 nt) {os << char(nt); return os;}
 
     static constexpr size_t nbits = 2;
     static const Nt2 a;

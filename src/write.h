@@ -25,7 +25,7 @@
 #include <iostream>
 #include <fstream>
 #include <zlib.h>
-#include <errno.h>
+#include <cerrno>
 
 #include "input.h"
 #include "clean.h"

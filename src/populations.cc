@@ -2208,9 +2208,9 @@ calculate_haplotype_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, P
     //
     // Instantiate the kernel smoothing and bootstrap objects if requested.
     //
-    KSmooth<LocStat>     *ks;
-    OHaplotypes<LocStat> *ord;
-    Bootstrap<LocStat>   *bs;
+    KSmooth<LocStat>     *ks=NULL;
+    OHaplotypes<LocStat> *ord=NULL;
+    Bootstrap<LocStat>   *bs=NULL;
     if (kernel_smoothed && loci_ordered) {
         ks  = new KSmooth<LocStat>(2);
         ord = new OHaplotypes<LocStat>();
@@ -2465,9 +2465,9 @@ calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pm
     //
     // Instantiate the kernel smoothing object and associated ordering object if requested.
     //
-    KSmooth<HapStat>     *ks;
-    OHaplotypes<HapStat> *ord;
-    Bootstrap<HapStat>   *bs;
+    KSmooth<HapStat>     *ks=NULL;
+    OHaplotypes<HapStat> *ord=NULL;
+    Bootstrap<HapStat>   *bs=NULL;
     if (kernel_smoothed && loci_ordered) {
         ks  = new KSmooth<HapStat>(5);
         ord = new OHaplotypes<HapStat>();
@@ -2707,9 +2707,9 @@ calculate_haplotype_divergence_pairwise(map<int, CSLocus *> &catalog, PopMap<CSL
     //
     // Instantiate the kernel smoothing object if requested.
     //
-    KSmooth<HapStat>     *ks;
-    OHaplotypes<HapStat> *ord;
-    Bootstrap<HapStat>   *bs;
+    KSmooth<HapStat>     *ks=NULL;
+    OHaplotypes<HapStat> *ord=NULL;
+    Bootstrap<HapStat>   *bs=NULL;
     if (kernel_smoothed && loci_ordered) {
         ks  = new KSmooth<HapStat>(5);
         ord = new OHaplotypes<HapStat>();
@@ -4201,8 +4201,8 @@ write_fst_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLo
     // Instantiate the kernel smoothing object if requested.
     //
     OPopPair<PopPair>  *ord = new OPopPair<PopPair>(psum, log_fh);
-    KSmooth<PopPair>   *ks;
-    Bootstrap<PopPair> *bs;
+    KSmooth<PopPair>   *ks=NULL;
+    Bootstrap<PopPair> *bs=NULL;
     if (kernel_smoothed && loci_ordered) {
         cerr << "Instantiating the kernel smoothing window, using sigma = " << sigma << " with a sliding window size of " << 6 * sigma << "\n";
         ks  = new KSmooth<PopPair>(2);
@@ -4549,7 +4549,7 @@ kernel_smoothed_popstats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Po
     //
     KSmooth<SumStat>   *ks  = new KSmooth<SumStat>(2);
     OSumStat<SumStat>  *ord = new OSumStat<SumStat>(psum, log_fh);
-    Bootstrap<SumStat> *bs;
+    Bootstrap<SumStat> *bs = NULL;
 
     if (bootstrap_pifis)
         bs = new Bootstrap<SumStat>(2);

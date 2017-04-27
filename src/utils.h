@@ -21,10 +21,10 @@
 #ifndef __UTILS_H__
 #define __UTILS_H__
 
-#include <stdlib.h>
-#include <errno.h>
-#include <limits.h>
-#include <math.h>
+#include <cstdlib>
+#include <cerrno>
+#include <climits>
+#include <cmath>
 #include <iostream>
 #include <utility>
 #include <string>
@@ -48,6 +48,14 @@ double reduced_factorial(double, double);
 
 double log_factorial(double);
 double reduced_log_factorial(double, double);
+
+inline
+bool almost_equal(double x, double y) {
+    if (!std::isnormal(x) || !std::isnormal(y))
+        throw std::domain_error("almost_equal");
+    return std::abs(x-y) <= 1e-12 * std::abs(std::min(x,y));
+}
+
 //
 // Comparison functions for the STL sort routine
 //

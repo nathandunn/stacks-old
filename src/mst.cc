@@ -243,6 +243,7 @@ string MinSpanTree::vis(bool overlay) {
     // Scale the graph to display on a scale_factor inch canvas. Find the largest edge weight
     // and scale the edge lengths to fit the canvas.
     //
+    scale = 0.0;
     for (i = this->nodes.begin(); i != this->nodes.end(); i++) {
         n = i->second;
         for (j = 0; j < n->edges.size(); j++)
