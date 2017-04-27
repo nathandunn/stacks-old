@@ -237,7 +237,7 @@ int write_results(map<int, MergedStack *> &m,
     //
     // Open the output files for writing.
     //
-    gzFile   gz_tags, gz_snps, gz_alle, gz_mods;
+    gzFile   gz_tags=NULL, gz_snps=NULL, gz_alle=NULL, gz_mods=NULL;
     ofstream tags, snps, alle, mods;
     if (gzip) {
         gz_tags = gzopen(tag_file.c_str(), "wb");

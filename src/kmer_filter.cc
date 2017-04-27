@@ -241,8 +241,8 @@ int process_paired_reads(string in_path_1,
                          string in_file_2,
                          SeqKmerHash &kmers,
                          map<string, long> &counter) {
-    Input    *fh_1, *fh_2;
-    ofstream *discard_fh_1, *discard_fh_2;
+    Input    *fh_1=NULL, *fh_2=NULL;
+    ofstream *discard_fh_1=NULL, *discard_fh_2=NULL;
     int       pos;
     string    path;
 
@@ -443,8 +443,8 @@ int process_reads(string in_path,
                   string in_file,
                   SeqKmerHash &kmers,
                   map<string, long> &counter) {
-    Input    *fh;
-    ofstream *discard_fh;
+    Input    *fh=NULL;
+    ofstream *discard_fh=NULL;
     int       pos;
 
     string path = in_path + in_file;
@@ -563,9 +563,9 @@ normalize_paired_reads(string in_path_1,
                        SeqKmerHash &kmers, vector<char *> &kmer_keys,
                        map<string, long> &counter)
 {
-    Input    *fh_1, *fh_2;
-    ofstream *discard_fh_1, *discard_fh_2;
-    ofstream *ofh_1, *ofh_2, *rem_fh;
+    Input    *fh_1=NULL, *fh_2=NULL;
+    ofstream *discard_fh_1=NULL, *discard_fh_2=NULL;
+    ofstream *ofh_1=NULL, *ofh_2=NULL, *rem_fh=NULL;
     string    path_1, path_2;
     int       pos;
 
@@ -810,8 +810,8 @@ normalize_reads(string in_path,
                 SeqKmerHash &kmers, vector<char *> &kmer_keys,
                 map<string, long> &counter)
 {
-    Input    *fh;
-    ofstream *discard_fh;
+    Input    *fh=NULL;
+    ofstream *discard_fh=NULL;
     string    path;
 
     int pos = in_file.find_last_of(".");

@@ -291,8 +291,8 @@ write_clonereduced_sequence(string prefix_1, string prefix_2,
                             CloneHash &clone_map, map<int, int> &clone_dist,
                             map<string, long> &counters)
 {
-    ofstream  out_fh_1,   out_fh_2, discard_fh_1, discard_fh_2;
-    gzFile    out_gzfh_1, out_gzfh_2, discard_gzfh_1, discard_gzfh_2;
+    ofstream  out_fh_1,        out_fh_2,        discard_fh_1,        discard_fh_2;
+    gzFile    out_gzfh_1=NULL, out_gzfh_2=NULL, discard_gzfh_1=NULL, discard_gzfh_2=NULL;
 
     int return_val = 1;
 
@@ -636,7 +636,7 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
     //
     // Determine how much sequence we need to trim to remove the oligo seqeunce before printing.
     //
-    int offset_1, offset_2;
+    int offset_1=-1, offset_2=-1;
     switch (barcode_type) {
     case inline_null:
     case inline_index:
@@ -838,7 +838,7 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
 int
 process_reads(string prefix_1, map<string, long> &counters, OligoHash &oligo_map)
 {
-    Input   *fh_1;
+    Input   *fh_1=NULL;
     RawRead    *r_1;
     ofstream out_fh_1, discard_fh_1;
     gzFile   out_gzfh_1, discard_gzfh_1;
