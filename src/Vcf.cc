@@ -9,9 +9,80 @@ using namespace std;
 
 pair<string,string> VcfRecord::util::fmt_info_af(const vector<double>& alt_freqs) {
     stringstream ss;
-    ss << std::fixed << std::setprecision(3);
+    ss << std::setprecision(3);
     join(alt_freqs, ',', ss);
     return {"AF", ss.str()};
+}
+
+string VcfRecord::util::fmt_gt_gl(const vector<string>& alleles, const GtLiks& liks) {
+    static const size_t n_digits = 5;
+
+    assert(!alleles.empty());
+    vector<double> v;
+    v.reserve(n_genotypes(alleles.size()));
+    for (size_t a2=0; a2<alleles.size(); ++a2) {
+        assert(alleles[a2].length() == 1); // GtLiks holds SNP genotype liks.
+        Nt2 a2nt (alleles[a2].front());
+        for (size_t a1=0; a1<=a2; ++a1) {
+            Nt2 a1nt (alleles[a1].front());
+            v.push_back(liks.at(a1nt, a2nt) / log(10));
+        }
+    }
+    stringstream ss;
+    ss << std::setprecision(n_digits);
+    join(v, ',', ss);
+    return ss.str();
+}
+
+GtLiks VcfRecord::util::parse_gt_gl(const vector<string>& alleles, const string& gl) {
+
+    auto illegal = [&gl](const string& msg = ""){
+        cerr << "Error: Illegal VCF genotype GL field: '" << gl << "'" << msg << ".\n";
+        throw exception();
+    };
+
+    GtLiks liks;
+
+    if (gl == ".")
+        return liks;
+    else if (gl.empty())
+        illegal(" (empty field)");
+
+    vector<double> v;
+    double d = 0;
+    const char* p = gl.c_str();
+    char* end = NULL;
+    d = std::strtod(p, &end);
+    if (end == p)
+        illegal();
+    v.push_back(d);
+    p = end;
+    while(*p != '\0') {
+        if (*p != ',')
+            illegal(" (expected a comma)");
+        ++p;
+        d = std::strtod(p, &end);
+        if (end == p)
+            illegal();
+        v.push_back(d);
+        p = end;
+    }
+    if (v.size() != n_genotypes(alleles.size()))
+        illegal(string(" (expected ") + to_string(n_genotypes(alleles.size())) + " values)");
+
+    size_t gt_i = 0;
+    for (size_t a2=0; a2<alleles.size(); ++a2) {
+        assert(alleles[a2].length() == 1); // GtLiks holds SNP genotype liks.
+        Nt2 a2nt (alleles[a2].front());
+        for (size_t a1=0; a1<=a2; ++a1) {
+            Nt2 a1nt (alleles[a1].front());
+            liks.set(a1nt, a2nt, v[gt_i] * log(10)); // Back to base e.
+            ++gt_i;
+        }
+    }
+    assert(gt_i == v.size());
+
+    return liks;
 }
 
 const VcfMeta VcfMeta::predefs::info_AD ("INFO","<ID=AD,Number=R,Type=Integer,Description=\"Total Depth for Each Allele\">");

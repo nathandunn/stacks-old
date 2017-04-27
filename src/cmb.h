@@ -21,7 +21,7 @@
 #ifndef __CMB_H__
 #define __CMB_H__
 
-#include <math.h>
+#include <cmath>
 #include <iostream>
 #include <sstream>
 #include <list>

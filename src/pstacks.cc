@@ -309,7 +309,7 @@ void load_radtags(string in_file, HashMap &radtags) {
             continue;
             break;
         default:
-            // assert(false);
+            DOES_NOT_HAPPEN;
             break;
         }
 

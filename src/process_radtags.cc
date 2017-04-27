@@ -249,9 +249,9 @@ process_paired_reads(string prefix_1,
                      map<BarcodePair, fhType *> &rem_2_fhs,
                      map<string, long> &counter,
                      map<BarcodePair, map<string, long> > &barcode_log) {
-    Input    *fh_1, *fh_2;
-    RawRead     *r_1, *r_2;
-    ofstream *discard_fh_1, *discard_fh_2;
+    Input    *fh_1=NULL, *fh_2=NULL;
+    RawRead     *r_1=NULL, *r_2=NULL;
+    ofstream *discard_fh_1=NULL, *discard_fh_2=NULL;
 
     int return_val = 1;
 
@@ -466,9 +466,9 @@ process_reads(string prefix,
               map<BarcodePair, fhType *> &pair_1_fhs,
               map<string, long> &counter,
               map<BarcodePair, map<string, long> > &barcode_log) {
-    Input *fh;
+    Input *fh=NULL;
     RawRead  *r;
-    ofstream *discard_fh;
+    ofstream *discard_fh=NULL;
 
     int return_val = 1;
 

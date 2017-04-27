@@ -361,7 +361,7 @@ four_gamete_test(string path, map<string, int> &pop_map, PhasedSummary *psum, ma
     fh << "# ID\tStart\tEnd\tLen\tSNP Count\tHaplotype Count\tHaplotype\tPopulations\tHapPopCnt\n";
 
     uint id = 1;
-    uint start, end, cnt, dist;
+    uint start, end=-1, cnt, dist;
     bool bound;
     map<int, int> buckets, snps;
 

@@ -28,19 +28,19 @@ bool quiet = false;
 string in_dir;
 int batch_id = -1;
 modelt model_type = snp;
-double gt_alpha = 0.05;
+const Model* model = NULL;
 set<int> locus_wl;
 size_t km_length = 31;
 size_t min_km_count = 2;
 bool gfa_out = false;
 bool aln_out = false;
+bool vcf_write_depths = false;
 
 //
 // Extra globals.
 //
 const string prog_name = "rystacks";
-LogAlterator* lg = NULL;
-const Model* model = NULL;
+LogAlterator* logger = NULL;
 gzFile o_gzfasta_f = NULL;
 VcfWriter* o_vcf_f = NULL;
 ofstream o_models_f;
@@ -53,20 +53,9 @@ int main(int argc, char** argv) {
 
     // Open the log.
     string lg_path = in_dir + prog_name + ".log";
-    if(!quiet)
-        cout << "Logging to '" << lg_path << "'." << endl;
-    lg = new LogAlterator(lg_path, quiet);
-    init_log(lg->l, argc, argv);
+    logger = new LogAlterator(lg_path, quiet, argc, argv);
     report_options(cout);
     cout << "\n" << flush;
-
-    // Initialize the model.
-    set_model_thresholds(gt_alpha);
-    if (model_type == snp) {
-        model = new MultinomialModel();
-    } else {
-        assert(false);
-    }
 
     // Open the BAM file and parse the header.
     BamCLocReader bam_fh (in_dir + "batch_" + to_string(batch_id) + ".catalog.bam");
@@ -78,13 +67,13 @@ int main(int argc, char** argv) {
 
     string o_vcf_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".vcf";
     VcfHeader vcf_header;
-    vcf_header.add_meta(VcfMeta("misc","\"less -x9,15,20,25,30,35,42,60,75 batch_1.rystacks.vcf\""));
     vcf_header.add_meta(VcfMeta::predefs::info_DP);
     vcf_header.add_meta(VcfMeta::predefs::info_AF);
     vcf_header.add_meta(VcfMeta::predefs::info_AD);
     vcf_header.add_meta(VcfMeta::predefs::format_GT);
     vcf_header.add_meta(VcfMeta::predefs::format_DP);
     vcf_header.add_meta(VcfMeta::predefs::format_AD);
+    vcf_header.add_meta(VcfMeta::predefs::format_GL);
     for(auto& s : bam_fh.mpopi().samples())
         vcf_header.add_sample(s.name);
     o_vcf_f = new VcfWriter(o_vcf_path, move(vcf_header));
@@ -101,6 +90,7 @@ int main(int argc, char** argv) {
     }
 
     // Process every locus
+    cout << "Processing all loci...\n" << flush;
     CLocReadSet loc (bam_fh.mpopi());
     size_t n_loci = 0;
     size_t n_discarded = 0;
@@ -129,7 +119,7 @@ int main(int argc, char** argv) {
     delete model;
 
     cout << prog_name << " is done.\n";
-    delete lg;
+    delete logger;
     return 0;
 }
 
@@ -217,28 +207,23 @@ bool process_one_locus(CLocReadSet&& loc) {
     // Call SNPs.
     //
     vector<SiteCall> calls;
-    CLocAlnSet::site_iterator site (aln_loc);
-    while(site) {
-        calls.push_back(model->call(site));
-        ++site;
+    calls.reserve(aln_loc.ref().length());
+    for(CLocAlnSet::site_iterator site (aln_loc); bool(site); ++site) {
+        SiteCounts counts;
+        site.counts(counts);
+        calls.push_back(model->call(move(counts)));
     }
 
-    /*
-    // Update the consensus sequence, if necessary.
-    // TODO Do the cases below happen? Add print statements...?
+    // Update the consensus sequence.
     DNASeq4 new_ref = aln_loc.ref();
     assert(calls.size() == new_ref.length());
     for (size_t i=0; i<calls.size(); ++i) {
-        const SiteCall& c = calls[i];
-        if (c.alleles.size() > 0) {
-            Nt4 most_frequent = c.most_frequent_nt();
-            if (new_ref[i] != most_frequent)
-                new_ref.set(i, most_frequent);
-        }
-        // else if (new_ref[i] != Nt4::n) {}
+        if (calls[i].alleles().empty())
+            new_ref.set(i, Nt4::n);
+        else
+            new_ref.set(i, calls[i].most_frequent_allele());
     }
     aln_loc.ref(move(new_ref));
-    */
 
     write_one_locus(aln_loc, calls);
 
@@ -274,7 +259,7 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
     for (size_t i=0; i<ref.length(); ++i) {
         const SiteCall& sitecall = calls[i];
         if (sitecall.alleles().empty())
-            // No data at this site. xxx Reconsider?
+            // No useful data at this site.
             continue;
 
         // Determine which alleles exist, and their order.
@@ -286,9 +271,9 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
             vcf_allele_indexes.insert({ref[i], 0});
 
             // Sort the alleles by frequency.
-            vector<pair<size_t, Nt4>> sorted_alleles;
+            vector<pair<double, Nt4>> sorted_alleles;
             for (auto& a : sitecall.alleles())
-                sorted_alleles.push_back({a.second, a.first});
+                sorted_alleles.push_back({a.second, Nt4(a.first)});
             sort(sorted_alleles.rbegin(), sorted_alleles.rend()); // (decreasing)
 
             // The reference allele has already been added to vcf_alleles; exclude it.
@@ -316,62 +301,80 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
         for (Nt4 nt : vcf_alleles)
             rec.alleles.push_back(string(1, char(nt)));
 
-        // INFO
-        rec.info.push_back({"DP", to_string(sitecall.tot_depth())});
         if(rec.alleles.size() == 1) {
-            size_t ad = 0;
-            Nt4 ref_nt = sitecall.alleles().begin()->first;
-            for (const SampleCall& s_call : sitecall.sample_calls())
-                ad += s_call.depths()[ref_nt];
-            if (ad != sitecall.tot_depth())
-                rec.info.push_back({"AD", to_string(ad)});
-        } else {
-            // INFO/AF.
-            size_t tot_count = 0;
-            for (auto& a : sitecall.alleles())
-                tot_count += a.second;
+            // Fixed site.
 
+            // Info/DP.
+            rec.info.push_back({"DP", to_string(sitecall.tot_depth())});
+            // Info/AD.
+            Nt4 ref_nt = sitecall.alleles().begin()->first;
+            rec.info.push_back({"AD", to_string(sitecall.tot_depths()[Nt2(ref_nt)])});
+            if (vcf_write_depths) {
+                // Info/cnts.
+                stringstream cnts;
+                join(sitecall.tot_depths().arr(), ',', cnts);
+                rec.info.push_back({"cnts", cnts.str()});
+            }
+            // Format.
+            rec.format.push_back("DP");
+            // Genotypes.
+            for (size_t sample=0; sample<mpopi.samples().size(); ++sample) {
+                size_t dp = sitecall.sample_depths()[sample].sum();
+                rec.samples.push_back(dp == 0 ? "." : to_string(dp));
+            }
+
+        } else {
+            // Polymorphic site.
+
+            // Info/DP.
+            rec.info.push_back({"DP", to_string(sitecall.tot_depth())});
+            // Info/AD.
+            vector<size_t> ad;
+            for (auto nt=vcf_alleles.begin(); nt!=vcf_alleles.end(); ++nt)
+                ad.push_back(sitecall.tot_depths()[Nt2(*nt)]);
+            stringstream ss;
+            join(ad, ',', ss);
+            rec.info.push_back({"AD", ss.str()});
+            // Info/AF.
             vector<double> alt_freqs;
             for (auto nt=++vcf_alleles.begin(); nt!=vcf_alleles.end(); ++nt) // rem. always >1 alleles.
-                alt_freqs.push_back((double)sitecall.alleles().at(*nt) / tot_count);
-
+                alt_freqs.push_back(sitecall.alleles().at(*nt));
             rec.info.push_back(VcfRecord::util::fmt_info_af(alt_freqs));
-        }
+            if (vcf_write_depths) {
+                // Info/cnts.
+                stringstream cnts;
+                join(sitecall.tot_depths().arr(), ',', cnts);
+                rec.info.push_back({"cnts", cnts.str()});
+            }
 
-        // Genotypes.
-        if(rec.alleles.size() == 1) {
-            // Fixed.
-            rec.format.push_back("DP");
-        } else {
+            // Format.
             rec.format.push_back("GT");
             rec.format.push_back("DP");
             rec.format.push_back("AD");
-        }
-        rec.samples.reserve(mpopi.samples().size());
-        assert(sitecall.sample_calls().size() == mpopi.samples().size());
-        for (const SampleCall& s_call : sitecall.sample_calls()) {
+            rec.format.push_back("GL");
 
-            if (s_call.depths().sum() == 0) {
-                // No data for this sample.
-                rec.samples.push_back(".");
-                continue;
-            }
+            // Genotypes.
+            rec.samples.reserve(mpopi.samples().size());
+            for (size_t sample=0; sample<mpopi.samples().size(); ++sample) {
+                const Counts<Nt2>& sdepths = sitecall.sample_depths()[sample];
+                const SampleCall& scall = sitecall.sample_calls()[sample];
+                if (sdepths.sum() == 0) {
+                    // No data for this sample.
+                    rec.samples.push_back(".");
+                    continue;
+                }
 
-            if(rec.alleles.size() == 1) {
-                // Fixed.
-                rec.samples.push_back(to_string(s_call.depths().sum()));
-            } else {
                 stringstream genotype;
                 // GT field.
                 vector<size_t> gt;
-                switch (s_call.call()) {
+                switch (scall.call()) {
                 case snp_type_hom:
-                    gt.push_back(vcf_allele_indexes.at(s_call.nt0()));
+                    gt.push_back(vcf_allele_indexes.at(scall.nt0()));
                     genotype << gt[0] << '/' << gt[0];
                     break;
                 case snp_type_het:
-                    gt.push_back(vcf_allele_indexes.at(s_call.nt0()));
-                    gt.push_back(vcf_allele_indexes.at(s_call.nt1()));
+                    gt.push_back(vcf_allele_indexes.at(scall.nt0()));
+                    gt.push_back(vcf_allele_indexes.at(scall.nt1()));
                     sort(gt.begin(), gt.end()); // (Prevents '1/0'.)
                     genotype << gt[0] << '/' << gt[1];
                     break;
@@ -380,18 +383,24 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
                     break;
                 }
                 // DP field.
-                genotype << ':' << s_call.depths().sum();
+                genotype << ':' << sdepths.sum();
                 // AD field.
                 vector<size_t> ad;
                 ad.reserve(vcf_alleles.size());
                 for (Nt4 nt : vcf_alleles)
-                    ad.push_back(s_call.depths()[nt]);
+                    ad.push_back(sdepths[nt]);
                 genotype << ':';
                 join(ad, ',', genotype);
+                // GL field.
+                genotype << ':' << VcfRecord::util::fmt_gt_gl(rec.alleles, scall.lnls());
+                if (vcf_write_depths) {
+                    // cnts field.
+                    genotype << ":";
+                    join(sdepths.arr(), ',', genotype);
+                }
                 // Push it.
                 rec.samples.push_back(genotype.str());
             }
-
         }
 
         // Write the record.
@@ -433,10 +442,16 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
         // Model.
         o_models_f << loc_id << "\ts_model\t" << sample_id << "\t";
         for (auto& c : calls) {
-            switch (c.sample_calls()[s].call()) {
-            case snp_type_hom: o_models_f << "O"; break;
-            case snp_type_het: o_models_f << "E"; break;
-            case snp_type_unk: o_models_f << "U"; break;
+            if (c.alleles().size() == 0) {
+                o_models_f << "U";
+            } else if (c.alleles().size() == 1) {
+                o_models_f << "O";
+            } else {
+                switch (c.sample_calls()[s].call()) {
+                case snp_type_hom: o_models_f << "O"; break;
+                case snp_type_het: o_models_f << "E"; break;
+                case snp_type_unk: o_models_f << "U"; break;
+                }
             }
         }
         o_models_f << "\n";
@@ -447,7 +462,7 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
         for (auto& c : calls) {
             // For each site/position.
             for (Nt2 nt : Nt2::all) {
-                size_t dp = c.sample_calls()[s].depths()[nt];
+                size_t dp = c.sample_depths()[s][nt];
                 if (dp <= 0xF)
                     o_models_f << "0" << dp;
                 else if (dp <= 0xFF)
@@ -467,13 +482,17 @@ const string help_string = string() +
         "  -P: input directory (must contain a batch_X.catalog.bam file)\n"
         "  -b: batch ID (default: guess)\n"
         "  -W,--whitelist: a whitelist of locus IDs\n"
-        "  --gt-alpha: alpha threshold for calling genotypes\n"
+        "  --model: model to use to call variants and genotypes;\n"
+        "           one of snp (default), marukihigh, or marukilow\n"
+        "  --gt-alpha: alpha threshold for calling genotypes (default: 0.05)\n"
+        "  --var-alpha: alpha threshold for discovering variants (default: 0.05)\n"
         "\n"
         "Alignment options:\n"
         "  --kmer-length: kmer length (default: 31)\n"
         "  --min-cov: minimum coverage to consider a kmer (default: 2)\n"
         "  --gfa: output a GFA file for each locus\n"
         "  --aln: output a file showing the contigs & alignments\n"
+        "  --depths: write detailed depth data in the output VCF\n"
         "\n"
         ;
 
@@ -484,21 +503,28 @@ void parse_command_line(int argc, char* argv[]) {
         exit(13);
     };
 
+try {
+
     static const option long_options[] = {
         {"version",      no_argument,       NULL,  1000},
         {"help",         no_argument,       NULL,  'h'},
         {"quiet",        no_argument,       NULL,  'q'},
         {"in-dir",       required_argument, NULL,  'P'},
         {"batch-id",     required_argument, NULL,  'b'},
+        {"model",        required_argument, NULL,  1006},
         {"gt-alpha",     required_argument, NULL,  1005},
+        {"var-alpha",    required_argument, NULL,  1008},
         {"whitelist",    required_argument, NULL,  'W'},
         {"kmer-length",  required_argument, NULL,  1001},
         {"min-cov",      required_argument, NULL,  1002},
         {"gfa",          no_argument,       NULL,  1003},
         {"aln",          no_argument,       NULL,  1004},
+        {"depths",       no_argument,       NULL,  1007},
         {0, 0, 0, 0}
     };
 
+    double gt_alpha = 0.05;
+    double var_alpha = 0.05;
     string wl_path;
 
     int c;
@@ -528,12 +554,14 @@ void parse_command_line(int argc, char* argv[]) {
         case 'b':
             batch_id = atoi(optarg);
             break;
+        case 1006: //model
+            model_type = parse_model_type(optarg);
+            break;
         case 1005: //gt-alpha
             gt_alpha = atof(optarg);
-            if (gt_alpha != 0.1 && gt_alpha != 0.05 && gt_alpha != 0.01 && gt_alpha != 0.001) {
-                cerr << "Error: Illegal --gt-alpha value; pick one of {0.1, 0.05, 0.01, 0.001}.\n";
-                bad_args();
-            }
+            break;
+        case 1008: //var-alpha
+            var_alpha = atof(optarg);
             break;
         case 'W':
             wl_path = optarg;
@@ -550,6 +578,9 @@ void parse_command_line(int argc, char* argv[]) {
         case 1004://aln
             aln_out = true;
             break;
+        case 1007://depths
+            vcf_write_depths = true;
+            break;
         case '?':
             bad_args();
             break;
@@ -565,6 +596,16 @@ void parse_command_line(int argc, char* argv[]) {
     if (in_dir.empty()) {
         cerr << "Error: An input directory must be provided (-P).\n";
         bad_args();
+    }
+
+    switch (model_type) {
+    case snp:        model = new MultinomialModel(gt_alpha); break;
+    case marukihigh: model = new MarukiHighModel(gt_alpha, var_alpha);  break;
+    case marukilow:  model = new MarukiLowModel(gt_alpha, var_alpha);   break;
+    default:
+        cerr << "Error: Model choice '" << to_string(model_type) << "' is not supported.\n";
+        bad_args();
+        break;
     }
 
     // Process arguments.
@@ -598,13 +639,18 @@ void parse_command_line(int argc, char* argv[]) {
             throw exception();
         }
     }
+
+} catch (std::invalid_argument&) {
+    bad_args();
+}
 }
 
 void report_options(ostream& os) {
     os << "Configuration for this run:\n"
        << "  Input directory: '" << in_dir << "'\n"
        << "  Batch ID: " << batch_id << "\n"
-       ;
+       << "  Model: " << *model << "\n";
+
     if (!locus_wl.empty())
         os << "  Whitelist of " << locus_wl.size() << " loci.\n";
     if (km_length != 31)

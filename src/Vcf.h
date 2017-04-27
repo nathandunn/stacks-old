@@ -41,6 +41,7 @@
 
 #include "constants.h"
 #include "utils.h"
+#include "stacks.h"
 
 using std::out_of_range;
 
@@ -122,6 +123,9 @@ struct VcfRecord {
 
     struct util {
         static pair<string,string> fmt_info_af(const vector<double>& alt_freqs);
+        static string fmt_gt_gl(const vector<string>& alleles, const GtLiks& liks);
+        static GtLiks parse_gt_gl(const vector<string>& alleles, const string& gl);
+        static size_t n_genotypes(size_t n_alleles) {return (n_alleles*(n_alleles+1))/2;}
     };
 };
 

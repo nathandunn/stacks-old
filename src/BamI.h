@@ -33,7 +33,9 @@
 #include <vector>
 #include <utility>
 
+extern "C" {
 #include "sam.h" //htslib
+}
 
 #include "stacks.h"
 #include "input.h"
@@ -206,7 +208,7 @@ Bam::next_seq(Seq& s)
             seq += 'N';
             break;
         default:
-            // assert(false);
+            DOES_NOT_HAPPEN;
             break;
         }
     }

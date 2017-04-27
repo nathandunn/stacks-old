@@ -4,39 +4,6 @@
 #include "constants.h"
 #include "nucleotides.h"
 
-template<typename Nt>
-class Counts {
-    // Array of counts, containing the count of A's at index Nt::a,of C's at
-    // index Nt::c, etc.
-    array<size_t,Nt::max()+1> counts_;
-
-public:
-    Counts() {
-        for (size_t& c : counts_)
-            c=-1;
-        for (Nt nt : Nt::all)
-            counts_[size_t(nt)] = 0;
-    }
-    Counts(const Counts<Nt4>& nt4counts);
-    Counts(const Counts<Nt2>& nt2counts);
-
-    void clear() {for (Nt nt : Nt::all) counts_[size_t(nt)]=0;}
-    void increment(Nt nt) {++counts_[size_t(nt)];}
-
-    // Get the count for a given nucleotide.
-    size_t operator[] (Nt nt) const {return counts_[size_t(nt)];}
-
-    size_t sum() const {return (*this)[Nt::a] + (*this)[Nt::c] + (*this)[Nt::g] + (*this)[Nt::t];}
-    array<pair<size_t,Nt>,4> sorted();
-
-    Counts& operator+= (const Counts& other)
-        {for (Nt nt : Nt::all) counts_[size_t(nt)] += other.counts_[size_t(nt)]; return *this;}
-
-    // Print the counts.
-    friend ostream& operator<< (ostream& os, const Counts& cnts)
-        {for (Nt nt : Nt::all) os << char(nt) << ":" << cnts[nt] << " "; return os;}
-};
-
 // A sequence of nucleotides on a uint64_t, where the first nucleotide uses the
 // low bits.
 template<class Nt>
@@ -127,7 +94,7 @@ public:
     bool  operator== (const DNASeq4& other) const {return l_ == other.l_ && v_ == other.v_;}
     bool  operator<  (const DNASeq4& other) const {return l_ < other.l_ ? true : v_ < other.v_;}
     friend class std::hash<DNASeq4>;
-    friend ostream& operator<< (ostream& os, const DNASeq4& seq) {for (Nt4 nt : seq) os << char(nt); return os;}
+    friend ostream& operator<< (ostream& os, const DNASeq4& seq) {for (Nt4 nt : seq) os << nt; return os;}
 
     // Iterator.
     class iterator {
@@ -155,35 +122,6 @@ public:
 // Inline definitions.
 // ==========
 //
-
-template<> inline
-Counts<Nt2>::Counts(const Counts<Nt2>& nt2counts) : counts_(nt2counts.counts_) {}
-template<> inline
-Counts<Nt2>::Counts(const Counts<Nt4>& nt4counts) : Counts() {
-    for (Nt2 nt2 : Nt2::all) // We thus ignore Nt4::n.
-        counts_[size_t(nt2)] = nt4counts[Nt4(nt2)];
-}
-template<> inline
-Counts<Nt4>::Counts(const Counts<Nt4>& nt4counts) : counts_(nt4counts.counts_) {}
-template<> inline
-Counts<Nt4>::Counts(const Counts<Nt2>& nt2counts) : Counts() {
-    for (Nt2 nt2 : Nt2::all)
-        counts_[size_t(Nt4(nt2))] = nt2counts[nt2];
-}
-
-template<typename Nt>
-array<pair<size_t,Nt>,4> Counts<Nt>::sorted() {
-    array<pair<size_t,Nt>,4> arr {{
-        {(*this)[Nt::t], Nt::t},
-        {(*this)[Nt::g], Nt::g},
-        {(*this)[Nt::c], Nt::c},
-        {(*this)[Nt::a], Nt::a}
-    }};
-    // Sort by decreasing value. Primarily on the count, secondarily on
-    // the Nt4 value.
-    std::sort(arr.rbegin(), arr.rend());
-    return arr;
-}
 
 namespace std { template<class Nt>
 struct hash<NtArray<Nt>> { size_t operator() (const NtArray<Nt>& a) const {

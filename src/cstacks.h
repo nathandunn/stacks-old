@@ -25,13 +25,13 @@
 #include <omp.h>    // OpenMP library
 #endif
 
-#include <errno.h>
+#include <cerrno>
 #include <zlib.h>   // Support for gzipped output files.
 
 #include <getopt.h> // Process command-line options
-#include <string.h>
-#include <math.h>
-#include <stdlib.h>
+#include <cstring>
+#include <cmath>
+#include <cstdlib>
 #include <utility>
 
 #include <string>
