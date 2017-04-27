@@ -695,8 +695,12 @@ double MarukiLowModel::calc_fixed_lnl(double n_tot, double n_M_tot) const {
 double MarukiLowModel::calc_dimorph_lnl(double freq_MM, double freq_Mm, double freq_mm, const vector<LikData>& liks) const {
     double lnl = 0.0;
     // Sum over samples.
-    for (const LikData& s_liks : liks)
+    for (const LikData& s_liks : liks) {
         lnl += calc_ln_weighted_sum(freq_MM, freq_Mm, freq_mm, s_liks);
+        if (std::isinf(lnl))
+            // One of the terms is -inf.
+            break;
+    }
     assert(lnl < 0.0 + 1e-12);
     if (lnl > 0.0)
         lnl = 0.0;
@@ -729,16 +733,19 @@ double MarukiLowModel::calc_ln_weighted_sum_safe(double freq_MM, double freq_Mm,
                                 );
     } else if (s[1].second > 0.0) {
         if (std::isinf(s[1].first))
-            // The only genotype that has a non-null likelihood has a freq of 0.
-            return 0.0;
+            // N.B. s[1].first may be -inf, which means that all genotypes with
+            // a non-null freq have null likelihoods. In this case the weighted
+            // sum is 0 and its log is -inf; and as a consequence the likelihood
+            // of the site being dimorphic is also -inf.
+            return -INFINITY;
         else
             return s[1].first + log(s[1].second + s[0].second * exp(s[0].first-s[1].first));
     } else {
         assert(s[0].second > 0.0); // the sum of freqs is always ~1.0.
         if (std::isinf(s[0].first))
-            return 0.0;
+            return -INFINITY;
         else
-            return s[0].first + log(s[0].second);
+            return s[0].first + log(s[0].second); // May be -inf like above.
     }
 }
 
@@ -759,6 +766,8 @@ SiteCall MarukiLowModel::call(SiteCounts&& depths) const {
      * IV. Compute the likelihoods for all samples, all genotypes using Bayes'
      *      theorem, and call genotypes.
      */
+
+    //TODO Find a solution to the error rate estimate issue.
 
     const size_t n_samples = depths.mpopi->samples().size();
 
@@ -790,9 +799,8 @@ SiteCall MarukiLowModel::call(SiteCounts&& depths) const {
     //
 
     // 1. Error rate.
-    //TODO Fix this after Maruki replied.
-    //double e = 3.0 / 2.0 * (dp_tot - n_M_tot - n_m_tot) / double(dp_tot);
-    double e = 0.01;
+    double e = 3.0 / 2.0 * (dp_tot - n_M_tot - n_m_tot) / double(dp_tot);
+    assert(e < 1.0);
 
     // 2. Base likelihoods.
     vector<LikData> liks;
@@ -810,9 +818,14 @@ SiteCall MarukiLowModel::call(SiteCounts&& depths) const {
                 continue;
             }
 
-            double lnl_MM = sdepths[nt_M] * ln_hit_hom + (dp-sdepths[nt_M]) * ln_err_hom;
+            double lnl_MM = sdepths[nt_M] * ln_hit_hom;
+            if (sdepths[nt_M] < dp)
+                lnl_MM += (dp-sdepths[nt_M]) * ln_err_hom;
+            assert(sdepths[nt_m] < dp);
             double lnl_mm = sdepths[nt_m] * ln_hit_hom + (dp-sdepths[nt_m]) * ln_err_hom;
-            double lnl_Mm = (sdepths[nt_M]+sdepths[nt_m]) * ln_hit_het + (dp-sdepths[nt_M]-sdepths[nt_m]) * ln_err_het;
+            double lnl_Mm = (sdepths[nt_M]+sdepths[nt_m]) * ln_hit_het;
+            if (sdepths[nt_M]+sdepths[nt_m] < dp)
+                lnl_Mm += (dp-(sdepths[nt_M]+sdepths[nt_m])) * ln_err_het;
             liks.push_back(LikData(lnl_MM, lnl_Mm, lnl_mm));
         }
     }
