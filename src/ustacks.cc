@@ -1838,7 +1838,7 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
     //
     // Open the output files for writing.
     //
-    gzFile   gz_tags, gz_snps, gz_alle, gz_mods;
+    gzFile   gz_tags=NULL, gz_snps=NULL, gz_alle=NULL, gz_mods=NULL;
     ofstream tags, snps, alle, mods;
     if (gzip) {
         gz_tags = gzopen(tag_file.c_str(), "wb");
@@ -2111,7 +2111,7 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
     if (retain_rem_reads) {
         string unused_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".unused.fa";
 
-        gzFile   gz_unused;
+        gzFile   gz_unused=NULL;
         ofstream unused;
 
         if (gzip) {
@@ -2229,6 +2229,7 @@ int dump_stack_graph(string data_file,
     // Scale the graph to display on a 10 inch canvas. Find the largest edge weight
     // and scale the edge lengths to fit the canvas.
     //
+    scale = 0.0;
     for (s = 0; s < keys.size(); s++)
         for (t = s+1; t < keys.size(); t++)
             scale = dist_map[keys[s]][keys[t]] > scale ? dist_map[keys[s]][keys[t]] : scale;

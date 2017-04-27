@@ -827,7 +827,7 @@ SiteCall MarukiLowModel::call(SiteCounts&& depths) const {
         else if (f > 1.0-1e-12)
             f = 1.0;
     };
-    double d_a_best;
+    double d_a_best = 0.0;
     double lnl_dimorph = std::numeric_limits<double>::lowest();
     {
         double d_a_min = max(-p*p, -(1-p)*(1-p));
