@@ -12,7 +12,7 @@ const array<Nt4,5> Nt4::all = {a, c, g, t, n};
 const Nt4 Nt4::from_ch[256] = {
     0,n,n,n, n,n,n,n, n,n,n,n, n,n,n,n, // 0x
     n,n,n,n, n,n,n,n, n,n,n,n, n,n,n,n, // 1x
-    n,n,n,n, n,n,n,n, n,n,n,n, n,n,n,n, // 2x
+    n,n,n,n, 0,n,n,n, n,n,n,n, n,n,n,n, // 2x
     n,n,n,n, n,n,n,n, n,n,n,n, n,0,n,n, // 3x rem. 0 for 0x3D ('=') because htslib does it...
     n,a,n,c, n,n,n,g, n,n,n,n, n,n,n,n, // 4x
     n,n,n,n, t,n,n,n, n,n,n,n, n,n,n,n, // 5x
