@@ -913,6 +913,9 @@ SiteCall MarukiLowModel::call(SiteCounts&& depths) const {
         double log_f_MM = log(freq_MM);
         double log_f_Mm = log(freq_Mm);
         double log_f_mm = log(freq_mm);
+        size_t gt_MM = GtLiks::gt_index(nt_M, nt_M);
+        size_t gt_Mm = GtLiks::gt_index(nt_M, nt_m);
+        size_t gt_mm = GtLiks::gt_index(nt_m, nt_m);
         for (size_t sample=0; sample<n_samples; ++sample) {
             const LikData& s_liks = liks[sample];
             SampleCall& s_call = sample_calls[sample];
@@ -931,9 +934,9 @@ SiteCall MarukiLowModel::call(SiteCounts&& depths) const {
                 lnl_Mm = 0.0;
             if (lnl_mm > 0.0)
                 lnl_mm = 0.0;
-            s_call.lnls().set(nt_M, nt_M, lnl_MM);
-            s_call.lnls().set(nt_M, nt_m, lnl_Mm);
-            s_call.lnls().set(nt_m, nt_m, lnl_mm);
+            s_call.lnls().set(gt_MM, lnl_MM);
+            s_call.lnls().set(gt_Mm, lnl_Mm);
+            s_call.lnls().set(gt_mm, lnl_mm);
 
             array<pair<double,pair<Nt2,Nt2>>,3> lnls {{
                 {lnl_MM, {nt_M,nt_M}},
