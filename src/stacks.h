@@ -302,16 +302,22 @@ struct SiteCounts {
 //
 class GtLiks {
     array<double,10> lnliks_; // {AA,AC,CC,AG,CG,GG,AT,CT,GT,TT} similar to VCF.
-    static size_t get_index(Nt2 n1, Nt2 n2)
-        {if(n1<n2) return size_t(n1) + (size_t(n2)*(size_t(n2)+1)) / 2; else return size_t(n2) + (size_t(n1)*(size_t(n1)+1)) / 2;}
 public:
     GtLiks() : lnliks_{{1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0}} {}
-    double at(Nt2 n1, Nt2 n2) const
-        {assert(has_lik(n1,n2)); return lnliks_[get_index(n1,n2)];}
-    bool has_lik(Nt2 n1, Nt2 n2) const
-        {return lnliks_[get_index(n1,n2)] != 1.0;}
-    void set(Nt2 n1, Nt2 n2, double lnl)
-        {assert(!std::isnan(lnl)); assert(lnl<=0.0); assert(!has_lik(n1,n2)); lnliks_[get_index(n1,n2)] = lnl;}
+    double at(Nt2 n1, Nt2 n2) const {return at(gt_index(n1,n2));}
+    bool has_lik(Nt2 n1, Nt2 n2) const {return has_lik(gt_index(n1,n2));}
+    void set(Nt2 n1, Nt2 n2, double lnl) {set(gt_index(n1, n2), lnl);}
+
+    double at(size_t gt) const {assert(has_lik(gt)); return lnliks_[gt];}
+    bool has_lik(size_t gt) const {return lnliks_[gt] != 1.0;}
+    void set(size_t gt, double lnl) {assert(!std::isnan(lnl)); assert(lnl<=0.0); assert(!has_lik(gt)); lnliks_[gt] = lnl;}
+
+    static size_t gt_index(Nt2 n1, Nt2 n2) {
+        if(n1<n2)
+            return size_t(n1) + (size_t(n2)*(size_t(n2)+1)) / 2;
+        else
+            return size_t(n2) + (size_t(n1)*(size_t(n1)+1)) / 2;
+    }
 
     // For debugging.
     friend ostream& operator<<(ostream& os, const GtLiks& liks);
