@@ -696,7 +696,9 @@ double MarukiLowModel::calc_dimorph_lnl(double freq_MM, double freq_Mm, double f
     double lnl = 0.0;
     // Sum over samples.
     for (const LikData& s_liks : liks)
-        lnl += calc_ln_weighted_sum(freq_MM, freq_Mm, freq_mm, s_liks);
+        if (s_liks.has_data)
+            // If !has_data, the sum is 1 and its log 0.
+            lnl += calc_ln_weighted_sum(freq_MM, freq_Mm, freq_mm, s_liks);
     assert(lnl <= 0.0);
     return lnl;
 }
@@ -801,7 +803,7 @@ SiteCall MarukiLowModel::call(SiteCounts&& depths) const {
             const Counts<Nt2>& sdepths = depths.samples[sample];
             size_t dp = sdepths.sum();
             if (dp == 0) {
-                liks.push_back(LikData(0.0, 0.0, 0.0));
+                liks.push_back(LikData());
                 continue;
             }
 
