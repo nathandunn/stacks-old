@@ -166,14 +166,17 @@ public:
 //
 class MarukiLowModel : public Model {
     struct LikData {
+        bool has_data;
         double lnl_MM;
         double lnl_Mm;
         double lnl_mm;
         double l_MM;
         double l_Mm;
         double l_mm;
+        LikData() : has_data(false), lnl_MM(0.0), lnl_Mm(0.0), lnl_mm(0.0), l_MM(1.0), l_Mm(1.0), l_mm(1.0) {}
         LikData(double lnl_MM_, double lnl_Mm_, double lnl_mm_)
-            : lnl_MM(lnl_MM_), lnl_Mm(lnl_Mm_), lnl_mm(lnl_mm_),
+            : has_data(true),
+              lnl_MM(lnl_MM_), lnl_Mm(lnl_Mm_), lnl_mm(lnl_mm_),
               l_MM(exp(lnl_MM)), l_Mm(exp(lnl_Mm)), l_mm(exp(lnl_mm))
             {assert(std::isfinite(lnl_MM) && std::isfinite(lnl_Mm) && std::isfinite(lnl_mm));}
     };
