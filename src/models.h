@@ -175,7 +175,7 @@ class MarukiLowModel : public Model {
         LikData(double lnl_MM_, double lnl_Mm_, double lnl_mm_)
             : lnl_MM(lnl_MM_), lnl_Mm(lnl_Mm_), lnl_mm(lnl_mm_),
               l_MM(exp(lnl_MM)), l_Mm(exp(lnl_Mm)), l_mm(exp(lnl_mm))
-            {}
+            {assert(std::isfinite(lnl_MM) && std::isfinite(lnl_Mm) && std::isfinite(lnl_mm));}
     };
 
     double gt_alpha_;
