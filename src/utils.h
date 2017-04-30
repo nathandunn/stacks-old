@@ -67,6 +67,7 @@ bool compare_pair_stringint(pair<string, int>, pair<string, int>);
 bool compare_pair_snp(pair<string, SNP *>, pair<string, SNP *>);
 bool compare_pair_haplotype(pair<string, double>, pair<string, double>);
 bool compare_pair_haplotype_rev(pair<string, double>, pair<string, double>);
+bool compare_str_len(string, string);
 
 //
 // Comparison classes for STL sets
