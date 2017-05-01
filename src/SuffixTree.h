@@ -80,6 +80,7 @@ public:
     ~SuffixTree() { delete this->root; }
 
     size_t build_tree();
+    size_t align(DNASeq4, vector<pair<size_t, size_t> > &);
     size_t write_dot(ofstream &);
     size_t write_suffixes(ostream &);
 private:

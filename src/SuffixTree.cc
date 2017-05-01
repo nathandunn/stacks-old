@@ -50,6 +50,90 @@ STNode::add_suffix_link(STNode *node)
 }
 
 size_t
+SuffixTree::align(DNASeq4 query, vector<pair<size_t, size_t> > &alns)
+{
+    int qcnt     = 0;
+    int qlen     = query.length();
+    int next_pos = 0;
+
+    STNode *active_node = this->root;
+    Nt4     active_edge = active_node->edge(query[0]) != NULL ? query[0] : Nt4::$;
+    int     node_pos    = 0;
+    int     node_stop   = active_node->edge(active_edge)->end();
+    
+    if (active_edge == Nt4::$) return 0;
+
+    //
+    // Walk the tree until we reach a non-matching nucleotide or hit a leaf node.
+    //
+    do {
+        next_pos = node_pos + 1;
+
+        if (qcnt < qlen && this->seq_[next_pos] != query[qcnt + 1]) {
+            //
+            // Next nucleotide does not match.
+            //
+            break;
+
+        } else  if (next_pos > node_stop && active_node->edge(active_edge)->succ() == NULL) {
+            //
+            // We have reached a leaf node.
+            //
+            break;
+
+        } else if (next_pos > node_stop && active_node->edge(active_edge)->succ() != NULL) {
+            //
+            // Traverse to the next node.
+            //
+            active_node = active_node->edge(active_edge)->succ();
+            active_edge = active_node->edge(query[qcnt + 1]) == NULL ? query[qcnt + 1] : Nt4::$;
+
+            //
+            // The next required edge is not available in the successor node.
+            //
+            if (active_edge == Nt4::$)
+                break;
+
+            node_pos  = active_node->edge(active_edge)->start();
+            node_stop = active_node->edge(active_edge)->end();
+        } else {
+            node_pos++;
+        }
+
+        qcnt++;
+
+    } while (qcnt <= qlen);
+
+    cerr << "Qcnt: " << qcnt << "\n";
+    //
+    // Did we reach the end of the query sequence, that is, did we have a perfect match in the suffix tree?
+    //
+    if (qcnt == qlen) {
+        //
+        // Are we at a leaf node?
+        //
+        if (active_node->edge(active_edge)->succ() == NULL) {
+            size_t aln_pos = node_pos - qcnt + 1;
+            alns.push_back(make_pair(aln_pos, qcnt));
+            
+        } else {
+            //
+            // Otherwise, traverse this path to the nearest leaf node to determine the alignment position.
+            //
+            
+        }
+        
+    } else {
+        //
+        // Traverse the remaining paths out of active_node to determine all the alignments for this fragment.
+        //
+
+    }
+    
+    return 0;
+}
+
+size_t
 SuffixTree::build_tree()
 {
     //
@@ -132,10 +216,8 @@ SuffixTree::build_tree()
                 string suf = this->seq_.str().substr(seq_index, remainder);
 		cerr << "  Inserting suffix '" << suf << "' into the tree.\n";
 
-                if (active_edge == Nt4::$ && active_node->edge(this->seq_[i]) != NULL) {
-                    cerr << "Setting active edge\n";
+                if (active_edge == Nt4::$ && active_node->edge(this->seq_[i]) != NULL)
                     active_edge = this->seq_[i];
-                }
 
 		//
 		// Is an edge, representing the next character to insert, not already present in the tree?
