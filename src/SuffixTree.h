@@ -73,6 +73,7 @@ public:
 class SuffixTree {
     DNASeq4 seq_;
     STNode *root;
+    const size_t min_align = 3;
 
 public:
     SuffixTree(DNASeq4 s): seq_(s)  { this->root = new STNode(1); }
@@ -83,7 +84,10 @@ public:
     size_t align(DNASeq4, vector<pair<size_t, size_t> > &);
     size_t write_dot(ofstream &);
     size_t write_suffixes(ostream &);
+
 private:
+    size_t find_leaf_dist(STNode *);
+    size_t find_all_leaf_dists(STNode *, vector<size_t> &);
     size_t write_suffix(vector<string> &, string, STNode *);
     int    forward_nodes(STNode **, Nt4 &, int &, int, int &, int);
 };
