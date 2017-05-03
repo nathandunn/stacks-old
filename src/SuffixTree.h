@@ -69,6 +69,23 @@ public:
     STNode *succ(STNode *s) { this->succ_ = s; return this->succ_; }
 };
 
+class STAln {
+public:
+    size_t query_pos;
+    size_t subj_pos;
+    size_t aln_len;
+
+    STAln() {
+        this->query_pos = 0;
+        this->subj_pos  = 0;
+        this->aln_len   = 0;
+    }
+    STAln(size_t q, size_t s, size_t a) {
+        this->query_pos = q;
+        this->subj_pos  = s;
+        this->aln_len   = a;
+    }
+};
 
 class SuffixTree {
     DNASeq4 seq_;
@@ -82,6 +99,7 @@ public:
 
     size_t build_tree();
     size_t align(DNASeq4, vector<pair<size_t, size_t> > &);
+    size_t align(const char *, vector<pair<size_t, size_t> > &);
     size_t write_dot(ofstream &);
     size_t write_suffixes(ostream &);
 
@@ -91,5 +109,7 @@ private:
     size_t write_suffix(vector<string> &, string, STNode *);
     int    forward_nodes(STNode **, Nt4 &, int &, int, int &, int);
 };
+
+bool compare_staln(STAln, STAln);
 
 #endif
