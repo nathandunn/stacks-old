@@ -97,11 +97,13 @@ public:
     SuffixTree()  { this->root = new STNode(1); }
     ~SuffixTree() { delete this->root; }
 
-    size_t build_tree();
-    size_t align(DNASeq4, vector<pair<size_t, size_t> > &);
-    size_t align(const char *, vector<pair<size_t, size_t> > &);
-    size_t write_dot(ofstream &);
-    size_t write_suffixes(ostream &);
+    size_t  build_tree();
+    size_t  align(DNASeq4, vector<pair<size_t, size_t> > &);
+    size_t  align(const char *, vector<pair<size_t, size_t> > &);
+    size_t  write_dot(ofstream &);
+    size_t  write_suffixes(ostream &);
+    DNASeq4 seq()     { return this->seq_; };
+    size_t  seq_len() { return this->seq_.length(); };
 
 private:
     size_t find_leaf_dist(STNode *);
