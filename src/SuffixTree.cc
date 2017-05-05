@@ -206,7 +206,18 @@ SuffixTree::align(const char *query, vector<pair<size_t, size_t> > &alns)
     if (qcnt < this->min_align)
         return 0;
 
-    if (active_node->edge(active_edge)->succ() == NULL) {
+    if (active_edge == Nt4::$) {
+        //
+        // Traverse the remaining paths out of active_node to determine all the alignments for this fragment.
+        //
+        vector<size_t> dists;
+
+        find_all_leaf_dists(active_node, dists);
+
+        for (uint i = 0; i < dists.size(); i++)
+            alns.push_back(make_pair(dists[i] - qcnt + 1, qcnt));
+
+    } else if (active_node->edge(active_edge)->succ() == NULL) {
         //
         // Are we at a leaf node?
         //
@@ -222,7 +233,7 @@ SuffixTree::align(const char *query, vector<pair<size_t, size_t> > &alns)
 
     } else {
         //
-        // Traverse the remaining paths out of active_node to determine all the alignments for this fragment.
+        // Traverse the remaining paths out of active_node's successor to determine all the alignments for this fragment.
         //
         vector<size_t> dists;
 
