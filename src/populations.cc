@@ -487,6 +487,10 @@ int main (int argc, char* argv[]) {
     log_haplotype_cnts(catalog, log_fh);
 
     apply_locus_constraints(catalog, pmap, log_fh);
+    if (pmap->loci_cnt() == 0) {
+        cerr << "Error: All loci have been filtered out.\n";
+        throw exception();
+    }
 
     log_fh << "# Distribution of population loci after applying locus constraints.\n";
     log_haplotype_cnts(catalog, log_fh);
@@ -573,6 +577,10 @@ int main (int argc, char* argv[]) {
     reduce_catalog_snps(catalog, whitelist, pmap);
     int retained = pmap->prune(blacklist);
     cerr << " retained " << retained << " loci.\n";
+    if (pmap->loci_cnt() == 0) {
+        cerr << "Error: All loci have been filtered out.\n";
+        throw exception();
+    }
 
     //
     // Merge loci that overlap on a common restriction enzyme cut site.
@@ -949,9 +957,6 @@ apply_locus_constraints(map<int, CSLocus *> &catalog,
     delete [] pop_tot;
     delete [] pop_order;
     delete [] samples;
-
-    if (retained == 0)
-        exit(0);
 
     return 0;
 }
