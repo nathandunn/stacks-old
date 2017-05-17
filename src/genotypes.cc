@@ -108,8 +108,8 @@ int main (int argc, char* argv[]) {
     int res;
     catalog_file << in_path << "batch_" << batch_id << ".catalog";
     if ((res = load_loci(catalog_file.str(), catalog, false, false, compressed)) == 0) {
-        cerr << "Unable to load the catalog '" << catalog_file.str() << "'\n";
-        return 0;
+        cerr << "Error: Unable to load the catalog '" << catalog_file.str() << "'\n";
+        throw exception();
     }
 
     //
@@ -142,7 +142,7 @@ int main (int argc, char* argv[]) {
         size_t sample_id = m[0]->sample_id;
         if (seen_samples.count(sample_id) > 0) {
             cerr << "Error: sample ID " << sample_id << " occurs twice in this data set, likely the pipeline was run incorrectly.\n";
-            return -1;
+            throw exception();
         }
         seen_samples.insert(sample_id);
         mpopi.set_sample_id(i, sample_id);
@@ -150,7 +150,7 @@ int main (int argc, char* argv[]) {
     mpopi.delete_samples(samples_to_remove);
     if (mpopi.samples().size() == 0) {
         cerr << "Error: Couln't find any matches files.\n";
-        return -1;
+        throw exception();
     }
     // [mpopi] is definitive.
     cerr << "Working on " << mpopi.samples().size() << " samples.\n";

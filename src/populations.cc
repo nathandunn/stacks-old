@@ -175,18 +175,18 @@ int main (int argc, char* argv[]) {
         // Path exists, check that it is a directory
         if (!S_ISDIR(out_path_stat.st_mode)) {
             cerr << "Error: '" << out_path.substr(0, out_path.length()-1) << "' is not a directory.\n";
-            return -1;
+            throw exception();
         }
     } else if (mkdir(out_path.c_str(), ACCESSPERMS) != 0) {
         // Failed to create the directory.
         cerr << "Error: Failed to create directory '" << out_path << "'.\n";
-        return -1;
+        throw exception();
     }
     string log_path = out_path + out_prefix + ".populations.log";
     ofstream log_fh(log_path.c_str(), ofstream::out);
     if (log_fh.fail()) {
         cerr << "Error opening log file '" << log_path << "'\n";
-        return -1;
+        throw exception();
     }
     init_log(log_fh, argc, argv);
     log_fh << flush;
@@ -249,7 +249,7 @@ int main (int argc, char* argv[]) {
         }
         if (!dir_good) {
             cerr << "Error: Unable to locate any file in input directory '" << in_path << "'.\n";
-            return -1;
+            throw exception();
         }
 
         //
@@ -261,7 +261,7 @@ int main (int argc, char* argv[]) {
         int    res = load_loci(catalog_prefix, catalog, false, false, compressed);
         if (res == 0) {
             cerr << "Unable to load the catalog '" << catalog_prefix << "'\n";
-            return -1;
+            throw exception();
         }
 
         //
@@ -297,7 +297,7 @@ int main (int argc, char* argv[]) {
         mpopi.delete_samples(samples_to_remove);
         if (mpopi.samples().size() == 0) {
             cerr << "Error: Couln't find any matches files.\n";
-            return -1;
+            throw exception();
         }
         // [mpopi] is definitive.
 
@@ -312,13 +312,13 @@ int main (int argc, char* argv[]) {
         VcfAbstractParser* parser = Vcf::adaptive_open(in_vcf_path);
         if (parser == NULL) {
             cerr << "Error: Unable to open VCF file '" << in_vcf_path << "'.\n";
-            return -1;
+            throw exception();
         }
 
         parser->read_header();
         if (parser->header().samples().empty()) {
             cerr << "Error: No samples in VCF file '" << in_vcf_path << "'.\n";
-            return -1;
+            throw exception();
         }
 
         // Reconsider the MetaPopInfo in light of the VCF header.
@@ -334,7 +334,7 @@ int main (int argc, char* argv[]) {
             if (not samples_to_discard.empty()) {
                 if (samples_to_discard.size() == mpopi.samples().size()) {
                     cerr << "Error: No common samples between the population map and VCF header.\n";
-                    return -1;
+                    throw exception();
                 }
                 cerr << "Warning: of the samples listed in the population map, "
                      << samples_to_discard.size() << " could not be found in the VCF :";
@@ -389,7 +389,7 @@ int main (int argc, char* argv[]) {
         }
         if (vcf_records->size() == 0) {
             cerr << "Error: No records.\n";
-            return -1;
+            throw exception();
         }
 
         catalog = create_catalog(*vcf_records);
