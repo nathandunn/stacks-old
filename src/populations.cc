@@ -288,7 +288,7 @@ int main (int argc, char* argv[]) {
             size_t sample_id = m[0]->sample_id;
             if (seen_samples.count(sample_id) > 0) {
                 cerr << "Error: sample ID " << sample_id << " occurs twice in this data set, likely the pipeline was run incorrectly.\n";
-                exit(0);
+                exit(1);
             }
             seen_samples.insert(sample_id);
             mpopi.set_sample_id(i, sample_id);
@@ -526,7 +526,7 @@ int main (int argc, char* argv[]) {
                         cerr << "Fatal error: Unable to find model data for catalog locus " << loc->id
                              << ", sample ID " << mpopi.samples()[i].id << ", sample locus " << d->id
                              << "; likely IDs were mismatched when running pipeline.\n";
-                        exit(0);
+                        exit(1);
                     }
                     d->add_model(modres[d->id]->model);
                 }
@@ -5471,7 +5471,7 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 'v':
             version();
-            exit(0);
+            exit(1);
             break;
         case '?':
             // getopt_long already printed an error message.
@@ -5662,5 +5662,5 @@ void help() {
 
               // << "    --bootstrap_type [exact|approx]: enable bootstrap resampling for population statistics (reference genome required).\n"
 
-    exit(0);
+    exit(1);
 }

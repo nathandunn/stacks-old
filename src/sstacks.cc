@@ -1464,7 +1464,7 @@ int parse_command_line(int argc, char* argv[]) {
 void version() {
     std::cerr << "sstacks " << VERSION << "\n\n";
 
-    exit(0);
+    exit(1);
 }
 
 void help() {
@@ -1484,5 +1484,5 @@ void help() {
               << "Gapped assembly options:\n"
               << "  --gapped: preform gapped alignments between stacks.\n";
 
-    exit(0);
+    exit(1);
 }

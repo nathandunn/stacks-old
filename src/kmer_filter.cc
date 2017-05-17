@@ -112,12 +112,12 @@ int main (int argc, char* argv[]) {
         if (kmer_distr) {
             generate_kmer_dist(kmers);
             if (write_k_freq == false)
-                exit(0);
+                exit(1);
         }
 
         if (write_k_freq) {
             write_kmer_freq(k_freq_path, kmers);
-            exit(0);
+            exit(1);
         }
 
         cerr << "Filtering reads by kmer frequency...\n";
@@ -1013,14 +1013,14 @@ read_kmer_freq(string in_path, SeqKmerHash &kmer_map, vector<char *> &kmer_map_k
 
         if (parts.size() != 2) {
             cerr << "kmer frequencies are not formated correctly: expecting two, tab separated columns, found " << parts.size() << ".\n";
-            exit(0);
+            exit(1);
         }
 
         strcpy(kmer, parts[1].c_str());
         cnt = is_integer(kmer);
         if (cnt < 0) {
             cerr << "Non integer found in second column.\n";
-            exit(0);
+            exit(1);
         }
 
         strcpy(kmer, parts[0].c_str());
@@ -1804,7 +1804,7 @@ int parse_command_line(int argc, char* argv[]) {
 void version() {
     std::cerr << "kmer_filter " << VERSION << "\n\n";
 
-    exit(0);
+    exit(1);
 }
 
 void help() {
@@ -1836,5 +1836,5 @@ void help() {
               << "    --read_k_freq <path>: read a set of kmers along with their frequencies of occurrence instead of reading raw input files.\n"
               << "\n";
 
-    exit(0);
+    exit(1);
 }

@@ -1251,7 +1251,7 @@ int parse_command_line(int argc, char* argv[]) {
 void version() {
     std::cerr << "process_radtags " << VERSION << "\n\n";
 
-    exit(0);
+    exit(1);
 }
 
 void help() {
@@ -1326,5 +1326,5 @@ void help() {
               << "    --barcode_dist_1: the number of allowed mismatches when rescuing single-end barcodes (default 1).\n"
               << "    --barcode_dist_2: the number of allowed mismatches when rescuing paired-end barcodes (defaults to --barcode_dist_1).\n";
 
-    exit(0);
+    exit(1);
 }

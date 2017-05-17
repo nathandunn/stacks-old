@@ -1805,7 +1805,7 @@ parse_command_line(int argc, char* argv[])
 void version() {
     std::cerr << "rxstacks " << VERSION << "\n\n";
 
-    exit(0);
+    exit(1);
 }
 
 void help() {
@@ -1832,5 +1832,5 @@ void help() {
               << "      --bound_high <num>: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1).\n"
               << "  Logging Options:\n"
               << "      --verbose: extended logging, including coordinates of all changed nucleotides (forces single-threaded execution).\n";
-    exit(0);
+    exit(1);
 }

@@ -2889,7 +2889,7 @@ int parse_command_line(int argc, char* argv[]) {
 void version() {
     std::cerr << "genotypes " << VERSION << "\n\n";
 
-    exit(0);
+    exit(1);
 }
 
 void help() {
@@ -2917,5 +2917,5 @@ void help() {
               << "  Manual corrections options:\n"
               << "    --cor_path <path>: path to file containing manual genotype corrections from a Stacks SQL database to incorporate into output.\n";
 
-    exit(0);
+    exit(1);
 }

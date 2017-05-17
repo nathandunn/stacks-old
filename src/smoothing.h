@@ -108,7 +108,6 @@ KSmooth<StatT>::smooth(vector<StatT *> &popstats)
                             if (p == NULL) continue;
                             cerr << "    Position: " << j << "; " << p->bp +1 << "bp\n";
                         }
-                        //exit(0);
                     }
                     continue;
                 }
