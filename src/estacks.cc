@@ -676,7 +676,7 @@ int parse_command_line(int argc, char* argv[]) {
 void version() {
     std::cerr << "estacks " << VERSION << "\n\n";
 
-    exit(0);
+    exit(1);
 }
 
 void help() {
@@ -692,5 +692,5 @@ void help() {
               << "  e: specify the barcode error frequency (0 < e < 1) if using the 'fixed' model.\n"
               << "  h: display this help messsage." << "\n\n";
 
-    exit(0);
+    exit(1);
 }

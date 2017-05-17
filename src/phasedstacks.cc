@@ -1940,7 +1940,7 @@ int parse_command_line(int argc, char* argv[]) {
 void version() {
     std::cerr << "phasedstacks " << VERSION << "\n\n";
 
-    exit(0);
+    exit(1);
 }
 
 void help() {
@@ -1963,5 +1963,5 @@ void help() {
               << "  --min_inform_pairs: when building D' haplotype blocks, the minimum number of informative D' measures to combine two blocks (default 0.9).\n\n";
 
 
-    exit(0);
+    exit(1);
 }

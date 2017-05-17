@@ -1953,7 +1953,7 @@ int parse_command_line(int argc, char* argv[]) {
 void version() {
     std::cerr << "cstacks " << VERSION << "\n";
 
-    exit(0);
+    exit(1);
 }
 
 void help() {
@@ -1983,5 +1983,5 @@ void help() {
               << "  --k_len <len>: specify k-mer size for matching between between catalog loci (automatically calculated by default).\n"
               << "  --report_mmatches: report query loci that match more than one catalog locus.\n";
 
-    exit(0);
+    exit(1);
 }

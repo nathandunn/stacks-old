@@ -1120,7 +1120,7 @@ int parse_command_line(int argc, char* argv[]) {
 void version() {
     std::cerr << "process_shortreads " << VERSION << "\n\n";
 
-    exit(0);
+    exit(1);
 }
 
 void help() {
@@ -1168,5 +1168,5 @@ void help() {
               << "    --mate-pair: raw reads are circularized mate-pair data, first read will be reverse complemented.\n"
               << "    --no_overhang: data does not contain an overhang nucleotide between barcode and seqeunce.\n";
 
-    exit(0);
+    exit(1);
 }

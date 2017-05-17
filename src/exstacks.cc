@@ -202,7 +202,7 @@ int parse_command_line(int argc, char* argv[]) {
 void version() {
     std::cerr << "exstacks " << stacks_version << "\n\n";
 
-    exit(0);
+    exit(1);
 }
 
 void help() {
@@ -214,5 +214,5 @@ void help() {
               << "  m: include tags in the catalog that match to more than one entry." << "\n"
               << "  h: display this help messsage." << "\n\n";
 
-    exit(0);
+    exit(1);
 }

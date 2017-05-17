@@ -1041,7 +1041,7 @@ int parse_command_line(int argc, char* argv[]) {
 void version() {
     std::cerr << "pstacks " << VERSION << "\n\n";
 
-    exit(0);
+    exit(1);
 }
 
 void help() {
@@ -1067,7 +1067,7 @@ void help() {
               << "       For the Fixed model:\n"
               << "       --bc_err_freq <num>: specify the barcode error frequency, between 0 and 1.0.\n";
 
-    exit(0);
+    exit(1);
 }
 
 void report_options(std::ostream& os) {

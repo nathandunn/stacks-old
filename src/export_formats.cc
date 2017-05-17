@@ -261,7 +261,7 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
     VcfWriter writer (file);
     if (writer.fail()) {
         cerr << "Error opening VCF file '" << file << "'\n";
-        exit(-1);
+        exit(1);
     }
 
     //
@@ -388,7 +388,7 @@ write_vcf(map<int, CSLocus *> &catalog,
     VcfWriter writer (file);
     if (writer.fail()) {
         cerr << "Error opening VCF file '" << file << "'\n";
-        exit(-1);
+        exit(1);
     }
 
     //
@@ -530,7 +530,7 @@ write_vcf_haplotypes(map<int, CSLocus *> &catalog,
     VcfWriter writer (file);
     if (writer.fail()) {
         cerr << "Error opening VCF file '" << file << "'\n";
-        exit(-1);
+        exit(1);
     }
 
     //

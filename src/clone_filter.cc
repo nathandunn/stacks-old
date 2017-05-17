@@ -1268,7 +1268,7 @@ int parse_command_line(int argc, char* argv[]) {
 void version() {
     std::cerr << "clone_filter " << VERSION << "\n\n";
 
-    exit(0);
+    exit(1);
 }
 
 void help() {
@@ -1296,5 +1296,5 @@ void help() {
               << "    --inline_index:  random oligo is inline with sequence on single-end read and second oligo occurs in FASTQ header.\n"
               << "    --index_inline:  random oligo occurs in FASTQ header (Illumina i5 or i7 read) and is inline with sequence on single-end read (if single read data) or paired-end read (if paired data).\n\n";
 
-    exit(0);
+    exit(1);
 }
