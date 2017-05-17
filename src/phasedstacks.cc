@@ -126,8 +126,8 @@ int main (int argc, char* argv[]) {
     int  res;
     catalog_file << cat_path << "batch_" << batch_id << ".catalog";
     if ((res = load_loci(catalog_file.str(), catalog, false, false, compressed)) == 0) {
-        cerr << "Unable to load the catalog '" << catalog_file.str() << "'\n";
-        return 0;
+        cerr << "Error: Unable to load the catalog '" << catalog_file.str() << "'\n";
+        throw exception();
     }
     cerr << "done.\n";
 
