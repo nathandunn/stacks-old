@@ -77,7 +77,7 @@ int main (int argc, char* argv[]) {
 
     if (res == 0) {
         cerr << "Unable to parse catalog, '" << catalog_path << "'\n";
-        return 0;
+        return 1;
     }
 
     KmerHashMap kmer_map;
