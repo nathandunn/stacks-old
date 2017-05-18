@@ -41,6 +41,8 @@ void load_dh_dictionary(map<string, string> &types, map<string, map<string, stri
 void load_mm_dh_dictionary(map<string, string> &types, map<string, map<string, string> > &dictionary);
 void load_segregation_ratios(map_types type, map<string, map<string, double> > &segregation_ratios);
 
+extern int encoded_gtypes[4][4];
+
 inline
 int
 encode_gtype(char a)
