@@ -32,8 +32,9 @@ const Model* model = NULL;
 set<int> locus_wl;
 size_t km_length = 31;
 size_t min_km_count = 2;
-bool gfa_out = false;
-bool aln_out = false;
+bool write_haplotypes = false;
+bool write_gfa = false;
+bool write_alns = false;
 bool vcf_write_depths = false;
 
 //
@@ -82,7 +83,7 @@ int main(int argc, char** argv) {
     o_models_f.open(o_models_path);
     check_open(o_models_f, o_models_path);
 
-    if (aln_out) {
+    if (write_alns) {
         string o_aln_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".aln";
         o_aln_f.open(o_aln_path);
         check_open(o_aln_f, o_aln_path);
@@ -148,7 +149,7 @@ bool process_one_locus(CLocReadSet&& loc) {
         if (graph.empty())
             break;
 
-        if (gfa_out)
+        if (write_gfa)
             graph.dump_gfa(in_dir + to_string(loc.id()) + ".gfa");
 
         vector<const SPath*> best_path;
@@ -198,7 +199,7 @@ bool process_one_locus(CLocReadSet&& loc) {
                 );
     }
 
-    if (aln_out)
+    if (write_alns)
         o_aln_f << "BEGIN " << aln_loc.id() << "\n"
                 << aln_loc
                 << "\nEND " << aln_loc.id() << "\n";
@@ -487,12 +488,13 @@ const string help_string = string() +
         "  --gt-alpha: alpha threshold for calling genotypes (default: 0.05)\n"
         "  --var-alpha: alpha threshold for discovering variants (default: 0.05)\n"
         "\n"
-        "Alignment options:\n"
+        "Debug options:\n"
         "  --kmer-length: kmer length (default: 31)\n"
         "  --min-cov: minimum coverage to consider a kmer (default: 2)\n"
         "  --gfa: output a GFA file for each locus\n"
-        "  --aln: output a file showing the contigs & alignments\n"
+        "  --alns: output a file showing the contigs & alignments\n"
         "  --depths: write detailed depth data in the output VCF\n"
+        "  --haps: output a phased VCF /!\\ conflicts with paired-end input\n"
         "\n"
         ;
 
@@ -517,8 +519,9 @@ try {
         {"whitelist",    required_argument, NULL,  'W'},
         {"kmer-length",  required_argument, NULL,  1001},
         {"min-cov",      required_argument, NULL,  1002},
+        {"haps",         no_argument,       NULL,  1009},
         {"gfa",          no_argument,       NULL,  1003},
-        {"aln",          no_argument,       NULL,  1004},
+        {"alns",         no_argument,       NULL,  1004},
         {"depths",       no_argument,       NULL,  1007},
         {0, 0, 0, 0}
     };
@@ -572,11 +575,14 @@ try {
         case 1002://min-cov
             min_km_count = atoi(optarg);
             break;
+        case 1009://haps
+            write_haplotypes = true;
+            break;
         case 1003://gfa
-            gfa_out = true;
+            write_gfa = true;
             break;
         case 1004://aln
-            aln_out = true;
+            write_alns = true;
             break;
         case 1007://depths
             vcf_write_depths = true;
