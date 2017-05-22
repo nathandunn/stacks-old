@@ -304,9 +304,6 @@ int PopMap<LocusT>::populate(map<int, LocusT*>& catalog,
      * corrected, genotype, trans_genotype
      *
      * [merge_partner] is set later by [merge_datums()] (in populations.cc).
-     * [snps] is only used by [write_vcf()] and [write_vcf_strict()], which
-     *     first call [populate_snp_calls()] then use the SNP data in the
-     *     datum.
      */
 
     loc_index = 0;
