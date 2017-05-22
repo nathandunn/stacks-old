@@ -84,7 +84,7 @@ class GappedAln {
 
     inline int swap(double *, dynprog *, int, int);
     int        trace_alignment(const string&, const string&);
-    int        trace_constrained_alignment(const string&, const string&, uint, uint, uint, uint);
+    int        trace_constrained_alignment(const string&, const string&, int, int, int, int);
  public:
     GappedAln();
     GappedAln(int i) : GappedAln(i, i) {};
@@ -447,25 +447,25 @@ GappedAln::align_constrained(const string& query, const string& subj, const vect
         //
         // Bound the region we are about to score.
         //
-        for (uint j = s_start; j <= s_end + 1; j++) {
+        for (int j = s_start; j <= s_end + 1; j++) {
             this->matrix[q_start - 1][j]    = -1000;
             this->path[q_start - 1][j].diag = false;
             this->path[q_start - 1][j].up   = false;
             this->path[q_start - 1][j].left = true;
         }
-        for (uint j = s_start - 1; j <= s_end; j++) {
+        for (int j = s_start - 1; j <= s_end; j++) {
             this->matrix[q_end + 1][j]    = -1000;
             this->path[q_end + 1][j].diag = false;
             this->path[q_end + 1][j].up   = true;
             this->path[q_end + 1][j].left = false;
         }
-        for (uint i = q_start; i <= q_end + 1; i++) {
+        for (int i = q_start; i <= q_end + 1; i++) {
             this->matrix[i][s_start - 1]    = -1000;
             this->path[i][s_start - 1].diag = false;
             this->path[i][s_start - 1].up   = true;
             this->path[i][s_start - 1].left = false;
         }
-        for (uint i = q_start - 1; i <= q_end; i++) {
+        for (int i = q_start - 1; i <= q_end; i++) {
             this->matrix[i][s_end + 1]    = -1000;
             this->path[i][s_end + 1].diag = false;
             this->path[i][s_end + 1].up   = false;
@@ -475,8 +475,8 @@ GappedAln::align_constrained(const string& query, const string& subj, const vect
         //
         // Score the bounded region.
         //
-        for (uint i = q_start; i <= q_end; i++) {
-            for (uint j = s_start; j <= s_end; j++) {
+        for (int i = q_start; i <= q_end; i++) {
+            for (int j = s_start; j <= s_end; j++) {
                 // Calculate the score:
                 //   1) If we were to move down from the above cell.
                 score_down   = this->matrix[i - 1][j];
@@ -746,7 +746,7 @@ GappedAln::trace_alignment(const string& tag_1, const string& tag_2)
 }
 
 int
-GappedAln::trace_constrained_alignment(const string& query, const string& subj, uint q_start, uint q_end, uint s_start, uint s_end)
+GappedAln::trace_constrained_alignment(const string& query, const string& subj, int q_start, int q_end, int s_start, int s_end)
 {
     //         j---->      subject
     //        [0][1][2][3]...[n-1]
