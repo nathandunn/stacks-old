@@ -74,7 +74,7 @@ double   homozygous_likelihood(int, map<char, int> &);
 class SampleCall {
     GtLiks lnls_;
     // The genotype call and the corresponding nucleotides.
-    // hom {nt, Nt4::n} | het {min_nt, max_nt} | unk {Nt4::n, Nt4::n}
+    // hom {nt, Nt2()} | het {min_nt, max_nt} | unk {Nt2(), Nt2()}
     // For hets, the two nucleotides are sorted lexically (A<C<G<T).
     snp_type call_;
     array<Nt2,2> nts_;
