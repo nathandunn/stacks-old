@@ -24,6 +24,7 @@ libcore_a_SOURCES = \
 	src/input.h src/input.cc \
 	src/kmers.h src/kmers.cc \
 	src/locus.h src/locus.cc \
+	src/locus_readers.h \
 	src/log_utils.h src/log_utils.cc \
 	src/MetaPopInfo.h src/MetaPopInfo.cc \
 	src/models.h src/models.cc \

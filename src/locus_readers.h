@@ -1,5 +1,5 @@
-#ifndef BAMCLOCREADER_H
-#define BAMCLOCREADER_H
+#ifndef LOCUS_READERS_H
+#define LOCUS_READERS_H
 
 #include <vector>
 #include <string>
@@ -24,6 +24,11 @@ public:
     // Reads one locus. Returns false on EOF.
     bool read_one_locus(CLocReadSet& readset);
 };
+
+//
+// Inline definitions
+// ==================
+//
 
 inline
 BamCLocReader::BamCLocReader(const string& bam_path)
