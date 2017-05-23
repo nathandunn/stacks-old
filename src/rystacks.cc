@@ -7,7 +7,7 @@
 #include "log_utils.h"
 #include "catalog_utils.h"
 #include "locus.h"
-#include "BamCLocReader.h"
+#include "locus_readers.h"
 #include "debruijn.h"
 #include "GappedAln.h"
 #include "aln_utils.h"
