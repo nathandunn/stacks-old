@@ -92,10 +92,15 @@ int main(int argc, char** argv) {
     check_open(o_models_f, o_models_path);
 
     if (write_alns) {
-        string o_aln_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".aln";
+        string o_aln_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".alns";
         o_aln_f.open(o_aln_path);
         check_open(o_aln_f, o_aln_path);
-        o_aln_f << "# id=123; sed -n \"/^BEGIN $id$/,/^END $id$/p\" batch_" << batch_id << ".rystacks.aln | less -x25\n";
+        o_aln_f <<
+            "# This prints observed read haplotypes:\n"
+            "# loc=39\n"
+            "# sample=BT_2827.13\n"
+            "# cols=$(grep -E \"^$loc\\b\" batch_1.rystacks.vcf | awk '$5!=\".\"' | cut -f2 | paste -sd ',') # (SNPs.)\n"
+            "# sed -n \"/^BEGIN $loc\\b/,/^END $loc\\b/ p\" batch_1.rystacks.alns | grep \"$sample\" | cut -f3 | cut -c$cols | sort | uniq -c | sort -nr\n";
     }
 
     // Process every locus
