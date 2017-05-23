@@ -16,10 +16,18 @@
 
 using namespace std;
 
+struct PhasedHet {
+    size_t phase_set;
+    Nt2 left_allele;
+    Nt2 right_allele;
+};
+
 void parse_command_line(int argc, char* argv[]);
 void report_options(ostream& os);
 bool process_one_locus(CLocReadSet&& loc);
-void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls);
+void write_one_locus(const CLocAlnSet& aln_loc,
+                     const vector<SiteCall>& calls,
+                     const vector<map<size_t,PhasedHet>>& phase_data); // {col : phasedhet} maps, for all samples
 
 //
 // Argument globals.
@@ -226,12 +234,78 @@ bool process_one_locus(CLocReadSet&& loc) {
     }
     aln_loc.ref(move(new_ref));
 
-    write_one_locus(aln_loc, calls);
+    // Call haplotypes.
+    vector<map<size_t,PhasedHet>> phase_data (aln_loc.mpopi().samples().size());
+    if (write_haplotypes) {
+        vector<size_t> snp_cols;
+        for (size_t i=0; i<aln_loc.ref().length(); ++i)
+            if (calls[i].alleles().size() > 1)
+                snp_cols.push_back(i);
+
+        for (size_t sample=0; sample<aln_loc.mpopi().samples().size(); ++sample) {
+
+            vector<size_t> het_cols;
+            for(size_t col : snp_cols)
+                if (calls[col].sample_calls()[sample].call() == snp_type_het)
+                    het_cols.push_back(col);
+
+            if (het_cols.empty())
+                continue;
+
+            // Count the haplotypes observed for this sample.
+            map<vector<Nt2>,size_t> sample_haps;
+            for (size_t read_i : aln_loc.sample_reads(sample)) {
+                const Read& read = aln_loc.reads()[read_i];
+                if (read.name.substr(read.name.length()-2) == "/2") {
+                    cerr << "Error: Refusing to call haplotypes in paired-end data.\n"; //TODO
+                    throw exception();
+                }
+
+                vector<Nt2> read_hap;
+                read_hap.reserve(het_cols.size());
+                for (size_t col : het_cols) {
+                    Nt4 nt = read.seq[col];
+                    if (nt == Nt4::n || !calls[col].alleles().count(nt))
+                        // Incomplete haplotype. //TODO This will cause problems: no haps when there are hets, see check below.
+                        break;
+                    read_hap.push_back(Nt2(nt));
+                }
+                if (read_hap.size() != het_cols.size())
+                    continue;
+
+                ++sample_haps[read_hap];
+            }
+
+            // Sort the sample's haplotypes by frequency.
+            vector<pair<size_t, vector<Nt2>>> s_sample_haps;
+            s_sample_haps.reserve(sample_haps.size());
+            for (auto& hap : sample_haps)
+                s_sample_haps.push_back({hap.second, hap.first});
+            sort(s_sample_haps.rbegin(), s_sample_haps.rend());
+
+            // Record the phase data.
+            if (s_sample_haps.size() < 2) {
+                cerr << "DEBUG: Oops, Sample is heterozygote for the locus but has <2 haplotype(s).\n";
+                throw exception();
+            }
+            for (size_t i=0; i<het_cols.size(); ++i) {
+                size_t col = het_cols[i];
+                PhasedHet ph {het_cols[0], s_sample_haps[0].second[i], s_sample_haps[1].second[i]};
+                phase_data[sample].insert({col, ph});
+            }
+        }
+    }
+
+    write_one_locus(aln_loc, calls, phase_data);
 
     return true;
 }
 
-void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
+void write_one_locus(
+        const CLocAlnSet& aln_loc,
+        const vector<SiteCall>& calls,
+        const vector<map<size_t,PhasedHet>>& phase_data
+        ){
 
     size_t loc_id = aln_loc.id();
     const DNASeq4& ref = aln_loc.ref();
@@ -350,6 +424,8 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
 
             // Format.
             rec.format.push_back("GT");
+            if (write_haplotypes)
+                rec.format.push_back("PS"); // Phase set.
             rec.format.push_back("DP");
             rec.format.push_back("AD");
             rec.format.push_back("GL");
@@ -372,15 +448,27 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
                 case snp_type_hom:
                     gt.push_back(vcf_allele_indexes.at(scall.nt0()));
                     genotype << gt[0] << '/' << gt[0];
+                    if (write_haplotypes)
+                        genotype << ":.";
                     break;
                 case snp_type_het:
-                    gt.push_back(vcf_allele_indexes.at(scall.nt0()));
-                    gt.push_back(vcf_allele_indexes.at(scall.nt1()));
-                    sort(gt.begin(), gt.end()); // (Prevents '1/0'.)
-                    genotype << gt[0] << '/' << gt[1];
+                    if (write_haplotypes) {
+                        const PhasedHet& p = phase_data[sample].at(i);
+                        genotype << vcf_allele_indexes.at(p.left_allele)
+                                 << '|'
+                                 << vcf_allele_indexes.at(p.right_allele)
+                                 << ':' << p.phase_set;
+                    } else {
+                        gt.push_back(vcf_allele_indexes.at(scall.nt0()));
+                        gt.push_back(vcf_allele_indexes.at(scall.nt1()));
+                        sort(gt.begin(), gt.end()); // (Prevents '1/0'.)
+                        genotype << gt[0] << '/' << gt[1];
+                    }
                     break;
                 default:
                     genotype << '.';
+                    if (write_haplotypes)
+                        genotype << ":.";
                     break;
                 }
                 // DP field.
@@ -394,8 +482,8 @@ void write_one_locus(const CLocAlnSet& aln_loc, const vector<SiteCall>& calls) {
                 join(ad, ',', genotype);
                 // GL field.
                 genotype << ':' << VcfRecord::util::fmt_gt_gl(rec.alleles, scall.lnls());
+                // cnts field.
                 if (vcf_write_depths) {
-                    // cnts field.
                     genotype << ":";
                     join(sdepths.arr(), ',', genotype);
                 }
