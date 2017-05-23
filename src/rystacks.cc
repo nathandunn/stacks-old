@@ -17,7 +17,7 @@
 using namespace std;
 
 struct PhasedHet {
-    size_t phase_set;
+    size_t phase_set; // N.B. The convention in VCF is to use the column of the first phased SNP for this.
     Nt2 left_allele;
     Nt2 right_allele;
 };
@@ -462,7 +462,7 @@ void write_one_locus(
                         genotype << vcf_allele_indexes.at(p.left_allele)
                                  << '|'
                                  << vcf_allele_indexes.at(p.right_allele)
-                                 << ':' << p.phase_set;
+                                 << ':' << (p.phase_set + 1);
                     } else {
                         gt.push_back(vcf_allele_indexes.at(scall.nt0()));
                         gt.push_back(vcf_allele_indexes.at(scall.nt1()));
