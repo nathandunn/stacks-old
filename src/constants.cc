@@ -17,7 +17,9 @@ map<string, FileT> known_extensions = {
     {".fq.gz", FileT::gzfastq},
     {".fastq.gz", FileT::gzfastq},
     {".sam", FileT::sam},
-    {".bam", FileT::bam}
+    {".bam", FileT::bam},
+    {".vcf", FileT::vcf},
+    {".vcf.gz", FileT::gzvcf}
 };
 
 string remove_suffix(FileT type, const string& orig) {
