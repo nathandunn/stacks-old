@@ -5187,6 +5187,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"threads",        required_argument, NULL, 't'},
             {"batch_id",       required_argument, NULL, 'b'},
             {"in_path",        required_argument, NULL, 'P'},
+            {"v2",             no_argument,       NULL, 1006},
             {"out_path",       required_argument, NULL, 'O'},
             {"in_vcf",         required_argument, NULL, 'V'},
             {"progeny",        required_argument, NULL, 'r'},
@@ -5241,6 +5242,9 @@ int parse_command_line(int argc, char* argv[]) {
             in_path = optarg;
             if (!in_path.empty() && in_path.back() != '/')
                 in_path += "/";
+            break;
+        case 1006: //v2
+            input_mode = InputMode::stacks2;
             break;
         case 'O':
             out_path = optarg;
@@ -5501,18 +5505,20 @@ int parse_command_line(int argc, char* argv[]) {
     //
 
     if (not in_path.empty() && not in_vcf_path.empty()) {
-        cerr << "Error: Please specify either '-P' or '--in_vcf', not both.\n";
+        cerr << "Error: Please specify either '-P/--in_path' or '-V/--in_vcf', not both.\n";
         help();
-    } else if (not in_path.empty()) {
-        input_mode = InputMode::stacks;
     } else if (not in_vcf_path.empty()) {
+        if (input_mode == InputMode::stacks2) {
+            cerr << "Error: '-V/--in_vcf' conflicts with '--v2'.\n";
+            help();
+        }
         input_mode = InputMode::vcf;
-    } else {
-        cerr << "Error: One of '--in_path' or '--in_vcf' is required.\n";
+    } else if (in_path.empty()) {
+        cerr << "Error: One of '-P/--in_path' or '-V/--in_vcf' is required.\n";
         help();
     }
 
-    if (input_mode == InputMode::stacks) {
+    if (input_mode == InputMode::stacks || input_mode == InputMode::stacks2) {
 
         if (pmap_path.empty())
             cerr << "A population map was not specified, all samples will be read from '" << in_path << "' as a single popultaion.\n";
