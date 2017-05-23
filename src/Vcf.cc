@@ -237,6 +237,7 @@ VcfGzParser::VcfGzParser(const string& path)
 : VcfAbstractParser(path), file_(NULL)
 {
     file_ = gzopen(path_.c_str(), "rb");
+    check_open(file_, path);
 #if ZLIB_VERNUM >= 0x1240
     gzbuffer(file_, libz_buffer_size);
 #endif
@@ -247,28 +248,17 @@ VcfGzParser::VcfGzParser(const string& path)
 VcfAbstractParser*
 Vcf::adaptive_open(const string& path)
 {
-    VcfAbstractParser* parser = NULL;
-    if (path.length() >= 4 && path.substr(path.length()-4) == ".vcf") {
-        parser = new VcfParser(path);
-        if (parser->fail()) {
-            // Opening failed
-            delete parser;
-            parser = NULL;
-        }
+    FileT filet = guess_file_type(path);
+    if (filet == FileT::vcf) {
+        return new VcfParser(path);
 #ifdef HAVE_LIBZ
-    } else if (path.length() >= 7 && path.substr(path.length()-7) == ".vcf.gz") {
-        parser = new VcfGzParser(path);
-        if (parser->fail()) {
-            delete parser;
-            parser = NULL;
-        }
+    } else if (filet == FileT::gzvcf) {
+        return new VcfGzParser(path);
 #endif
     } else {
         cerr << "Error: File '" << path << "' : expected '.vcf(.gz)' suffix.\n";
         throw exception();
     }
-
-    return parser;
 }
 
 bool

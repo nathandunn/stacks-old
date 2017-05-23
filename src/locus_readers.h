@@ -9,6 +9,7 @@
 #include "MetaPopInfo.h"
 #include "BamI.h"
 #include "locus.h"
+#include "Vcf.h"
 
 class BamCLocReader {
     Bam* bam_f_;
@@ -23,6 +24,20 @@ public:
 
     // Reads one locus. Returns false on EOF.
     bool read_one_locus(CLocReadSet& readset);
+};
+
+class VcfCLocReader {
+    VcfAbstractParser* vcf_f_;
+    VcfRecord next_rec_;
+    bool eof_;
+public:
+    VcfCLocReader(const string& vcf_path);
+    ~VcfCLocReader() {if(vcf_f_) delete vcf_f_;}
+
+    const VcfHeader& header() const {return vcf_f_->header();}
+
+    // Reads one locus. Returns false on EOF.
+    bool read_one_locus(vector<VcfRecord>& records);
 };
 
 //
@@ -108,6 +123,46 @@ bool BamCLocReader::read_one_locus(CLocReadSet& readset) {
             break;
         }
     } while (rec.chrom() == curr_chrom);
+
+    return true;
+}
+
+inline
+VcfCLocReader::VcfCLocReader(const string& vcf_path)
+        : vcf_f_(Vcf::adaptive_open(vcf_path)),
+          next_rec_(),
+          eof_(false)
+{
+    vcf_f_->read_header();
+
+    // Read the very first record.
+    if(!vcf_f_->next_record(next_rec_))
+        eof_ = true;
+}
+
+inline
+bool VcfCLocReader::read_one_locus(vector<VcfRecord>& records) {
+    records.clear();
+    if (eof_)
+        return false;
+
+    // Parse the locus ID.
+    string curr_chrom = next_rec_.chrom;
+    records.push_back(move(next_rec_));
+
+    // Read all the records of the locus, and one more.
+    while (records.back().chrom == curr_chrom) {
+        records.push_back(VcfRecord());
+        if (!vcf_f_->next_record(records.back())) {
+            eof_ = true;
+            break;
+        }
+    }
+
+    // Remove the first record of the next locus (or the record for which EOF
+    // was encountered) from the vector.
+    next_rec_ = move(records.back());
+    records.pop_back();
 
     return true;
 }

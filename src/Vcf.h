@@ -78,7 +78,7 @@ enum class RType {
 const size_t line_buf_size = 4096;
 
 // Open the given VCF file using VcfParser or VcfGzParser, depending on the
-// suffix of the file. Return NULL if the opening failed.
+// suffix of the file. Throws on failure.
 // (The pointee is dynamically allocated and should be deleted.)
 VcfAbstractParser* adaptive_open(const string& path);
 
@@ -257,7 +257,7 @@ class VcfParser : public VcfAbstractParser {
     inline void getline(char* ptr, size_t n);
     void check_eol() {eol_ = ! file_.fail(); file_.clear();}
 public:
-    VcfParser(const string& path) : VcfAbstractParser(path), file_(path) {}
+    VcfParser(const string& path) : VcfAbstractParser(path), file_(path) {check_open(file_, path);}
     bool fail() {return file_.fail();}
 };
 

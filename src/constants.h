@@ -134,7 +134,9 @@ enum class FileT {unknown,
     fasta,   gzfasta,
     fastq,   gzfastq,
     bowtie,  sam, bam, tsv,
-    bustard, phase, fastphase, beagle};
+    bustard, phase, fastphase, beagle,
+    vcf, gzvcf
+};
 
 string remove_suffix(FileT, const string&);
 
