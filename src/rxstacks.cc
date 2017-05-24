@@ -101,11 +101,11 @@ int main (int argc, char* argv[]) {
     stringstream catalog_file;
     map<int, CSLocus *> catalog;
     bool compressed = false;
-    int res;
     catalog_file << in_path << "batch_" << batch_id << ".catalog";
-    if ((res = load_loci(catalog_file.str(), catalog, 0, false, compressed)) == 0) {
-        cerr << "Unable to load the catalog '" << catalog_file.str() << "'\n";
-        return 0;
+    int res = load_loci(catalog_file.str(), catalog, 0, false, compressed);
+    if (res  == 0) {
+        cerr << "Error: Unable to load the catalog '" << catalog_file.str() << "'\n";
+        throw exception();
     }
 
     in_file_type = compressed == true ? FileT::gzsql : FileT::sql;
@@ -141,7 +141,7 @@ int main (int argc, char* argv[]) {
         size_t sample_id = m[0]->sample_id;
         if (seen_samples.count(sample_id) > 0) {
             cerr << "Error: sample ID " << sample_id << " occurs twice in this data set, likely the pipeline was run incorrectly.\n";
-            return -1;
+            throw exception();
         }
         seen_samples.insert(sample_id);
         mpopi.set_sample_id(i, sample_id);
@@ -149,7 +149,7 @@ int main (int argc, char* argv[]) {
     mpopi.delete_samples(samples_to_remove);
     if (mpopi.samples().size() == 0) {
         cerr << "Error: Couln't find any matches files.\n";
-        return -1;
+        throw exception();
     }
     // [mpopi] is definitive.
     cerr << "Working on " << mpopi.samples().size() << " samples.\n";
@@ -386,6 +386,7 @@ int main (int argc, char* argv[]) {
         map<int, Locus *>::iterator stack_it;
         for (stack_it = stacks.begin(); stack_it != stacks.end(); stack_it++)
             delete stack_it->second;
+        stacks.clear();
         cerr << "done.\n";
     }
 
@@ -395,6 +396,16 @@ int main (int argc, char* argv[]) {
         log_snp_fh.close();
         log_hap_fh.close();
     }
+
+    //
+    // Free memory associated with the catalog and matches to the catalog.
+    //
+    for (map<int, CSLocus *>::iterator cat_it = catalog.begin(); cat_it != catalog.end(); cat_it++)
+        delete cat_it->second;
+
+    for (uint i = 0; i < catalog_matches.size(); i++)
+        for (uint j = 0; j < catalog_matches[i].size(); j++)
+            delete catalog_matches[i][j];
 
     cerr << "rxstacks is done.\n";
     return 0;
@@ -542,14 +553,10 @@ prune_mst_haplotypes(CSLocus *cloc, Datum *d, Locus *loc, unsigned long &pruned_
     mst::MinSpanTree *mst = new mst::MinSpanTree();
 
     map<string, int>::iterator it;
-    vector<uint>   keys;
     vector<string> haps;
-    mst::Node *n;
-
     for (it = cloc->hap_cnts.begin(); it != cloc->hap_cnts.end(); it++) {
-        n = mst->add_node(it->first);
+        mst->add_node(it->first);
         haps.push_back(it->first);
-        keys.push_back(n->id);
     }
 
     //
@@ -600,8 +607,10 @@ prune_mst_haplotypes(CSLocus *cloc, Datum *d, Locus *loc, unsigned long &pruned_
     //
     sort(haplotypes.begin(), haplotypes.end(), compare_pair_haplotype_rev);
 
-    if (size <= 2)
+    if (size <= 2) {
+        delete mst;
         return 0;
+    }
 
     //
     // Pull out the two most frequently occuring haplotypes.
@@ -710,6 +719,7 @@ prune_mst_haplotypes(CSLocus *cloc, Datum *d, Locus *loc, unsigned long &pruned_
     // operate on newly generated, spurious haplotypes.
     //
     generate_matched_haplotypes(cloc, loc, d);
+    delete mst;
 
     return 0;
 }
@@ -793,6 +803,7 @@ prune_locus_haplotypes(CSLocus *cloc, Datum *d, Locus *loc, unsigned long &prune
 
     return 0;
 }
+
 
 string
 convert_catalog_haplotype_to_sample(string cat_haplotype, CSLocus *cloc, Locus *loc)
@@ -1779,7 +1790,7 @@ parse_command_line(int argc, char* argv[])
 void version() {
     cerr << "rxstacks " << VERSION << "\n\n";
 
-    exit(0);
+    exit(1);
 }
 
 void help() {
@@ -1806,5 +1817,5 @@ void help() {
               << "      --bound_high <num>: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1).\n"
               << "  Logging Options:\n"
               << "      --verbose: extended logging, including coordinates of all changed nucleotides (forces single-threaded execution).\n";
-    exit(0);
+    exit(1);
 }

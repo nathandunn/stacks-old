@@ -2675,7 +2675,7 @@ int parse_command_line(int argc, char* argv[]) {
 void version() {
     cerr << "ustacks " << VERSION << "\n\n";
 
-    exit(0);
+    exit(1);
 }
 
 void help() {
@@ -2713,5 +2713,5 @@ void help() {
               << "\n"
               << "  h: display this help messsage.\n";
 
-    exit(0);
+    exit(1);
 }

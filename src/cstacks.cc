@@ -80,8 +80,8 @@ int main (int argc, char* argv[]) {
     if (catalog_path.length() > 0) {
         cerr << "\nInitializing existing catalog...\n";
         if (!initialize_existing_catalog(catalog_path, catalog)) {
-            cerr << "Failed to initialize the catalog.\n";
-            return 1;
+            cerr << "Error: Failed to initialize the catalog.\n";
+            throw exception();
         }
         i = 1;
 
@@ -91,8 +91,8 @@ int main (int argc, char* argv[]) {
 
         cerr << "\nInitializing new catalog...\n";
         if (!initialize_new_catalog(s, catalog)) {
-            cerr << "Failed to initialize the catalog.\n";
-            return 1;
+            cerr << "Error: Failed to initialize the catalog.\n";
+            throw exception();
         }
         i = 2;
         seen_sample_ids.insert(catalog.begin()->second->sample_id);
@@ -128,7 +128,7 @@ int main (int argc, char* argv[]) {
         if (!seen_sample_ids.insert(s.first).second) {
             // Insert failed.
             cerr << "Error: Sample ID '" << s.first << "' occurs more than once. Sample IDs must be unique." << endl;
-            return -1;
+            throw exception();
         }
 
         //dump_loci(sample);
@@ -1953,7 +1953,7 @@ int parse_command_line(int argc, char* argv[]) {
 void version() {
     cerr << "cstacks " << VERSION << "\n";
 
-    exit(0);
+    exit(1);
 }
 
 void help() {
@@ -1983,5 +1983,5 @@ void help() {
               << "  --k_len <len>: specify k-mer size for matching between between catalog loci (automatically calculated by default).\n"
               << "  --report_mmatches: report query loci that match more than one catalog locus.\n";
 
-    exit(0);
+    exit(1);
 }

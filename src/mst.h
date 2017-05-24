@@ -66,8 +66,11 @@ public:
     }
 
     ~Node()  {
+        this->min_adj_list.clear();
+
         for (uint i = 0; i < this->edges.size(); i++)
             delete this->edges[i];
+        this->edges.clear();
     }
 
     Edge *add_edge(Node *, int);
@@ -81,8 +84,9 @@ class MinSpanTree {
  public:
     MinSpanTree()  { id_cnt = 0; }
     ~MinSpanTree() {
-        for (uint i = 0; i < this->nodes.size(); i++)
-            delete this->nodes[i];
+        for (map<int, Node *>::iterator i = this->nodes.begin(); i != this->nodes.end(); i++)
+            delete i->second;
+        this->nodes.clear();
     }
 
     Node  *add_node(int id);

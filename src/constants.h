@@ -47,6 +47,7 @@
 #include <utility>
 #include <algorithm>
 #include <functional>
+#include <memory>
 
 // OpenMP
 #ifdef _OPENMP
@@ -102,6 +103,7 @@ using std::size_t;
 using std::getline;
 using std::exception;
 using std::move;
+using std::unique_ptr;
 
 typedef unsigned int uint;
 typedef unsigned char uchar;
