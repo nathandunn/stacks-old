@@ -69,6 +69,10 @@ public:
     // is preserved.)
     void delete_samples(const vector<size_t>& rm_samples);
 
+    // Intersects the population map with a list of samples.
+    // May call `delete_samples()`.
+    void intersect_with(const vector<string>& samples);
+
     // Retrieve information.
     const vector<Sample>& samples() const {return samples_;}
     const vector<Pop>& pops() const {return pops_;}

@@ -250,52 +250,76 @@ void MetaPopInfo::init_directory(const string& dir_path) {
 
 void MetaPopInfo::delete_samples(const vector<size_t>& rm_samples) {
 
+    if (rm_samples.empty())
+        return;
+
     // Remove these samples from [samples_].
-    for (vector<size_t>::const_iterator s = rm_samples.begin(); s != rm_samples.end(); ++s) {
-        samples_.at(*s).name.clear(); // Mark the sample for removal.
-    }
-    samples_.erase(
-            remove_if(samples_.begin(), samples_.end(),
-                    [] (Sample& s) {return s.name.empty();} ),
-            samples_.end());
+    for (size_t s : rm_samples)
+        samples_.at(s).name.clear(); // Mark the sample for removal.
+    samples_.erase(remove_if(
+            samples_.begin(),
+            samples_.end(),
+            [] (Sample& s) {return s.name.empty();}
+            ), samples_.end());
 
     // Update the indexes of the populations.
-    for (vector<Pop>::iterator p = pops_.begin(); p != pops_.end(); ++p) {
+    for (Pop& p : pops_) {
         for (vector<size_t>::const_reverse_iterator rm_sample = rm_samples.rbegin(); rm_sample != rm_samples.rend(); ++rm_sample) {
-            if (p->first_sample > *rm_sample) // n.b. ">"
-                --p->first_sample;
-            if (p->last_sample >= *rm_sample) // n.b. ">=". Thus if the population becomes
+            if (p.first_sample > *rm_sample) // n.b. ">"
+                --p.first_sample;
+            if (p.last_sample >= *rm_sample) // n.b. ">=". Thus if the population becomes
                                               // empty, [first_sample] will be past [last_sample].
                                               // n.b. If removing the first pop, last_sample=size_t(-1).
-                --p->last_sample;
+                --p.last_sample;
         }
     }
 
+    // Remove empty populations.
     auto pop_is_empty = [] (Pop& p) {return (p.first_sample > p.last_sample || p.last_sample == size_t(-1));};
-
-    // Remove the empty populations from [groups_].
-    for(vector<Group>::iterator group = groups_.begin(); group != groups_.end(); ++group)
-        group->pops.erase(
-                remove_if(group->pops.begin(), group->pops.end(),
-                        [this,&pop_is_empty] (size_t p) {return pop_is_empty(pops_[p]);}),
-                group->pops.end());
-
-    // Remove the empty populations from [pops_].
-    pops_.erase(
-            remove_if(pops_.begin(), pops_.end(), pop_is_empty),
-            pops_.end());
+    for(Group& g : groups_)
+        g.pops.erase(remove_if(
+                g.pops.begin(),
+                g.pops.end(),
+                [this,&pop_is_empty] (size_t p) {return pop_is_empty(pops_[p]);}
+                ), g.pops.end());
+    pops_.erase(remove_if(
+            pops_.begin(),
+            pops_.end(),
+            pop_is_empty
+            ),  pops_.end());
 
     // Remove empty groups from [groups_].
-    groups_.erase(
-            remove_if(groups_.begin(), groups_.end(),
-                    [] (Group& g) {return g.pops.empty();}),
-            groups_.end());
+    groups_.erase(remove_if(
+            groups_.begin(),
+            groups_.end(),
+            [] (Group& g) {return g.pops.empty();}
+            ), groups_.end());
 
     // Update the support members.
     reset_sample_map();
     reset_pop_map();
     reset_group_map();
     reset_sample_id_map();
+}
+
+void MetaPopInfo::intersect_with(const vector<string>& samples) {
+    vector<size_t> common_samples;
+    for (const string& s : samples) {
+        auto itr = sample_indexes_.find(s);
+        if (itr != sample_indexes_.end())
+            common_samples.push_back(itr->second);
+    }
+    sort(common_samples.begin(), common_samples.end());
+
+    vector<size_t> rm_samples;
+    auto next_common = common_samples.begin();
+    for (size_t i=0; i< samples_.size(); ++i)
+        if (next_common != common_samples.end() && i == *next_common)
+            ++next_common;
+        else
+            rm_samples.push_back(i);
+
+    delete_samples(rm_samples);
 }
 
 void MetaPopInfo::reset_sample_id_map() {
