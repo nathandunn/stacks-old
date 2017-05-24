@@ -80,7 +80,7 @@ const size_t line_buf_size = 4096;
 // Open the given VCF file using VcfParser or VcfGzParser, depending on the
 // suffix of the file. Throws on failure.
 // (The pointee is dynamically allocated and should be deleted.)
-VcfAbstractParser* adaptive_open(const string& path);
+unique_ptr<VcfAbstractParser> adaptive_open(const string& path);
 
 } //namespace Vcf
 
