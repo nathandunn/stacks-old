@@ -1,10 +1,6 @@
 #ifndef LOCUS_READERS_H
 #define LOCUS_READERS_H
 
-#include <vector>
-#include <string>
-#include <map>
-
 #include "constants.h"
 #include "MetaPopInfo.h"
 #include "BamI.h"

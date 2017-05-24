@@ -113,6 +113,9 @@ public:
     // members [cnt, hcnt, confounded_cnt] are modified).
     int populate(map<int, LocusT*>& catalog, const vector<vector<CatMatch *> >& matches);
 
+    // Populates the PopMap based on Stacks (v2) files.
+    int populate(const map<int, LocusT*>& catalog, const unordered_map<int,vector<VcfRecord>>& cloci_records, const VcfHeader& header);
+
     // Populates the PopMap based on VCF (SNP) records.
     // The catalog is modified (LocusT must be CSLocus, and
     // members [cnt, hcnt] are modified).
@@ -260,9 +263,17 @@ int PopMap<LocusT>::populate(map<int, LocusT*> &catalog,
 }
 
 template<class LocusT>
+int PopMap<LocusT>::populate(const map<int, LocusT*>& catalog,
+                             const unordered_map<int,vector<VcfRecord>>& cloci_records,
+                             const VcfHeader& header
+                             ) {
+}
+
+template<class LocusT>
 int PopMap<LocusT>::populate(map<int, LocusT*>& catalog,
-             const vector<VcfRecord>& records,
-             const VcfHeader& header) {
+                             const vector<VcfRecord>& records,
+                             const VcfHeader& header
+                             ) {
 
     // Initalize [locus_order], [rev_locus_order].
     size_t loc_index = 0;
