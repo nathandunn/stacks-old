@@ -461,11 +461,11 @@ CSLocus* new_cslocus(const Seq& consensus, const vector<VcfRecord>& records, int
     if (!snp_records.empty()) {
         pair<string,string> haplotypes;
         for (size_t sample=0; sample<n_samples; ++sample) {
-            VcfRecord::util::build_haps(haplotypes, snp_records, sample);
-            if (haplotypes.first.empty())
-                continue;
-            ++loc->alleles[haplotypes.first];
-            ++loc->alleles[haplotypes.second];
+            if (VcfRecord::util::build_haps(haplotypes, snp_records, sample)) {
+                // Complete haplotypes.
+                ++loc->alleles[haplotypes.first];
+                ++loc->alleles[haplotypes.second];
+            }
         }
     }
 

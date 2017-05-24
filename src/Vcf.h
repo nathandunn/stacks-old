@@ -131,9 +131,8 @@ struct VcfRecord {
 
         // Builds the haplotypes of a sample over a set of (phased) records.
         // (At most one phase set is expected.)
-        // Returns a pair where `.first` is the empty string if the haplotypes
-        // were incomplete.
-        static void build_haps(pair<string,string>& haplotypes,
+        // Returns false if the haplotypes were incomplete (N's).
+        static bool build_haps(pair<string,string>& haplotypes,
                                   const vector<const VcfRecord*>& snp_records,
                                   size_t sample_index);
     };

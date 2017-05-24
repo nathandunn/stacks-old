@@ -85,22 +85,27 @@ GtLiks VcfRecord::util::parse_gt_gl(const vector<string>& alleles, const string&
     return liks;
 }
 
-void VcfRecord::util::build_haps(pair<string,string>& haplotypes, const vector<const VcfRecord*>& snp_records, size_t sample_index) {
+bool VcfRecord::util::build_haps(pair<string,string>& haplotypes, const vector<const VcfRecord*>& snp_records, size_t sample_index) {
     haplotypes.first.resize(snp_records.size(), 'N');
     haplotypes.second.resize(snp_records.size(), 'N');
 
     #ifdef DEBUG
     size_t phase_set (-1);
     #endif
+    bool complete = true;
     for (size_t i=0; i<snp_records.size(); ++i) {
         // For each SNP...
+        // Parse the genotype.
         const VcfRecord& rec = *snp_records[i];
         pair<int,int> gt = rec.parse_genotype_nochecks(rec.samples[sample_index]);
-        if (gt.first == -1) {
-            haplotypes.first.clear();
-            return;
-        }
+
         // Record the (phased) alleles.
+        if (gt.first == -1) {
+            complete = false;
+            haplotypes.first[i] = 'N';
+            haplotypes.second[i] = 'N';
+            continue;
+        }
         haplotypes.first[i] = rec.alleles[gt.first][0];
         haplotypes.second[i] = rec.alleles[gt.second][0];
 
@@ -116,6 +121,8 @@ void VcfRecord::util::build_haps(pair<string,string>& haplotypes, const vector<c
         }
         #endif
     }
+
+    return complete;
 }
 
 const VcfMeta VcfMeta::predefs::info_AD ("INFO","<ID=AD,Number=R,Type=Integer,Description=\"Total Depth for Each Allele\">");
