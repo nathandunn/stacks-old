@@ -87,6 +87,31 @@ int implement_random_snp_whitelist(map<int, CSLocus *> &, PopSum<CSLocus> *, map
  */
 map<int, CSLocus*> create_catalog(const vector<VcfRecord>& vcf_records);
 
+/*
+ * Creates a CSLocus based on a consensus sequence and a set of VCF records for
+ * the locus. The fasta identifier and all the VCF records should have the same
+ * locus ID.
+ *
+ * We observe the following rules to create the locus (@ when the value is obvious) :
+ * [sample_id] (batch number) Always set to 0.
+ * [id] @
+ * [con] the fasta sequence
+ * [len] @
+ * [loc] for denovo, this should be {"", 0, strand_plus} TODO ref-based.
+ * [snps] polymorphic positions taken from the VCF; i.e. VCF records where
+ *         ALT is "." are ignored.
+ *     [col] @
+ *     [type] always "snp_type_het"
+ *     [lratio] always 0 (this isn't used by populations).
+ *     [rank_1, 2, 3, 4] @
+ * [alleles] We fill the haplotype frequency map by reconstituting each sample's
+ *         pair of haplotypes from the phased SNP genotypes (in the VCF).
+ * [strings] @
+ * [depth] is always 0.
+ * [lnl] is always 0.
+ *
+ * Other members need not be set, c.f. `create_catalog(vector<VcfRecord>&)`.
+ */
 CSLocus* new_cslocus(const Seq& consensus, const vector<VcfRecord>& records, int id);
 
 #endif // __CATALOG_UTILS_H__

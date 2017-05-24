@@ -117,7 +117,9 @@ struct VcfRecord {
     inline string parse_gt_subfield(const string& sample, size_t index) const;
 
     // Returns (first allele, second allele), '-1' meaning no data.
+    // (The second version is for use with internal, stacks-generated files.)
     inline pair<int, int> parse_genotype(const string& sample) const;
+    inline pair<int, int> parse_genotype_nochecks(const string& sample) const;
 
     inline bool is_snp() const;
 
@@ -413,6 +415,32 @@ pair<int, int> VcfRecord::parse_genotype(const string& sample) const {
              << "'.\n";
         throw e;
     }
+
+    return genotype;
+}
+
+inline pair<int, int> VcfRecord::parse_genotype_nochecks(const string& sample) const {
+    assert(!format.empty() && format[0]=="GT");
+    assert(!sample.empty());
+
+    pair<int, int> genotype = {-1,-1};
+    if (sample[0] == '.')
+        return genotype;
+
+    const char* start = sample.c_str();
+    char* end;
+
+    // First allele.
+    genotype.first = strtol(start, &end, 10);
+    assert(end != start);
+    assert(*end == '/' || *end == '|');
+
+    // Second allele.
+    start = end;
+    ++start;
+    genotype.second = strtol(start, &end, 10);
+    assert(end != start);
+    assert(*end == ':' || *end == '\0');
 
     return genotype;
 }
