@@ -23,12 +23,11 @@ public:
 };
 
 class VcfCLocReader {
-    VcfAbstractParser* vcf_f_;
+    unique_ptr<VcfAbstractParser> vcf_f_;
     VcfRecord next_rec_;
     bool eof_;
 public:
     VcfCLocReader(const string& vcf_path);
-    ~VcfCLocReader() {if(vcf_f_) delete vcf_f_;}
 
     const VcfHeader& header() const {return vcf_f_->header();}
 

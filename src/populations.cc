@@ -203,9 +203,9 @@ int main (int argc, char* argv[]) {
 
     // We need some objects in the main scope for each mode.
     vector<vector<CatMatch *> > catalog_matches;
-    unordered_map<int,vector<VcfRecord>> *cloci_vcf_records = NULL;
-    VcfHeader                  *vcf_header  = NULL;
-    vector<VcfRecord>          *vcf_records = NULL;
+    unique_ptr<unordered_map<int,vector<VcfRecord>>> cloci_vcf_records;
+    unique_ptr<VcfHeader> vcf_header;
+    unique_ptr<vector<VcfRecord>> vcf_records;
 
     // Read the population map file, if any.
     if (not pmap_path.empty()) {
@@ -302,7 +302,7 @@ int main (int argc, char* argv[]) {
         //
         // Stacks v2 mode
         //
-        cloci_vcf_records = new unordered_map<int,vector<VcfRecord>>();
+        cloci_vcf_records.reset(new unordered_map<int,vector<VcfRecord>>());
 
         // Open the files.
         string catalog_fa_path = in_path + "batch_" + to_string(batch_id) + ".rystacks.fa.gz";
@@ -358,7 +358,7 @@ int main (int argc, char* argv[]) {
             (*cloci_vcf_records)[cloc_id] = move(records);
         }
 
-        vcf_header = new VcfHeader(reader.header());
+        vcf_header.reset(new VcfHeader(reader.header()));
 
     } else if (input_mode == InputMode::vcf) {
 
@@ -368,7 +368,7 @@ int main (int argc, char* argv[]) {
 
         // Open the VCF file
         cerr << "Opening the VCF file...\n";
-        VcfAbstractParser* parser = Vcf::adaptive_open(in_vcf_path);
+        unique_ptr<VcfAbstractParser> parser = Vcf::adaptive_open(in_vcf_path);
         if (parser == NULL) {
             cerr << "Error: Unable to open VCF file '" << in_vcf_path << "'.\n";
             throw exception();
@@ -407,7 +407,7 @@ int main (int argc, char* argv[]) {
 
         // Read the SNP records
         cerr << "Reading the VCF records...\n";
-        vcf_records = new vector<VcfRecord>();
+        vcf_records.reset(new vector<VcfRecord>());
         vector<size_t> skipped_notsnp;
         vector<size_t> skipped_filter;
 
@@ -447,8 +447,7 @@ int main (int argc, char* argv[]) {
         }
 
         catalog = create_catalog(*vcf_records);
-        vcf_header = new VcfHeader(parser->header());
-        delete parser;
+        vcf_header.reset(new VcfHeader(parser->header()));
     }
 
     //
@@ -520,18 +519,9 @@ int main (int argc, char* argv[]) {
     } else if (input_mode == InputMode::stacks2) {
         // Using Stacks v2 files.
         pmap->populate(catalog, *cloci_vcf_records, *vcf_header);
-        delete cloci_vcf_records;
-        delete vcf_header;
-        cloci_vcf_records = NULL;
-        vcf_header = NULL;
-
     } else if (input_mode == InputMode::vcf) {
         // ...or using VCF records.
         pmap->populate(catalog, *vcf_records, *vcf_header);
-        delete vcf_records;
-        delete vcf_header;
-        vcf_records = NULL;
-        vcf_header = NULL;
     }
 
     //
@@ -767,6 +757,10 @@ int main (int argc, char* argv[]) {
     if (genomic_out)
         write_genomic(catalog, pmap);
 
+    for (auto& cloc : catalog)
+        delete cloc.second;
+    delete psum;
+    delete pmap;
     log_fh.close();
 
     cerr << "Populations is done.\n";

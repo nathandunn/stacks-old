@@ -245,15 +245,15 @@ VcfGzParser::VcfGzParser(const string& path)
 
 #endif // HAVE_LIBZ
 
-VcfAbstractParser*
+unique_ptr<VcfAbstractParser>
 Vcf::adaptive_open(const string& path)
 {
     FileT filet = guess_file_type(path);
     if (filet == FileT::vcf) {
-        return new VcfParser(path);
+        return unique_ptr<VcfAbstractParser>(new VcfParser(path));
 #ifdef HAVE_LIBZ
     } else if (filet == FileT::gzvcf) {
-        return new VcfGzParser(path);
+        return unique_ptr<VcfAbstractParser>(new VcfGzParser(path));
 #endif
     } else {
         cerr << "Error: File '" << path << "' : expected '.vcf(.gz)' suffix.\n";

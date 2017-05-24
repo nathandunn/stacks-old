@@ -165,7 +165,7 @@ PopMap<LocusT>::~PopMap() {
     this->ordered_loci.clear();
     
     for (int i = 0; i < this->num_loci; i++) {
-        for (int j = 0; j < metapopinfo.samples().size(); j++)
+        for (size_t j = 0; j < metapopinfo.samples().size(); j++)
             delete this->data[i][j];
         delete [] this->data[i];
     }
