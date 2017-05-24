@@ -327,9 +327,7 @@ int main (int argc, char* argv[]) {
                 }
             }
         }
-        // Sample IDs. //TODO Get them from the VCF header.
-        for (size_t i = 0; i < mpopi.samples().size(); ++i)
-            mpopi.set_sample_id(i, i+1); //id=i+1
+        reader.set_sample_ids(mpopi);
 
         // Read the files, create the loci.
         vector<VcfRecord> records;
@@ -340,8 +338,9 @@ int main (int argc, char* argv[]) {
             int cloc_id = is_integer(records[0].chrom.c_str());
             assert(cloc_id >= 0);
 
-            // Find the corresponding fasta record. (Npte: c-loci with very low
-            // coverage could be missing from the VCF altogether.)
+            // Find the corresponding fasta record. (Note: c-loci with very low
+            // coverage might be entirely missing from the VCF; in this case
+            // ignore them.)
             int rv = fasta_f.next_seq(seq);
             while(rv != 0 && atoi(seq.id) != cloc_id)
                 rv = fasta_f.next_seq(seq);

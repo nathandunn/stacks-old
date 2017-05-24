@@ -30,6 +30,7 @@ public:
     VcfCLocReader(const string& vcf_path);
 
     const VcfHeader& header() const {return vcf_f_->header();}
+    void set_sample_ids(MetaPopInfo& mpopi) const;
 
     // Reads one locus. Returns false on EOF.
     bool read_one_locus(vector<VcfRecord>& records);
@@ -133,6 +134,13 @@ VcfCLocReader::VcfCLocReader(const string& vcf_path)
     // Read the very first record.
     if(!vcf_f_->next_record(next_rec_))
         eof_ = true;
+}
+
+inline
+void VcfCLocReader::set_sample_ids(MetaPopInfo& mpopi) const {
+    //TODO Write & retrieve actual sample IDs using the VCF header.
+    for (size_t i = 0; i < mpopi.samples().size(); ++i)
+        mpopi.set_sample_id(i, i+1); //id=i+1
 }
 
 inline
