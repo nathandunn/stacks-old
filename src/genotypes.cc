@@ -103,11 +103,11 @@ int main (int argc, char* argv[]) {
     stringstream catalog_file;
     map<int, CSLocus *> catalog;
     bool compressed = false;
-    int res;
     catalog_file << in_path << "batch_" << batch_id << ".catalog";
-    if ((res = load_loci(catalog_file.str(), catalog, 0, false, compressed)) == 0) {
-        cerr << "Unable to load the catalog '" << catalog_file.str() << "'\n";
-        return 0;
+    int res = load_loci(catalog_file.str(), catalog, 0, false, compressed);
+    if (res == 0) {
+        cerr << "Error: Unable to load the catalog '" << catalog_file.str() << "'\n";
+        throw exception();
     }
 
     //
@@ -140,7 +140,7 @@ int main (int argc, char* argv[]) {
         size_t sample_id = m[0]->sample_id;
         if (seen_samples.count(sample_id) > 0) {
             cerr << "Error: sample ID " << sample_id << " occurs twice in this data set, likely the pipeline was run incorrectly.\n";
-            return -1;
+            throw exception();
         }
         seen_samples.insert(sample_id);
         mpopi.set_sample_id(i, sample_id);
@@ -148,7 +148,7 @@ int main (int argc, char* argv[]) {
     mpopi.delete_samples(samples_to_remove);
     if (mpopi.samples().size() == 0) {
         cerr << "Error: Couln't find any matches files.\n";
-        return -1;
+        throw exception();
     }
     // [mpopi] is definitive.
     cerr << "Working on " << mpopi.samples().size() << " samples.\n";
@@ -2446,6 +2446,7 @@ write_onemap(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<string, st
     marker_types["abxac"] = "A.2";
     marker_types["abxcd"] = "A.1";
 
+
     //
     // Output the header: number of individuals followed by number of markers.
     //
@@ -2886,7 +2887,7 @@ int parse_command_line(int argc, char* argv[]) {
 void version() {
     cerr << "genotypes " << VERSION << "\n\n";
 
-    exit(0);
+    exit(1);
 }
 
 void help() {
@@ -2914,5 +2915,5 @@ void help() {
               << "  Manual corrections options:\n"
               << "    --cor_path <path>: path to file containing manual genotype corrections from a Stacks SQL database to incorporate into output.\n";
 
-    exit(0);
+    exit(1);
 }

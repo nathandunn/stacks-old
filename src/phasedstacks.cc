@@ -123,11 +123,11 @@ int main (int argc, char* argv[]) {
     stringstream catalog_file;
     map<int, CSLocus *> catalog;
     bool compressed = false;
-    int  res;
     catalog_file << cat_path << "batch_" << batch_id << ".catalog";
-    if ((res = load_loci(catalog_file.str(), catalog, 0, false, compressed)) == 0) {
-        cerr << "Unable to load the catalog '" << catalog_file.str() << "'\n";
-        return 0;
+    int res = load_loci(catalog_file.str(), catalog, 0, false, compressed);
+    if (res == 0) {
+        cerr << "Error: Unable to load the catalog '" << catalog_file.str() << "'\n";
+        throw exception();
     }
     cerr << "done.\n";
 
@@ -924,6 +924,7 @@ calc_dprime(PhasedSummary *psum)
                     psum->recomb[i][j] = false;
                 else
                     psum->recomb[i][j] = true;
+
 
                 D = freq_AB - (freq_A * freq_B);
                 // cerr << "D_AB: " << D << "; ";
@@ -1939,7 +1940,7 @@ int parse_command_line(int argc, char* argv[]) {
 void version() {
     cerr << "phasedstacks " << VERSION << "\n\n";
 
-    exit(0);
+    exit(1);
 }
 
 void help() {
@@ -1961,5 +1962,6 @@ void help() {
               << "  --minor_allele_freq: specify a minimum minor allele frequency required to process a nucleotide site (0 < a < 0.5).\n"
               << "  --min_inform_pairs: when building D' haplotype blocks, the minimum number of informative D' measures to combine two blocks (default 0.9).\n\n";
 
-    exit(0);
+
+    exit(1);
 }

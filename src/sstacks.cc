@@ -80,8 +80,8 @@ int main (int argc, char* argv[]) {
     res = load_loci(catalog_path, catalog, 0, false, compressed);
 
     if (res == 0) {
-        cerr << "Unable to parse catalog, '" << catalog_path << "'\n";
-        return 0;
+        cerr << "Error: Unable to parse catalog, '" << catalog_path << "'\n";
+        throw exception();
     }
 
     KmerHashMap kmer_map;
@@ -108,8 +108,8 @@ int main (int argc, char* argv[]) {
         res = load_loci(sample_path, sample, 2, false, compressed);
 
         if (res == 0) {
-            cerr << "Unable to parse '" << sample_path << "'\n";
-            return 0;
+            cerr << "Error: Unable to parse '" << sample_path << "'\n";
+            throw exception();
         }
 
         in_file_type = compressed == true ? FileT::gzsql : FileT::sql;
@@ -1466,7 +1466,7 @@ int parse_command_line(int argc, char* argv[]) {
 void version() {
     cerr << "sstacks " << VERSION << "\n\n";
 
-    exit(0);
+    exit(1);
 }
 
 void help() {
@@ -1490,5 +1490,5 @@ void help() {
               << "  --pe_reads: path to the sample's paired-end read sequences (if any)." << "\n"
               ;
 
-    exit(0);
+    exit(1);
 }

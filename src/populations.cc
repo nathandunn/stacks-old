@@ -171,18 +171,18 @@ int main (int argc, char* argv[]) {
         // Path exists, check that it is a directory
         if (!S_ISDIR(out_path_stat.st_mode)) {
             cerr << "Error: '" << out_path.substr(0, out_path.length()-1) << "' is not a directory.\n";
-            return -1;
+            throw exception();
         }
     } else if (mkdir(out_path.c_str(), ACCESSPERMS) != 0) {
         // Failed to create the directory.
         cerr << "Error: Failed to create directory '" << out_path << "'.\n";
-        return -1;
+        throw exception();
     }
     string log_path = out_path + out_prefix + ".populations.log";
     ofstream log_fh(log_path.c_str(), ofstream::out);
     if (log_fh.fail()) {
         cerr << "Error opening log file '" << log_path << "'\n";
-        return -1;
+        throw exception();
     }
     init_log(log_fh, argc, argv);
     log_fh << flush;
@@ -246,7 +246,7 @@ int main (int argc, char* argv[]) {
         }
         if (!dir_good) {
             cerr << "Error: Unable to locate any file in input directory '" << in_path << "'.\n";
-            return -1;
+            throw exception();
         }
 
         //
@@ -258,7 +258,7 @@ int main (int argc, char* argv[]) {
         int    res = load_loci(catalog_prefix, catalog, 0, false, compressed);
         if (res == 0) {
             cerr << "Unable to load the catalog '" << catalog_prefix << "'\n";
-            return -1;
+            throw exception();
         }
 
         //
@@ -285,7 +285,7 @@ int main (int argc, char* argv[]) {
             size_t sample_id = m[0]->sample_id;
             if (seen_samples.count(sample_id) > 0) {
                 cerr << "Error: sample ID " << sample_id << " occurs twice in this data set, likely the pipeline was run incorrectly.\n";
-                exit(0);
+                exit(1);
             }
             seen_samples.insert(sample_id);
             mpopi.set_sample_id(i, sample_id);
@@ -294,7 +294,7 @@ int main (int argc, char* argv[]) {
         mpopi.delete_samples(samples_to_remove);
         if (mpopi.samples().size() == 0) {
             cerr << "Error: Couln't find any matches files.\n";
-            return -1;
+            throw exception();
         }
         // [mpopi] is definitive.
 
@@ -371,13 +371,13 @@ int main (int argc, char* argv[]) {
         VcfAbstractParser* parser = Vcf::adaptive_open(in_vcf_path);
         if (parser == NULL) {
             cerr << "Error: Unable to open VCF file '" << in_vcf_path << "'.\n";
-            return -1;
+            throw exception();
         }
 
         parser->read_header();
         if (parser->header().samples().empty()) {
             cerr << "Error: No samples in VCF file '" << in_vcf_path << "'.\n";
-            return -1;
+            throw exception();
         }
 
         // Reconsider the MetaPopInfo in light of the VCF header.
@@ -393,7 +393,7 @@ int main (int argc, char* argv[]) {
             if (not samples_to_discard.empty()) {
                 if (samples_to_discard.size() == mpopi.samples().size()) {
                     cerr << "Error: No common samples between the population map and VCF header.\n";
-                    return -1;
+                    throw exception();
                 }
                 cerr << "Warning: of the samples listed in the population map, "
                      << samples_to_discard.size() << " could not be found in the VCF :";
@@ -448,7 +448,7 @@ int main (int argc, char* argv[]) {
         }
         if (vcf_records->size() == 0) {
             cerr << "Error: No records.\n";
-            return -1;
+            throw exception();
         }
 
         catalog = create_catalog(*vcf_records);
@@ -554,6 +554,10 @@ int main (int argc, char* argv[]) {
     log_haplotype_cnts(catalog, log_fh);
 
     apply_locus_constraints(catalog, pmap, log_fh);
+    if (pmap->loci_cnt() == 0) {
+        cerr << "Error: All loci have been filtered out.\n";
+        throw exception();
+    }
 
     log_fh << "# Distribution of population loci after applying locus constraints.\n";
     log_haplotype_cnts(catalog, log_fh);
@@ -589,7 +593,7 @@ int main (int argc, char* argv[]) {
                         cerr << "Fatal error: Unable to find model data for catalog locus " << loc->id
                              << ", sample ID " << mpopi.samples()[i].id << ", sample locus " << d->id
                              << "; likely IDs were mismatched when running pipeline.\n";
-                        exit(0);
+                        exit(1);
                     }
                     d->add_model(modres[d->id]->model);
                 }
@@ -640,6 +644,10 @@ int main (int argc, char* argv[]) {
     reduce_catalog_snps(catalog, whitelist, pmap);
     int retained = pmap->prune(blacklist);
     cerr << " retained " << retained << " loci.\n";
+    if (pmap->loci_cnt() == 0) {
+        cerr << "Error: All loci have been filtered out.\n";
+        throw exception();
+    }
 
     //
     // Merge loci that overlap on a common restriction enzyme cut site.
@@ -1016,9 +1024,6 @@ apply_locus_constraints(map<int, CSLocus *> &catalog,
     delete [] pop_tot;
     delete [] pop_order;
     delete [] samples;
-
-    if (retained == 0)
-        exit(0);
 
     return 0;
 }
@@ -2169,6 +2174,9 @@ int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
         exit(1);
     }
 
+    uint rcnt = enz.length() ? renz_cnt[enz] : 0;
+    uint rlen = enz.length() ? renz_len[enz] : 0;
+
     //
     // Count the number of markers that have enough samples to output.
     //
@@ -2179,7 +2187,14 @@ int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
     for (cit = catalog.begin(); cit != catalog.end(); cit++) {
         loc = cit->second;
 
-        num_loci += loc->len - renz_len[enz];
+        uint start = 0;
+        uint end   = loc->len;
+        if (end > rlen) {
+            for (uint n = 0; n < rcnt; n++)
+                if (strncmp(loc->con, renz[enz][n], rlen) == 0)
+                    start += renz_len[enz];
+        }
+        num_loci += end - start;
     }
     cerr << "Writing " << num_loci << " nucleotide positions to genomic file, '" << file << "'\n";
 
@@ -2193,10 +2208,6 @@ int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
     //
     map<string, vector<CSLocus *> >::iterator it;
     int  a, b;
-
-    uint  rcnt = enz.length() ? renz_cnt[enz] : 0;
-    uint  rlen = enz.length() ? renz_len[enz] : 0;
-    char *p;
 
     for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
         for (uint i = 0; i < it->second.size(); i++) {
@@ -2215,14 +2226,10 @@ int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
             // Check for the existence of the restriction enzyme cut site, mask off
             // its output.
             //
-            for (uint n = 0; n < rcnt; n++)
-                if (strncmp(loc->con, renz[enz][n], rlen) == 0)
-                    start += renz_len[enz];
-            if (start == 0) {
-                p = loc->con + (loc->len - rlen);
-                for (uint n = rcnt; n < rcnt + rcnt; n++)
-                    if (strncmp(p, renz[enz][n], rlen) == 0)
-                        end -= renz_len[enz];
+            if (end > rlen) {
+                for (uint n = 0; n < rcnt; n++)
+                    if (strncmp(loc->con, renz[enz][n], rlen) == 0)
+                        start += renz_len[enz];
             }
 
             uint k = 0;
@@ -5533,7 +5540,7 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 'v':
             version();
-            exit(0);
+            exit(1);
             break;
         case '?':
             // getopt_long already printed an error message.
@@ -5726,5 +5733,5 @@ void help() {
 
               // << "    --bootstrap_type [exact|approx]: enable bootstrap resampling for population statistics (reference genome required).\n"
 
-    exit(0);
+    exit(1);
 }

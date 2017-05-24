@@ -158,6 +158,12 @@ PopMap<LocusT>::PopMap(const MetaPopInfo& mpopi, int num_loci)
 
 template<class LocusT>
 PopMap<LocusT>::~PopMap() {
+
+    typename std::map<string, vector<LocusT *> >::iterator it;
+    for (it = this->ordered_loci.begin(); it != this->ordered_loci.end(); it++)
+        it->second.clear();
+    this->ordered_loci.clear();
+    
     for (int i = 0; i < this->num_loci; i++) {
         for (int j = 0; j < metapopinfo.samples().size(); j++)
             delete this->data[i][j];

@@ -268,7 +268,6 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
     header.add_meta(VcfMeta::predefs::format_GL);
     for(auto& s : mpopi.samples())
         header.add_sample(s.name);
-
     VcfWriter writer (path, move(header));
 
     // We need to order the SNPs taking into account overlapping loci.
@@ -291,6 +290,7 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
                 continue;
             }
             Datum** d = pmap->locus(loc->id);
+
 
             const char ref = sites[pos]->p_allele;
             const char alt = sites[pos]->q_allele;
@@ -379,7 +379,6 @@ write_vcf(map<int, CSLocus *> &catalog,
     header.add_meta(VcfMeta::predefs::format_GL);
     for(auto& s : mpopi.samples())
         header.add_sample(s.name);
-
     VcfWriter writer (path, move(header));
 
     map<string, vector<CSLocus *> >::iterator it;
@@ -501,7 +500,6 @@ write_vcf_haplotypes(map<int, CSLocus *> &catalog,
     header.add_meta(VcfMeta::predefs::format_DP);
     for(auto& s : mpopi.samples())
         header.add_sample(s.name);
-
     VcfWriter writer (path, move(header));
 
     CSLocus  *loc;
@@ -1617,6 +1615,7 @@ write_fastphase(map<int, CSLocus *> &catalog,
                 for (uint pos = 0; pos < ordered_loci.size(); pos++) {
                     loc = catalog[ordered_loci[pos].id];
                     col = loc->snps[ordered_loci[pos].snp_index]->col;
+
 
                     s = psum->locus(loc->id);
                     d = pmap->locus(loc->id);

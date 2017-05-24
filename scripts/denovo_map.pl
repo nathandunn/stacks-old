@@ -106,6 +106,14 @@ load_sql_data($log_fh, \%pops, \@parents, \@progeny, \@samples) if ($sql == true
 print $log_fh "\ndenovo_map.pl completed at ", strftime("%Y-%m-%d %H:%M:%S", (localtime(time))), "\n";
 close($log_fh);
 
+sub check_return_value {
+    my ($rv, $log_fh) = @_;
+    if ($rv != 0) {
+        my $msg = "\ndenovo_map.pl: Aborted because the last command failed. (" . $rv . ")\n";
+        print $log_fh $msg;
+        die($msg);
+    }
+}
 
 sub execute_stacks {
     my ($log_fh, $sample_id, $parents, $progeny, $samples, $sample_ids) = @_;
@@ -144,7 +152,15 @@ sub execute_stacks {
         print $log_fh "$cmd\n";
 
         if ($dry_run == false) {
-            @results = `$cmd`;
+            open($pipe_fh, "$cmd |");
+            @results = ();
+            while (<$pipe_fh>) {
+                print $log_fh $_;
+                push(@results, $_);
+            }
+            close($pipe_fh);
+            my $rv = $? >> 8;
+            check_return_value($rv, $log_fh);
 
             #
             # Pull the depth of coverage from ustacks.
@@ -159,7 +175,6 @@ sub execute_stacks {
             }
             push(@depths_of_cov, [$sample->{'file'}, $depth]);
         }
-        write_results(\@results, $log_fh);
 
         $i++;
         $sample_id++;
@@ -187,6 +202,8 @@ sub execute_stacks {
             if ($_ =~ /failed/i) { print STDERR "Catalog construction failed.\n"; exit(1); }
         }
         close($pipe_fh);
+        my $rv = $? >> 8;
+        check_return_value($rv, $log_fh);
     }
 
     #
@@ -210,6 +227,8 @@ sub execute_stacks {
             print $log_fh $_;
         }
         close($pipe_fh);
+        my $rv = $? >> 8;
+        check_return_value($rv, $log_fh);
     }
 
     if ($data_type eq "map") {
@@ -228,6 +247,8 @@ sub execute_stacks {
                 print $log_fh $_;
             }
             close($pipe_fh);
+            my $rv = $? >> 8;
+            check_return_value($rv, $log_fh);
         }
 
     } else {
@@ -243,6 +264,8 @@ sub execute_stacks {
                 print $log_fh $_;
             }
             close($pipe_fh);
+            my $rv = $? >> 8;
+            check_return_value($rv, $log_fh);
         }
     }
 }

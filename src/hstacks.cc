@@ -453,7 +453,7 @@ int call_consensus(map<int, HLocus *> &loci, set<int> &merge_list,
 
     if (!call_alleles(reads, snps, alleles)) {
         cerr << "Error calling alleles.\n";
-        exit(0);
+        exit(1);
     }
 
     return 0;
@@ -908,7 +908,7 @@ int parse_command_line(int argc, char* argv[]) {
 void version() {
     cerr << "hstacks " << VERSION << "\n\n";
 
-    exit(0);
+    exit(1);
 }
 
 void help() {
@@ -923,5 +923,5 @@ void help() {
               << "  p: enable parallel execution with num_threads threads.\n"
               << "  h: display this help messsage." << "\n\n";
 
-    exit(0);
+    exit(1);
 }

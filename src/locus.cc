@@ -73,7 +73,7 @@ Locus::populate_alleles()
     vector<SNP *>::iterator  i;
     map<string, int>::iterator j;
     string s;
-    int    k;
+    uint   k;
 
     if (this->len > strlen(this->con))
 	cerr << "Recorded locus->len: " << this->len << "; consensus length: " << strlen(this->con) << "\n";
@@ -97,9 +97,10 @@ Locus::populate_alleles()
         k = 0;
 
         for (i = this->snps.begin(); i != this->snps.end(); i++) {
-            if ((*i)->col < this->len)
+            if ((*i)->type == snp_type_het && (*i)->col < this->len && k < j->first.length()) {
                 s.replace((*i)->col, 1, 1, j->first[k]);
-            k++;
+                k++;
+            }
         }
 
         this->strings.push_back(make_pair(j->first, s));

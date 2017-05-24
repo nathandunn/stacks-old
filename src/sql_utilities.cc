@@ -1,5 +1,3 @@
-#include <unordered_map>
-
 #include "sql_utilities.h"
 
 using namespace std;
@@ -77,6 +75,7 @@ void load_catalog_matches(string sample,  vector<CatMatch *> &matches) {
         gzclose(gz_fh);
     else
         fh.close();
+    free(line);
 
     return;
 }
@@ -196,7 +195,7 @@ int load_model_results(string sample,  map<int, ModRes *> &modres) {
     else
         fh.close();
 
-    delete [] line;
+    free(line);
 
     return 1;
 }
@@ -295,7 +294,7 @@ int load_snp_calls(string sample,  map<int, SNPRes *> &snpres) {
     else
         fh.close();
 
-    delete [] line;
+    free(line);
 
     return 1;
 }
