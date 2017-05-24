@@ -85,6 +85,39 @@ GtLiks VcfRecord::util::parse_gt_gl(const vector<string>& alleles, const string&
     return liks;
 }
 
+void VcfRecord::util::build_haps(pair<string,string>& haplotypes, const vector<const VcfRecord*>& snp_records, size_t sample_index) {
+    haplotypes.first.resize(snp_records.size(), 'N');
+    haplotypes.second.resize(snp_records.size(), 'N');
+
+    #ifdef DEBUG
+    size_t phase_set (-1);
+    #endif
+    for (size_t i=0; i<snp_records.size(); ++i) {
+        // For each SNP...
+        const VcfRecord& rec = *snp_records[i];
+        pair<int,int> gt = rec.parse_genotype_nochecks(rec.samples[sample_index]);
+        if (gt.first == -1) {
+            haplotypes.first.clear();
+            return;
+        }
+        // Record the (phased) alleles.
+        haplotypes.first[i] = rec.alleles[gt.first][0];
+        haplotypes.second[i] = rec.alleles[gt.second][0];
+
+        #ifdef DEBUG
+        // Check that there is only one phase set.
+        assert(rec.format[1] == "PS");
+        if (gt.first != gt.second) {
+            size_t ps = stoi(rec.parse_gt_subfield(rec.samples[i], 1));
+            if (phase_set == size_t(-1))
+                phase_set = ps;
+            else
+                assert(ps == phase_set);
+        }
+        #endif
+    }
+}
+
 const VcfMeta VcfMeta::predefs::info_AD ("INFO","<ID=AD,Number=R,Type=Integer,Description=\"Total Depth for Each Allele\">");
 const VcfMeta VcfMeta::predefs::info_AF ("INFO","<ID=AF,Number=A,Type=Float,Description=\"Allele Frequency\">");
 const VcfMeta VcfMeta::predefs::info_DP ("INFO","<ID=DP,Number=1,Type=Integer,Description=\"Total Depth\">");
