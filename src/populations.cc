@@ -30,6 +30,8 @@
 
 #include "MetaPopInfo.h"
 #include "export_formats.h"
+#include "locus_readers.h"
+#include "gzFasta.h"
 
 #include "populations.h"
 
@@ -201,6 +203,7 @@ int main (int argc, char* argv[]) {
 
     // We need some objects in the main scope for each mode.
     vector<vector<CatMatch *> > catalog_matches;
+    unordered_map<int,vector<VcfRecord>> *cloci_vcf_records = NULL;
     VcfHeader                  *vcf_header  = NULL;
     vector<VcfRecord>          *vcf_records = NULL;
 
@@ -295,6 +298,68 @@ int main (int argc, char* argv[]) {
         }
         // [mpopi] is definitive.
 
+    } else if (input_mode == InputMode::stacks2) {
+        //
+        // Stacks v2 mode
+        //
+        cloci_vcf_records = new unordered_map<int,vector<VcfRecord>>();
+
+        // Open the files.
+        string catalog_fa_path = in_path + "batch_" + to_string(batch_id) + ".rystacks.fa.gz";
+        string catalog_vcf_path = in_path + "batch_" + to_string(batch_id) + ".rystacks.vcf";
+        GzFasta fasta_f (catalog_fa_path);
+        VcfCLocReader reader (catalog_vcf_path);
+
+        // Create the population map or check that all samples have data.
+        if (pmap_path.empty()) {
+            cerr << "No population map specified, using all samples...\n";
+            mpopi.init_names(reader.header().samples());
+        } else {
+            size_t n_samples_before = mpopi.samples().size();
+            mpopi.intersect_with(reader.header().samples());
+            size_t n_rm_samples = n_samples_before - mpopi.samples().size();
+            if (n_rm_samples > 0) {
+                cerr << "Warning: No genotype data exists for " << n_rm_samples
+                     << " of the samples listed in the population map.\n";
+                if (mpopi.samples().empty()) {
+                    cerr << "Error: No more samples.\n";
+                    throw exception();
+                }
+            }
+        }
+        // Sample IDs. //TODO Get them from the VCF header.
+        for (size_t i = 0; i < mpopi.samples().size(); ++i)
+            mpopi.set_sample_id(i, i+1); //id=i+1
+
+        // Read the files, create the loci.
+        vector<VcfRecord> records;
+        Seq seq;
+        while (reader.read_one_locus(records)) {
+            // Get the current locus ID.
+            assert(!records.empty());
+            int cloc_id = is_integer(records[0].chrom.c_str());
+            assert(cloc_id >= 0);
+
+            // Find the corresponding fasta record. (Npte: c-loci with very low
+            // coverage could be missing from the VCF altogether.)
+            int rv = fasta_f.next_seq(seq);
+            while(rv != 0 && atoi(seq.id) != cloc_id)
+                rv = fasta_f.next_seq(seq);
+            if (rv == 0) {
+                cerr << "Error: files are discordant, maybe trucated: '"
+                     << catalog_fa_path << "' and '" << catalog_vcf_path << "'.\n";
+                throw exception();
+            }
+
+            // Create the CSLocus.
+            catalog.insert({cloc_id, new_cslocus(seq, records, cloc_id)});
+
+            // Save the records (they are needed for the PopMap object).
+            (*cloci_vcf_records)[cloc_id] = move(records);
+        }
+
+        vcf_header = new VcfHeader(reader.header());
+
     } else if (input_mode == InputMode::vcf) {
 
         //
@@ -337,13 +402,13 @@ int main (int argc, char* argv[]) {
                 cerr << "\n";
                 mpopi.delete_samples(samples_to_discard);
             }
-
-            // Create arbitrary sample IDs.
-            for (size_t i = 0; i < mpopi.samples().size(); ++i)
-                mpopi.set_sample_id(i, i+1); //id=i+1
-
-            // [mpopi] is definitive.
         }
+
+        // Create arbitrary sample IDs.
+        for (size_t i = 0; i < mpopi.samples().size(); ++i)
+            mpopi.set_sample_id(i, i+1); //id=i+1
+
+        // [mpopi] is definitive.
 
         // Read the SNP records
         cerr << "Reading the VCF records...\n";
@@ -456,6 +521,14 @@ int main (int argc, char* argv[]) {
             for(vector<CatMatch*>::iterator match = sample->begin(); match != sample->end(); ++match)
                 delete *match;
         catalog_matches.clear();
+
+    } else if (input_mode == InputMode::stacks2) {
+        // Using Stacks v2 files.
+        pmap->populate(catalog, *cloci_vcf_records, *vcf_header);
+        delete cloci_vcf_records;
+        delete vcf_header;
+        cloci_vcf_records = NULL;
+        vcf_header = NULL;
 
     } else if (input_mode == InputMode::vcf) {
         // ...or using VCF records.

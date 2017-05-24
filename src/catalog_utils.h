@@ -87,4 +87,6 @@ int implement_random_snp_whitelist(map<int, CSLocus *> &, PopSum<CSLocus> *, map
  */
 map<int, CSLocus*> create_catalog(const vector<VcfRecord>& vcf_records);
 
+CSLocus* new_cslocus(const Seq& consensus, const vector<VcfRecord>& records, int id);
+
 #endif // __CATALOG_UTILS_H__

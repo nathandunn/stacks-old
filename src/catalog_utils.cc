@@ -415,3 +415,6 @@ map<int, CSLocus*> create_catalog(const vector<VcfRecord>& records) {
 
     return catalog;
 }
+
+CSLocus* new_cslocus(const Seq& consensus, const vector<VcfRecord>& records, int id) {
+}
