@@ -368,7 +368,8 @@ map<int, CSLocus*> create_catalog(const vector<VcfRecord>& records) {
     for (size_t i = 0; i < records.size(); ++i) {
         const VcfRecord& rec = records[i];
 
-        CSLocus* loc = catalog.insert(make_pair(i, new CSLocus())).first->second;
+        CSLocus* loc = new CSLocus();
+        catalog.insert(make_pair(i, loc));
         loc->sample_id = 0;
         loc->id = i;
         loc->len = 1;
@@ -417,4 +418,96 @@ map<int, CSLocus*> create_catalog(const vector<VcfRecord>& records) {
 }
 
 CSLocus* new_cslocus(const Seq& consensus, const vector<VcfRecord>& records, int id) {
+    CSLocus* loc = new CSLocus();
+    size_t n_samples = records.at(0).samples.at(0).size();
+
+    // sample_id
+    loc->sample_id = 0;
+
+    // id
+    loc->id = id;
+
+    // con + len
+    assert(consensus.seq != NULL);
+    loc->add_consensus(consensus.seq);
+
+    // loc
+    loc->loc = PhyLoc("", 0, strand_plus);
+
+    // snps
+    vector<const VcfRecord*> snp_records;
+    for (auto& rec : records) {
+        if (rec.alleles.size() > 1) {
+            snp_records.push_back(&rec);
+            assert(rec.is_snp());
+        }
+    }
+    for (const VcfRecord* rec : snp_records) {
+        SNP* snp = new SNP();
+        loc->snps.push_back(snp);
+        snp->type = snp_type_het;
+        snp->col = rec->pos;
+        snp->rank_1 = rec->alleles[0][0]; // N.B. the VCF parser forbids empty alleles.
+        snp->rank_2 = rec->alleles[1][0];
+        if (rec->alleles.size() >= 3) {
+            snp->rank_3 = rec->alleles[2][0];
+            if (rec->alleles.size() == 4)
+                snp->rank_4 = rec->alleles[3][0];
+        }
+        snp->lratio = 0.0;
+    }
+
+    // alleles
+    if (!snp_records.empty()) {
+        pair<string,string> sample_haps;
+        sample_haps.first.resize(snp_records.size(), '?');
+        sample_haps.second.resize(snp_records.size(), '?');
+        for (size_t sample=0; sample<n_samples; ++sample) {
+            // For each sample.
+            bool incomplete = false;
+            #ifdef DEBUG
+            size_t phase_set (-1);
+            #endif
+            for (size_t i=0; i<snp_records.size(); ++i) {
+                // For each SNP of the locus.
+                const VcfRecord& rec = *snp_records[i];
+                pair<int,int> gt = rec.parse_genotype_nochecks(rec.samples[sample]);
+                if (gt.first == -1) {
+                    incomplete = true;
+                    break;
+                }
+                // Record the (phased) alleles.
+                sample_haps.first[i] = rec.alleles[gt.first][0];
+                sample_haps.second[i] = rec.alleles[gt.second][0];
+
+                #ifdef DEBUG
+                // Check that the phase set is consistent across the locus.
+                assert(rec.format[1] == "PS");
+                if (gt.first != gt.second) {
+                    size_t ps = stoi(rec.parse_gt_subfield(rec.samples[i], 1));
+                    if (phase_set == size_t(-1))
+                        phase_set = ps;
+                    else
+                        assert(ps == phase_set);
+                }
+                #endif
+            }
+            if (incomplete)
+                continue;
+            // Record the two haplotypes of the sample.
+            ++loc->alleles[sample_haps.first];
+            ++loc->alleles[sample_haps.second];
+        }
+    }
+
+    // strings
+    loc->populate_alleles();
+
+    // depth
+    loc->depth = 0;
+
+    // lnl
+    loc->lnl = 0;
+
+    return loc;
 }
