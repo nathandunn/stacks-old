@@ -386,21 +386,16 @@ int main (int argc, char* argv[]) {
             mpopi.init_names(parser->header().samples());
         } else {
             // Intersect the samples present in the population map and the VCF.
-            vector<size_t> samples_to_discard;
-            for (size_t i=0; i<mpopi.samples().size(); ++i)
-                if (not parser->header().sample_indexes().count(mpopi.samples()[i].name))
-                    samples_to_discard.push_back(i);
-            if (not samples_to_discard.empty()) {
-                if (samples_to_discard.size() == mpopi.samples().size()) {
-                    cerr << "Error: No common samples between the population map and VCF header.\n";
+            size_t n_samples_before = mpopi.samples().size();
+            mpopi.intersect_with(parser->header().samples());
+            size_t n_rm_samples = n_samples_before - mpopi.samples().size();
+            if (n_rm_samples > 0) {
+                cerr << "Warning: Of the samples listed in the population map, "
+                     << n_rm_samples << " could not be found in the VCF :";
+                if (mpopi.samples().empty()) {
+                    cerr << "Error: No more samples.\n";
                     throw exception();
                 }
-                cerr << "Warning: of the samples listed in the population map, "
-                     << samples_to_discard.size() << " could not be found in the VCF :";
-                for (const size_t& s : samples_to_discard)
-                    cerr << " " << mpopi.samples()[s].name;
-                cerr << "\n";
-                mpopi.delete_samples(samples_to_discard);
             }
         }
 
