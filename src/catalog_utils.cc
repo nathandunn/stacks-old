@@ -459,44 +459,13 @@ CSLocus* new_cslocus(const Seq& consensus, const vector<VcfRecord>& records, int
 
     // alleles
     if (!snp_records.empty()) {
-        pair<string,string> sample_haps;
-        sample_haps.first.resize(snp_records.size(), '?');
-        sample_haps.second.resize(snp_records.size(), '?');
+        pair<string,string> haplotypes;
         for (size_t sample=0; sample<n_samples; ++sample) {
-            // For each sample.
-            bool incomplete = false;
-            #ifdef DEBUG
-            size_t phase_set (-1);
-            #endif
-            for (size_t i=0; i<snp_records.size(); ++i) {
-                // For each SNP of the locus.
-                const VcfRecord& rec = *snp_records[i];
-                pair<int,int> gt = rec.parse_genotype_nochecks(rec.samples[sample]);
-                if (gt.first == -1) {
-                    incomplete = true;
-                    break;
-                }
-                // Record the (phased) alleles.
-                sample_haps.first[i] = rec.alleles[gt.first][0];
-                sample_haps.second[i] = rec.alleles[gt.second][0];
-
-                #ifdef DEBUG
-                // Check that the phase set is consistent across the locus.
-                assert(rec.format[1] == "PS");
-                if (gt.first != gt.second) {
-                    size_t ps = stoi(rec.parse_gt_subfield(rec.samples[i], 1));
-                    if (phase_set == size_t(-1))
-                        phase_set = ps;
-                    else
-                        assert(ps == phase_set);
-                }
-                #endif
-            }
-            if (incomplete)
+            VcfRecord::util::build_haps(haplotypes, snp_records, sample);
+            if (haplotypes.first.empty())
                 continue;
-            // Record the two haplotypes of the sample.
-            ++loc->alleles[sample_haps.first];
-            ++loc->alleles[sample_haps.second];
+            ++loc->alleles[haplotypes.first];
+            ++loc->alleles[haplotypes.second];
         }
     }
 

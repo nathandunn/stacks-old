@@ -128,6 +128,14 @@ struct VcfRecord {
         static string fmt_gt_gl(const vector<string>& alleles, const GtLiks& liks);
         static GtLiks parse_gt_gl(const vector<string>& alleles, const string& gl);
         static size_t n_genotypes(size_t n_alleles) {return (n_alleles*(n_alleles+1))/2;}
+
+        // Builds the haplotypes of a sample over a set of (phased) records.
+        // (At most one phase set is expected.)
+        // Returns a pair where `.first` is the empty string if the haplotypes
+        // were incomplete.
+        static void build_haps(pair<string,string>& haplotypes,
+                                  const vector<const VcfRecord*>& snp_records,
+                                  size_t sample_index);
     };
 };
 
