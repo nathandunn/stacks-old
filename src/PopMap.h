@@ -330,15 +330,29 @@ void PopMap<LocusT>::populate(const map<int, LocusT*>& catalog,
                     continue;
                 }
 
-                pair<int,int> gt = rec->parse_genotype_nochecks(rec->samples[sample_vcf_i]);
-                if (gt.first == -1) {
-                    model[col] = 'U';
+                const string& gt_str = rec->samples[sample_vcf_i];
+                if (rec->alleles.size() == 1) {
+                    // Monomorphic site.
+                    assert(rec->format.size() == 1 && rec->format[0] == "DP"); // Only the samples overall depths are given.
+                    if (gt_str == ".") {
+                        model[col] = 'U';
+                    } else {
+                        if (no_data)
+                            no_data = false;
+                        model[col] = 'O';
+                    }
                 } else {
-                    if (no_data)
-                        no_data = false;
-                    model[col] = gt.first == gt.second ? 'O' : 'E';
+                    // Polymorphic site.
+                    assert(rec->alleles.size() >= 2);
+                    pair<int,int> gt = rec->parse_genotype_nochecks(gt_str);
+                    if (gt.first == -1) {
+                        model[col] = 'U';
+                    } else {
+                        if (no_data)
+                            no_data = false;
+                        model[col] = gt.first == gt.second ? 'O' : 'E';
+                    }
                 }
-
                 ++rec;
             }
             assert(rec == cloc_records.end());
