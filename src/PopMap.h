@@ -114,7 +114,7 @@ public:
     int populate(map<int, LocusT*>& catalog, const vector<vector<CatMatch *> >& matches);
 
     // Populates the PopMap based on Stacks (v2) files.
-    int populate(const map<int, LocusT*>& catalog, const unordered_map<int,vector<VcfRecord>>& cloci_records, const VcfHeader& header);
+    void populate(const map<int, LocusT*>& catalog, const unordered_map<int,vector<VcfRecord>>& cloci_records, const VcfHeader& header);
 
     // Populates the PopMap based on VCF (SNP) records.
     // The catalog is modified (LocusT must be CSLocus, and
@@ -269,10 +269,103 @@ int PopMap<LocusT>::populate(map<int, LocusT*> &catalog,
 }
 
 template<class LocusT>
-int PopMap<LocusT>::populate(const map<int, LocusT*>& catalog,
+void PopMap<LocusT>::populate(const map<int, LocusT*>& catalog,
                              const unordered_map<int,vector<VcfRecord>>& cloci_records,
                              const VcfHeader& header
                              ) {
+
+    // Initalize [locus_order], [rev_locus_order].
+    size_t i = 0;
+    for (auto& cloc : catalog) {
+        locus_order[cloc.second->id] = i;
+        rev_locus_order[i] = cloc.second->id;
+        ++i;
+    }
+
+    // Initialize [ordered_loci].
+    order_loci(catalog);
+
+    /*
+     * Fill the PopMap.
+     *
+     * We observe the following rules to create the Datums (@ when the value
+     * is obvious) :
+     * [id] the c-locus ID.
+     * [len] the full length of the c-locus
+     * [model] @
+     * [cigar] is left to NULL.
+     * [obshap] haplotypes, relative to [model].
+     * [tot_depth], [depths] set to 0 as they don't make sense for
+     *     variable-coverage data.
+     * [lnl] is set to 0.
+     *
+     * Other members need not be set, c.f. `populate(vector<VcfRecord>&)`.
+     */
+
+    for (auto& cloc_pair : catalog) {
+        const LocusT& cloc = *cloc_pair.second;
+        const vector<VcfRecord>& cloc_records = cloci_records.at(cloc.id);
+
+        vector<const VcfRecord*> snp_records;
+        for (auto& rec : cloc_records) {
+            if (rec.alleles.size() > 1) {
+                assert(rec.is_snp());
+                snp_records.push_back(&rec);
+            }
+        }
+
+        string model;
+        model.resize(cloc.len, 'U');
+        pair<string,string> obshaps;
+        for (size_t sample=0; sample<metapopinfo.samples().size(); ++sample) {
+            size_t sample_vcf_i = header.sample_indexes().at(metapopinfo.samples()[sample].name);
+            bool no_data = true;
+
+            // Get the sample's model string.
+            auto rec = cloc_records.begin();
+            for (size_t col=0; col<cloc.len; ++col) {
+                if (rec->pos != col) {
+                    // No VCF record for this column, skip it.
+                    assert(model[col] == 'U'); // Position never changes as it's missing for all samples.
+                    continue;
+                }
+
+                pair<int,int> gt = rec->parse_genotype_nochecks(rec->samples[sample_vcf_i]);
+                if (gt.first == -1) {
+                    model[col] = 'U';
+                } else {
+                    if (no_data)
+                        no_data = false;
+                    model[col] = gt.first == gt.second ? 'O' : 'E';
+                }
+
+                ++rec;
+            }
+            assert(rec == cloc_records.end());
+
+            if (!no_data) {
+                // Create the Datum (see rules above).
+                Datum* d = new Datum();
+                data[locus_index(cloc.id)][sample] = d;
+
+                d->id = cloc.id;
+                d->len = cloc.len;
+                d->model = new char[cloc.len+1];
+                strncpy(d->model, model.c_str(), cloc.len+1);
+                d->cigar = NULL;
+                VcfRecord::util::build_haps(obshaps, snp_records, sample_vcf_i);
+                assert(obshaps.first.length() == snp_records.size());
+                for (size_t i=0; i<2; ++i)
+                    d->obshap.push_back(new char[snp_records.size()+1]);
+                strncpy(d->obshap[0], obshaps.first.c_str(), snp_records.size()+1);
+                strncpy(d->obshap[1], obshaps.second.c_str(), snp_records.size()+1);
+                d->tot_depth = 0;
+                for (size_t i=0; i<2; ++i)
+                    d->depth.push_back(0);
+                d->lnl = 0;
+            }
+        }
+    }
 }
 
 template<class LocusT>
@@ -307,10 +400,10 @@ int PopMap<LocusT>::populate(map<int, LocusT*>& catalog,
      *     If one of a sample's VCF alleles is missing ('.') or has an index
      *     corresponding to the special '*' allele, the Datum* is left to NULL.
      *
+     * [cigar] is left to NULL. (Updated May 24, 2017. It used not to exist.)
+     *
      * When no depth information is available, [tot_depth] and the [depths]
      * of all alleles are set to 0.
-     * (n.b. the parsing of depth information in VCF is not implemented as
-     * of Mar 21, 2016.)
      *
      * When no likelihood information is available, [lnl] is set to 0.
      * (n.b. the parsing of depth information in VCF is not implemented as
