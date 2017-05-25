@@ -113,7 +113,7 @@ bool VcfRecord::util::build_haps(pair<string,string>& haplotypes, const vector<c
         // Check that there is only one phase set.
         assert(rec.format[1] == "PS");
         if (gt.first != gt.second) {
-            size_t ps = stoi(rec.parse_gt_subfield(rec.samples[i], 1));
+            size_t ps = stoi(rec.parse_gt_subfield(rec.samples[sample_index], 1));
             if (phase_set == size_t(-1))
                 phase_set = ps;
             else
