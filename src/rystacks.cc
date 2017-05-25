@@ -194,8 +194,13 @@ bool process_one_locus(CLocReadSet&& loc) {
 
     CLocAlnSet fw_aln_loc (loc.mpopi(), loc.id());
     fw_aln_loc.ref(DNASeq4(loc.reads().at(0).seq));
-    for (SRead& r : loc.reads())
+    for (SRead& r : loc.reads()) {
+        if (r.seq.length() != fw_aln_loc.ref().length()) {
+            cerr << "DEBUG: Error: Can't handle reads of different legnths.\n"; //xxx
+            throw exception();
+        }
         fw_aln_loc.add(SAlnRead(move((Read&)r), {{'M',r.seq.length()}}, r.sample));
+    }
 
     //
     // Merge the forward & paired-end contigs.
