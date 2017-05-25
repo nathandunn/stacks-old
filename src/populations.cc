@@ -332,6 +332,9 @@ int main (int argc, char* argv[]) {
         // Read the files, create the loci.
         vector<VcfRecord> records;
         Seq seq;
+        seq.id   = new char[id_len];
+        seq.seq  = new char[max_len];
+        seq.qual = new char[max_len];
         while (reader.read_one_locus(records)) {
             // Get the current locus ID.
             assert(!records.empty());
