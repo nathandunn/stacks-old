@@ -696,7 +696,9 @@ double MarukiLowModel::calc_dimorph_lnl(double freq_MM, double freq_Mm, double f
     double lnl = 0.0;
     // Sum over samples.
     for (const LikData& s_liks : liks)
-        lnl += calc_ln_weighted_sum(freq_MM, freq_Mm, freq_mm, s_liks);
+        if (s_liks.has_data)
+            // If !has_data, the sum is 1 and its log 0.
+            lnl += calc_ln_weighted_sum(freq_MM, freq_Mm, freq_mm, s_liks);
     assert(lnl <= 0.0);
     return lnl;
 }
@@ -801,7 +803,7 @@ SiteCall MarukiLowModel::call(SiteCounts&& depths) const {
             const Counts<Nt2>& sdepths = depths.samples[sample];
             size_t dp = sdepths.sum();
             if (dp == 0) {
-                liks.push_back(LikData(0.0, 0.0, 0.0));
+                liks.push_back(LikData());
                 continue;
             }
 
@@ -913,6 +915,9 @@ SiteCall MarukiLowModel::call(SiteCounts&& depths) const {
         double log_f_MM = log(freq_MM);
         double log_f_Mm = log(freq_Mm);
         double log_f_mm = log(freq_mm);
+        size_t gt_MM = GtLiks::gt_index(nt_M, nt_M);
+        size_t gt_Mm = GtLiks::gt_index(nt_M, nt_m);
+        size_t gt_mm = GtLiks::gt_index(nt_m, nt_m);
         for (size_t sample=0; sample<n_samples; ++sample) {
             const LikData& s_liks = liks[sample];
             SampleCall& s_call = sample_calls[sample];
@@ -931,9 +936,9 @@ SiteCall MarukiLowModel::call(SiteCounts&& depths) const {
                 lnl_Mm = 0.0;
             if (lnl_mm > 0.0)
                 lnl_mm = 0.0;
-            s_call.lnls().set(nt_M, nt_M, lnl_MM);
-            s_call.lnls().set(nt_M, nt_m, lnl_Mm);
-            s_call.lnls().set(nt_m, nt_m, lnl_mm);
+            s_call.lnls().set(gt_MM, lnl_MM);
+            s_call.lnls().set(gt_Mm, lnl_Mm);
+            s_call.lnls().set(gt_mm, lnl_mm);
 
             array<pair<double,pair<Nt2,Nt2>>,3> lnls {{
                 {lnl_MM, {nt_M,nt_M}},
