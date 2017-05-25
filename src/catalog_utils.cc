@@ -419,7 +419,6 @@ map<int, CSLocus*> create_catalog(const vector<VcfRecord>& records) {
 
 CSLocus* new_cslocus(const Seq& consensus, const vector<VcfRecord>& records, int id) {
     CSLocus* loc = new CSLocus();
-    size_t n_samples = records.at(0).samples.at(0).size();
 
     // sample_id
     loc->sample_id = 0;
@@ -460,7 +459,7 @@ CSLocus* new_cslocus(const Seq& consensus, const vector<VcfRecord>& records, int
     // alleles
     if (!snp_records.empty()) {
         pair<string,string> haplotypes;
-        for (size_t sample=0; sample<n_samples; ++sample) {
+        for (size_t sample=0; sample<records.at(0).samples.size(); ++sample) {
             if (VcfRecord::util::build_haps(haplotypes, snp_records, sample)) {
                 // Complete haplotypes.
                 ++loc->alleles[haplotypes.first];
