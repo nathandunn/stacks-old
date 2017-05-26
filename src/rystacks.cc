@@ -357,22 +357,6 @@ void write_one_locus(
     const MetaPopInfo& mpopi = aln_loc.mpopi();
 
     //
-    // Fasta output.
-    //
-
-    // Determine the number of samples that have reads for this locus.
-    set<size_t> loc_samples;
-    for (const SAlnRead& r : aln_loc.reads())
-        loc_samples.insert(r.sample);
-
-    // Write the fasta record.
-    gzputs(o_gzfasta_f, ">");
-    gzputs(o_gzfasta_f, (to_string(loc_id) + " NS=" + to_string(loc_samples.size())).c_str());
-    gzputs(o_gzfasta_f, "\n");
-    gzputs(o_gzfasta_f, ref.str().c_str());
-    gzputs(o_gzfasta_f, "\n");
-
-    //
     // Vcf output.
     //
     assert(calls.size() == ref.length());
@@ -540,6 +524,22 @@ void write_one_locus(
         // Write the record.
         o_vcf_f->write_record(rec);
     }
+
+    //
+    // Fasta output.
+    //
+
+    // Determine the number of samples that have reads for this locus.
+    set<size_t> loc_samples;
+    for (const SAlnRead& r : aln_loc.reads())
+        loc_samples.insert(r.sample);
+
+    // Write the fasta record.
+    gzputs(o_gzfasta_f, ">");
+    gzputs(o_gzfasta_f, (to_string(loc_id) + " NS=" + to_string(loc_samples.size())).c_str());
+    gzputs(o_gzfasta_f, "\n");
+    gzputs(o_gzfasta_f, ref.str().c_str());
+    gzputs(o_gzfasta_f, "\n");
 
     //
     // Models/tsv output.
