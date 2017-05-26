@@ -369,15 +369,20 @@ void PopMap<LocusT>::populate(map<int, LocusT*>& catalog,
                 d->model = new char[cloc.len+1];
                 strncpy(d->model, model.c_str(), cloc.len+1);
                 d->cigar = NULL;
-                VcfRecord::util::build_haps(obshaps, snp_records, sample_vcf_i);
-                assert(obshaps.first.length() == snp_records.size());
-                for (size_t i=0; i<2; ++i)
-                    d->obshap.push_back(new char[snp_records.size()+1]);
-                strncpy(d->obshap[0], obshaps.first.c_str(), snp_records.size()+1);
-                strncpy(d->obshap[1], obshaps.second.c_str(), snp_records.size()+1);
-                d->tot_depth = 0;
-                for (size_t i=0; i<2; ++i)
+                if (snp_records.empty()) {
+                    d->obshap.push_back(new char[10]);
+                    strncpy(d->obshap[0], "consensus", 10);
+                } else {
+                    VcfRecord::util::build_haps(obshaps, snp_records, sample_vcf_i);
+                    assert(obshaps.first.length() == snp_records.size());
+                    for (size_t i=0; i<2; ++i)
+                        d->obshap.push_back(new char[snp_records.size()+1]);
+                    strncpy(d->obshap[0], obshaps.first.c_str(), snp_records.size()+1);
+                    strncpy(d->obshap[1], obshaps.second.c_str(), snp_records.size()+1);
+                }
+                for (size_t i=0; i<d->obshap.size(); ++i)
                     d->depth.push_back(0);
+                d->tot_depth = 0;
                 d->lnl = 0;
             }
         }
