@@ -114,7 +114,7 @@ public:
     int populate(map<int, LocusT*>& catalog, const vector<vector<CatMatch *> >& matches);
 
     // Populates the PopMap based on Stacks (v2) files.
-    void populate(const map<int, LocusT*>& catalog, const unordered_map<int,vector<VcfRecord>>& cloci_records, const VcfHeader& header);
+    void populate(map<int, LocusT*>& catalog, const unordered_map<int,vector<VcfRecord>>& cloci_records, const VcfHeader& header);
 
     // Populates the PopMap based on VCF (SNP) records.
     // The catalog is modified (LocusT must be CSLocus, and
@@ -269,7 +269,7 @@ int PopMap<LocusT>::populate(map<int, LocusT*> &catalog,
 }
 
 template<class LocusT>
-void PopMap<LocusT>::populate(const map<int, LocusT*>& catalog,
+void PopMap<LocusT>::populate(map<int, LocusT*>& catalog,
                              const unordered_map<int,vector<VcfRecord>>& cloci_records,
                              const VcfHeader& header
                              ) {
@@ -303,7 +303,7 @@ void PopMap<LocusT>::populate(const map<int, LocusT*>& catalog,
      */
 
     for (auto& cloc_pair : catalog) {
-        const LocusT& cloc = *cloc_pair.second;
+        LocusT& cloc = *cloc_pair.second;
         const vector<VcfRecord>& cloc_records = cloci_records.at(cloc.id);
 
         vector<const VcfRecord*> snp_records;
@@ -361,6 +361,8 @@ void PopMap<LocusT>::populate(const map<int, LocusT*>& catalog,
                 // Create the Datum (see rules above).
                 Datum* d = new Datum();
                 data[locus_index(cloc.id)][sample] = d;
+                ++cloc.cnt;
+                ++cloc.hcnt;
 
                 d->id = cloc.id;
                 d->len = cloc.len;
