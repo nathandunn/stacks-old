@@ -5224,7 +5224,7 @@ int load_marker_column_list(string path, map<int, set<int> > &list) {
     return 0;
 }
 
-bool hap_compare(pair<string, int> a, pair<string, int> b) {
+bool hap_compare(const pair<string, int>& a, const pair<string, int>& b) {
     return (a.second > b.second);
 }
 

@@ -117,7 +117,7 @@ void log_snps_per_loc_distrib(ostream&, map<int, CSLocus*>&);
 //int  load_snp_calls(string,  PopMap<CSLocus> *); //no implementation
 
 //bool compare_pop_map(pair<int, string>, pair<int, string>); //no implementation; the function is in [sql_utilities.h]
-bool hap_compare(pair<string, int>, pair<string, int>);
+bool hap_compare(const pair<string,int>&, const pair<string,int>&);
 
 void vcfcomp_simplify_pmap (map<int, CSLocus*>& catalog, PopMap<CSLocus>* pmap);
 
