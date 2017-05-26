@@ -276,7 +276,7 @@ bool process_one_locus(CLocReadSet&& loc) {
                 for (size_t col : het_cols) {
                     Nt4 nt = read.seq[col];
                     if (nt == Nt4::n || !calls[col].alleles().count(nt))
-                        // Incomplete haplotype. //TODO This will cause problems: no haps when there are hets, see check below.
+                        // Incomplete haplotype. //TODO This will cause problems: no haps when there are hets (e.g. shorter reads).
                         break;
                     read_hap.push_back(Nt2(nt));
                 }
@@ -295,13 +295,48 @@ bool process_one_locus(CLocReadSet&& loc) {
 
             // Record the phase data.
             if (s_sample_haps.size() < 2) {
-                cerr << "DEBUG: Oops, Sample is heterozygote for the locus but has <2 haplotype(s).\n";
+                // Issues because of incomplete haplotypes.
+                cerr << "DEBUG: Oops, Sample is heterozygous for the locus but has <2 haplotype(s).\n"; //xxx
                 throw exception();
             }
             for (size_t i=0; i<het_cols.size(); ++i) {
                 size_t col = het_cols[i];
-                PhasedHet ph {het_cols[0], s_sample_haps[0].second[i], s_sample_haps[1].second[i]};
+                Nt2 left_allele = s_sample_haps[0].second[i];
+                Nt2 right_allele = s_sample_haps[1].second[i];
+                PhasedHet ph {het_cols[0], left_allele, right_allele};
                 phase_data[sample].insert({col, ph});
+
+                if (left_allele == right_allele) {
+                    //
+                    // The genotype of this sample at this position was called to
+                    // be a heterozygote, but the two most abundant haplotypes actually
+                    // agree on the allele at this position.
+                    // Real examples:
+                    // haplos TTG-ATG-AGA with depths 4-4-3 (issue with the 2nd SNP)
+                    // haplos TG-CG-CT-TT with depths 6-6-3-2 (issue with the 2nd SNP)
+                    //
+                    // This means that tere is a fundamental problem with the calls
+                    // for this sample. We delete its data altoghether, so that it
+                    // will appear as "." in the VCF.
+                    //
+                    // N.B. Global coverage and the fixed/polymorphism call still
+                    // account for this sample, which can make those records look
+                    // like they are inconsistent.
+                    //
+                    // PCR duplicates, and possibly overmerging, are possible
+                    // sources for such cases.
+                    //
+                    // I originally noticed this because 0|0 and 1|1 genotypes
+                    // were popping up in the VCF (instead of 0/0 and 1/1, as it
+                    // doesn't make sense to phase homozygote positions). In all
+                    // cases there were 0/1's converted to 'homozygote' by haplotype
+                    // selection.
+                    //
+                    for (SiteCall& c : calls)
+                        c.discard_sample(sample);
+                    phase_data[sample].clear();
+                    break;
+                }
             }
         }
     }

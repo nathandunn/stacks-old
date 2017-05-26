@@ -115,6 +115,9 @@ public:
     size_t tot_depth() const {return tot_depths().sum();}
     Nt2 most_frequent_allele() const;
 
+    void discard_sample(size_t sample_i)
+        {depths_.samples[sample_i] = Counts<Nt2>(); if(!sample_calls_.empty()) sample_calls_[sample_i] = SampleCall();}
+
     static map<Nt2,double> tally_allele_freqs(const vector<SampleCall>& spldata);
 
     // For debugging.
