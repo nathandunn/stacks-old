@@ -360,6 +360,7 @@ void write_one_locus(
     // Vcf output.
     //
     assert(calls.size() == ref.length());
+    vector<size_t> sample_sites_w_data (mpopi.samples().size(), 0);
     for (size_t i=0; i<ref.length(); ++i) {
         const SiteCall& sitecall = calls[i];
         if (sitecall.alleles().empty())
@@ -424,7 +425,12 @@ void write_one_locus(
             // Genotypes.
             for (size_t sample=0; sample<mpopi.samples().size(); ++sample) {
                 size_t dp = sitecall.sample_depths()[sample].sum();
-                rec.samples.push_back(dp == 0 ? "." : to_string(dp));
+                if (dp == 0) {
+                    rec.samples.push_back(".");
+                    continue;
+                }
+                ++sample_sites_w_data[sample];
+                rec.samples.push_back(to_string(dp));
             }
 
         } else {
@@ -469,6 +475,7 @@ void write_one_locus(
                     rec.samples.push_back(".");
                     continue;
                 }
+                ++sample_sites_w_data[sample];
 
                 stringstream genotype;
                 // GT field.
@@ -529,14 +536,27 @@ void write_one_locus(
     // Fasta output.
     //
 
-    // Determine the number of samples that have reads for this locus.
-    set<size_t> loc_samples;
+    // Determine the number of samples for this locus. Some samples may have
+    // been discarded (as of May 26, 2017, this would be because their haplotypes
+    // were inconsistent).
+    set<size_t> samples_w_reads;
     for (const SAlnRead& r : aln_loc.reads())
-        loc_samples.insert(r.sample);
+        samples_w_reads.insert(r.sample);
+    size_t n_remaining_samples = 0;
+    for (size_t sample_n_sites : sample_sites_w_data)
+        if (sample_n_sites > 0)
+            ++n_remaining_samples;
 
     // Write the fasta record.
     gzputs(o_gzfasta_f, ">");
-    gzputs(o_gzfasta_f, (to_string(loc_id) + " NS=" + to_string(loc_samples.size())).c_str());
+    gzputs(o_gzfasta_f, to_string(loc_id).c_str());
+    gzputs(o_gzfasta_f, " NS=");
+    gzputs(o_gzfasta_f, to_string(n_remaining_samples).c_str());
+    if (n_remaining_samples != samples_w_reads.size()) {
+        assert(n_remaining_samples < samples_w_reads.size());
+        gzputs(o_gzfasta_f, " n_discarded_samples=");
+        gzputs(o_gzfasta_f, to_string(samples_w_reads.size() - n_remaining_samples).c_str());
+    }
     gzputs(o_gzfasta_f, "\n");
     gzputs(o_gzfasta_f, ref.str().c_str());
     gzputs(o_gzfasta_f, "\n");
