@@ -398,81 +398,81 @@ void write_one_locus(
 
         // Create the VCF record.
         VcfRecord rec;
-        rec.type = Vcf::RType::expl;
-        rec.chrom = to_string(loc_id);
-        rec.pos = i+1;
+        rec.type_m() = Vcf::RType::expl;
+        rec.chrom_m() = to_string(loc_id);
+        rec.pos_m() = i+1;
 
         // Alleles.
         for (Nt4 nt : vcf_alleles)
-            rec.alleles.push_back(string(1, char(nt)));
+            rec.alleles_m().push_back(string(1, char(nt)));
 
-        if(rec.alleles.size() == 1) {
+        if(rec.alleles().size() == 1) {
             // Fixed site.
 
             // Info/DP.
-            rec.info.push_back({"DP", to_string(sitecall.tot_depth())});
+            rec.info_m().push_back({"DP", to_string(sitecall.tot_depth())});
             // Info/AD.
             Nt4 ref_nt = sitecall.alleles().begin()->first;
-            rec.info.push_back({"AD", to_string(sitecall.tot_depths()[Nt2(ref_nt)])});
+            rec.info_m().push_back({"AD", to_string(sitecall.tot_depths()[Nt2(ref_nt)])});
             if (vcf_write_depths) {
                 // Info/cnts.
                 stringstream cnts;
                 join(sitecall.tot_depths().arr(), ',', cnts);
-                rec.info.push_back({"cnts", cnts.str()});
+                rec.info_m().push_back({"cnts", cnts.str()});
             }
             // Format.
-            rec.format.push_back("DP");
+            rec.format_m().push_back("DP");
             // Genotypes.
             for (size_t sample=0; sample<mpopi.samples().size(); ++sample) {
                 size_t dp = sitecall.sample_depths()[sample].sum();
                 if (dp == 0) {
-                    rec.samples.push_back(".");
+                    rec.samples_m().push_back(".");
                     continue;
                 }
                 ++sample_sites_w_data[sample];
-                rec.samples.push_back(to_string(dp));
+                rec.samples_m().push_back(to_string(dp));
             }
 
         } else {
             // Polymorphic site.
 
             // Info/DP.
-            rec.info.push_back({"DP", to_string(sitecall.tot_depth())});
+            rec.info_m().push_back({"DP", to_string(sitecall.tot_depth())});
             // Info/AD.
             vector<size_t> ad;
             for (auto nt=vcf_alleles.begin(); nt!=vcf_alleles.end(); ++nt)
                 ad.push_back(sitecall.tot_depths()[Nt2(*nt)]);
             stringstream ss;
             join(ad, ',', ss);
-            rec.info.push_back({"AD", ss.str()});
+            rec.info_m().push_back({"AD", ss.str()});
             // Info/AF.
             vector<double> alt_freqs;
             for (auto nt=++vcf_alleles.begin(); nt!=vcf_alleles.end(); ++nt) // rem. always >1 alleles.
                 alt_freqs.push_back(sitecall.alleles().at(*nt));
-            rec.info.push_back(VcfRecord::util::fmt_info_af(alt_freqs));
+            rec.info_m().push_back(VcfRecord::util::fmt_info_af(alt_freqs));
             if (vcf_write_depths) {
                 // Info/cnts.
                 stringstream cnts;
                 join(sitecall.tot_depths().arr(), ',', cnts);
-                rec.info.push_back({"cnts", cnts.str()});
+                rec.info_m().push_back({"cnts", cnts.str()});
             }
 
             // Format.
-            rec.format.push_back("GT");
+            rec.format_m().push_back("GT");
             if (write_haplotypes)
-                rec.format.push_back("PS"); // Phase set.
-            rec.format.push_back("DP");
-            rec.format.push_back("AD");
-            rec.format.push_back("GL");
+                rec.format_m().push_back("PS"); // Phase set.
+            rec.format_m().push_back("DP");
+            rec.format_m().push_back("AD");
+            rec.format_m().push_back("GL");
 
             // Genotypes.
-            rec.samples.reserve(mpopi.samples().size());
+            rec.samples_m().reserve(mpopi.samples().size());
             for (size_t sample=0; sample<mpopi.samples().size(); ++sample) {
                 const Counts<Nt2>& sdepths = sitecall.sample_depths()[sample];
                 const SampleCall& scall = sitecall.sample_calls()[sample];
                 if (sdepths.sum() == 0) {
                     // No data for this sample.
-                    rec.samples.push_back(".");
+                    rec.samples_m().push_back(".");
                     continue;
                 }
                 ++sample_sites_w_data[sample];
@@ -517,14 +517,14 @@ void write_one_locus(
                 genotype << ':';
                 join(ad, ',', genotype);
                 // GL field.
-                genotype << ':' << VcfRecord::util::fmt_gt_gl(rec.alleles, scall.lnls());
+                genotype << ':' << VcfRecord::util::fmt_gt_gl(rec.alleles(), scall.lnls());
                 // cnts field.
                 if (vcf_write_depths) {
                     genotype << ":";
                     join(sdepths.arr(), ',', genotype);
                 }
                 // Push it.
-                rec.samples.push_back(genotype.str());
+                rec.samples_m().push_back(genotype.str());
             }
         }
 

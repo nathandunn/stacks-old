@@ -97,7 +97,7 @@ bool VcfRecord::util::build_haps(pair<string,string>& haplotypes, const vector<c
         // For each SNP...
         // Parse the genotype.
         const VcfRecord& rec = *snp_records[i];
-        pair<int,int> gt = rec.parse_genotype_nochecks(rec.samples[sample_index]);
+        pair<int,int> gt = rec.parse_genotype_nochecks(rec.samples()[sample_index]);
 
         // Record the (phased) alleles.
         if (gt.first == -1) {
@@ -106,14 +106,14 @@ bool VcfRecord::util::build_haps(pair<string,string>& haplotypes, const vector<c
             haplotypes.second[i] = 'N';
             continue;
         }
-        haplotypes.first[i] = rec.alleles[gt.first][0];
-        haplotypes.second[i] = rec.alleles[gt.second][0];
+        haplotypes.first[i] = rec.alleles()[gt.first][0];
+        haplotypes.second[i] = rec.alleles()[gt.second][0];
 
         #ifdef DEBUG
         // Check that there is only one phase set.
-        assert(rec.format[1] == "PS");
+        assert(rec.format()[1] == "PS");
         if (gt.first != gt.second) {
-            size_t ps = stoi(rec.parse_gt_subfield(rec.samples[sample_index], 1));
+            size_t ps = stoi(rec.parse_gt_subfield(rec.samples()[sample_index], 1));
             if (phase_set == size_t(-1))
                 phase_set = ps;
             else
@@ -362,7 +362,7 @@ VcfAbstractParser::next_record(VcfRecord& record)
         // ([record.type] is still [null].)
         return true;
     }
-    record.chrom.assign(line_, tabs_[Vcf::chrom]);
+    record.chrom_m().assign(line_, tabs_[Vcf::chrom]);
 
     // POS
     if(tabs_[Vcf::pos-1]+1 == tabs_[Vcf::pos]
@@ -373,14 +373,14 @@ VcfAbstractParser::next_record(VcfRecord& record)
         // ([record.type] is still [null].)
         return true;
     }
-    record.pos = stoi(tabs_[Vcf::pos-1]+1) -1 ; // VCF is 1-based
+    record.pos_m() = stoi(tabs_[Vcf::pos-1]+1) -1 ; // VCF is 1-based
 
     // ID
     if(tabs_[Vcf::id-1]+1 == tabs_[Vcf::id])
         cerr << "Notice: Empty ID field should be marked by a dot."
                 << " Line " << line_number_ << " in file '" << path_ << "'.\n";
     if(*(tabs_[Vcf::id-1]+1) != '.')
-        record.id.assign(tabs_[Vcf::id-1]+1, tabs_[Vcf::id]);
+        record.id_m().assign(tabs_[Vcf::id-1]+1, tabs_[Vcf::id]);
 
     // REF
     if(tabs_[Vcf::ref-1]+1 == tabs_[Vcf::ref]
@@ -391,7 +391,7 @@ VcfAbstractParser::next_record(VcfRecord& record)
         // ([record.type] is still [null].)
         return true;
     }
-    record.alleles.push_back(string(tabs_[Vcf::ref-1]+1, tabs_[Vcf::ref]));
+    record.alleles_m().push_back(string(tabs_[Vcf::ref-1]+1, tabs_[Vcf::ref]));
 
     // ALT & determine the type of the record
     if(tabs_[Vcf::alt-1]+1 == tabs_[Vcf::alt]) {
@@ -401,13 +401,13 @@ VcfAbstractParser::next_record(VcfRecord& record)
         // ([record.type] is still [null].)
         return true;
     } else if(*(tabs_[Vcf::alt-1]+1) == '.') {
-        record.type = Vcf::RType::invariant;
+        record.type_m() = Vcf::RType::invariant;
     } else {
         get_bounds(bounds_, tabs_[Vcf::alt-1], tabs_[Vcf::alt], ',');
         for (size_t i = 0; i < bounds_.size()-1; ++i ) {
-            record.alleles.push_back(string(bounds_.at(i)+1, bounds_.at(i+1)));
-            if (record.alleles.back().empty()) {
-                record.alleles.pop_back();
+            record.alleles_m().push_back(string(bounds_.at(i)+1, bounds_.at(i+1)));
+            if (record.alleles().back().empty()) {
+                record.alleles_m().pop_back();
                 cerr << "Warning: Skipping malformed VCF record (malformed ALT field)."
                      << " Line " << line_number_ << " in file '" << path_ << "'.\n";
                 // Skip this record.
@@ -417,15 +417,15 @@ VcfAbstractParser::next_record(VcfRecord& record)
         }
 
         if (strchr(tabs_[Vcf::alt-1]+1, '[') || strchr(tabs_[Vcf::alt-1]+1, ']'))
-            record.type = Vcf::RType::breakend;
+            record.type_m() = Vcf::RType::breakend;
         else if (strchr(tabs_[Vcf::alt-1]+1, '<'))
-            record.type = Vcf::RType::symbolic;
+            record.type_m() = Vcf::RType::symbolic;
         else
-            record.type = Vcf::RType::expl;
+            record.type_m() = Vcf::RType::expl;
     }
 
     // Do not parse symbolic & breakend records.
-    if (record.type == Vcf::RType::symbolic || record.type == Vcf::RType::breakend) {
+    if (record.type() == Vcf::RType::symbolic || record.type() == Vcf::RType::breakend) {
         read_to_eol();
         return true;
     }
@@ -435,7 +435,7 @@ VcfAbstractParser::next_record(VcfRecord& record)
         cerr << "Notice: Empty QUAL field should be marked by a dot."
              << " Line " << line_number_ << " in file '" << path_ << "'.\n";
     if(*(tabs_[Vcf::qual-1]+1) != '.')
-        record.qual.assign(tabs_[Vcf::qual-1]+1, tabs_[Vcf::qual]);
+        record.qual_m().assign(tabs_[Vcf::qual-1]+1, tabs_[Vcf::qual]);
 
     // FILTER
     if(tabs_[Vcf::filter-1]+1 == tabs_[Vcf::filter])
@@ -444,7 +444,7 @@ VcfAbstractParser::next_record(VcfRecord& record)
     if(*(tabs_[Vcf::filter-1]+1) != '.') {
         get_bounds(bounds_, tabs_[Vcf::filter-1], tabs_[Vcf::filter],';');
         for(size_t i = 0; i < bounds_.size()-1; ++i )
-            record.filter.push_back(string(bounds_.at(i)+1, bounds_.at(i+1)));
+            record.filter_m().push_back(string(bounds_.at(i)+1, bounds_.at(i+1)));
     }
 
     // INFO
@@ -456,9 +456,9 @@ VcfAbstractParser::next_record(VcfRecord& record)
         for(size_t i = 0; i < bounds_.size()-1; ++i ) {
             char* equal = strchr(bounds_[i]+1, '=');
             if(equal == NULL or bounds_[i+1] - equal < 0)
-                record.info.push_back(pair<string,string>(string(bounds_[i]+1, bounds_[i+1]),string()));
+                record.info_m().push_back(pair<string,string>(string(bounds_[i]+1, bounds_[i+1]),string()));
             else
-                record.info.push_back(pair<string,string>(string(bounds_[i]+1, equal),string(equal+1,bounds_[i+1])));
+                record.info_m().push_back(pair<string,string>(string(bounds_[i]+1, equal),string(equal+1,bounds_[i+1])));
         }
     }
 
@@ -470,7 +470,7 @@ VcfAbstractParser::next_record(VcfRecord& record)
 
         get_bounds(bounds_, tabs_[Vcf::format-1], tabs_[Vcf::format],':');
         for(size_t i = 0; i < bounds_.size()-1; ++i )
-            record.format.push_back(string(bounds_.at(i)+1, bounds_.at(i+1)));
+            record.format_m().push_back(string(bounds_.at(i)+1, bounds_.at(i+1)));
 
         // SAMPLES
         sample_index_ = 0;
@@ -487,7 +487,7 @@ VcfAbstractParser::next_record(VcfRecord& record)
             getline(line_+lastfieldlen, Vcf::line_buf_size-lastfieldlen);
             if(eof_) {
                 cerr << "Warning: Encountered end of file while reading a record.\n";
-                record.type = Vcf::RType::null;
+                record.type_m() = Vcf::RType::null;
                 return false;
             }
 
@@ -539,40 +539,40 @@ void VcfWriter::write_header() {
 
 void VcfWriter::write_record(const VcfRecord& r) {
 
-    if (r.type != Vcf::RType::expl)
+    if (r.type() != Vcf::RType::expl)
         // This is not implemented.
         throw exception();
 
-    file_ << r.chrom
-          << "\t" << r.pos
-          << "\t" << (r.id.empty() ? "." : r.id)
-          << "\t" << r.alleles.at(0);
+    file_ << r.chrom()
+          << "\t" << r.pos()
+          << "\t" << (r.id().empty() ? "." : r.id())
+          << "\t" << r.alleles().at(0);
 
     //ALT
     file_ << "\t";
-    if (r.alleles.size() == 1) {
+    if (r.alleles().size() == 1) {
         file_ << ".";
     } else {
-        auto allele = r.alleles.begin()+1;
+        auto allele = r.alleles().begin()+1;
         file_ << *allele;
         ++allele;
-        while(allele != r.alleles.end()) {
+        while(allele != r.alleles().end()) {
             file_ << "," << *allele;
             ++allele;
         }
     }
 
-    file_ << "\t" << (r.qual.empty() ? "." : r.qual);
+    file_ << "\t" << (r.qual().empty() ? "." : r.qual());
 
     //FILTER
     file_ << "\t";
-    if (r.filter.empty()) {
+    if (r.filter().empty()) {
         file_ << ".";
     } else {
-        auto filter = r.filter.begin();
+        auto filter = r.filter().begin();
         file_ << *filter;
         ++filter;
-        while(filter != r.filter.end()) {
+        while(filter != r.filter().end()) {
             file_ << ";" << *filter;
             ++filter;
         }
@@ -580,13 +580,13 @@ void VcfWriter::write_record(const VcfRecord& r) {
 
     //INFO
     file_ << "\t";
-    if (r.info.empty()) {
+    if (r.info().empty()) {
         file_ << ".";
     } else {
-        auto i = r.info.begin();
+        auto i = r.info().begin();
         file_ << i->first << "=" << i->second;
         ++i;
-        while(i != r.info.end()) {
+        while(i != r.info().end()) {
             file_ << ";" << i->first << "=" << i->second;
             ++i;
         }
@@ -595,23 +595,23 @@ void VcfWriter::write_record(const VcfRecord& r) {
     if (not header_.samples().empty()) {
         //FORMAT
         file_ << "\t";
-        if (r.format.empty()) {
+        if (r.format().empty()) {
             file_ << ".";
         } else {
-            auto f = r.format.begin();
+            auto f = r.format().begin();
             file_ << *f;
             ++f;
-            while(f != r.format.end()) {
+            while(f != r.format().end()) {
                 file_ << ":" << *f;
                 ++f;
             }
         }
 
         //SAMPLES
-        if (r.samples.size() != header_.samples().size())
+        if (r.samples().size() != header_.samples().size())
             throw exception();
 
-        for (const string& s : r.samples)
+        for (const string& s : r.samples())
             file_ << "\t" << s;
     }
 

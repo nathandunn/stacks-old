@@ -308,7 +308,7 @@ void PopMap<LocusT>::populate(map<int, LocusT*>& catalog,
 
         vector<const VcfRecord*> snp_records;
         for (auto& rec : cloc_records) {
-            if (rec.alleles.size() > 1) {
+            if (rec.alleles().size() > 1) {
                 assert(rec.is_snp());
                 snp_records.push_back(&rec);
             }
@@ -324,16 +324,16 @@ void PopMap<LocusT>::populate(map<int, LocusT*>& catalog,
             // Get the sample's model string.
             auto rec = cloc_records.begin();
             for (size_t col=0; col<cloc.len; ++col) {
-                if (rec->pos != col) {
+                if (rec->pos() != col) {
                     // No VCF record for this column, skip it.
                     assert(model[col] == 'U'); // Position never changes as it's missing for all samples.
                     continue;
                 }
 
-                const string& gt_str = rec->samples[sample_vcf_i];
-                if (rec->alleles.size() == 1) {
+                const string& gt_str = rec->samples()[sample_vcf_i];
+                if (rec->alleles().size() == 1) {
                     // Monomorphic site.
-                    assert(rec->format.size() == 1 && rec->format[0] == "DP"); // Only the samples overall depths are given.
+                    assert(rec->format().size() == 1 && rec->format()[0] == "DP"); // Only the samples overall depths are given.
                     if (gt_str == ".") {
                         model[col] = 'U';
                     } else {
@@ -343,7 +343,7 @@ void PopMap<LocusT>::populate(map<int, LocusT*>& catalog,
                     }
                 } else {
                     // Polymorphic site.
-                    assert(rec->alleles.size() >= 2);
+                    assert(rec->alleles().size() >= 2);
                     pair<int,int> gt = rec->parse_genotype_nochecks(gt_str);
                     if (gt.first == -1) {
                         model[col] = 'U';
@@ -454,13 +454,13 @@ int PopMap<LocusT>::populate(map<int, LocusT*>& catalog,
 
         for (size_t s = 0; s < metapopinfo.samples().size(); ++s) {
             size_t vcf_index = header.sample_indexes().at(metapopinfo.samples()[s].name);
-            const string& sample = rec.samples.at(vcf_index);
+            const string& sample = rec.samples().at(vcf_index);
 
             pair<int, int> gt = rec.parse_genotype(sample);
             if (gt.first < 0
                     || gt.second < 0
-                    || rec.alleles[gt.first]=="*"
-                    || rec.alleles[gt.second]=="*")
+                    || rec.alleles()[gt.first]=="*"
+                    || rec.alleles()[gt.second]=="*")
                 // Missing or incomplete genotype.
                 continue;
 
@@ -477,12 +477,12 @@ int PopMap<LocusT>::populate(map<int, LocusT*>& catalog,
                          start=coma+1;
                      }
                      ad.push_back(stoi(ad_str.substr(start)));
-                     if (ad.size() != rec.alleles.size())
+                     if (ad.size() != rec.alleles().size())
                          throw exception();
                  } catch (exception& e) {
                      cerr << "Warning: Badly formatted AD string '" << ad_str
-                          << "' at VCF record '" << rec.chrom << ":" << rec.pos << "'.\n";
-                     ad = vector<int>(rec.alleles.size(), 0);
+                          << "' at VCF record '" << rec.chrom() << ":" << rec.pos() << "'.\n";
+                     ad = vector<int>(rec.alleles().size(), 0);
                  }
             }
 
@@ -500,7 +500,7 @@ int PopMap<LocusT>::populate(map<int, LocusT*>& catalog,
             d->model = new char[2];
             if (gt.first == gt.second) {
                 strcpy(d->model, "O");
-                const string& allele = rec.alleles[gt.first];
+                const string& allele = rec.alleles()[gt.first];
                 d->obshap.push_back(new char[allele.size()+1]);
                 strcpy(d->obshap[0], allele.c_str());
                 if (ad_index != -1)
@@ -509,8 +509,8 @@ int PopMap<LocusT>::populate(map<int, LocusT*>& catalog,
                     d->depth = {0};
             } else {
                 strcpy(d->model, "E");
-                const string& allele1 = rec.alleles[gt.first];
-                const string& allele2 = rec.alleles[gt.second];
+                const string& allele1 = rec.alleles()[gt.first];
+                const string& allele2 = rec.alleles()[gt.second];
                 d->obshap.push_back(new char[allele1.size()+1]);
                 d->obshap.push_back(new char[allele2.size()+1]);
                 strcpy(d->obshap[0], allele1.c_str());

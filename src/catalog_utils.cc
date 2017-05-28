@@ -374,9 +374,9 @@ map<int, CSLocus*> create_catalog(const vector<VcfRecord>& records) {
         loc->id = i;
         loc->len = 1;
         loc->con = new char[2];
-        strcpy(loc->con, rec.alleles[0].c_str());
-        loc->loc.set(rec.chrom.c_str(), (uint)rec.pos, strand_plus);
-        for (const string& a : rec.alleles) {
+        strcpy(loc->con, rec.alleles()[0].c_str());
+        loc->loc.set(rec.chrom().c_str(), (uint)rec.pos(), strand_plus);
+        for (const string& a : rec.alleles()) {
             if (a=="*")
                 continue;
             loc->alleles.insert({a, 0});
@@ -390,7 +390,7 @@ map<int, CSLocus*> create_catalog(const vector<VcfRecord>& records) {
         vector<char*> snp_alleles = {&snp.rank_1, &snp.rank_2, &snp.rank_3, &snp.rank_4};
         try {
             size_t s=0;
-            for (const string& a : rec.alleles) {
+            for (const string& a : rec.alleles()) {
                 if (a=="*")
                     continue;
                 *snp_alleles.at(s) = a.at(0);
@@ -398,9 +398,9 @@ map<int, CSLocus*> create_catalog(const vector<VcfRecord>& records) {
             }
         } catch (out_of_range& e) {
             cerr << "Warning: Skipping malformed VCF SNP record '"
-                 << rec.chrom << ":" << rec.pos << "'."
+                 << rec.chrom() << ":" << rec.pos() << "'."
                  << " Alleles were:";
-            for (const string& a : rec.alleles)
+            for (const string& a : rec.alleles())
                 cerr << " '" << a << "';";
             cerr << ".\n";
             delete loc->snps[0];
@@ -436,7 +436,7 @@ CSLocus* new_cslocus(const Seq& consensus, const vector<VcfRecord>& records, int
     // snps
     vector<const VcfRecord*> snp_records;
     for (auto& rec : records) {
-        if (rec.alleles.size() > 1) {
+        if (rec.alleles().size() > 1) {
             snp_records.push_back(&rec);
             assert(rec.is_snp());
         }
@@ -445,13 +445,13 @@ CSLocus* new_cslocus(const Seq& consensus, const vector<VcfRecord>& records, int
         SNP* snp = new SNP();
         loc->snps.push_back(snp);
         snp->type = snp_type_het;
-        snp->col = rec->pos;
-        snp->rank_1 = rec->alleles[0][0]; // N.B. the VCF parser forbids empty alleles.
-        snp->rank_2 = rec->alleles[1][0];
-        if (rec->alleles.size() >= 3) {
-            snp->rank_3 = rec->alleles[2][0];
-            if (rec->alleles.size() == 4)
-                snp->rank_4 = rec->alleles[3][0];
+        snp->col = rec->pos();
+        snp->rank_1 = rec->alleles()[0][0]; // N.B. the VCF parser forbids empty alleles.
+        snp->rank_2 = rec->alleles()[1][0];
+        if (rec->alleles().size() >= 3) {
+            snp->rank_3 = rec->alleles()[2][0];
+            if (rec->alleles().size() == 4)
+                snp->rank_4 = rec->alleles()[3][0];
         }
         snp->lratio = 0.0;
     }
@@ -459,7 +459,7 @@ CSLocus* new_cslocus(const Seq& consensus, const vector<VcfRecord>& records, int
     // alleles
     if (!snp_records.empty()) {
         pair<string,string> haplotypes;
-        for (size_t sample=0; sample<records.at(0).samples.size(); ++sample) {
+        for (size_t sample=0; sample<records.at(0).samples().size(); ++sample) {
             if (VcfRecord::util::build_haps(haplotypes, snp_records, sample)) {
                 // Complete haplotypes.
                 ++loc->alleles[haplotypes.first];

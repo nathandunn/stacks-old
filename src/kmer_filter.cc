@@ -34,7 +34,7 @@ vector<string> in_pair_files;
 string in_path;
 string out_path;
 string k_freq_path;
-bool   filter_rare_k     = false;
+bool   filter_mare_k     = false;
 bool   filter_abundant_k = false;
 bool   normalize         = false;
 bool   discards     = false;
@@ -62,7 +62,7 @@ int main (int argc, char* argv[]) {
         min_lim = (int) round((double) kmer_len * 0.80);
 
     cerr << "Using a kmer size of " << kmer_len << "\n";
-    if (filter_rare_k) {
+    if (filter_mare_k) {
         cerr << "Filtering out reads by identifying rare kmers: On.\n"
              << "  A kmer is considered rare when its coverage is at " << min_k_pct * 100 << "% or below the median kmer coverage for the read.\n"
              << "  A read is dropped when it contains " << min_lim << " or more rare kmers in a row.\n";
@@ -96,7 +96,7 @@ int main (int argc, char* argv[]) {
     build_file_list(in_pair_files, pair_files);
     cerr << "Found " << pair_files.size() << " paired input file(s).\n";
 
-    if (filter_rare_k || filter_abundant_k || kmer_distr || write_k_freq) {
+    if (filter_mare_k || filter_abundant_k || kmer_distr || write_k_freq) {
         cerr << "Generating kmer distribution...\n";
 
         if (read_k_freq)
@@ -174,7 +174,7 @@ int main (int argc, char* argv[]) {
         //
         // Add the remainder files from the previous step to the queue.
         //
-        if (filter_rare_k || filter_abundant_k) {
+        if (filter_mare_k || filter_abundant_k) {
             string file;
             int    pos;
             for (uint i = 0; i < pair_files.size(); i += 2) {
@@ -352,7 +352,7 @@ int process_paired_reads(string in_path_1,
         //
         kmer_lookup(kmers, s_1->seq, kmer, num_kmers, rare_k, abundant_k);
 
-        if (filter_rare_k && rare_k > 0) {
+        if (filter_mare_k && rare_k > 0) {
             counter["rare_k"]++;
             retain_1 = false;
             msg_1 << "rare_k_" << rare_k;
@@ -374,7 +374,7 @@ int process_paired_reads(string in_path_1,
         //
         kmer_lookup(kmers, s_2->seq, kmer, num_kmers, rare_k, abundant_k);
 
-        if (filter_rare_k && rare_k > 0) {
+        if (filter_mare_k && rare_k > 0) {
             counter["rare_k"]++;
             retain_2 = false;
             msg_2 << "rare_k_" << rare_k;
@@ -515,7 +515,7 @@ int process_reads(string in_path,
 
         kmer_lookup(kmers, s->seq, kmer, num_kmers, rare_k, abundant_k);
 
-        if (filter_rare_k && rare_k > 0) {
+        if (filter_mare_k && rare_k > 0) {
             counter["rare_k"]++;
             retain = false;
             msg << "rare_k_" << rare_k;
@@ -569,7 +569,7 @@ normalize_paired_reads(string in_path_1,
     string    path_1, path_2;
     int       pos;
 
-    if (filter_abundant_k || filter_rare_k) {
+    if (filter_abundant_k || filter_mare_k) {
         //
         // If we already filtered the data, open the files we created in the output
         // directory to normalize.
@@ -621,7 +621,7 @@ normalize_paired_reads(string in_path_1,
     //
     // Open the output files.
     //
-    if (filter_abundant_k || filter_rare_k) {
+    if (filter_abundant_k || filter_mare_k) {
         pos    = in_file_1.find_last_of(".");
         path_1 = out_path + in_file_1.substr(0, pos) + ".fil.norm" + in_file_1.substr(pos);
         ofh_1  = new ofstream(path_1.c_str(), ifstream::out);
@@ -687,7 +687,7 @@ normalize_paired_reads(string in_path_1,
     //
     if (discards) {
         pos = in_file_1.find_last_of(".");
-        if (filter_abundant_k || filter_rare_k)
+        if (filter_abundant_k || filter_mare_k)
             path_1 = out_path + in_file_1.substr(0, pos) + ".fil.discards" + in_file_1.substr(pos);
         else
             path_1 = out_path + in_file_1.substr(0, pos) + ".discards" + in_file_1.substr(pos);
@@ -699,7 +699,7 @@ normalize_paired_reads(string in_path_1,
         }
 
         pos = in_file_2.find_last_of(".");
-        if (filter_abundant_k || filter_rare_k)
+        if (filter_abundant_k || filter_mare_k)
             path_2 = out_path + in_file_2.substr(0, pos) + ".fil.discards" + in_file_2.substr(pos);
         else
             path_2 = out_path + in_file_2.substr(0, pos) + ".discards" + in_file_2.substr(pos);
@@ -816,7 +816,7 @@ normalize_reads(string in_path,
 
     int pos = in_file.find_last_of(".");
 
-    if (filter_abundant_k || filter_rare_k) {
+    if (filter_abundant_k || filter_mare_k) {
         if (in_file.substr(pos - 4, 4) == ".fil")
             path = out_path + in_file;
         else
@@ -851,7 +851,7 @@ normalize_reads(string in_path,
     //
     // Open the output file.
     //
-    // if (filter_abundant_k || filter_rare_k) {
+    // if (filter_abundant_k || filter_mare_k) {
     //         path = out_path + in_file.substr(0, pos) + ".norm" + in_file.substr(pos);
     // } else {
     //         path = out_path + in_file.substr(0, pos) + ".norm" + in_file.substr(pos);
@@ -868,7 +868,7 @@ normalize_reads(string in_path,
     // Open a file for recording discarded reads
     //
     if (discards) {
-        if (filter_abundant_k || filter_rare_k)
+        if (filter_abundant_k || filter_mare_k)
             path = out_path + in_file.substr(0, pos) + ".fil.discards" + in_file.substr(pos);
         else
             path = out_path + in_file.substr(0, pos) + ".discards" + in_file.substr(pos);
@@ -1708,7 +1708,7 @@ int parse_command_line(int argc, char* argv[]) {
             kmer_distr = true;
             break;
         case 'R':
-            filter_rare_k = true;
+            filter_mare_k = true;
             break;
         case 'A':
             filter_abundant_k = true;
