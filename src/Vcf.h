@@ -89,26 +89,47 @@ unique_ptr<VcfAbstractParser> adaptive_open(const string& path);
  * ==========
  * Datastructure to store VCF records
  */
-struct VcfRecord {
-    string chrom; // required
-    size_t pos; // required
-    string id;
-    vector<string> alleles; // allele 0 is REF and is required ; case insensitive
-    string qual;
-    vector<string> filter;
-    vector<pair<string, string> > info;
-    vector<string> format;
-    vector<string> samples;
-
-    Vcf::RType type;
-
-    //map<string, size_t> allele_indexes;
+class VcfRecord {
+    string chrom_; // required
+    size_t pos_; // required
+    string id_;
+    Vcf::RType type_;
+    vector<string> alleles_; // allele 0 is REF and is required ; case insensitive
+    string qual_;
+    vector<string> filter_;
+    vector<pair<string, string> > info_;
+    vector<string> format_;
+    vector<string> samples_;
+    //map<string, size_t> allele_indexes_;
     //void refresh_allele_indexes();
 
+public:
     VcfRecord()
-    : chrom(), pos(-1), id(), alleles(), qual(), filter(), info(), format(),
-      samples(), type(Vcf::RType::null)
+    : chrom_(), pos_(-1), id_(), type_(Vcf::RType::null), alleles_(), qual_(), filter_(), info_(),
+      format_(), samples_()
     {}
+
+    const string& chrom() const {return chrom_;}
+    const size_t& pos() const {return pos_;}
+    const string& id() const {return id_;}
+    const Vcf::RType& type() const {return type_;}
+    const vector<string>& alleles() const {return alleles_;}
+    const string& qual() const {return qual_;}
+    const vector<string>& filter() const {return filter_;}
+    const vector<pair<string, string> >& info() const {return info_;}
+    const vector<string>& format() const {return format_;}
+    const vector<string>& samples() const {return samples_;}
+
+    string& chrom_m() {return chrom_;} // for "modifiable"
+    size_t& pos_m() {return pos_;}
+    string& id_m() {return id_;}
+    Vcf::RType& type_m() {return type_;}
+    vector<string>& alleles_m() {return alleles_;}
+    string& qual_m() {return qual_;}
+    vector<string>& filter_m() {return filter_;}
+    vector<pair<string, string> >& info_m() {return info_;}
+    vector<string>& format_m() {return format_;}
+    vector<string>& samples_m() {return samples_;}
 
     // Clears all the members.
     inline void clear();
@@ -331,22 +352,22 @@ get_bounds(vector<char*>& bounds, char* tab1, char* tab2, char sep)
 
 inline
 void VcfRecord::clear() {
-    pos = -1;
-    chrom.clear();
-    id.clear();
-    alleles.clear();
-    qual.clear();
-    filter.clear();
-    info.clear();
-    format.clear();
-    samples.clear();
-    type = Vcf::RType::null;
+    chrom_m().clear();
+    pos_m() = -1;
+    id_m().clear();
+    type_m() = Vcf::RType::null;
+    alleles_m().clear();
+    qual_m().clear();
+    filter_m().clear();
+    info_m().clear();
+    format_m().clear();
+    samples_m().clear();
 }
 
 inline
 size_t VcfRecord::index_of_gt_subfield(const string& key) const {
     size_t i = 0;
-    for (const string& f : format) {
+    for (const string& f : format()) {
         if (f == key)
             return i;
         ++i;
@@ -380,8 +401,8 @@ pair<int, int> VcfRecord::parse_genotype(const string& sample) const {
 
     pair<int, int> genotype = {-1,-1};
 
-    if (format.empty()
-            || format[0] != "GT"
+    if (format().empty()
+            || format()[0] != "GT"
             || sample.empty()
             || sample[0] == '.') {
         return genotype;
@@ -392,7 +413,7 @@ pair<int, int> VcfRecord::parse_genotype(const string& sample) const {
         slash = strchr(first, '|');
         if (slash == NULL) {
             cerr << "Error: Malformed VCF genotype field '" << sample
-                    << "', at marker '" << chrom << ":" << pos
+                    << "', at marker '" << chrom() << ":" << pos()
                     << "'.\n";
             throw exception();
         }
@@ -412,13 +433,13 @@ pair<int, int> VcfRecord::parse_genotype(const string& sample) const {
         genotype.first = stoi(string(first, slash));
         genotype.second = stoi(colon==NULL ? string(slash+1) : string(slash+1, colon));
         if (genotype.first < 0
-            || genotype.first >= int(alleles.size())
+            || genotype.first >= int(alleles().size())
             || genotype.second < 0
-            || genotype.second >= int(alleles.size()))
+            || genotype.second >= int(alleles().size()))
             throw exception();
     } catch (exception& e) {
         cerr << "Error: Malformed VCF genotype '" << sample
-             << "', at marker '" << chrom << ":" << pos
+             << "', at marker '" << chrom() << ":" << pos()
              << "'.\n";
         throw e;
     }
@@ -427,7 +448,7 @@ pair<int, int> VcfRecord::parse_genotype(const string& sample) const {
 }
 
 inline pair<int, int> VcfRecord::parse_genotype_nochecks(const string& sample) const {
-    assert(!format.empty() && format[0]=="GT");
+    assert(!format().empty() && format()[0]=="GT");
     assert(!sample.empty());
 
     pair<int, int> genotype = {-1,-1};
@@ -454,10 +475,10 @@ inline pair<int, int> VcfRecord::parse_genotype_nochecks(const string& sample) c
 
 inline
 bool VcfRecord::is_snp() const {
-    if (type != Vcf::RType::expl)
+    if (type() != Vcf::RType::expl)
         return false;
 
-    for (const string& a : alleles)
+    for (const string& a : alleles())
         if (a.length() > 1)
             return false;
 
@@ -486,7 +507,7 @@ void VcfAbstractParser::add_sample(VcfRecord& record, char* tab1, char* tab2)
         cerr << "Warning: malformed VCF record line (empty SAMPLE field should be marked by a dot)."
              << " Line " << line_number_ << " in file " << path_ << "'.\n";
 
-    record.samples.push_back(string(tab1+1, tab2));
+    record.samples_m().push_back(string(tab1+1, tab2));
 
     ++sample_index_;
 }

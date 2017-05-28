@@ -150,11 +150,11 @@ bool VcfCLocReader::read_one_locus(vector<VcfRecord>& records) {
         return false;
 
     // Parse the locus ID.
-    string curr_chrom = next_rec_.chrom;
+    string curr_chrom = next_rec_.chrom();
     records.push_back(move(next_rec_));
 
     // Read all the records of the locus, and one more.
-    while (records.back().chrom == curr_chrom) {
+    while (records.back().chrom() == curr_chrom) {
         records.push_back(VcfRecord());
         if (!vcf_f_->next_record(records.back())) {
             eof_ = true;
