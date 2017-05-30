@@ -40,6 +40,7 @@
 #endif
 
 #include "constants.h"
+#include "nucleotides.h"
 #include "utils.h"
 #include "stacks.h"
 
@@ -97,7 +98,7 @@ class VcfRecord {
     vector<string> alleles_; // allele 0 is REF and is required ; case insensitive
     string qual_;
     vector<string> filter_;
-    vector<pair<string, string> > info_;
+    vector<string> info_;
     vector<string> format_;
     vector<string> samples_;
     //map<string, size_t> allele_indexes_;
@@ -109,16 +110,23 @@ public:
       format_(), samples_()
     {}
 
-    const string& chrom() const {return chrom_;}
-    const size_t& pos() const {return pos_;}
-    const string& id() const {return id_;}
     const Vcf::RType& type() const {return type_;}
-    const vector<string>& alleles() const {return alleles_;}
-    const string& qual() const {return qual_;}
-    const vector<string>& filter() const {return filter_;}
-    const vector<pair<string, string> >& info() const {return info_;}
-    const vector<string>& format() const {return format_;}
-    const vector<string>& samples() const {return samples_;}
+
+    size_t n_alleles() const {return alleles_.size();}
+    size_t n_filters() const {return filter_.size();}
+    size_t n_infos() const {return info_.size();}
+    size_t n_formats() const {return format_.size();}
+    size_t n_samples() const {return samples_.size();}
+
+    const char* chrom() const {return chrom_.c_str();}
+    size_t pos() const {return pos_;}
+    const char* id() const {return id_.c_str();}
+    const char* allele(size_t i) const {return alleles_[i].c_str();}
+    const char* qual() const {return qual_.c_str();}
+    const char* filter(size_t i) const {return filter_[i].c_str();}
+    const char* info(size_t i) const {return info_[i].c_str();}
+    const char* format(size_t i) const {return format_[i].c_str();}
+    const char* sample(size_t i) const {return samples_[i].c_str();}
 
     string& chrom_m() {return chrom_;} // for "modifiable"
     size_t& pos_m() {return pos_;}
@@ -127,7 +135,7 @@ public:
     vector<string>& alleles_m() {return alleles_;}
     string& qual_m() {return qual_;}
     vector<string>& filter_m() {return filter_;}
-    vector<pair<string, string> >& info_m() {return info_;}
+    vector<string>& info_m() {return info_;}
     vector<string>& format_m() {return format_;}
     vector<string>& samples_m() {return samples_;}
 
@@ -135,19 +143,19 @@ public:
     inline void clear();
 
     inline size_t index_of_gt_subfield(const string& key) const;
-    inline string parse_gt_subfield(const string& sample, size_t index) const;
+    inline string parse_gt_subfield(const char* sample, size_t index) const;
 
     // Returns (first allele, second allele), '-1' meaning no data.
     // (The second version is for use with internal, stacks-generated files.)
-    inline pair<int, int> parse_genotype(const string& sample) const;
-    inline pair<int, int> parse_genotype_nochecks(const string& sample) const;
+    inline pair<int, int> parse_genotype(const char* sample) const;
+    inline pair<int, int> parse_genotype_nochecks(const char* sample) const;
 
     inline bool is_snp() const;
 
     struct util {
-        static pair<string,string> fmt_info_af(const vector<double>& alt_freqs);
-        static string fmt_gt_gl(const vector<string>& alleles, const GtLiks& liks);
-        static GtLiks parse_gt_gl(const vector<string>& alleles, const string& gl);
+        static string fmt_info_af(const vector<double>& alt_freqs);
+        static string fmt_gt_gl(const vector<Nt2>& alleles, const GtLiks& liks);
+        static GtLiks parse_gt_gl(const vector<Nt2>& alleles, const string& gl);
         static size_t n_genotypes(size_t n_alleles) {return (n_alleles*(n_alleles+1))/2;}
 
         // Builds the haplotypes of a sample over a set of (phased) records.
@@ -366,22 +374,18 @@ void VcfRecord::clear() {
 
 inline
 size_t VcfRecord::index_of_gt_subfield(const string& key) const {
-    size_t i = 0;
-    for (const string& f : format()) {
-        if (f == key)
+    for (size_t i=0; i<n_formats(); ++i)
+        if (strcmp(key.c_str(), format(i)) == 0)
             return i;
-        ++i;
-    }
-
     throw out_of_range(key);
 }
 
 inline
-string VcfRecord::parse_gt_subfield(const string& sample, size_t index) const {
+string VcfRecord::parse_gt_subfield(const char* sample, size_t index) const {
     string subf;
 
     // Skip the first [index] colons.
-    const char* first = sample.c_str();
+    const char* first = sample;
     for(size_t i=0; i<index; ++i) {
         first = strchr(first, ':');
         if (first == NULL)
@@ -397,17 +401,17 @@ string VcfRecord::parse_gt_subfield(const string& sample, size_t index) const {
 }
 
 inline
-pair<int, int> VcfRecord::parse_genotype(const string& sample) const {
+pair<int, int> VcfRecord::parse_genotype(const char* sample) const {
 
     pair<int, int> genotype = {-1,-1};
 
-    if (format().empty()
-            || format()[0] != "GT"
-            || sample.empty()
+    assert(sample != NULL && sample[0] != '\0');
+    if (n_formats() == 0
+            || strcmp(format(0), "GT") == 0
             || sample[0] == '.') {
         return genotype;
     }
-    const char* first = sample.c_str();
+    const char* first = sample;
     const char* slash = strchr(first, '/');
     if (slash == NULL) {
         slash = strchr(first, '|');
@@ -433,9 +437,9 @@ pair<int, int> VcfRecord::parse_genotype(const string& sample) const {
         genotype.first = stoi(string(first, slash));
         genotype.second = stoi(colon==NULL ? string(slash+1) : string(slash+1, colon));
         if (genotype.first < 0
-            || genotype.first >= int(alleles().size())
+            || genotype.first >= int(n_alleles())
             || genotype.second < 0
-            || genotype.second >= int(alleles().size()))
+            || genotype.second >= int(n_alleles()))
             throw exception();
     } catch (exception& e) {
         cerr << "Error: Malformed VCF genotype '" << sample
@@ -447,15 +451,15 @@ pair<int, int> VcfRecord::parse_genotype(const string& sample) const {
     return genotype;
 }
 
-inline pair<int, int> VcfRecord::parse_genotype_nochecks(const string& sample) const {
-    assert(!format().empty() && format()[0]=="GT");
-    assert(!sample.empty());
+inline pair<int, int> VcfRecord::parse_genotype_nochecks(const char* sample) const {
+    assert(n_formats() > 0 && strcmp(format(0),"GT")==0);
+    assert(sample != NULL && sample[0] != '\0');
 
     pair<int, int> genotype = {-1,-1};
     if (sample[0] == '.')
         return genotype;
 
-    const char* start = sample.c_str();
+    const char* start = sample;
     char* end;
 
     // First allele.
@@ -478,8 +482,8 @@ bool VcfRecord::is_snp() const {
     if (type() != Vcf::RType::expl)
         return false;
 
-    for (const string& a : alleles())
-        if (a.length() > 1)
+    for (size_t i=0; i<n_alleles(); ++i)
+        if (strlen(allele(i)) > 1)
             return false;
 
     return true;

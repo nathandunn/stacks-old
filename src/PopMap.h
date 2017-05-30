@@ -308,7 +308,7 @@ void PopMap<LocusT>::populate(map<int, LocusT*>& catalog,
 
         vector<const VcfRecord*> snp_records;
         for (auto& rec : cloc_records) {
-            if (rec.alleles().size() > 1) {
+            if (rec.n_alleles() > 1) {
                 assert(rec.is_snp());
                 snp_records.push_back(&rec);
             }
@@ -330,11 +330,11 @@ void PopMap<LocusT>::populate(map<int, LocusT*>& catalog,
                     continue;
                 }
 
-                const string& gt_str = rec->samples()[sample_vcf_i];
-                if (rec->alleles().size() == 1) {
+                const char* gt_str = rec->sample(sample_vcf_i);
+                if (rec->n_alleles() == 1) {
                     // Monomorphic site.
-                    assert(rec->format().size() == 1 && rec->format()[0] == "DP"); // Only the samples overall depths are given.
-                    if (gt_str == ".") {
+                    assert(rec->n_formats() == 1 && strcmp(rec->format(0),"DP")==0); // Only the samples overall depths are given.
+                    if (gt_str[0] == '.') {
                         model[col] = 'U';
                     } else {
                         if (no_data)
@@ -343,7 +343,7 @@ void PopMap<LocusT>::populate(map<int, LocusT*>& catalog,
                     }
                 } else {
                     // Polymorphic site.
-                    assert(rec->alleles().size() >= 2);
+                    assert(rec->n_alleles() >= 2);
                     pair<int,int> gt = rec->parse_genotype_nochecks(gt_str);
                     if (gt.first == -1) {
                         model[col] = 'U';
@@ -454,13 +454,13 @@ int PopMap<LocusT>::populate(map<int, LocusT*>& catalog,
 
         for (size_t s = 0; s < metapopinfo.samples().size(); ++s) {
             size_t vcf_index = header.sample_indexes().at(metapopinfo.samples()[s].name);
-            const string& sample = rec.samples().at(vcf_index);
+            const char* sample = rec.sample(vcf_index);
 
             pair<int, int> gt = rec.parse_genotype(sample);
             if (gt.first < 0
                     || gt.second < 0
-                    || rec.alleles()[gt.first]=="*"
-                    || rec.alleles()[gt.second]=="*")
+                    || strcmp(rec.allele(gt.first),"*")==0
+                    || strcmp(rec.allele(gt.second),"*")==0)
                 // Missing or incomplete genotype.
                 continue;
 
@@ -477,12 +477,12 @@ int PopMap<LocusT>::populate(map<int, LocusT*>& catalog,
                          start=coma+1;
                      }
                      ad.push_back(stoi(ad_str.substr(start)));
-                     if (ad.size() != rec.alleles().size())
+                     if (ad.size() != rec.n_alleles())
                          throw exception();
                  } catch (exception& e) {
                      cerr << "Warning: Badly formatted AD string '" << ad_str
                           << "' at VCF record '" << rec.chrom() << ":" << rec.pos() << "'.\n";
-                     ad = vector<int>(rec.alleles().size(), 0);
+                     ad = vector<int>(rec.n_alleles(), 0);
                  }
             }
 
@@ -500,21 +500,24 @@ int PopMap<LocusT>::populate(map<int, LocusT*>& catalog,
             d->model = new char[2];
             if (gt.first == gt.second) {
                 strcpy(d->model, "O");
-                const string& allele = rec.alleles()[gt.first];
-                d->obshap.push_back(new char[allele.size()+1]);
-                strcpy(d->obshap[0], allele.c_str());
+                const char* allele = rec.allele(gt.first);
+                size_t len = strlen(allele);
+                d->obshap.push_back(new char[len+1]);
+                memcpy(d->obshap[0], allele, len+1);
                 if (ad_index != -1)
                     d->depth = { ad[gt.first] };
                 else
                     d->depth = {0};
             } else {
                 strcpy(d->model, "E");
-                const string& allele1 = rec.alleles()[gt.first];
-                const string& allele2 = rec.alleles()[gt.second];
-                d->obshap.push_back(new char[allele1.size()+1]);
-                d->obshap.push_back(new char[allele2.size()+1]);
-                strcpy(d->obshap[0], allele1.c_str());
-                strcpy(d->obshap[1], allele2.c_str());
+                const char* allele0 = rec.allele(gt.first);
+                const char* allele1 = rec.allele(gt.second);
+                size_t len0 = strlen(allele0);
+                size_t len1 = strlen(allele1);
+                d->obshap.push_back(new char[len0+1]);
+                d->obshap.push_back(new char[len1+1]);
+                memcpy(d->obshap[0], allele0, len0+1);
+                memcpy(d->obshap[1], allele1, len1+1);
                 if (ad_index != -1)
                     d->depth = {ad[gt.first], ad[gt.second]};
                 else

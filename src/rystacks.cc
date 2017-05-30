@@ -367,18 +367,21 @@ void write_one_locus(
             // No useful data at this site.
             continue;
 
+        if (!ref[i].is_acgt())
+            continue;
+
         // Determine which alleles exist, and their order.
         // (n.b. As of Apr4,2017 the ref allele might not be the most frequent one.)
-        vector<Nt4> vcf_alleles;
-        map<Nt4, size_t> vcf_allele_indexes;
+        vector<Nt2> vcf_alleles;
+        map<Nt2, size_t> vcf_allele_indexes;
         {
             vcf_alleles.push_back(ref[i]);
-            vcf_allele_indexes.insert({ref[i], 0});
+            vcf_allele_indexes.insert({Nt2(ref[i]), 0});
 
             // Sort the alleles by frequency.
-            vector<pair<double, Nt4>> sorted_alleles;
+            vector<pair<double, Nt2>> sorted_alleles;
             for (auto& a : sitecall.alleles())
-                sorted_alleles.push_back({a.second, Nt4(a.first)});
+                sorted_alleles.push_back({a.second, a.first});
             sort(sorted_alleles.rbegin(), sorted_alleles.rend()); // (decreasing)
 
             // The reference allele has already been added to vcf_alleles; exclude it.
@@ -403,22 +406,22 @@ void write_one_locus(
         rec.pos_m() = i+1;
 
         // Alleles.
-        for (Nt4 nt : vcf_alleles)
+        for (Nt2 nt : vcf_alleles)
             rec.alleles_m().push_back(string(1, char(nt)));
 
-        if(rec.alleles().size() == 1) {
+        if(rec.n_alleles() == 1) {
             // Fixed site.
 
             // Info/DP.
-            rec.info_m().push_back({"DP", to_string(sitecall.tot_depth())});
+            rec.info_m().push_back(string("DP=") + to_string(sitecall.tot_depth()));
             // Info/AD.
-            Nt4 ref_nt = sitecall.alleles().begin()->first;
-            rec.info_m().push_back({"AD", to_string(sitecall.tot_depths()[Nt2(ref_nt)])});
+            Nt2 ref_nt = sitecall.alleles().begin()->first;
+            rec.info_m().push_back(string("AD=") + to_string(sitecall.tot_depths()[ref_nt]));
             if (vcf_write_depths) {
                 // Info/cnts.
                 stringstream cnts;
                 join(sitecall.tot_depths().arr(), ',', cnts);
-                rec.info_m().push_back({"cnts", cnts.str()});
+                rec.info_m().push_back(string("cnts=") + cnts.str());
             }
             // Format.
             rec.format_m().push_back("DP");
@@ -437,14 +440,14 @@ void write_one_locus(
             // Polymorphic site.
 
             // Info/DP.
-            rec.info_m().push_back({"DP", to_string(sitecall.tot_depth())});
+            rec.info_m().push_back(string("DP=") + to_string(sitecall.tot_depth()));
             // Info/AD.
             vector<size_t> ad;
-            for (auto nt=vcf_alleles.begin(); nt!=vcf_alleles.end(); ++nt)
-                ad.push_back(sitecall.tot_depths()[Nt2(*nt)]);
+            for (Nt2 nt : vcf_alleles)
+                ad.push_back(sitecall.tot_depths()[nt]);
             stringstream ss;
             join(ad, ',', ss);
-            rec.info_m().push_back({"AD", ss.str()});
+            rec.info_m().push_back(string("AD=") + ss.str());
             // Info/AF.
             vector<double> alt_freqs;
             for (auto nt=++vcf_alleles.begin(); nt!=vcf_alleles.end(); ++nt) // rem. always >1 alleles.
@@ -454,7 +457,7 @@ void write_one_locus(
                 // Info/cnts.
                 stringstream cnts;
                 join(sitecall.tot_depths().arr(), ',', cnts);
-                rec.info_m().push_back({"cnts", cnts.str()});
+                rec.info_m().push_back(string("cnts=") + cnts.str());
             }
 
             // Format.
@@ -512,12 +515,12 @@ void write_one_locus(
                 // AD field.
                 vector<size_t> ad;
                 ad.reserve(vcf_alleles.size());
-                for (Nt4 nt : vcf_alleles)
+                for (Nt2 nt : vcf_alleles)
                     ad.push_back(sdepths[nt]);
                 genotype << ':';
                 join(ad, ',', genotype);
                 // GL field.
-                genotype << ':' << VcfRecord::util::fmt_gt_gl(rec.alleles(), scall.lnls());
+                genotype << ':' << VcfRecord::util::fmt_gt_gl(vcf_alleles, scall.lnls());
                 // cnts field.
                 if (vcf_write_depths) {
                     genotype << ":";
