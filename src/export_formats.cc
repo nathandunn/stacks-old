@@ -306,8 +306,8 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
             rec.alleles_m().push_back(string(1, loc->loc.strand == strand_plus ? alt : reverse(alt)));
             rec.qual_m() = ".";
             rec.filter_m().push_back("PASS");
-            rec.info_m().push_back({"NS",to_string(sites[pos]->num_indv)});
-            rec.info_m().push_back({"AF",freq_alt});
+            rec.info_m().push_back(string("NS=") + to_string(sites[pos]->num_indv));
+            rec.info_m().push_back(string("AF=") + freq_alt);
             rec.format_m().push_back("GT");
             rec.format_m().push_back("DP");
             rec.format_m().push_back("AD");
@@ -427,9 +427,9 @@ write_vcf(map<int, CSLocus *> &catalog,
             rec.alleles_m().push_back(string(1, loc->loc.strand == strand_plus ? alt : reverse(alt)));
             rec.qual_m() = ".";
             rec.filter_m().push_back("PASS");
-            rec.info_m().push_back({"NS",to_string(t->nucs[col].num_indv)});
-            rec.info_m().push_back({"AF",freq_alt});
-            rec.info_m().push_back({"locori", loc->loc.strand == strand_plus ? "p" : "m"});
+            rec.info_m().push_back(string("NS=") + to_string(t->nucs[col].num_indv));
+            rec.info_m().push_back(string("AF=") + freq_alt);
+            rec.info_m().push_back(string("locori=") + (loc->loc.strand == strand_plus ? "p" : "m"));
             rec.format_m().push_back("GT");
             rec.format_m().push_back("DP");
             rec.format_m().push_back("AD");
@@ -531,7 +531,7 @@ write_vcf_haplotypes(map<int, CSLocus *> &catalog,
             rec.pos_m() = loc->sort_bp() + 1;
             rec.id_m() = to_string(loc->id);
             rec.type_m() = Vcf::RType::expl;
-            rec.info_m().push_back({"locori", loc->loc.strand == strand_plus ? "p" : "m"});
+            rec.info_m().push_back(string("locori=") + (loc->loc.strand == strand_plus ? "p" : "m"));
 
             //alleles
             vector<pair<string, double> > ordered_hap (hap_freq.begin(), hap_freq.end());
@@ -549,9 +549,9 @@ write_vcf_haplotypes(map<int, CSLocus *> &catalog,
             //info
             stringstream ss;
             ss << n_alleles/2;
-            rec.info_m().push_back({"NS",ss.str()});
-            rec.info_m().push_back({"AF",string()});
-            string& af=rec.info_m().back().second;
+            rec.info_m().push_back(string("NS=") + ss.str());
+            rec.info_m().push_back(string("AF="));
+            string& af = rec.info_m().back();
             sprintf(allele, "%0.3f", ordered_hap[1].second); //NB. hap_freq.size() >= 2
             af += allele;
             for (auto h=ordered_hap.begin()+2; h!=ordered_hap.end(); ++h) {

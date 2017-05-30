@@ -24,6 +24,7 @@ public:
     Nt4& operator=(const Nt4& other) {nt_ = other.nt_; return *this;}
 
     Nt4 rev_compl() const {return rev_compl_[size_t(nt_)];}
+    bool is_acgt() const {return *this == a || *this == c || *this == g || *this == t;}
     size_t index() const {return to_index[size_t(nt_)];}
     explicit operator size_t () const {return nt_;}
     explicit operator int () const {return nt_;}

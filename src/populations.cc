@@ -338,7 +338,7 @@ int main (int argc, char* argv[]) {
         while (reader.read_one_locus(records)) {
             // Get the current locus ID.
             assert(!records.empty());
-            int cloc_id = is_integer(records[0].chrom().c_str());
+            int cloc_id = is_integer(records[0].chrom());
             assert(cloc_id >= 0);
 
             // Find the corresponding fasta record. (Note: c-loci with very low
@@ -423,7 +423,7 @@ int main (int argc, char* argv[]) {
             }
 
             // Check for a filtered-out SNP
-            if (not rec->filter().empty() && rec->filter()[0] != "PASS") {
+            if (rec->n_filters() > 0 && strcmp(rec->filter(0), "PASS") != 0) {
                 skipped_filter.push_back(parser->line_number());
                 continue;
             }

@@ -7,24 +7,23 @@
 
 using namespace std;
 
-pair<string,string> VcfRecord::util::fmt_info_af(const vector<double>& alt_freqs) {
+string VcfRecord::util::fmt_info_af(const vector<double>& alt_freqs) {
     stringstream ss;
     ss << std::setprecision(3);
     join(alt_freqs, ',', ss);
-    return {"AF", ss.str()};
+    return string("AF=") + ss.str();
 }
 
-string VcfRecord::util::fmt_gt_gl(const vector<string>& alleles, const GtLiks& liks) {
+string VcfRecord::util::fmt_gt_gl(const vector<Nt2>& alleles, const GtLiks& liks) {
     static const size_t n_digits = 5;
 
     assert(!alleles.empty());
     vector<double> v;
     v.reserve(n_genotypes(alleles.size()));
     for (size_t a2=0; a2<alleles.size(); ++a2) {
-        assert(alleles[a2].length() == 1); // GtLiks holds SNP genotype liks.
-        Nt2 a2nt (alleles[a2].front());
+        Nt2 a2nt = alleles[a2];
         for (size_t a1=0; a1<=a2; ++a1) {
-            Nt2 a1nt (alleles[a1].front());
+            Nt2 a1nt = alleles[a1];
             v.push_back(liks.at(a1nt, a2nt) / log(10));
         }
     }
@@ -34,7 +33,7 @@ string VcfRecord::util::fmt_gt_gl(const vector<string>& alleles, const GtLiks& l
     return ss.str();
 }
 
-GtLiks VcfRecord::util::parse_gt_gl(const vector<string>& alleles, const string& gl) {
+GtLiks VcfRecord::util::parse_gt_gl(const vector<Nt2>& alleles, const string& gl) {
 
     auto illegal = [&gl](const string& msg = ""){
         cerr << "Error: Illegal VCF genotype GL field: '" << gl << "'" << msg << ".\n";
@@ -72,10 +71,9 @@ GtLiks VcfRecord::util::parse_gt_gl(const vector<string>& alleles, const string&
 
     size_t gt_i = 0;
     for (size_t a2=0; a2<alleles.size(); ++a2) {
-        assert(alleles[a2].length() == 1); // GtLiks holds SNP genotype liks.
-        Nt2 a2nt (alleles[a2].front());
+        Nt2 a2nt = alleles[a2];
         for (size_t a1=0; a1<=a2; ++a1) {
-            Nt2 a1nt (alleles[a1].front());
+            Nt2 a1nt = alleles[a1];
             liks.set(a1nt, a2nt, v[gt_i] * log(10)); // Back to base e.
             ++gt_i;
         }
@@ -97,7 +95,7 @@ bool VcfRecord::util::build_haps(pair<string,string>& haplotypes, const vector<c
         // For each SNP...
         // Parse the genotype.
         const VcfRecord& rec = *snp_records[i];
-        pair<int,int> gt = rec.parse_genotype_nochecks(rec.samples()[sample_index]);
+        pair<int,int> gt = rec.parse_genotype_nochecks(rec.sample(sample_index));
 
         // Record the (phased) alleles.
         if (gt.first == -1) {
@@ -106,14 +104,14 @@ bool VcfRecord::util::build_haps(pair<string,string>& haplotypes, const vector<c
             haplotypes.second[i] = 'N';
             continue;
         }
-        haplotypes.first[i] = rec.alleles()[gt.first][0];
-        haplotypes.second[i] = rec.alleles()[gt.second][0];
+        haplotypes.first[i] = rec.allele(gt.first)[0];
+        haplotypes.second[i] = rec.allele(gt.second)[0];
 
         #ifdef DEBUG
         // Check that there is only one phase set.
-        assert(rec.format()[1] == "PS");
+        assert(rec.n_formats() >= 2 && strcmp(rec.format(1), "PS") == 0);
         if (gt.first != gt.second) {
-            size_t ps = stoi(rec.parse_gt_subfield(rec.samples()[sample_index], 1));
+            size_t ps = stoi(rec.parse_gt_subfield(rec.sample(sample_index), 1));
             if (phase_set == size_t(-1))
                 phase_set = ps;
             else
@@ -406,7 +404,7 @@ VcfAbstractParser::next_record(VcfRecord& record)
         get_bounds(bounds_, tabs_[Vcf::alt-1], tabs_[Vcf::alt], ',');
         for (size_t i = 0; i < bounds_.size()-1; ++i ) {
             record.alleles_m().push_back(string(bounds_.at(i)+1, bounds_.at(i+1)));
-            if (record.alleles().back().empty()) {
+            if (record.alleles_m().back().empty()) {
                 record.alleles_m().pop_back();
                 cerr << "Warning: Skipping malformed VCF record (malformed ALT field)."
                      << " Line " << line_number_ << " in file '" << path_ << "'.\n";
@@ -453,13 +451,8 @@ VcfAbstractParser::next_record(VcfRecord& record)
              << " Line " << line_number_ << " in file '" << path_ << "'.\n";
     if(*(tabs_[Vcf::info-1]+1) != '.') {
         get_bounds(bounds_, tabs_[Vcf::info-1], tabs_[Vcf::info], ';');
-        for(size_t i = 0; i < bounds_.size()-1; ++i ) {
-            char* equal = strchr(bounds_[i]+1, '=');
-            if(equal == NULL or bounds_[i+1] - equal < 0)
-                record.info_m().push_back(pair<string,string>(string(bounds_[i]+1, bounds_[i+1]),string()));
-            else
-                record.info_m().push_back(pair<string,string>(string(bounds_[i]+1, equal),string(equal+1,bounds_[i+1])));
-        }
+        for(size_t i = 0; i < bounds_.size()-1; ++i )
+                record.info_m().push_back(string(bounds_[i]+1, bounds_[i+1]));
     }
 
     // FORMAT
@@ -545,74 +538,60 @@ void VcfWriter::write_record(const VcfRecord& r) {
 
     file_ << r.chrom()
           << "\t" << r.pos()
-          << "\t" << (r.id().empty() ? "." : r.id())
-          << "\t" << r.alleles().at(0);
+          << "\t" << (*r.id() == '\0' ? "." : r.id())
+          << "\t" << r.allele(0);
 
     //ALT
     file_ << "\t";
-    if (r.alleles().size() == 1) {
+    if (r.n_alleles() == 1) {
         file_ << ".";
     } else {
-        auto allele = r.alleles().begin()+1;
-        file_ << *allele;
-        ++allele;
-        while(allele != r.alleles().end()) {
-            file_ << "," << *allele;
-            ++allele;
-        }
+        assert(r.n_alleles() > 1);
+        file_ << r.allele(1);
+        for (size_t i=2; i<r.n_alleles(); ++i)
+            file_ << "," << r.allele(i);
     }
 
-    file_ << "\t" << (r.qual().empty() ? "." : r.qual());
+    //QUAL
+    file_ << "\t" << (*r.qual() == '\0' ? "." : r.qual());
 
     //FILTER
     file_ << "\t";
-    if (r.filter().empty()) {
+    if (r.n_filters() == 0) {
         file_ << ".";
     } else {
-        auto filter = r.filter().begin();
-        file_ << *filter;
-        ++filter;
-        while(filter != r.filter().end()) {
-            file_ << ";" << *filter;
-            ++filter;
-        }
+        file_ << r.filter(0);
+        for (size_t i=1; i<r.n_filters(); ++i)
+            file_ << ";" << r.filter(i);
     }
 
     //INFO
     file_ << "\t";
-    if (r.info().empty()) {
+    if (r.n_infos() == 0) {
         file_ << ".";
     } else {
-        auto i = r.info().begin();
-        file_ << i->first << "=" << i->second;
-        ++i;
-        while(i != r.info().end()) {
-            file_ << ";" << i->first << "=" << i->second;
-            ++i;
-        }
+        file_ << r.info(0);
+        for (size_t i=1; i<r.n_infos(); ++i)
+            file_ << ";" << r.info(i);
     }
 
     if (not header_.samples().empty()) {
         //FORMAT
         file_ << "\t";
-        if (r.format().empty()) {
+        if (r.n_formats() == 0) {
             file_ << ".";
         } else {
-            auto f = r.format().begin();
-            file_ << *f;
-            ++f;
-            while(f != r.format().end()) {
-                file_ << ":" << *f;
-                ++f;
-            }
+            file_ << r.format(0);
+            for (size_t i=1; i<r.n_formats(); ++i)
+                file_ << ":" << r.format(i);
         }
 
         //SAMPLES
-        if (r.samples().size() != header_.samples().size())
+        if (r.n_samples() != header_.samples().size())
             throw exception();
 
-        for (const string& s : r.samples())
-            file_ << "\t" << s;
+        for (size_t i=0; i<r.n_samples(); ++i)
+            file_ << "\t" << r.sample(i);
     }
 
     file_ << "\n";
