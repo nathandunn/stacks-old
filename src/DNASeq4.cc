@@ -35,28 +35,27 @@ DNASeq4 DNASeq4::rev_compl() const {
     return rev;
 }
 
-void DNASeq4::append(const DNASeq4& other) {
+void DNASeq4::append(iterator first, iterator past) {
 
-    if (other.l_ == 0)
+    if (!(first != past))
         return;
 
-    auto nt = other.begin();
-    if (l_%2==1) {
-        v_.back().second(*nt);
-        ++nt;
-    }
-
-    l_ += other.l_;
+    l_ += past - first;
     reserve(l_);
 
-    while(nt != other.end()) {
-        Nt4 first = *nt;
-        ++nt;
-        if (nt != other.end()) {
-            v_.push_back(DiNuc(first, *nt));
-            ++nt;
+    if (l_%2==1) {
+        v_.back().second(*first);
+        ++first;
+    }
+
+    while(first != past) {
+        Nt4 prev = *first;
+        ++first;
+        if (first != past) {
+            v_.push_back(DiNuc(prev, *first));
+            ++first;
         } else {
-            v_.push_back(DiNuc(first, Nt4(0)));
+            v_.push_back(DiNuc(prev, Nt4(0)));
             break;
         }
     }

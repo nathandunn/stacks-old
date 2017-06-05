@@ -239,7 +239,7 @@ CLocAlnSet CLocAlnSet::juxtapose(CLocAlnSet&& left, CLocAlnSet&& right) {
     size_t left_ref_len = merged.ref().length();
 
     // Extend the reference sequence.
-    merged.ref_.append(right.ref());
+    merged.ref_.append(right.ref().begin(), right.ref().end());
 
     // Extend the left reads.
     for (SAlnRead& r : merged.reads_) {
