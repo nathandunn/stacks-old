@@ -56,6 +56,8 @@ struct AlnRead : Read {
     AlnRead(Read&& r, Cigar&& c) : Read(move(r)), cigar(move(c)) {}
 
     Alignment aln() const {return Alignment(seq, cigar);}
+
+    static AlnRead merger_of(AlnRead&& r1, AlnRead&& r2);
 };
 
 //

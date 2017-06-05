@@ -83,6 +83,7 @@ public:
     DNASeq4& operator= (DNASeq4&& other) {l_ = other.l_; v_ = move(other.v_); other.clear(); return *this;}
 
     size_t length() const {return l_;}
+    bool empty() const {return l_ == 0;}
     string str() const;
     DNASeq4 rev_compl() const;
     void set(size_t i, Nt4 nt) {i%2==0 ? v_[i/2].first(nt) : v_[i/2].second(nt);}
