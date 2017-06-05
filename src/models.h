@@ -95,20 +95,20 @@ public:
 };
 
 class SiteCall {
-    SiteCounts depths_;
+    const SiteCounts* depths_;
     map<Nt2,double> alleles_;
     vector<SampleCall> sample_calls_; // Empty if alleles_.size() < 2.
 public:
-    SiteCall(SiteCounts&& depths,
+    SiteCall(const SiteCounts& depths,
              map<Nt2,double>&& alleles,
              vector<SampleCall>&& sample_calls
              )
-        : depths_(move(depths)),
+        : depths_(&depths),
           alleles_(move(alleles)),
           sample_calls_(move(sample_calls))
         {}
-    const Counts<Nt2>& tot_depths() const {return depths_.tot;}
-    const vector<Counts<Nt2>>& sample_depths() const {return depths_.samples;}
+    const Counts<Nt2>& tot_depths() const {return depths_->tot;}
+    const vector<Counts<Nt2>>& sample_depths() const {return depths_->samples;}
     const map<Nt2,double>& alleles() const {return alleles_;}
     const vector<SampleCall>& sample_calls() const {return sample_calls_;}
 
@@ -116,7 +116,7 @@ public:
     Nt2 most_frequent_allele() const;
 
     void discard_sample(size_t sample_i)
-        {depths_.samples[sample_i] = Counts<Nt2>(); if(!sample_calls_.empty()) sample_calls_[sample_i] = SampleCall();}
+        {if(!sample_calls_.empty()) sample_calls_[sample_i] = SampleCall();}
 
     static map<Nt2,double> tally_allele_freqs(const vector<SampleCall>& spldata);
 
@@ -127,7 +127,7 @@ public:
 class Model {
 public:
     virtual ~Model() {}
-    virtual SiteCall call(SiteCounts&& depths) const = 0;
+    virtual SiteCall call(const SiteCounts& depths) const = 0;
     virtual void print(ostream& os) const = 0;
     friend ostream& operator<< (ostream& os, const Model& m) {m.print(os); return os;}
 };
@@ -139,7 +139,7 @@ class MultinomialModel : public Model {
     double alpha_;
 public:
     MultinomialModel(double gt_alpha) : alpha_(gt_alpha) {set_model_thresholds(alpha_);}
-    SiteCall call(SiteCounts&& depths) const;
+    SiteCall call(const SiteCounts& depths) const;
     void print(ostream& os) const
         {os << to_string(modelt::snp) << " (alpha: "  << alpha_ << ")";}
 };
@@ -159,7 +159,7 @@ public:
         : gt_alpha_(gt_alpha), gt_threshold_(qchisq(gt_alpha_,1)),
           var_alpha_(var_alpha), var_threshold_(qchisq(var_alpha_,1))
         {}
-    SiteCall call(SiteCounts&& depths) const;
+    SiteCall call(const SiteCounts& depths) const;
     void print(ostream& os) const
         {os << to_string(modelt::marukihigh) << " (var_alpha: "  << var_alpha_ << ", gt_alpha: " << gt_alpha_ << ")";}
 };
@@ -201,7 +201,7 @@ public:
           n_underflows_(0)
         {}
     ~MarukiLowModel() {cout << "DEBUG: marukilow: " << n_underflows_ << " underflows occurred.\n";}
-    SiteCall call(SiteCounts&& depths) const;
+    SiteCall call(const SiteCounts& depths) const;
     void print(ostream& os) const
         {os << to_string(modelt::marukilow) << " (var_alpha: "  << var_alpha_ << ", gt_alpha: " << gt_alpha_ << ")";}
 };

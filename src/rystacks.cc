@@ -26,6 +26,7 @@ void parse_command_line(int argc, char* argv[]);
 void report_options(ostream& os);
 bool process_one_locus(CLocReadSet&& loc);
 void write_one_locus(const CLocAlnSet& aln_loc,
+                     const vector<SiteCounts>& depths,
                      const vector<SiteCall>& calls,
                      const vector<map<size_t,PhasedHet>>& phase_data); // {col : phasedhet} maps, for all samples
 
@@ -225,12 +226,12 @@ bool process_one_locus(CLocReadSet&& loc) {
     //
     // Call SNPs.
     //
+    vector<SiteCounts> depths;
     vector<SiteCall> calls;
     calls.reserve(aln_loc.ref().length());
     for(CLocAlnSet::site_iterator site (aln_loc); bool(site); ++site) {
-        SiteCounts counts;
-        site.counts(counts);
-        calls.push_back(model->call(move(counts)));
+        depths.push_back(site.counts());
+        calls.push_back(model->call(depths.back()));
     }
 
     // Update the consensus sequence.
@@ -332,8 +333,10 @@ bool process_one_locus(CLocReadSet&& loc) {
                     // cases there were 0/1's converted to 'homozygote' by haplotype
                     // selection.
                     //
-                    for (SiteCall& c : calls)
-                        c.discard_sample(sample);
+                    for (size_t i=0; i<aln_loc.ref().length(); ++i) {
+                        depths[i].samples[sample] = Counts<Nt2>();
+                        calls[i].discard_sample(sample);
+                    }
                     phase_data[sample].clear();
                     break;
                 }
@@ -341,13 +344,14 @@ bool process_one_locus(CLocReadSet&& loc) {
         }
     }
 
-    write_one_locus(aln_loc, calls, phase_data);
+    write_one_locus(aln_loc, depths, calls, phase_data);
 
     return true;
 }
 
 void write_one_locus(
         const CLocAlnSet& aln_loc,
+        const vector<SiteCounts>& depths,
         const vector<SiteCall>& calls,
         const vector<map<size_t,PhasedHet>>& phase_data
         ){
@@ -359,9 +363,11 @@ void write_one_locus(
     //
     // Vcf output.
     //
+    assert(depths.size() == ref.length());
     assert(calls.size() == ref.length());
     vector<size_t> sample_sites_w_data (mpopi.samples().size(), 0);
     for (size_t i=0; i<ref.length(); ++i) {
+        const SiteCounts& sitedepths = depths[i];
         const SiteCall& sitecall = calls[i];
         if (sitecall.alleles().empty())
             // No useful data at this site.
@@ -413,21 +419,21 @@ void write_one_locus(
             // Fixed site.
 
             // Info/DP.
-            rec.info_m().push_back(string("DP=") + to_string(sitecall.tot_depth()));
+            rec.info_m().push_back(string("DP=") + to_string(sitedepths.tot.sum()));
             // Info/AD.
             Nt2 ref_nt = sitecall.alleles().begin()->first;
-            rec.info_m().push_back(string("AD=") + to_string(sitecall.tot_depths()[ref_nt]));
+            rec.info_m().push_back(string("AD=") + to_string(sitedepths.tot[ref_nt]));
             if (vcf_write_depths) {
                 // Info/cnts.
                 stringstream cnts;
-                join(sitecall.tot_depths().arr(), ',', cnts);
+                join(sitedepths.tot.arr(), ',', cnts);
                 rec.info_m().push_back(string("cnts=") + cnts.str());
             }
             // Format.
             rec.format_m().push_back("DP");
             // Genotypes.
             for (size_t sample=0; sample<mpopi.samples().size(); ++sample) {
-                size_t dp = sitecall.sample_depths()[sample].sum();
+                size_t dp = sitedepths.samples[sample].sum();
                 if (dp == 0) {
                     rec.samples_m().push_back(".");
                     continue;
@@ -440,11 +446,11 @@ void write_one_locus(
             // Polymorphic site.
 
             // Info/DP.
-            rec.info_m().push_back(string("DP=") + to_string(sitecall.tot_depth()));
+            rec.info_m().push_back(string("DP=") + to_string(sitedepths.tot.sum()));
             // Info/AD.
             vector<size_t> ad;
             for (Nt2 nt : vcf_alleles)
-                ad.push_back(sitecall.tot_depths()[nt]);
+                ad.push_back(sitedepths.tot[nt]);
             stringstream ss;
             join(ad, ',', ss);
             rec.info_m().push_back(string("AD=") + ss.str());
@@ -456,7 +462,7 @@ void write_one_locus(
             if (vcf_write_depths) {
                 // Info/cnts.
                 stringstream cnts;
-                join(sitecall.tot_depths().arr(), ',', cnts);
+                join(sitedepths.tot.arr(), ',', cnts);
                 rec.info_m().push_back(string("cnts=") + cnts.str());
             }
 
@@ -471,7 +477,7 @@ void write_one_locus(
             // Genotypes.
             rec.samples_m().reserve(mpopi.samples().size());
             for (size_t sample=0; sample<mpopi.samples().size(); ++sample) {
-                const Counts<Nt2>& sdepths = sitecall.sample_depths()[sample];
+                const Counts<Nt2>& sdepths = sitedepths.samples[sample];
                 const SampleCall& scall = sitecall.sample_calls()[sample];
                 if (sdepths.sum() == 0) {
                     // No data for this sample.
