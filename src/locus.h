@@ -220,10 +220,12 @@ public:
     const vector<SAlnRead>& reads() const {return reads_;}
     const vector<size_t>& sample_reads(size_t sample) const {return reads_per_sample_.at(sample);}
 
-    void clear() {id_= -1; ref_ = DNASeq4(); reads_.clear(); reads_per_sample_.clear();}
+    void clear()
+        {id_= -1; ref_ = DNASeq4(); reads_.clear(); reads_per_sample_ = vector<vector<size_t>>(mpopi().samples().size());}
     void id(int id) {id_ = id;}
     void ref(DNASeq4&& ref) {ref_ = move(ref);}
     void add(SAlnRead&& r);
+    void merge_paired_reads();
 
     friend ostream& operator<< (ostream& os, const CLocAlnSet& loc);
 

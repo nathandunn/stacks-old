@@ -181,6 +181,48 @@ QLocus::clear_matches()
     return 0;
 }
 
+void CLocAlnSet::merge_paired_reads() {
+
+    // Sort reads by name. Paired reads should have the same name but end with
+    // respectively "/1" and "/2".
+    sort(reads_.begin(), reads_.end(),
+         [](const SAlnRead& r1, const SAlnRead& r2){return r1.name < r2.name;}
+         );
+
+    // Merge paired reads.
+    for (auto r1=reads_.begin(); r1!=reads_.end(); ++r1) {
+        auto r2 = r1+1;
+        const string& n1 = r1->name;
+        const string& n2 = r2->name;
+        const size_t l = n1.length();
+        if (n2.length() == l && l >= 2
+                && n1[l-2] == '/' && n1[l-1] == '1'
+                && n2[l-2] == '/' && n2[l-1] == '2'
+                && n1.substr(0, l-2) == n2.substr(0, l-2)
+                ){
+            // r1 and r2 are paired, merge them.
+            assert(r1->sample == r2->sample);
+            *r1 = SAlnRead(AlnRead::merger_of(move(*r1), move(*r2)), r1->sample);
+
+            // Mark r2 for removal and skip it.
+            r2->seq.clear();
+            ++r1;
+        }
+    }
+
+    // Remove emptied reads.
+    reads_.erase(std::remove_if(
+            reads_.begin(),
+            reads_.end(),
+            [](const Read& r){return r.seq.empty();}
+            ), reads_.end());
+
+    // Refresh `reads_per_sample_`.
+    reads_per_sample_ = vector<vector<size_t>>(mpopi().samples().size());
+    for (size_t i=0; i<reads_.size(); ++i)
+        reads_per_sample_[reads_[i].sample].push_back(i);
+}
+
 ostream& operator<< (ostream& os, const CLocAlnSet& loc) {
     os << "ref\t\t" << loc.ref().str();
     for (auto& r : loc.reads_)
