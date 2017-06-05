@@ -25,6 +25,10 @@ struct PhasedHet {
 void parse_command_line(int argc, char* argv[]);
 void report_options(ostream& os);
 bool process_one_locus(CLocReadSet&& loc);
+vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
+                                         const CLocAlnSet& aln_loc,
+                                         set<size_t>& inconsistent_samples
+                                         );
 void write_one_locus(const CLocAlnSet& aln_loc,
                      const vector<SiteCounts>& depths,
                      const vector<SiteCall>& calls,
@@ -246,100 +250,15 @@ bool process_one_locus(CLocReadSet&& loc) {
     aln_loc.ref(move(new_ref));
 
     // Call haplotypes.
-    vector<map<size_t,PhasedHet>> phase_data (aln_loc.mpopi().samples().size());
+    vector<map<size_t,PhasedHet>> phase_data;
     if (write_haplotypes) {
-        vector<size_t> snp_cols;
-        for (size_t i=0; i<aln_loc.ref().length(); ++i)
-            if (calls[i].alleles().size() > 1)
-                snp_cols.push_back(i);
-
-        for (size_t sample=0; sample<aln_loc.mpopi().samples().size(); ++sample) {
-
-            vector<size_t> het_cols;
-            for(size_t col : snp_cols)
-                if (calls[col].sample_calls()[sample].call() == snp_type_het)
-                    het_cols.push_back(col);
-
-            if (het_cols.empty())
-                continue;
-
-            // Count the haplotypes observed for this sample.
-            map<vector<Nt2>,size_t> sample_haps;
-            for (size_t read_i : aln_loc.sample_reads(sample)) {
-                const Read& read = aln_loc.reads()[read_i];
-                if (read.name.substr(read.name.length()-2) == "/2") {
-                    cerr << "Error: Refusing to call haplotypes in paired-end data.\n"; //TODO
-                    throw exception();
-                }
-
-                vector<Nt2> read_hap;
-                read_hap.reserve(het_cols.size());
-                for (size_t col : het_cols) {
-                    Nt4 nt = read.seq[col];
-                    if (nt == Nt4::n || !calls[col].alleles().count(nt))
-                        // Incomplete haplotype. //TODO This will cause problems: no haps when there are hets (e.g. shorter reads).
-                        break;
-                    read_hap.push_back(Nt2(nt));
-                }
-                if (read_hap.size() != het_cols.size())
-                    continue;
-
-                ++sample_haps[read_hap];
-            }
-
-            // Sort the sample's haplotypes by frequency.
-            vector<pair<size_t, vector<Nt2>>> s_sample_haps;
-            s_sample_haps.reserve(sample_haps.size());
-            for (auto& hap : sample_haps)
-                s_sample_haps.push_back({hap.second, hap.first});
-            sort(s_sample_haps.rbegin(), s_sample_haps.rend());
-
-            // Record the phase data.
-            if (s_sample_haps.size() < 2) {
-                // Issues because of incomplete haplotypes.
-                cerr << "DEBUG: Oops, Sample is heterozygous for the locus but has <2 haplotype(s).\n"; //xxx
-                throw exception();
-            }
-            for (size_t i=0; i<het_cols.size(); ++i) {
-                size_t col = het_cols[i];
-                Nt2 left_allele = s_sample_haps[0].second[i];
-                Nt2 right_allele = s_sample_haps[1].second[i];
-                PhasedHet ph {het_cols[0], left_allele, right_allele};
-                phase_data[sample].insert({col, ph});
-
-                if (left_allele == right_allele) {
-                    //
-                    // The genotype of this sample at this position was called to
-                    // be a heterozygote, but the two most abundant haplotypes actually
-                    // agree on the allele at this position.
-                    // Real examples:
-                    // haplos TTG-ATG-AGA with depths 4-4-3 (issue with the 2nd SNP)
-                    // haplos TG-CG-CT-TT with depths 6-6-3-2 (issue with the 2nd SNP)
-                    //
-                    // This means that tere is a fundamental problem with the calls
-                    // for this sample. We delete its data altoghether, so that it
-                    // will appear as "." in the VCF.
-                    //
-                    // N.B. Global coverage and the fixed/polymorphism call still
-                    // account for this sample, which can make those records look
-                    // like they are inconsistent.
-                    //
-                    // PCR duplicates, and possibly overmerging, are possible
-                    // sources for such cases.
-                    //
-                    // I originally noticed this because 0|0 and 1|1 genotypes
-                    // were popping up in the VCF (instead of 0/0 and 1/1, as it
-                    // doesn't make sense to phase homozygote positions). In all
-                    // cases there were 0/1's converted to 'homozygote' by haplotype
-                    // selection.
-                    //
-                    for (size_t i=0; i<aln_loc.ref().length(); ++i) {
-                        depths[i].samples[sample] = Counts<Nt2>();
-                        calls[i].discard_sample(sample);
-                    }
-                    phase_data[sample].clear();
-                    break;
-                }
+        set<size_t> inconsistent_samples;
+        phase_data = phase_hets(calls, aln_loc, inconsistent_samples);
+        for (size_t sample : inconsistent_samples) {
+            // Observed haplotypes are inconsistent given the sample's diploidy.
+            for (size_t i=0; i<aln_loc.ref().length(); ++i) {
+                depths[i].samples[sample] = Counts<Nt2>();
+                calls[i].discard_sample(sample);
             }
         }
     }
@@ -347,6 +266,107 @@ bool process_one_locus(CLocReadSet&& loc) {
     write_one_locus(aln_loc, depths, calls, phase_data);
 
     return true;
+}
+
+vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
+                                         const CLocAlnSet& aln_loc,
+                                         set<size_t>& inconsistent_samples
+                                         ){
+    vector<map<size_t,PhasedHet>> phased_samples (aln_loc.mpopi().samples().size());
+
+    vector<size_t> snp_cols;
+    for (size_t i=0; i<aln_loc.ref().length(); ++i)
+        if (calls[i].alleles().size() > 1)
+            snp_cols.push_back(i);
+
+    for (size_t sample=0; sample<aln_loc.mpopi().samples().size(); ++sample) {
+
+        vector<size_t> het_cols;
+        for(size_t col : snp_cols)
+            if (calls[col].sample_calls()[sample].call() == snp_type_het)
+                het_cols.push_back(col);
+
+        if (het_cols.empty())
+            continue;
+
+        // Count the haplotypes observed for this sample.
+        map<vector<Nt2>,size_t> sample_haps;
+        for (size_t read_i : aln_loc.sample_reads(sample)) {
+            const Read& read = aln_loc.reads()[read_i];
+            if (read.name.substr(read.name.length()-2) == "/2") {
+                cerr << "Error: Refusing to call haplotypes in paired-end data.\n"; //TODO
+                throw exception();
+            }
+
+            vector<Nt2> read_hap;
+            read_hap.reserve(het_cols.size());
+            for (size_t col : het_cols) {
+                Nt4 nt = read.seq[col];
+                if (nt == Nt4::n || !calls[col].alleles().count(nt))
+                    // Incomplete haplotype. //TODO This will cause problems: no haps when there are hets (e.g. shorter reads).
+                    break;
+                read_hap.push_back(Nt2(nt));
+            }
+            if (read_hap.size() != het_cols.size())
+                continue;
+
+            ++sample_haps[read_hap];
+        }
+
+        // Sort the sample's haplotypes by frequency.
+        vector<pair<size_t, vector<Nt2>>> s_sample_haps;
+        s_sample_haps.reserve(sample_haps.size());
+        for (auto& hap : sample_haps)
+            s_sample_haps.push_back({hap.second, hap.first});
+        sort(s_sample_haps.rbegin(), s_sample_haps.rend());
+
+        // Record the phase data.
+        if (s_sample_haps.size() < 2) {
+            // Issues because of incomplete haplotypes.
+            cerr << "DEBUG: Oops, Sample is heterozygous for the locus but has <2 haplotype(s).\n"; //xxx
+            throw exception();
+        }
+        for (size_t i=0; i<het_cols.size(); ++i) {
+            size_t col = het_cols[i];
+            Nt2 left_allele = s_sample_haps[0].second[i];
+            Nt2 right_allele = s_sample_haps[1].second[i];
+            PhasedHet ph {het_cols[0], left_allele, right_allele};
+            phased_samples[sample].insert({col, ph});
+
+            if (left_allele == right_allele) {
+                //
+                // The genotype of this sample at this position was called to
+                // be a heterozygote, but the two most abundant haplotypes actually
+                // agree on the allele at this position.
+                // Real examples:
+                // haplos TTG-ATG-AGA with depths 4-4-3 (issue with the 2nd SNP)
+                // haplos TG-CG-CT-TT with depths 6-6-3-2 (issue with the 2nd SNP)
+                //
+                // This means that tere is a fundamental problem with the calls
+                // for this sample. We delete its data altoghether, so that it
+                // will appear as "." in the VCF.
+                //
+                // N.B. Global coverage and the fixed/polymorphism call still
+                // account for this sample, which can make those records look
+                // like they are inconsistent.
+                //
+                // PCR duplicates, and possibly overmerging, are possible
+                // sources for such cases.
+                //
+                // I originally noticed this because 0|0 and 1|1 genotypes
+                // were popping up in the VCF (instead of 0/0 and 1/1, as it
+                // doesn't make sense to phase homozygote positions). In all
+                // cases there were 0/1's converted to 'homozygote' by haplotype
+                // selection.
+                //
+                phased_samples[sample].clear();
+                inconsistent_samples.insert(sample);
+                break;
+            }
+        }
+    }
+
+    return phased_samples;
 }
 
 void write_one_locus(
@@ -498,6 +518,7 @@ void write_one_locus(
                     break;
                 case snp_type_het:
                     if (write_haplotypes) {
+                        assert(!phase_data.empty());
                         const PhasedHet& p = phase_data[sample].at(i);
                         genotype << vcf_allele_indexes.at(p.left_allele)
                                  << '|'
