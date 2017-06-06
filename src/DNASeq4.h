@@ -108,6 +108,7 @@ public:
     public:
         iterator(vector<DiNuc>::const_iterator vi, bool f) : vi_(vi), first_(f) {}
         bool operator!= (iterator other) const {return ! (vi_ == other.vi_? first_ == other.first_ : false);}
+        bool operator== (iterator other) const {return !operator!=(other);}
         iterator& operator++ () {if (first_) {first_ = false;} else {++vi_; first_ = true;} return *this; }
         iterator& operator-- () {if (first_) {--vi_; first_ = false;} else {first_ = true;} return *this; }
         size_t operator- (iterator other) {return 2*(vi_ - other.vi_) + size_t(other.first_) - size_t(first_);}
