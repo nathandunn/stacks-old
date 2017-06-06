@@ -45,6 +45,7 @@ public:
         operator bool() const {return cig_it_ != cig_past_;}
 
         Nt4 operator* () const {if (cig_it_->first=='M') return *seq_it_; else {assert(cig_it_->first=='D'); return Nt4::n;}}
+        char curr_op() const {return cig_it_->first;} // N.B. This is never 'I' (as it is skipped).
 
     private:
         void skip_insertion();
@@ -57,7 +58,7 @@ struct AlnRead : Read {
 
     Alignment aln() const {return Alignment(seq, cigar);}
 
-    static AlnRead merger_of(AlnRead&& r1, AlnRead&& r2);
+    static AlnRead merger_of(const AlnRead& r1, const AlnRead& r2);
 };
 
 //
@@ -154,6 +155,60 @@ bool Alignment::check_cigar() const {
     }
 
     return seq_i == seq_->length();
+}
+
+inline
+AlnRead AlnRead::merger_of(const AlnRead& r1, const AlnRead& r2) {
+
+    // name.
+    string name (r1.name);
+    if (name[name.length()-2] == '/' && (name.back() == '1' || name.back() == '2'))
+        name.back() = 'm';
+    else
+        name += "/m";
+
+    // sequence & cigar.
+    // xxx We use push_back(); it would be faster to append (but it would require a more elaborate handling of cigars).
+    DNASeq4 seq;
+    Cigar cig;
+    auto a1 = Alignment::iterator(r1.aln());
+    auto a2 = Alignment::iterator(r1.aln());
+    auto increment_cigar_op = [&cig](char op){
+        if (cig.empty() || cig.back().first != op)
+            cig.push_back({op, 1});
+        else
+            ++cig.back().second;
+    };
+    while(a1) {
+        assert(a2); // a1 & a2 must become false together.
+        char o1 = a1.curr_op();
+        char o2 = a2.curr_op();
+        assert((o1 == 'M' || o1 == 'D') && (o2 =='M' || o2 == 'D'));
+        if (o1 == 'M' && o2 == 'M') {
+            Nt4 nt1 = *a1;
+            Nt4 nt2 = *a2;
+            if (nt1 == nt2)
+                seq.push_back(nt1);
+            else
+                seq.push_back(Nt4::n);
+            increment_cigar_op('M');
+        } else if (o1 == 'D' && o2 == 'D') {
+            increment_cigar_op('D');
+        } else if (o1 == 'M' && o2 == 'D') {
+            Nt4 nt1 = *a1;
+            seq.push_back(nt1);
+            increment_cigar_op('M');
+        } else if (o1 == 'D' && o2 == 'M') {
+            Nt4 nt2 = *a2;
+            seq.push_back(nt2);
+            increment_cigar_op('M');
+        }
+        ++a1;
+        ++a2;
+    }
+    assert(!a2);
+
+    return AlnRead(Read(move(seq), move(name)), move(cig));
 }
 
 #endif
