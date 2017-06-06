@@ -203,6 +203,7 @@ void CLocAlnSet::merge_paired_reads() {
             // r1 and r2 are paired, merge them.
             assert(r1->sample == r2->sample);
             *r1 = SAlnRead(AlnRead::merger_of(move(*r1), move(*r2)), r1->sample);
+            assert(cigar_length_ref(r1->cigar) == ref_.length());
 
             // Mark r2 for removal and skip it.
             r2->seq.clear();
