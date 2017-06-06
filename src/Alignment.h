@@ -13,7 +13,7 @@ class Alignment {
 public:
     Alignment(const DNASeq4& seq, const Cigar& cigar)
         : seq_(&seq), cig_(&cigar)
-        {assert(check_cigar());}
+        {assert(cigar_length_query(*cig_) == seq_->length()); assert(check_cigar_ops());}
 
     // N.B. Inefficient; prefer iteration.
     Nt4 operator[] (size_t ref_i) const;
@@ -22,7 +22,7 @@ public:
         {for(iterator it (aln); it; ++it) os << char(*it); return os;}
 
 private:
-    bool check_cigar() const;
+    bool check_cigar_ops() const;
 
 public:
     // Iterator.
@@ -142,18 +142,13 @@ void Alignment::iterator::skip_insertion() {
 }
 
 inline
-bool Alignment::check_cigar() const {
-    size_t seq_i = 0;
-    for (auto& op : *cig_) {
-        if (op.first == 'M' || op.first == 'I')
-            // M and I consume the sequence.
-            seq_i += op.second;
-        else if (op.first != 'D')
+bool Alignment::check_cigar_ops() const {
+    for (auto& op : *cig_)
+        if (op.first != 'M' && op.first != 'D' && op.first != 'I')
             // Oops, the class only knows M, I and D.
             return false;
-    }
 
-    return seq_i == seq_->length();
+    return true;
 }
 
 inline
