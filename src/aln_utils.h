@@ -29,21 +29,26 @@
 #include "constants.h"
 #include "utils.h"
 
+typedef vector<pair<char, uint>> Cigar;
+
 string invert_cigar(string);
-int    parse_cigar(const char *, vector<pair<char, uint> > &, bool check_correctness = false);
-string apply_cigar_to_seq(const char *, vector<pair<char, uint> > &);
-string remove_cigar_from_seq(const char *, vector<pair<char, uint> > &);
-string apply_cigar_to_model_seq(const char *, vector<pair<char, uint> > &);
-int    apply_cigar_to_seq(char *, uint, const char *, vector<pair<char, uint> > &);
-int    apply_cigar_to_model_seq(char *, uint, const char *, vector<pair<char, uint> > &);
-std::tuple<uint,uint,uint> cigar_lengths(const vector<pair<char, uint>>&);
-void cigar_extend_right(vector<pair<char, uint>>&, size_t);
-void cigar_extend_left(vector<pair<char, uint>>&, size_t);
+int    parse_cigar(const char*, Cigar&, bool check_correctness = false);
+string apply_cigar_to_seq(const char*, Cigar&);
+string remove_cigar_from_seq(const char*, Cigar&);
+string apply_cigar_to_model_seq(const char*, Cigar&);
+int    apply_cigar_to_seq(char*, uint, const char*, Cigar&);
+int    apply_cigar_to_model_seq(char*, uint, const char*, Cigar&);
+std::tuple<uint,uint,uint> cigar_lengths(const Cigar&);
+inline uint cigar_length_padded(const Cigar& c) {return std::get<0>(cigar_lengths(c));}
+inline uint cigar_length_ref(const Cigar& c) {return std::get<1>(cigar_lengths(c));}
+inline uint cigar_length_query(const Cigar& c) {return std::get<2>(cigar_lengths(c));}
+void cigar_extend_right(Cigar&, size_t);
+void cigar_extend_left(Cigar&, size_t);
 
 #include "locus.h"
-int    adjust_snps_for_gaps(vector<pair<char, uint> > &, Locus *);
-int    adjust_and_add_snps_for_gaps(vector<pair<char, uint> > &, Locus *);
-int    remove_snps_from_gaps(vector<pair<char, uint> > &, Locus *);
+int    adjust_snps_for_gaps(Cigar&, Locus*);
+int    adjust_and_add_snps_for_gaps(Cigar&, Locus*);
+int    remove_snps_from_gaps(Cigar&, Locus*);
 
 //
 // Inline definitions.
@@ -51,7 +56,7 @@ int    remove_snps_from_gaps(vector<pair<char, uint> > &, Locus *);
 //
 
 inline
-void cigar_extend_right(vector<pair<char, uint>>& cig, size_t len) {
+void cigar_extend_right(Cigar& cig, size_t len) {
     if (cig.back().first == 'D')
         cig.back().second += len;
     else
@@ -59,7 +64,7 @@ void cigar_extend_right(vector<pair<char, uint>>& cig, size_t len) {
 }
 
 inline
-void cigar_extend_left(vector<pair<char, uint>>& cig, size_t len) {
+void cigar_extend_left(Cigar& cig, size_t len) {
     if (cig.front().first == 'D')
         cig.front().second += len;
     else

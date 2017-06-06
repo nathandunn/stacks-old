@@ -38,7 +38,7 @@ invert_cigar(string cigar)
 }
 
 int
-parse_cigar(const char *cigar_str, vector<pair<char, uint> > &cigar, bool check_correctness)
+parse_cigar(const char *cigar_str, Cigar &cigar, bool check_correctness)
 {
     cigar.clear();
     const char* p      = cigar_str;
@@ -81,7 +81,7 @@ parse_cigar(const char *cigar_str, vector<pair<char, uint> > &cigar, bool check_
 }
 
 string
-apply_cigar_to_seq(const char *seq, vector<pair<char, uint> > &cigar)
+apply_cigar_to_seq(const char *seq, Cigar &cigar)
 {
     uint   size = cigar.size();
     char   op;
@@ -135,7 +135,7 @@ apply_cigar_to_seq(const char *seq, vector<pair<char, uint> > &cigar)
 }
 
 string
-apply_cigar_to_model_seq(const char *seq, vector<pair<char, uint> > &cigar)
+apply_cigar_to_model_seq(const char *seq, Cigar &cigar)
 {
     uint   size = cigar.size();
     char   op;
@@ -189,7 +189,7 @@ apply_cigar_to_model_seq(const char *seq, vector<pair<char, uint> > &cigar)
 }
 
 int
-apply_cigar_to_seq(char *seq, uint seq_len, const char *old_seq, vector<pair<char, uint> > &cigar)
+apply_cigar_to_seq(char *seq, uint seq_len, const char *old_seq, Cigar &cigar)
 {
     uint   size = cigar.size();
     char   op;
@@ -241,7 +241,7 @@ apply_cigar_to_seq(char *seq, uint seq_len, const char *old_seq, vector<pair<cha
 }
 
 int
-apply_cigar_to_model_seq(char *seq, uint seq_len, const char *model, vector<pair<char, uint> > &cigar)
+apply_cigar_to_model_seq(char *seq, uint seq_len, const char *model, Cigar &cigar)
 {
     uint   size = cigar.size();
     char   op;
@@ -293,7 +293,7 @@ apply_cigar_to_model_seq(char *seq, uint seq_len, const char *model, vector<pair
 }
 
 string
-remove_cigar_from_seq(const char *seq, vector<pair<char, uint> > &cigar)
+remove_cigar_from_seq(const char *seq, Cigar &cigar)
 {
     uint   size = cigar.size();
     char   op;
@@ -340,7 +340,7 @@ remove_cigar_from_seq(const char *seq, vector<pair<char, uint> > &cigar)
 }
 
 int
-adjust_snps_for_gaps(vector<pair<char, uint> > &cigar, Locus *loc)
+adjust_snps_for_gaps(Cigar &cigar, Locus *loc)
 {
     uint   size = cigar.size();
     char   op;
@@ -379,7 +379,7 @@ adjust_snps_for_gaps(vector<pair<char, uint> > &cigar, Locus *loc)
 }
 
 int
-adjust_and_add_snps_for_gaps(vector<pair<char, uint> > &cigar, Locus *loc)
+adjust_and_add_snps_for_gaps(Cigar &cigar, Locus *loc)
 {
     uint   size = cigar.size();
     char   op;
@@ -433,7 +433,7 @@ adjust_and_add_snps_for_gaps(vector<pair<char, uint> > &cigar, Locus *loc)
 }
 
 int
-remove_snps_from_gaps(vector<pair<char, uint> > &cigar, Locus *loc)
+remove_snps_from_gaps(Cigar &cigar, Locus *loc)
 {
     uint   size = cigar.size();
     char   op;
@@ -481,7 +481,7 @@ remove_snps_from_gaps(vector<pair<char, uint> > &cigar, Locus *loc)
     return 0;
 }
 
-std::tuple<uint,uint,uint> cigar_lengths(const vector<pair<char, uint>>& cigar) {
+std::tuple<uint,uint,uint> cigar_lengths(const Cigar& cigar) {
     uint padded_len = 0;
     uint ref_len = 0;
     uint seq_len = 0;
