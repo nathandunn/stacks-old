@@ -40,13 +40,14 @@ void DNASeq4::append(iterator first, iterator past) {
     if (!(first != past))
         return;
 
-    l_ += past - first;
-    reserve(l_);
-
     if (l_%2==1) {
         v_.back().second(*first);
+        ++l_;
         ++first;
     }
+
+    l_ += past - first;
+    reserve(l_);
 
     while(first != past) {
         Nt4 prev = *first;
