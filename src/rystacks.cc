@@ -608,8 +608,8 @@ void write_one_locus(
     // Depth.
     // One two-digit hex number per position (max 0xFF).
     o_models_f << loc_id << "\tdepth\t\t" << std::hex;
-    for (auto& c : calls) {
-        size_t dp = c.tot_depth();
+    for (size_t i=0; i<ref.length(); ++i) {
+        size_t dp = depths[i].tot.sum();
         if (dp <= 0xF)
             o_models_f << "0" << dp;
         else if (dp <= 0xFF)
@@ -625,7 +625,8 @@ void write_one_locus(
 
         // Model.
         o_models_f << loc_id << "\ts_model\t" << sample_id << "\t";
-        for (auto& c : calls) {
+        for (size_t i=0; i<ref.length(); ++i) {
+            const SiteCall& c = calls[i];
             if (c.alleles().size() == 0) {
                 o_models_f << "U";
             } else if (c.alleles().size() == 1) {
@@ -643,10 +644,12 @@ void write_one_locus(
         // Depths.
         // Four two-digit hex numbers (A,C,T,G) per position.
         o_models_f << loc_id << "\ts_depths\t" << sample_id << "\t" << std::hex;
-        for (auto& c : calls) {
-            // For each site/position.
+        for (size_t i=0; i<ref.length(); ++i) {
+            // For each site...
+            const SiteCounts& sitedepths = depths[i];
             for (Nt2 nt : Nt2::all) {
-                size_t dp = c.sample_depths()[s][nt];
+                // For each of A, C, G and T...
+                size_t dp = sitedepths.samples[s][nt];
                 if (dp <= 0xF)
                     o_models_f << "0" << dp;
                 else if (dp <= 0xFF)

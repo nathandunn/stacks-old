@@ -95,24 +95,18 @@ public:
 };
 
 class SiteCall {
-    const SiteCounts* depths_;
     map<Nt2,double> alleles_;
     vector<SampleCall> sample_calls_; // Empty if alleles_.size() < 2.
 public:
-    SiteCall(const SiteCounts& depths,
-             map<Nt2,double>&& alleles,
+    SiteCall(map<Nt2,double>&& alleles,
              vector<SampleCall>&& sample_calls
              )
-        : depths_(&depths),
-          alleles_(move(alleles)),
+        : alleles_(move(alleles)),
           sample_calls_(move(sample_calls))
         {}
-    const Counts<Nt2>& tot_depths() const {return depths_->tot;}
-    const vector<Counts<Nt2>>& sample_depths() const {return depths_->samples;}
     const map<Nt2,double>& alleles() const {return alleles_;}
     const vector<SampleCall>& sample_calls() const {return sample_calls_;}
 
-    size_t tot_depth() const {return tot_depths().sum();}
     Nt2 most_frequent_allele() const;
 
     void discard_sample(size_t sample_i)
@@ -121,7 +115,7 @@ public:
     static map<Nt2,double> tally_allele_freqs(const vector<SampleCall>& spldata);
 
     // For debugging.
-    friend ostream& operator<<(ostream& os, const SiteCall& sc);
+    void print(ostream& os, const SiteCounts& depths);
 };
 
 class Model {
