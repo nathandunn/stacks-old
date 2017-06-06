@@ -25,6 +25,7 @@ public:
 
     Nt4 rev_compl() const {return rev_compl_[size_t(nt_)];}
     bool is_acgt() const {return *this == a || *this == c || *this == g || *this == t;}
+    bool is_acgtn() const {return is_acgt() || *this == n ;}
     size_t index() const {return to_index[size_t(nt_)];}
     explicit operator size_t () const {return nt_;}
     explicit operator int () const {return nt_;}
@@ -74,7 +75,7 @@ class Nt2 {
 public:
     Nt2() : nt_(Nt2::a) {}
     Nt2(char c) : nt_(from_ch[size_t(c)]) {}
-    Nt2(Nt4 nt4) : nt_(from_nt4[size_t(nt4)]) {assert(!(nt4==Nt4::n));}
+    Nt2(Nt4 nt4) : nt_(from_nt4[size_t(nt4)]) {assert(nt4.is_acgt());}
     Nt2(size_t i) : nt_(i) {}
     Nt2(int i) : nt_(i) {}
     Nt2(const Nt2& other) : nt_(other.nt_) {}
