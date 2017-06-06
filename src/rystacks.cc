@@ -255,6 +255,7 @@ bool process_one_locus(CLocReadSet&& loc) {
     if (write_haplotypes) {
         set<size_t> inconsistent_samples;
         phase_data = phase_hets(calls, aln_loc, inconsistent_samples);
+        /* TODO {
         for (size_t sample : inconsistent_samples) {
             // Observed haplotypes are inconsistent given the sample's diploidy.
             for (size_t i=0; i<aln_loc.ref().length(); ++i) {
@@ -262,6 +263,7 @@ bool process_one_locus(CLocReadSet&& loc) {
                 calls[i].discard_sample(sample);
             }
         }
+        // TODO } */
     }
 
     write_one_locus(aln_loc, depths, calls, phase_data);
@@ -280,61 +282,90 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
         if (calls[i].alleles().size() > 1)
             snp_cols.push_back(i);
 
+    // TODO{
+    cerr << "--------------------\nBEGIN LOCUS " << aln_loc.id() << "\n";
+    if (snp_cols.empty()) {
+        cerr << "fixed\n";
+        return phased_samples;
+    }
+    cerr << "snps columns: ";
+    join(snp_cols, ',', cerr);
+    cerr << "\n";
+    // TODO}
+
     for (size_t sample=0; sample<aln_loc.mpopi().samples().size(); ++sample) {
-
-        vector<size_t> het_cols;
-        for(size_t col : snp_cols)
-            if (calls[col].sample_calls()[sample].call() == snp_type_het)
-                het_cols.push_back(col);
-
-        if (het_cols.empty())
+        //TODO{
+        if (aln_loc.sample_reads(sample).empty()) {
+            cerr << "sample " << sample << ", no data\n";
             continue;
+        }
+        //TODO}
 
         // Count the haplotypes observed for this sample.
-        map<vector<Nt2>,size_t> sample_haps;
-        for (size_t read_i : aln_loc.sample_reads(sample)) {
-            const Read& read = aln_loc.reads()[read_i];
-            if (read.name.substr(read.name.length()-2) == "/2") {
-                cerr << "Error: Refusing to call haplotypes in paired-end data.\n"; //TODO
-                throw exception();
+        map<vector<Nt4>,size_t> sample_haps;
+        {
+            vector<Nt4> read_hap (snp_cols.size());
+            for (size_t read_i : aln_loc.sample_reads(sample)) {
+                auto nt = Alignment::iterator(aln_loc.reads()[read_i].aln());
+                size_t snp_i = 0;
+                size_t next_snp_col = snp_cols[snp_i]; //safe, c.f. above
+                size_t col = 0;
+                while(nt) {
+                    if (col == next_snp_col) {
+                        assert((*nt).is_acgtn());
+                        read_hap[snp_i] = (*nt != Nt4::n && !calls[col].alleles().count(Nt2(*nt))) ?
+                                Nt4::n : *nt;
+                        ++snp_i;
+                        if (snp_i == snp_cols.size())
+                            // All het positions have been processed.
+                            break;
+                        next_snp_col = snp_cols[snp_i];
+                    }
+                    ++nt;
+                    ++col;
+                }
+                assert(snp_i == snp_cols.size());
+                ++sample_haps[read_hap];
             }
-
-            vector<Nt2> read_hap;
-            read_hap.reserve(het_cols.size());
-            for (size_t col : het_cols) {
-                Nt4 nt = read.seq[col];
-                if (nt == Nt4::n || !calls[col].alleles().count(nt))
-                    // Incomplete haplotype. //TODO This will cause problems: no haps when there are hets (e.g. shorter reads).
-                    break;
-                read_hap.push_back(Nt2(nt));
-            }
-            if (read_hap.size() != het_cols.size())
-                continue;
-
-            ++sample_haps[read_hap];
         }
 
         // Sort the sample's haplotypes by frequency.
-        vector<pair<size_t, vector<Nt2>>> s_sample_haps;
+        vector<pair<size_t, vector<Nt4>>> s_sample_haps;
         s_sample_haps.reserve(sample_haps.size());
         for (auto& hap : sample_haps)
             s_sample_haps.push_back({hap.second, hap.first});
         sort(s_sample_haps.rbegin(), s_sample_haps.rend());
+        //TODO{
+        {
+            vector<size_t> het_cols;
+            for(size_t col : snp_cols)
+                if (calls[col].sample_calls()[sample].call() == snp_type_het)
+                    het_cols.push_back(col);
+            cerr << "sample " << sample << (het_cols.empty() ? string(" (homozygous/uncalled)") : string()) << ", haplotypes are:\n";
+            for (auto& h : s_sample_haps) {
+                cerr << std::setw(3) << h.first << " ";
+                join(h.second, "", cerr);
+                cerr << "\n";
+            }
+            if (het_cols.empty())
+                continue;
+        }
+        //TODO}
 
         // Record the phase data.
-        if (s_sample_haps.size() < 2) {
-            // Issues because of incomplete haplotypes.
-            cerr << "DEBUG: Oops, Sample is heterozygous for the locus but has <2 haplotype(s).\n"; //xxx
-            throw exception();
-        }
-        for (size_t i=0; i<het_cols.size(); ++i) {
-            size_t col = het_cols[i];
-            Nt2 left_allele = s_sample_haps[0].second[i];
-            Nt2 right_allele = s_sample_haps[1].second[i];
-            PhasedHet ph {het_cols[0], left_allele, right_allele};
+        assert(s_sample_haps.size() >= 2); // As sample is heterozygous (`!het_col.empty()`).
+        const vector<Nt4>& left_hap = s_sample_haps[0].second;
+        const vector<Nt4>& right_hap = s_sample_haps[1].second;
+        for (size_t snp_i=0; snp_i<snp_cols.size(); ++snp_i) {
+            Nt4 left_allele = left_hap[snp_i];
+            Nt4 right_allele = right_hap[snp_i];
+            if (left_allele == right_allele || left_allele == Nt4::n || right_allele == Nt4::n)
+                continue;
+            size_t col = snp_cols[snp_i];
+            PhasedHet ph {snp_cols[0], Nt2(left_allele), Nt2(right_allele)};
             phased_samples[sample].insert({col, ph});
 
-            if (left_allele == right_allele) {
+            if (calls[col].sample_calls()[sample].call() == snp_type_het && left_allele == right_allele) {
                 //
                 // The genotype of this sample at this position was called to
                 // be a heterozygote, but the two most abundant haplotypes actually
@@ -360,12 +391,18 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
                 // cases there were 0/1's converted to 'homozygote' by haplotype
                 // selection.
                 //
+                // xxx As of June 6, 2017 (temporary code) this can also happen
+                // because of a "competition" between resolved and unresolved
+                // haplotypes.
+                //
                 phased_samples[sample].clear();
                 inconsistent_samples.insert(sample);
+                cerr << "the two best haplotypes are (inconsistently) identical at snp " << snp_i+1 << "\n"; //TODO
                 break;
             }
         }
     }
+    cerr << "END LOCUS " << aln_loc.id() << "\n"; //TODO
 
     return phased_samples;
 }
@@ -509,10 +546,10 @@ void write_one_locus(
 
                 stringstream genotype;
                 // GT field.
-                vector<size_t> gt;
+                array<size_t,2> gt;
                 switch (scall.call()) {
                 case snp_type_hom:
-                    gt.push_back(vcf_allele_indexes.at(scall.nt0()));
+                    gt[0] = vcf_allele_indexes.at(scall.nt0());
                     genotype << gt[0] << '/' << gt[0];
                     if (write_haplotypes)
                         genotype << ":.";
@@ -520,14 +557,25 @@ void write_one_locus(
                 case snp_type_het:
                     if (write_haplotypes) {
                         assert(!phase_data.empty());
-                        const PhasedHet& p = phase_data[sample].at(i);
-                        genotype << vcf_allele_indexes.at(p.left_allele)
-                                 << '|'
-                                 << vcf_allele_indexes.at(p.right_allele)
-                                 << ':' << (p.phase_set + 1);
+                        auto itr = phase_data[sample].find(i);
+                        if (itr != phase_data[sample].end()) {
+                            // There is phase data for this heterozygous site.
+                            const PhasedHet& p = itr->second;
+                            genotype << vcf_allele_indexes.at(p.left_allele)
+                                     << '|'
+                                     << vcf_allele_indexes.at(p.right_allele)
+                                     << ':' << (p.phase_set + 1);
+                        } else {
+                            // No phase data.
+                            gt[0] = vcf_allele_indexes.at(scall.nt0());
+                            gt[1] = vcf_allele_indexes.at(scall.nt1());
+                            sort(gt.begin(), gt.end()); // (Prevents '1/0'.)
+                            genotype << gt[0] << '/' << gt[1];
+                            genotype << ":.";
+                        }
                     } else {
-                        gt.push_back(vcf_allele_indexes.at(scall.nt0()));
-                        gt.push_back(vcf_allele_indexes.at(scall.nt1()));
+                        gt[0] = vcf_allele_indexes.at(scall.nt0());
+                        gt[1] = vcf_allele_indexes.at(scall.nt1());
                         sort(gt.begin(), gt.end()); // (Prevents '1/0'.)
                         genotype << gt[0] << '/' << gt[1];
                     }
