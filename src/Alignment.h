@@ -4,8 +4,7 @@
 #include "constants.h"
 #include "DNASeq4.h"
 #include "stacks.h"
-
-typedef vector<pair<char, uint>> Cigar;
+#include "aln_utils.h"
 
 class Alignment {
     const DNASeq4* seq_;
@@ -159,6 +158,7 @@ bool Alignment::check_cigar() const {
 
 inline
 AlnRead AlnRead::merger_of(const AlnRead& r1, const AlnRead& r2) {
+    assert(cigar_length_ref(r1.cigar) == cigar_length_ref(r2.cigar));
 
     // name.
     string name (r1.name);

@@ -202,7 +202,6 @@ void CLocAlnSet::merge_paired_reads() {
                 ){
             // r1 and r2 are paired, merge them.
             assert(r1->sample == r2->sample);
-            assert(std::get<1>(cigar_lengths(r1->cigar)) == std::get<1>(cigar_lengths(r2->cigar)));
             *r1 = SAlnRead(AlnRead::merger_of(move(*r1), move(*r2)), r1->sample);
 
             // Mark r2 for removal and skip it.
@@ -245,7 +244,7 @@ CLocAlnSet CLocAlnSet::juxtapose(CLocAlnSet&& left, CLocAlnSet&& right) {
     // Extend the left reads.
     for (SAlnRead& r : merged.reads_) {
         cigar_extend_right(r.cigar, right.ref().length());
-        assert(std::get<1>(cigar_lengths(r.cigar)) == merged.ref().length());
+        assert(cigar_length_ref(r.cigar) == merged.ref().length());
     }
 
     // Extend & add the right reads.

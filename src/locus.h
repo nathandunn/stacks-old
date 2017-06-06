@@ -28,12 +28,11 @@
 #include <algorithm>
 #include <utility>
 
+class Locus; // Forward-declaration of Locus is required by aln_utils.h.
 #include "constants.h"
 #include "stacks.h"
 #include "MetaPopInfo.h"
 #include "Alignment.h"
-
-class Locus;
 #include "aln_utils.h"
 
 typedef struct match {
