@@ -172,7 +172,7 @@ AlnRead AlnRead::merger_of(const AlnRead& r1, const AlnRead& r2) {
     DNASeq4 seq;
     Cigar cig;
     auto a1 = Alignment::iterator(r1.aln());
-    auto a2 = Alignment::iterator(r1.aln());
+    auto a2 = Alignment::iterator(r2.aln());
     auto increment_cigar_op = [&cig](char op){
         if (cig.empty() || cig.back().first != op)
             cig.push_back({op, 1});
