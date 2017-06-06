@@ -220,6 +220,7 @@ bool process_one_locus(CLocReadSet&& loc) {
                 move(fw_aln_loc),
                 CLocAlnSet::juxtapose(move(dummy), move(pe_aln_loc))
                 );
+        aln_loc.merge_paired_reads();
     }
 
     if (write_alns)
