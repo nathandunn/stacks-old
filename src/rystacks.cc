@@ -161,7 +161,8 @@ int main(int argc, char** argv) {
     gzclose(o_gzfasta_f);
     delete o_vcf_f;
     delete model;
-    o_hapgraphs_f << "}\n"; //TODO
+    if (write_hapgraphs)
+        o_hapgraphs_f << "}\n";
 
     cout << prog_name << " is done.\n";
     delete logger;
@@ -308,30 +309,21 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
         if (calls[i].alleles().size() > 1)
             snp_cols.push_back(i);
 
-    // TODO{
-    cerr << "--------------------\nBEGIN LOCUS " << aln_loc.id() << "\n";
-    if (snp_cols.empty()) {
-        cerr << "fixed\n";
-    } else {
-        cerr << "snps columns: ";
-        join(snp_cols, ',', cerr);
-        cerr << "\n";
-    }
-    // TODO}
-
     if (snp_cols.empty())
         return phased_samples;
 
-    if (write_hapgraphs)
+    if (write_hapgraphs) {
         o_hapgraphs_f << "subgraph cluster_loc" << aln_loc.id() << " {\n"
-                      << "\tlabel=\"locus " << aln_loc.id() << "\";\n";
+                      << "\tlabel=\"locus " << aln_loc.id() << "\";\n"
+                      << "\t# snp columns: ";
+        join(snp_cols, ',', o_hapgraphs_f);
+        o_hapgraphs_f << "\n";
+    }
 
     SnpAlleleCooccurrenceCounter cooccurences (snp_cols.size());
     for (size_t sample=0; sample<aln_loc.mpopi().samples().size(); ++sample) {
-        if (aln_loc.sample_reads(sample).empty()) {
-            cerr << "sample " << sample << ", no data\n"; //TODO
+        if (aln_loc.sample_reads(sample).empty())
             continue;
-        }
 
         vector<size_t> het_snps;
         for(size_t snp_i=0; snp_i<snp_cols.size(); ++snp_i)
@@ -339,7 +331,6 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
                 het_snps.push_back(snp_i);
 
         if (het_snps.size() == 0) {
-            cerr << "sample " << sample << ", homozygous/uncalled\n"; //TODO
             continue;
         } else if (het_snps.size() == 1) {
             // Trivial.
@@ -347,10 +338,9 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
             //continue;
         }
 
-        // Count the haplotypes observed for this sample.
+        // Iterate over reads, record seen haplotypes (as pairwise cooccurrences).
         cooccurences.clear();
         vector<Nt4> read_hap (het_snps.size());
-        map<vector<Nt4>,size_t> sample_haps; //TODO
         for (size_t read_i : aln_loc.sample_reads(sample)) {
             auto nt = Alignment::iterator(aln_loc.reads()[read_i].aln());
             size_t het_i = 0;
@@ -379,30 +369,7 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
                     ++cooccurences.at(het_snps[i], Nt2(nti), het_snps[j], Nt2(ntj));
                 }
             }
-            ++sample_haps[read_hap]; //TODO
         }
-
-        //TODO{
-        {
-            // Print the sample's haplotypes.
-            vector<pair<size_t, vector<Nt4>>> s_sample_haps;
-            s_sample_haps.reserve(sample_haps.size());
-            for (auto& hap : sample_haps)
-                s_sample_haps.push_back({hap.second, hap.first});
-            sort(s_sample_haps.rbegin(), s_sample_haps.rend());
-            cerr << "sample " << sample << " (het snps:";
-            for (size_t snp_i : het_snps)
-                cerr << "," << snp_cols[snp_i];
-            cerr << "); haplotypes are:\n";
-            for (auto& h : s_sample_haps) {
-                cerr << std::setw(3) << h.first << " ";
-                //join(h.second, "", cerr);
-                for (size_t het_i=0; het_i<het_snps.size(); ++het_i)
-                    cerr << h.second[het_i];
-                cerr << "\n";
-            }
-        }
-        //TODO}
 
         // Initialize the dot graph, if required.
         auto nodeid = [&aln_loc,&sample](size_t col, Nt2 allele)
@@ -410,7 +377,14 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
         if (write_hapgraphs) {
             o_hapgraphs_f << "\tsubgraph cluster_sample" << sample << " {\n"
                           << "\t\tlabel=\"sample" << sample << "\";\n"
-                          << "\t\tstyle=dashed;\n";
+                          << "\t\tstyle=dashed;\n"
+                          << "\t\t# heterozygous columns: ";
+            vector<size_t> het_cols;
+            for (size_t snp_i : het_snps)
+                het_cols.push_back(snp_cols[snp_i]);
+            join(het_cols, ',', o_hapgraphs_f);
+            o_hapgraphs_f << "\n";
+
             for (size_t snp_i : het_snps) {
                 size_t col = snp_cols[snp_i];
                 const SampleCall& c = calls[col].sample_calls()[sample];
@@ -450,8 +424,6 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
         if (write_hapgraphs)
             o_hapgraphs_f << "\t}\n";
     }
-    cerr << "END LOCUS " << aln_loc.id() << "\n"; //TODO
-
     if (write_hapgraphs)
         o_hapgraphs_f << "}\n";
 
