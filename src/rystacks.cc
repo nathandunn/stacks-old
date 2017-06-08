@@ -342,24 +342,19 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
         cooccurences.clear();
         vector<Nt4> read_hap (het_snps.size());
         for (size_t read_i : aln_loc.sample_reads(sample)) {
-            auto nt = Alignment::iterator(aln_loc.reads()[read_i].aln());
-            size_t het_i = 0;
-            size_t next_het_col = snp_cols[het_snps[het_i]];
-            size_t col = 0;
-            while(nt) {
-                if (col == next_het_col) {
-                    const SampleCall& c = calls[col].sample_calls()[sample];
-                    read_hap[het_i] = (*nt == c.nt0() || *nt == c.nt1()) ? *nt : Nt4::n;
-                    ++het_i;
-                    if (het_i == het_snps.size())
-                        // All het positions have been processed.
-                        break;
-                    next_het_col = snp_cols[het_snps[het_i]];
-                }
-                ++nt;
-                ++col;
+            // Build the haplotype.
+            size_t curr_col = 0;
+            Alignment::iterator read_itr = aln_loc.reads()[read_i].aln();
+            for (size_t het_i=0; het_i<het_snps.size(); ++het_i) {
+                size_t col = snp_cols[het_snps[het_i]];
+                read_itr += col - curr_col;
+                curr_col = col;
+                Nt4 nt = *read_itr;
+                const SampleCall& c = calls[col].sample_calls()[sample];
+                read_hap[het_i] = (nt == c.nt0() || nt == c.nt1()) ? nt : Nt4::n;
             }
-            assert(het_i == het_snps.size());
+
+            // Record the pairwise cooccurrences.
             for (size_t i=0; i<het_snps.size(); ++i) {
                 for (size_t j=i+1; j<het_snps.size(); ++j) {
                     Nt4 nti = read_hap[i];
