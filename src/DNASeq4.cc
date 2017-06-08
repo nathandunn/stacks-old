@@ -15,23 +15,26 @@ string DNASeq4::str() const {
 }
 
 DNASeq4 DNASeq4::rev_compl() const {
-    assert(v_.size() == (l_+1)/2);
-
     DNASeq4 rev;
     rev.l_ = l_;
     rev.reserve(rev.l_);
 
     iterator nt = end();
-    for (size_t i=0; i<l_/2; ++i)
-        // Push two nucleotides, l_/2 times.
-        rev.v_.push_back(
-                DiNuc((*--nt).rev_compl(), (*--nt).rev_compl())
-                );
+    if (nt != begin()) {
+        do {
+            --nt;
+            Nt4 first = (*nt).rev_compl();
+            if (nt != begin()) {
+                --nt;
+                Nt4 second = (*nt).rev_compl();
+                rev.v_.push_back(DiNuc(first, second));
+            } else {
+                rev.v_.push_back(DiNuc((*nt).rev_compl(), Nt4(0)));
+                break;
+            }
+        } while(nt != begin());
+    }
 
-    if (l_ % 2 == 1)
-        rev.v_.push_back(DiNuc((*--nt).rev_compl(), Nt4(0)));
-
-    assert(rev.v_.size() == v_.size() && !(nt != begin()));
     return rev;
 }
 
