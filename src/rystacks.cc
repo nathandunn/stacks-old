@@ -370,10 +370,12 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
             }
         }
 
-        // Initialize the dot graph, if required.
-        auto nodeid = [&aln_loc,&sample](size_t col, Nt2 allele)
-                {return string("l")+to_string(aln_loc.id())+"s"+to_string(sample)+"c"+to_string(col)+char(allele);};
+        // Write the dot graph, if required.
         if (write_hapgraphs) {
+            auto nodeid = [&aln_loc,&sample](size_t col, Nt2 allele)
+                    {return string("l")+to_string(aln_loc.id())+"s"+to_string(sample)+"c"+to_string(col)+char(allele);};
+
+            // Initialize the subgraph.
             size_t n_reads = aln_loc.sample_reads(sample).size();
             size_t n_merged_reads = 0;
             for (size_t read_i : aln_loc.sample_reads(sample))
@@ -393,6 +395,7 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
             join(het_cols, ',', o_hapgraphs_f);
             o_hapgraphs_f << "\n";
 
+            // Write the node labels.
             for (size_t snp_i : het_snps) {
                 size_t col = snp_cols[snp_i];
                 const SampleCall& c = calls[col].sample_calls()[sample];
@@ -402,21 +405,19 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
                                   << "<sup><font point-size=\"10\">" << col << "</font></sup>" << allele
                                   << ">];\n";
             }
-        }
 
-        // Iterate over pairwise cooccurrences.
-        for (size_t het_i=0; het_i<het_snps.size(); ++het_i) {
-            size_t snp_i = het_snps[het_i];
-            size_t coli = snp_cols[snp_i];
-            for (size_t het_j=het_i+1; het_j<het_snps.size(); ++het_j) {
-                size_t snp_j = het_snps[het_j];
-                size_t colj = snp_cols[snp_j];
-                for (auto& nti : calls[coli].alleles()) {
-                    for (auto& ntj : calls[colj].alleles()) {
-                        size_t n = cooccurences.at(snp_i, nti.first, snp_j, ntj.first);
-                        if (n == 0)
-                            continue;
-                        if (write_hapgraphs) {
+            // Write the edges.
+            for (size_t het_i=0; het_i<het_snps.size(); ++het_i) {
+                size_t snp_i = het_snps[het_i];
+                size_t coli = snp_cols[snp_i];
+                for (size_t het_j=het_i+1; het_j<het_snps.size(); ++het_j) {
+                    size_t snp_j = het_snps[het_j];
+                    size_t colj = snp_cols[snp_j];
+                    for (auto& nti : calls[coli].alleles()) {
+                        for (auto& ntj : calls[colj].alleles()) {
+                            size_t n = cooccurences.at(snp_i, nti.first, snp_j, ntj.first);
+                            if (n == 0)
+                                continue;
                             o_hapgraphs_f << "\t\t" << nodeid(coli,nti.first) << " -- " << nodeid(colj,ntj.first) << " [";
                             if (n==1)
                                 o_hapgraphs_f << "style=dotted";
@@ -424,14 +425,11 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
                                 o_hapgraphs_f << "label=\"" << n << "\",penwidth=" << n;
                             o_hapgraphs_f << "];\n";
                         }
-                        // ...
                     }
                 }
             }
-        }
-
-        if (write_hapgraphs)
             o_hapgraphs_f << "\t}\n";
+        }
     }
     if (write_hapgraphs)
         o_hapgraphs_f << "}\n";
