@@ -128,9 +128,11 @@ int main(int argc, char** argv) {
         string o_hapgraphs_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".hapgraphs.dot";
         o_hapgraphs_f.open(o_hapgraphs_path);
         check_open(o_hapgraphs_f, o_hapgraphs_path);
-        o_hapgraphs_f << "# dot -Tsvg -O batch_1.rystacks.hapgraphs.dot\n"
+        o_hapgraphs_f << "# dot -Tpdf -O batch_1.rystacks.hapgraphs.dot\n"
+                      << "# loc=371\n"
+                      << "# { g=batch_1.rystacks.hapgraphs.dot; sed -n '0,/^subgraph/p' $g | head -n-1; sed -n \"/^subgraph cluster_loc$loc\\b/,/^}/p\" $g; echo \\}; } | dot -Tpdf -o haps.$loc.pdf\n"
                       << "graph {\n"
-                      << "edge[color=\"grey60\",arrowsize=0.8,fontsize=12,labeljust=\"l\"];\n";
+                      << "edge[color=\"grey60\",fontsize=12,labeljust=\"l\"];\n";
     }
 
     // Process every locus
@@ -372,8 +374,17 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
         auto nodeid = [&aln_loc,&sample](size_t col, Nt2 allele)
                 {return string("l")+to_string(aln_loc.id())+"s"+to_string(sample)+"c"+to_string(col)+char(allele);};
         if (write_hapgraphs) {
+            size_t n_reads = aln_loc.sample_reads(sample).size();
+            size_t n_merged_reads = 0;
+            for (size_t read_i : aln_loc.sample_reads(sample))
+                if (aln_loc.reads()[read_i].name.back() == 'm')
+                    ++n_merged_reads;
+            const string& sample_name = aln_loc.mpopi().samples()[sample].name;
             o_hapgraphs_f << "\tsubgraph cluster_sample" << sample << " {\n"
-                          << "\t\tlabel=\"sample" << sample << "\";\n"
+                          << "\t\tlabel=\""
+                          << "i" << sample << " '" << sample_name << "'\\n"
+                          << "nreads=" << n_reads << ",merged=" << n_merged_reads
+                          << "\";\n"
                           << "\t\tstyle=dashed;\n"
                           << "\t\t# heterozygous columns: ";
             vector<size_t> het_cols;
