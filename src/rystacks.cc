@@ -326,7 +326,6 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
         o_hapgraphs_f << "subgraph cluster_loc" << aln_loc.id() << " {\n"
                       << "\tlabel=\"locus " << aln_loc.id() << "\";\n";
 
-    vector<Nt4> read_hap (snp_cols.size());
     SnpAlleleCooccurrenceCounter cooccurences (snp_cols.size());
     for (size_t sample=0; sample<aln_loc.mpopi().samples().size(); ++sample) {
         if (aln_loc.sample_reads(sample).empty()) {
@@ -339,7 +338,10 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
             if (calls[snp_cols[snp_i]].sample_calls()[sample].call() == snp_type_het)
                 het_snps.push_back(snp_i);
 
-        if (het_snps.size() == 1) {
+        if (het_snps.size() == 0) {
+            cerr << "sample " << sample << ", homozygous/uncalled\n"; //TODO
+            continue;
+        } else if (het_snps.size() == 1) {
             // Trivial.
             //phased_samples.insert(...); //TODO
             //continue;
@@ -347,34 +349,34 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
 
         // Count the haplotypes observed for this sample.
         cooccurences.clear();
+        vector<Nt4> read_hap (het_snps.size());
         map<vector<Nt4>,size_t> sample_haps; //TODO
         for (size_t read_i : aln_loc.sample_reads(sample)) {
             auto nt = Alignment::iterator(aln_loc.reads()[read_i].aln());
-            size_t snp_i = 0;
-            size_t next_snp_col = snp_cols[snp_i]; //safe, c.f. above
+            size_t het_i = 0;
+            size_t next_het_col = snp_cols[het_snps[het_i]];
             size_t col = 0;
             while(nt) {
-                if (col == next_snp_col) {
-                    assert((*nt).is_acgtn());
-                    read_hap[snp_i] = (*nt != Nt4::n && !calls[col].alleles().count(Nt2(*nt))) ?
-                            Nt4::n : *nt;
-                    ++snp_i;
-                    if (snp_i == snp_cols.size())
+                if (col == next_het_col) {
+                    const SampleCall& c = calls[col].sample_calls()[sample];
+                    read_hap[het_i] = (*nt == c.nt0() || *nt == c.nt1()) ? *nt : Nt4::n;
+                    ++het_i;
+                    if (het_i == het_snps.size())
                         // All het positions have been processed.
                         break;
-                    next_snp_col = snp_cols[snp_i];
+                    next_het_col = snp_cols[het_snps[het_i]];
                 }
                 ++nt;
                 ++col;
             }
-            assert(snp_i == snp_cols.size());
-            for (size_t i=0; i<snp_cols.size(); ++i) {
-                for (size_t j=i+1; j<snp_cols.size(); ++j) {
+            assert(het_i == het_snps.size());
+            for (size_t i=0; i<het_snps.size(); ++i) {
+                for (size_t j=i+1; j<het_snps.size(); ++j) {
                     Nt4 nti = read_hap[i];
                     Nt4 ntj = read_hap[j];
                     if (nti == Nt4::n || ntj == Nt4::n)
                         continue;
-                    ++cooccurences.at(i, Nt2(nti), j, Nt2(ntj));
+                    ++cooccurences.at(het_snps[i], Nt2(nti), het_snps[j], Nt2(ntj));
                 }
             }
             ++sample_haps[read_hap]; //TODO
@@ -388,20 +390,15 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
             for (auto& hap : sample_haps)
                 s_sample_haps.push_back({hap.second, hap.first});
             sort(s_sample_haps.rbegin(), s_sample_haps.rend());
-            cerr << "sample " << sample << " (";
-            if (het_snps.empty()) {
-                cerr << "homozygous/uncalled";
-            } else {
-                cerr << "het snps:";
-                for (size_t snp_i : het_snps)
-                    cerr << "," << snp_cols[snp_i];
-            }
+            cerr << "sample " << sample << " (het snps:";
+            for (size_t snp_i : het_snps)
+                cerr << "," << snp_cols[snp_i];
             cerr << "); haplotypes are:\n";
             for (auto& h : s_sample_haps) {
                 cerr << std::setw(3) << h.first << " ";
                 //join(h.second, "", cerr);
-                for (size_t snp_i : het_snps)
-                    cerr << h.second[snp_i];
+                for (size_t het_i=0; het_i<het_snps.size(); ++het_i)
+                    cerr << h.second[het_i];
                 cerr << "\n";
             }
         }
