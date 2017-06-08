@@ -445,6 +445,119 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
             }
             o_hapgraphs_f << "\t}\n";
         }
+
+        // Call haplotypes.
+        vector<vector<Nt4>> haps;
+        vector<array<size_t,4>> allele_to_hap (het_snps.size(), {SIZE_MAX,SIZE_MAX,SIZE_MAX,SIZE_MAX}); // Records which haplotype each allele is currently part of.
+        bool inconsistent = false;
+        for (size_t het_i=0; het_i<het_snps.size(); ++het_i) {
+            array<Nt2,2> allelesi = sample_het_calls[het_i]->nts();
+            size_t snp_i = het_snps[het_i];
+            for (size_t het_j=het_i+1; het_j<het_snps.size(); ++het_j) {
+                array<Nt2,2> allelesj = sample_het_calls[het_j]->nts();
+                size_t snp_j = het_snps[het_j];
+                for (Nt2 nti : allelesi) {
+                    for (Nt2 ntj : allelesj) {
+                        size_t n = cooccurences.at(snp_i, nti, snp_j, ntj);
+                        if (n == 0)
+                            continue;
+
+                        // Discard low-coverage edges.
+                        const size_t min_n_cooccurrences = 2;
+                        if (n < min_n_cooccurrences)
+                            continue;
+
+                        size_t& hap_i = allele_to_hap[het_i][size_t(nti)];
+                        size_t& hap_j = allele_to_hap[het_j][size_t(ntj)];
+                        if (hap_i == SIZE_MAX && hap_j == SIZE_MAX) {
+                            // Both nodes are singletons. Start a new haplotype.
+                            hap_i = haps.size();
+                            hap_j = haps.size();
+                            haps.push_back(vector<Nt4>(het_snps.size(), Nt4::n));
+                            haps.back()[het_i] = Nt4(nti);
+                            haps.back()[het_j] = Nt4(ntj);
+                        } else if (hap_i == hap_j) {
+                            // Nodes are already in the same haplotype/subgraph.
+                            // Nothing to do.
+                        } else if (hap_j == SIZE_MAX) {
+                            // Add ntj to nti's haplotype (i.e. subgraph).
+                            vector<Nt4>& hap = haps[hap_i];
+                            assert(hap[het_i] == Nt4(nti));
+                            if (hap[het_j] == Nt4::n) {
+                                hap[het_j] = Nt4(ntj);
+                                hap_j = hap_i;
+                            } else {
+                                assert(hap[het_j] != Nt4(ntj)); // As `cooccurrences` is a half-matrix.
+                                // allele nti at position het_i (i.e. column `snp_cols[het_snps[het_i]]`)
+                                // is already phased with another allele at position het_j.
+                                inconsistent = true;
+                                break;
+                            }
+                        } else if (hap_i == SIZE_MAX) {
+                            // Same as immediately above, reversed (add nti to ntj's haplotype).
+                            vector<Nt4>& hap = haps[hap_j];
+                            assert(hap[het_j] == Nt4(ntj));
+                            if (hap[het_i] == Nt4::n) {
+                                hap[het_i] = Nt4(nti);
+                                hap_i = hap_j;
+                            } else {
+                                assert(hap[het_i] != Nt4(nti));
+                                inconsistent = true;
+                                break;
+                            }
+                        } else {
+                            // Both nodes are already in a haplotype. The haplotype graph
+                            // is consistent only if the positions spanned by the two
+                            // haplotypes are disjoint.
+                            assert(haps[hap_i][het_i] == Nt4(nti));
+                            assert(haps[hap_j][het_j] == Nt4(ntj));
+                            for (size_t k=0; k<het_snps.size(); ++k) {
+                                if (haps[hap_i][k] != Nt4::n && haps[hap_j][k] != Nt4::n) {
+                                    assert(haps[hap_i][k] != haps[hap_j][k]);
+                                    inconsistent = true;
+                                    break;
+                                }
+                            }
+                            if (inconsistent) {
+                                break;
+                            } else {
+                                // Merge the two haplotypes/subgraphs.
+                                vector<Nt4>& hap = haps[hap_i];
+                                vector<Nt4>& rm_hap = haps[hap_j];
+                                assert(haps[hap_i][het_j] == Nt4::n);
+                                assert(haps[hap_j][het_i] == Nt4::n);
+                                for (size_t k=0; k<het_snps.size(); ++k) {
+                                    if (rm_hap[k] != Nt4::n) {
+                                        // Transfer the allele to the kept haplotype.
+                                        hap[k] = rm_hap[k];
+                                        allele_to_hap[k][size_t(Nt2(hap[k]))] = hap_i;
+                                    }
+                                }
+
+                                #ifdef DEBUG
+                                // Check that the discarded haplotype has become inaccessible.
+                                size_t rm_hap_i = &rm_hap - haps.data();
+                                for (auto& het : allele_to_hap)
+                                    for (auto& nt : het)
+                                        assert(nt != rm_hap_i);
+                                #endif
+                            }
+                        }
+                    }
+                    if (inconsistent)
+                        break;
+                }
+                if (inconsistent)
+                    break;
+            }
+            if (inconsistent)
+                break;
+        }
+        if (inconsistent) {
+            // Discard all phasing information for this sample.
+            phased_samples[sample].clear();
+            inconsistent_samples.insert(sample);
+        }
     }
     if (write_hapgraphs)
         o_hapgraphs_f << "}\n";
