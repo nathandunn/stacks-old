@@ -331,7 +331,7 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
         for(size_t snp_i=0; snp_i<snp_cols.size(); ++snp_i)
             if (calls[snp_cols[snp_i]].sample_calls()[sample].call() == snp_type_het)
                 het_snps.push_back(snp_i);
-
+        // Check that we have >= 2 snps.
         if (het_snps.size() == 0) {
             continue;
         } else if (het_snps.size() == 1) {
@@ -341,6 +341,10 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
             phased_samples[sample].insert({col, {col, c.nt0(), c.nt1()}});
             continue;
         }
+
+        vector<const SampleCall*> sample_het_calls;
+        for (size_t het_i=0; het_i<het_snps.size(); ++het_i)
+            sample_het_calls.push_back(&calls[snp_cols[het_snps[het_i]]].sample_calls()[sample]);
 
         // Iterate over reads, record seen haplotypes (as pairwise cooccurrences).
         cooccurences.clear();
@@ -354,16 +358,26 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
                 read_itr += col - curr_col;
                 curr_col = col;
                 Nt4 nt = *read_itr;
-                const SampleCall& c = calls[col].sample_calls()[sample];
-                read_hap[het_i] = (nt == c.nt0() || nt == c.nt1()) ? nt : Nt4::n;
+                if (nt == Nt4::n) {
+                    read_hap[het_i] = Nt4::n;
+                } else {
+                    const SampleCall& c = *sample_het_calls[het_i];
+                    Nt2 nt2 = Nt2(nt);
+                    if (nt2 == c.nt0() || nt2 == c.nt1())
+                        read_hap[het_i] = nt;
+                    else
+                        read_hap[het_i] = Nt4::n;
+                }
             }
 
             // Record the pairwise cooccurrences.
             for (size_t i=0; i<het_snps.size(); ++i) {
+                Nt4 nti = read_hap[i];
+                if (nti == Nt4::n)
+                    continue;
                 for (size_t j=i+1; j<het_snps.size(); ++j) {
-                    Nt4 nti = read_hap[i];
                     Nt4 ntj = read_hap[j];
-                    if (nti == Nt4::n || ntj == Nt4::n)
+                    if (ntj == Nt4::n)
                         continue;
                     ++cooccurences.at(het_snps[i], Nt2(nti), het_snps[j], Nt2(ntj));
                 }
@@ -396,10 +410,10 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
             o_hapgraphs_f << "\n";
 
             // Write the node labels.
-            for (size_t snp_i : het_snps) {
-                size_t col = snp_cols[snp_i];
-                const SampleCall& c = calls[col].sample_calls()[sample];
-                for (Nt2 allele : c.nts())
+            for (size_t i=0; i<het_snps.size(); ++i) {
+                array<Nt2,2> alleles = sample_het_calls[i]->nts();
+                size_t col = snp_cols[het_snps[i]];
+                for (Nt2 allele : alleles)
                     o_hapgraphs_f << "\t\t" << nodeid(col, allele)
                                   << " [label=<"
                                   << "<sup><font point-size=\"10\">" << col << "</font></sup>" << allele
@@ -408,17 +422,18 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
 
             // Write the edges.
             for (size_t het_i=0; het_i<het_snps.size(); ++het_i) {
+                array<Nt2,2> alleles_i = sample_het_calls[het_i]->nts();
                 size_t snp_i = het_snps[het_i];
-                size_t coli = snp_cols[snp_i];
                 for (size_t het_j=het_i+1; het_j<het_snps.size(); ++het_j) {
+                    array<Nt2,2> alleles_j = sample_het_calls[het_j]->nts();
                     size_t snp_j = het_snps[het_j];
-                    size_t colj = snp_cols[snp_j];
-                    for (auto& nti : calls[coli].alleles()) {
-                        for (auto& ntj : calls[colj].alleles()) {
-                            size_t n = cooccurences.at(snp_i, nti.first, snp_j, ntj.first);
+                    for (Nt2 nti : alleles_i) {
+                        for (Nt2 ntj : alleles_j) {
+                            size_t n = cooccurences.at(snp_i, nti, snp_j, ntj);
                             if (n == 0)
                                 continue;
-                            o_hapgraphs_f << "\t\t" << nodeid(coli,nti.first) << " -- " << nodeid(colj,ntj.first) << " [";
+                            o_hapgraphs_f << "\t\t" << nodeid(snp_cols[snp_i],nti)
+                                          << " -- " << nodeid(snp_cols[snp_j],ntj) << " [";
                             if (n==1)
                                 o_hapgraphs_f << "style=dotted";
                             else
