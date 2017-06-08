@@ -30,6 +30,7 @@
 
 #include <cstdlib>
 #include <cstddef>
+#include <cstdint>
 #include <cstring>
 #include <cmath>
 #include <cassert>
