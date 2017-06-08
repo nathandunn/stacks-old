@@ -22,6 +22,20 @@ struct PhasedHet {
     Nt2 right_allele;
 };
 
+class SnpAlleleCooccurrenceCounter {
+    size_t n_snps_;
+    vector<array<array<size_t,4>,4>> cooccurences_;
+public:
+    SnpAlleleCooccurrenceCounter(size_t n_snps)
+        : n_snps_(n_snps),
+          cooccurences_(n_snps_*n_snps_) // n*n matrix, athough we only use the i<j half.
+        {}
+    size_t& at(size_t snp_i1, Nt2 snp1_allele, size_t snp_i2, Nt2 snp2_allele)
+        {assert(snp_i1 < snp_i2); return cooccurences_[snp_i1*n_snps_+snp_i2][size_t(snp1_allele)][size_t(snp2_allele)];}
+    void clear()
+        {for(size_t i=0; i<n_snps_; ++i) for(size_t j=i+1; j<n_snps_; ++j) cooccurences_[i*n_snps_+j] = array<array<size_t,4>,4>();}
+};
+
 void parse_command_line(int argc, char* argv[]);
 void report_options(ostream& os);
 bool process_one_locus(CLocReadSet&& loc);
@@ -48,6 +62,7 @@ size_t min_km_count = 2;
 bool write_haplotypes = false;
 bool write_gfa = false;
 bool write_alns = false;
+bool write_hapgraphs = false;
 bool vcf_write_depths = false;
 
 //
@@ -59,6 +74,7 @@ gzFile o_gzfasta_f = NULL;
 VcfWriter* o_vcf_f = NULL;
 ofstream o_models_f;
 ofstream o_aln_f;
+ofstream o_hapgraphs_f;
 
 int main(int argc, char** argv) {
 
@@ -108,6 +124,15 @@ int main(int argc, char** argv) {
             "# sed -n \"/^BEGIN $loc\\b/,/^END $loc\\b/ p\" batch_1.rystacks.alns | grep \"$sample\" | cut -f3 | cut -c$cols | sort | uniq -c | sort -nr\n";
     }
 
+    if (write_hapgraphs) {
+        string o_hapgraphs_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".hapgraphs.dot";
+        o_hapgraphs_f.open(o_hapgraphs_path);
+        check_open(o_hapgraphs_f, o_hapgraphs_path);
+        o_hapgraphs_f << "# dot -Tsvg -O batch_1.rystacks.hapgraphs.dot\n"
+                      << "graph {\n"
+                      << "edge[color=\"grey60\",arrowsize=0.8,fontsize=12,labeljust=\"l\"];\n";
+    }
+
     // Process every locus
     cout << "Processing all loci...\n" << flush;
     CLocReadSet loc (bam_fh.mpopi());
@@ -136,6 +161,7 @@ int main(int argc, char** argv) {
     gzclose(o_gzfasta_f);
     delete o_vcf_f;
     delete model;
+    o_hapgraphs_f << "}\n"; //TODO
 
     cout << prog_name << " is done.\n";
     delete logger;
@@ -286,123 +312,151 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
     cerr << "--------------------\nBEGIN LOCUS " << aln_loc.id() << "\n";
     if (snp_cols.empty()) {
         cerr << "fixed\n";
-        return phased_samples;
+    } else {
+        cerr << "snps columns: ";
+        join(snp_cols, ',', cerr);
+        cerr << "\n";
     }
-    cerr << "snps columns: ";
-    join(snp_cols, ',', cerr);
-    cerr << "\n";
     // TODO}
 
+    if (snp_cols.empty())
+        return phased_samples;
+
+    if (write_hapgraphs)
+        o_hapgraphs_f << "subgraph cluster_loc" << aln_loc.id() << " {\n"
+                      << "\tlabel=\"locus " << aln_loc.id() << "\";\n";
+
+    vector<Nt4> read_hap (snp_cols.size());
+    SnpAlleleCooccurrenceCounter cooccurences (snp_cols.size());
     for (size_t sample=0; sample<aln_loc.mpopi().samples().size(); ++sample) {
-        //TODO{
         if (aln_loc.sample_reads(sample).empty()) {
-            cerr << "sample " << sample << ", no data\n";
+            cerr << "sample " << sample << ", no data\n"; //TODO
             continue;
         }
-        //TODO}
+
+        vector<size_t> het_snps;
+        for(size_t snp_i=0; snp_i<snp_cols.size(); ++snp_i)
+            if (calls[snp_cols[snp_i]].sample_calls()[sample].call() == snp_type_het)
+                het_snps.push_back(snp_i);
+
+        if (het_snps.size() == 1) {
+            // Trivial.
+            //phased_samples.insert(...); //TODO
+            //continue;
+        }
 
         // Count the haplotypes observed for this sample.
-        map<vector<Nt4>,size_t> sample_haps;
-        {
-            vector<Nt4> read_hap (snp_cols.size());
-            for (size_t read_i : aln_loc.sample_reads(sample)) {
-                auto nt = Alignment::iterator(aln_loc.reads()[read_i].aln());
-                size_t snp_i = 0;
-                size_t next_snp_col = snp_cols[snp_i]; //safe, c.f. above
-                size_t col = 0;
-                while(nt) {
-                    if (col == next_snp_col) {
-                        assert((*nt).is_acgtn());
-                        read_hap[snp_i] = (*nt != Nt4::n && !calls[col].alleles().count(Nt2(*nt))) ?
-                                Nt4::n : *nt;
-                        ++snp_i;
-                        if (snp_i == snp_cols.size())
-                            // All het positions have been processed.
-                            break;
-                        next_snp_col = snp_cols[snp_i];
-                    }
-                    ++nt;
-                    ++col;
+        cooccurences.clear();
+        map<vector<Nt4>,size_t> sample_haps; //TODO
+        for (size_t read_i : aln_loc.sample_reads(sample)) {
+            auto nt = Alignment::iterator(aln_loc.reads()[read_i].aln());
+            size_t snp_i = 0;
+            size_t next_snp_col = snp_cols[snp_i]; //safe, c.f. above
+            size_t col = 0;
+            while(nt) {
+                if (col == next_snp_col) {
+                    assert((*nt).is_acgtn());
+                    read_hap[snp_i] = (*nt != Nt4::n && !calls[col].alleles().count(Nt2(*nt))) ?
+                            Nt4::n : *nt;
+                    ++snp_i;
+                    if (snp_i == snp_cols.size())
+                        // All het positions have been processed.
+                        break;
+                    next_snp_col = snp_cols[snp_i];
                 }
-                assert(snp_i == snp_cols.size());
-                ++sample_haps[read_hap];
+                ++nt;
+                ++col;
             }
+            assert(snp_i == snp_cols.size());
+            for (size_t i=0; i<snp_cols.size(); ++i) {
+                for (size_t j=i+1; j<snp_cols.size(); ++j) {
+                    Nt4 nti = read_hap[i];
+                    Nt4 ntj = read_hap[j];
+                    if (nti == Nt4::n || ntj == Nt4::n)
+                        continue;
+                    ++cooccurences.at(i, Nt2(nti), j, Nt2(ntj));
+                }
+            }
+            ++sample_haps[read_hap]; //TODO
         }
 
-        // Sort the sample's haplotypes by frequency.
-        vector<pair<size_t, vector<Nt4>>> s_sample_haps;
-        s_sample_haps.reserve(sample_haps.size());
-        for (auto& hap : sample_haps)
-            s_sample_haps.push_back({hap.second, hap.first});
-        sort(s_sample_haps.rbegin(), s_sample_haps.rend());
         //TODO{
         {
-            vector<size_t> het_cols;
-            for(size_t col : snp_cols)
-                if (calls[col].sample_calls()[sample].call() == snp_type_het)
-                    het_cols.push_back(col);
-            cerr << "sample " << sample << (het_cols.empty() ? string(" (homozygous/uncalled)") : string()) << ", haplotypes are:\n";
+            // Print the sample's haplotypes.
+            vector<pair<size_t, vector<Nt4>>> s_sample_haps;
+            s_sample_haps.reserve(sample_haps.size());
+            for (auto& hap : sample_haps)
+                s_sample_haps.push_back({hap.second, hap.first});
+            sort(s_sample_haps.rbegin(), s_sample_haps.rend());
+            cerr << "sample " << sample << " (";
+            if (het_snps.empty()) {
+                cerr << "homozygous/uncalled";
+            } else {
+                cerr << "het snps:";
+                for (size_t snp_i : het_snps)
+                    cerr << "," << snp_cols[snp_i];
+            }
+            cerr << "); haplotypes are:\n";
             for (auto& h : s_sample_haps) {
                 cerr << std::setw(3) << h.first << " ";
-                join(h.second, "", cerr);
+                //join(h.second, "", cerr);
+                for (size_t snp_i : het_snps)
+                    cerr << h.second[snp_i];
                 cerr << "\n";
             }
-            if (het_cols.empty())
-                continue;
         }
         //TODO}
 
-        // Record the phase data.
-        assert(s_sample_haps.size() >= 2); // As sample is heterozygous (`!het_col.empty()`).
-        const vector<Nt4>& left_hap = s_sample_haps[0].second;
-        const vector<Nt4>& right_hap = s_sample_haps[1].second;
-        for (size_t snp_i=0; snp_i<snp_cols.size(); ++snp_i) {
-            Nt4 left_allele = left_hap[snp_i];
-            Nt4 right_allele = right_hap[snp_i];
-            if (left_allele == right_allele || left_allele == Nt4::n || right_allele == Nt4::n)
-                continue;
-            size_t col = snp_cols[snp_i];
-            PhasedHet ph {snp_cols[0], Nt2(left_allele), Nt2(right_allele)};
-            phased_samples[sample].insert({col, ph});
-
-            if (calls[col].sample_calls()[sample].call() == snp_type_het && left_allele == right_allele) {
-                //
-                // The genotype of this sample at this position was called to
-                // be a heterozygote, but the two most abundant haplotypes actually
-                // agree on the allele at this position.
-                // Real examples:
-                // haplos TTG-ATG-AGA with depths 4-4-3 (issue with the 2nd SNP)
-                // haplos TG-CG-CT-TT with depths 6-6-3-2 (issue with the 2nd SNP)
-                //
-                // This means that tere is a fundamental problem with the calls
-                // for this sample. We delete its data altoghether, so that it
-                // will appear as "." in the VCF.
-                //
-                // N.B. Global coverage and the fixed/polymorphism call still
-                // account for this sample, which can make those records look
-                // like they are inconsistent.
-                //
-                // PCR duplicates, and possibly overmerging, are possible
-                // sources for such cases.
-                //
-                // I originally noticed this because 0|0 and 1|1 genotypes
-                // were popping up in the VCF (instead of 0/0 and 1/1, as it
-                // doesn't make sense to phase homozygote positions). In all
-                // cases there were 0/1's converted to 'homozygote' by haplotype
-                // selection.
-                //
-                // xxx As of June 6, 2017 (temporary code) this can also happen
-                // because of a "competition" between resolved and unresolved
-                // haplotypes.
-                //
-                phased_samples[sample].clear();
-                inconsistent_samples.insert(sample);
-                cerr << "the two best haplotypes are (inconsistently) identical at snp " << snp_i+1 << "\n"; //TODO
-                break;
+        // Initialize the dot graph, if required.
+        auto nodeid = [&aln_loc,&sample](size_t col, Nt2 allele)
+                {return string("l")+to_string(aln_loc.id())+"s"+to_string(sample)+"c"+to_string(col)+char(allele);};
+        if (write_hapgraphs) {
+            o_hapgraphs_f << "\tsubgraph cluster_sample" << sample << " {\n"
+                          << "\t\tlabel=\"sample" << sample << "\";\n"
+                          << "\t\tstyle=dashed;\n";
+            for (size_t snp_i : het_snps) {
+                size_t col = snp_cols[snp_i];
+                const SampleCall& c = calls[col].sample_calls()[sample];
+                for (Nt2 allele : {c.nt0(), c.nt1()})
+                    o_hapgraphs_f << "\t\t" << nodeid(col, allele)
+                                  << " [label=<"
+                                  << "<sup><font point-size=\"10\">" << col << "</font></sup>" << allele
+                                  << ">];\n";
             }
         }
+
+        // Iterate over
+        for (size_t het_i=0; het_i<het_snps.size(); ++het_i) {
+            size_t snp_i = het_snps[het_i];
+            size_t coli = snp_cols[snp_i];
+            for (size_t het_j=het_i+1; het_j<het_snps.size(); ++het_j) {
+                size_t snp_j = het_snps[het_j];
+                size_t colj = snp_cols[snp_j];
+                for (auto& nti : calls[coli].alleles()) {
+                    for (auto& ntj : calls[colj].alleles()) {
+                        size_t n = cooccurences.at(snp_i, nti.first, snp_j, ntj.first);
+                        if (n == 0)
+                            continue;
+                        if (write_hapgraphs) {
+                            o_hapgraphs_f << "\t\t" << nodeid(coli,nti.first) << " -- " << nodeid(colj,ntj.first) << " [";
+                            if (n==1)
+                                o_hapgraphs_f << "style=dotted";
+                            else
+                                o_hapgraphs_f << "label=\"" << n << "\",penwidth=" << n;
+                            o_hapgraphs_f << "];\n";
+                        }
+                    }
+                }
+            }
+        }
+
+        if (write_hapgraphs)
+            o_hapgraphs_f << "\t}\n";
     }
     cerr << "END LOCUS " << aln_loc.id() << "\n"; //TODO
+
+    if (write_hapgraphs)
+        o_hapgraphs_f << "}\n";
 
     return phased_samples;
 }
@@ -728,6 +782,7 @@ const string help_string = string() +
         "  --min-cov: minimum coverage to consider a kmer (default: 2)\n"
         "  --gfa: output a GFA file for each locus\n"
         "  --alns: output a file showing the contigs & alignments\n"
+        "  --hap-graphs: output a dot graph file showing phasing information\n"
         "  --depths: write detailed depth data in the output VCF\n"
         "  --haps: output a phased VCF /!\\ conflicts with paired-end input\n"
         "\n"
@@ -757,6 +812,7 @@ try {
         {"haps",         no_argument,       NULL,  1009},
         {"gfa",          no_argument,       NULL,  1003},
         {"alns",         no_argument,       NULL,  1004},
+        {"hap-graphs",   no_argument,       NULL,  1010},
         {"depths",       no_argument,       NULL,  1007},
         {0, 0, 0, 0}
     };
@@ -818,6 +874,9 @@ try {
             break;
         case 1004://aln
             write_alns = true;
+            break;
+        case 1010://hap-graphs
+            write_hapgraphs = true;
             break;
         case 1007://depths
             vcf_write_depths = true;
