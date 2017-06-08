@@ -333,9 +333,11 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
         if (het_snps.size() == 0) {
             continue;
         } else if (het_snps.size() == 1) {
-            // Trivial.
-            //phased_samples.insert(...); //TODO
-            //continue;
+            // Sample has trivial 1nt-long haplotypes.
+            size_t col = snp_cols[het_snps[0]];
+            const SampleCall& c = calls[col].sample_calls()[sample];
+            phased_samples[sample].insert({col, {col, c.nt0(), c.nt1()}});
+            continue;
         }
 
         // Iterate over reads, record seen haplotypes (as pairwise cooccurrences).
@@ -391,7 +393,7 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
             }
         }
 
-        // Iterate over
+        // Iterate over pairwise cooccurrences.
         for (size_t het_i=0; het_i<het_snps.size(); ++het_i) {
             size_t snp_i = het_snps[het_i];
             size_t coli = snp_cols[snp_i];
@@ -411,6 +413,7 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
                                 o_hapgraphs_f << "label=\"" << n << "\",penwidth=" << n;
                             o_hapgraphs_f << "];\n";
                         }
+                        // ...
                     }
                 }
             }
