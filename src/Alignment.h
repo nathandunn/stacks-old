@@ -41,6 +41,7 @@ public:
             : cig_it_(a.cig_->begin()), cig_past_(a.cig_->end()), pos_(0), seq_it_(a.seq_->begin()), seq_past_(a.seq_->end())
             {skip_insertion();}
         iterator& operator++ ();
+        iterator& operator+= (size_t n);
         operator bool() const {return cig_it_ != cig_past_;}
 
         Nt4 operator* () const {if (cig_it_->first=='M') return *seq_it_; else {assert(cig_it_->first=='D'); return Nt4::n;}}
@@ -126,6 +127,15 @@ Alignment::iterator& Alignment::iterator::operator++ () {
     // also consumed.
     assert(cig_it_ == cig_past_ ? !(seq_it_ != seq_past_) : true);
 
+    return *this;
+}
+
+inline
+Alignment::iterator& Alignment::iterator::operator+= (size_t n) {
+    // We could block-increment according to the cigar, but this is not implemented
+    // at the moment, i.e. we just increment n times.
+    for (size_t i=0; i<n; ++i)
+        ++*this;
     return *this;
 }
 
