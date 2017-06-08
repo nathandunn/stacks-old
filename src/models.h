@@ -85,8 +85,9 @@ public:
           GtLiks& lnls()       {return lnls_;}
 
     snp_type call() const {return call_;}
-    Nt4 nt0() const {assert(call_==snp_type_hom || call_==snp_type_het); return nts_[0];}
-    Nt4 nt1() const {assert(call_==snp_type_het); return nts_[1];}
+    Nt2 nt0() const {assert(call_==snp_type_hom || call_==snp_type_het); return nts_[0];}
+    Nt2 nt1() const {assert(call_==snp_type_het); return nts_[1];}
+    array<Nt2,2> nts() const {assert(call_==snp_type_het); return nts_;}
 
     void set_call(snp_type c, Nt2 rank0_nt, Nt2 rank1_nt);
 

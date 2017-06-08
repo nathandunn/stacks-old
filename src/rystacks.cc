@@ -399,7 +399,7 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
             for (size_t snp_i : het_snps) {
                 size_t col = snp_cols[snp_i];
                 const SampleCall& c = calls[col].sample_calls()[sample];
-                for (Nt2 allele : {c.nt0(), c.nt1()})
+                for (Nt2 allele : c.nts())
                     o_hapgraphs_f << "\t\t" << nodeid(col, allele)
                                   << " [label=<"
                                   << "<sup><font point-size=\"10\">" << col << "</font></sup>" << allele
