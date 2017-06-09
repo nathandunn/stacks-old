@@ -59,7 +59,7 @@ const Model* model = NULL;
 set<int> locus_wl;
 size_t km_length = 31;
 size_t min_km_count = 2;
-bool write_haplotypes = false;
+bool write_haplotypes = true;
 bool write_gfa = false;
 bool write_alns = false;
 bool write_hapgraphs = false;
@@ -927,11 +927,11 @@ const string help_string = string() +
         "Debug options:\n"
         "  --kmer-length: kmer length (default: 31)\n"
         "  --min-cov: minimum coverage to consider a kmer (default: 2)\n"
+        "  --no-haps: disable phasing\n"
         "  --gfa: output a GFA file for each locus\n"
         "  --alns: output a file showing the contigs & alignments\n"
         "  --hap-graphs: output a dot graph file showing phasing information\n"
         "  --depths: write detailed depth data in the output VCF\n"
-        "  --haps: output a phased VCF /!\\ conflicts with paired-end input\n"
         "\n"
         ;
 
@@ -956,7 +956,7 @@ try {
         {"whitelist",    required_argument, NULL,  'W'},
         {"kmer-length",  required_argument, NULL,  1001},
         {"min-cov",      required_argument, NULL,  1002},
-        {"haps",         no_argument,       NULL,  1009},
+        {"no-haps",      no_argument,       NULL,  1009},
         {"gfa",          no_argument,       NULL,  1003},
         {"alns",         no_argument,       NULL,  1004},
         {"hap-graphs",   no_argument,       NULL,  1010},
@@ -1013,8 +1013,8 @@ try {
         case 1002://min-cov
             min_km_count = atoi(optarg);
             break;
-        case 1009://haps
-            write_haplotypes = true;
+        case 1009://no-haps
+            write_haplotypes = false;
             break;
         case 1003://gfa
             write_gfa = true;
