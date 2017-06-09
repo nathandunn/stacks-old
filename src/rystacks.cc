@@ -553,10 +553,35 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
             if (inconsistent)
                 break;
         }
+
+        // Record haplotypes.
         if (inconsistent) {
-            // Discard all phasing information for this sample.
-            phased_samples[sample].clear();
             inconsistent_samples.insert(sample);
+        } else {
+            for (size_t i=0; i<haps.size(); ++i) {
+                for (size_t j=i+1; j<haps.size(); ++j) {
+                    // Each pair of haplotypes becomes one 'phase set'.
+                    // N.B. There is more than one pair only if there are three or more
+                    // haplotypes but in this case, because these haplotypes are compatible
+                    // by construction, phased columns are disjoint across all pairs.
+                    size_t phase_set = SIZE_MAX;
+                    for (size_t het_i=0; het_i<het_snps.size(); ++het_i) {
+                        Nt4 hapi_nt = haps[i][het_i];
+                        Nt4 hapj_nt = haps[j][het_i];
+                        if (hapi_nt == Nt4::n || hapj_nt == Nt4::n)
+                            continue;
+
+                        size_t col = snp_cols[het_snps[het_i]];
+                        if (phase_set == SIZE_MAX)
+                            // This is the first observation for this pair of haplotypes.
+                            phase_set = col;
+
+                        assert(!phased_samples[sample].count(col)); // Disjoint resolved columns across pairs.
+                        PhasedHet ph {phase_set, hapi_nt, hapj_nt};
+                        phased_samples[sample].insert({col, ph});
+                    }
+                }
+            }
         }
     }
     if (write_hapgraphs)
