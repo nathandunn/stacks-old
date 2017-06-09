@@ -306,7 +306,7 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
                                          ){
     vector<map<size_t,PhasedHet>> phased_samples (aln_loc.mpopi().samples().size());
 
-    vector<size_t> snp_cols;
+    vector<size_t> snp_cols; // The SNPs of this locus.
     for (size_t i=0; i<aln_loc.ref().length(); ++i)
         if (calls[i].alleles().size() > 1)
             snp_cols.push_back(i);
@@ -327,11 +327,11 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
         if (aln_loc.sample_reads(sample).empty())
             continue;
 
-        vector<size_t> het_snps;
+        vector<size_t> het_snps; // The heterozygote SNPs of this sample.
         for(size_t snp_i=0; snp_i<snp_cols.size(); ++snp_i)
             if (calls[snp_cols[snp_i]].sample_calls()[sample].call() == snp_type_het)
                 het_snps.push_back(snp_i);
-        // Check that we have >= 2 snps.
+        // Check that we have >= 2 hets.
         if (het_snps.size() == 0) {
             continue;
         } else if (het_snps.size() == 1) {
@@ -537,7 +537,7 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
                                         allele_to_hap[k][size_t(Nt2(hap[k]))] = hap_i;
                                     }
                                 }
-
+                                rm_hap = vector<Nt4>();
                                 #ifdef DEBUG
                                 // Check that the discarded haplotype has become inaccessible.
                                 size_t rm_hap_i = &rm_hap - haps.data();
@@ -563,7 +563,14 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
             inconsistent_samples.insert(sample);
         } else {
             for (size_t i=0; i<haps.size(); ++i) {
+                if (haps[i].empty())
+                    // Deleted remnant of a merger.
+                    continue;
+
                 for (size_t j=i+1; j<haps.size(); ++j) {
+                    if (haps[j].empty())
+                        continue;
+
                     // Each pair of haplotypes becomes one 'phase set'.
                     // N.B. There is more than one pair only if there are three or more
                     // haplotypes but in this case, because these haplotypes are compatible
