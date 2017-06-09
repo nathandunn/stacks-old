@@ -447,9 +447,13 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
         }
 
         // Call haplotypes.
+        // This is based on a graph of cooccurrences in which nodes are the het
+        // alleles. Subgraphs represent haplotypes, and may not include more than
+        // one node for each SNP.
         vector<vector<Nt4>> haps;
-        vector<array<size_t,4>> allele_to_hap (het_snps.size(), {SIZE_MAX,SIZE_MAX,SIZE_MAX,SIZE_MAX}); // Records which haplotype each allele is currently part of.
         bool inconsistent = false;
+        // We keep track of which haplotype each allele is currently part of.
+        vector<array<size_t,4>> allele_to_hap (het_snps.size(), {SIZE_MAX,SIZE_MAX,SIZE_MAX,SIZE_MAX});
         for (size_t het_i=0; het_i<het_snps.size(); ++het_i) {
             array<Nt2,2> allelesi = sample_het_calls[het_i]->nts();
             size_t snp_i = het_snps[het_i];
@@ -577,10 +581,18 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
                             phase_set = col;
 
                         assert(!phased_samples[sample].count(col)); // Disjoint resolved columns across pairs.
-                        PhasedHet ph {phase_set, hapi_nt, hapj_nt};
-                        phased_samples[sample].insert({col, ph});
+                        phased_samples[sample][col] = PhasedHet({phase_set, hapi_nt, hapj_nt});
                     }
                 }
+            }
+        }
+
+        // Record singleton nodes (that are implicit in our representation).
+        for (size_t het_i=0; het_i<het_snps.size(); ++het_i) {
+            size_t col = snp_cols[het_snps[het_i]];
+            if (!phased_samples[sample].count(col)) {
+                array<Nt2,2> alleles = sample_het_calls[het_i]->nts();
+                phased_samples[sample][col] = PhasedHet({col, alleles[0], alleles[1]});
             }
         }
     }
