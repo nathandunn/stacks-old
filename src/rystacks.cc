@@ -592,14 +592,13 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
                     }
                 }
             }
-        }
-
-        // Record singleton nodes (that are implicit in our representation).
-        for (size_t het_i=0; het_i<het_snps.size(); ++het_i) {
-            size_t col = snp_cols[het_snps[het_i]];
-            if (!phased_samples[sample].count(col)) {
-                array<Nt2,2> alleles = sample_het_calls[het_i]->nts();
-                phased_samples[sample][col] = PhasedHet({col, alleles[0], alleles[1]});
+            // Record singleton nodes (that are implicit in our representation).
+            for (size_t het_i=0; het_i<het_snps.size(); ++het_i) {
+                size_t col = snp_cols[het_snps[het_i]];
+                if (!phased_samples[sample].count(col)) {
+                    array<Nt2,2> alleles = sample_het_calls[het_i]->nts();
+                    phased_samples[sample][col] = PhasedHet({col, alleles[0], alleles[1]});
+                }
             }
         }
     }
