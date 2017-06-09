@@ -341,8 +341,8 @@ void parse_command_line(int argc, char* argv[]) {
             prog_name + " " + VERSION  + "\n" +
             prog_name + " -s sample_prefix [-f paired_reads]\n"
             "\n"
-            "  -s,--prefix: prefix path for the sample.\n"
-            "  -f,--pe-reads: path to the sample's paired-end read sequences (if any).\n"
+            "  -s,--prefix: prefix path for the sample. (Required.)\n"
+            "  -f,--pe-reads: path to the file containing the sample's paired-end read sequences, if any.\n"
             "\n"
             ;
 
