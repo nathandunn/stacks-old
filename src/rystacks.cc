@@ -63,7 +63,7 @@ bool quiet = false;
 string in_dir;
 int batch_id = -1;
 modelt model_type = snp;
-const Model* model = NULL;
+unique_ptr<const Model> model;
 set<int> locus_wl;
 size_t km_length = 31;
 size_t min_km_count = 2;
@@ -77,9 +77,9 @@ bool vcf_write_depths = false;
 // Extra globals.
 //
 const string prog_name = "rystacks";
-LogAlterator* logger = NULL;
+unique_ptr<LogAlterator> logger;
 gzFile o_gzfasta_f = NULL;
-VcfWriter* o_vcf_f = NULL;
+unique_ptr<VcfWriter> o_vcf_f;
 ofstream o_models_f;
 ofstream o_aln_f;
 ofstream o_hapgraphs_f;
@@ -92,7 +92,7 @@ try {
 
     // Open the log.
     string lg_path = in_dir + prog_name + ".log";
-    logger = new LogAlterator(lg_path, quiet, argc, argv);
+    logger.reset(new LogAlterator(lg_path, quiet, argc, argv));
     report_options(cout);
     cout << "\n" << flush;
 
@@ -115,7 +115,7 @@ try {
     vcf_header.add_meta(VcfMeta::predefs::format_GL);
     for(auto& s : bam_fh.mpopi().samples())
         vcf_header.add_sample(s.name);
-    o_vcf_f = new VcfWriter(o_vcf_path, move(vcf_header));
+    o_vcf_f.reset(new VcfWriter(o_vcf_path, move(vcf_header)));
 
     /*  //xxx disabled
     string o_models_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".tsv";
@@ -172,13 +172,10 @@ try {
     cout << "Processed " << n_loci << " loci; retained " << (n_loci-n_discarded) << " of them.\n";
 
     gzclose(o_gzfasta_f);
-    delete o_vcf_f;
-    delete model;
     if (write_hapgraphs)
         o_hapgraphs_f << "}\n";
 
     cout << prog_name << " is done.\n";
-    delete logger;
     return 0;
 
 } catch (const std::exception& e) {
@@ -1062,9 +1059,9 @@ try {
     }
 
     switch (model_type) {
-    case snp:        model = new MultinomialModel(gt_alpha); break;
-    case marukihigh: model = new MarukiHighModel(gt_alpha, var_alpha);  break;
-    case marukilow:  model = new MarukiLowModel(gt_alpha, var_alpha);   break;
+    case snp:        model.reset(new MultinomialModel(gt_alpha)); break;
+    case marukihigh: model.reset(new MarukiHighModel(gt_alpha, var_alpha));  break;
+    case marukilow:  model.reset(new MarukiLowModel(gt_alpha, var_alpha));   break;
     default:
         cerr << "Error: Model choice '" << to_string(model_type) << "' is not supported.\n";
         bad_args();
