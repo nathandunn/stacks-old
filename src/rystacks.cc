@@ -108,9 +108,11 @@ int main(int argc, char** argv) {
         vcf_header.add_sample(s.name);
     o_vcf_f = new VcfWriter(o_vcf_path, move(vcf_header));
 
+    /*  //xxx disabled
     string o_models_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".tsv";
     o_models_f.open(o_models_path);
     check_open(o_models_f, o_models_path);
+    */
 
     if (write_alns) {
         string o_aln_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".alns";
@@ -842,10 +844,10 @@ void write_one_locus(
     gzputs(o_gzfasta_f, "\n");
 
     //
-    // Models/tsv output.
+    // Models/tsv output. //xxx disabled
     // LOCID \t LINETYPE \t SAMPLEID \t CONTENTS
     //
-
+    /*
     // Consensus.
     o_models_f << loc_id << "\tconsensus\t\t" << ref << "\n";
 
@@ -910,6 +912,7 @@ void write_one_locus(
         }
         o_models_f << std::dec << "\n";
     }
+    */
 }
 
 const string help_string = string() +
