@@ -48,6 +48,14 @@ void write_one_locus(const CLocAlnSet& aln_loc,
                      const vector<SiteCall>& calls,
                      const vector<map<size_t,PhasedHet>>& phase_data); // {col : phasedhet} maps, for all samples
 
+int stacks_handle_exceptions(const exception& e) {
+    std::cerr << "Aborted.";
+    if (typeid(e) != typeid(std::exception))
+        std::cerr << " (" << e.what() << ")";
+    std::cerr << "\n";
+    return 13;
+}
+
 //
 // Argument globals.
 //
@@ -77,6 +85,7 @@ ofstream o_aln_f;
 ofstream o_hapgraphs_f;
 
 int main(int argc, char** argv) {
+try {
 
     // Parse arguments.
     parse_command_line(argc, argv);
@@ -171,6 +180,10 @@ int main(int argc, char** argv) {
     cout << prog_name << " is done.\n";
     delete logger;
     return 0;
+
+} catch (const std::exception& e) {
+    return stacks_handle_exceptions(e);
+}
 }
 
 bool process_one_locus(CLocReadSet&& loc) {
