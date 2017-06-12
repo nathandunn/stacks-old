@@ -370,14 +370,9 @@ int main (int argc, char* argv[]) {
 
         // Open the VCF file
         cerr << "Opening the VCF file...\n";
-        unique_ptr<VcfAbstractParser> parser = Vcf::adaptive_open(in_vcf_path);
-        if (parser == NULL) {
-            cerr << "Error: Unable to open VCF file '" << in_vcf_path << "'.\n";
-            throw exception();
-        }
+        VcfParser parser (in_vcf_path);
 
-        parser->read_header();
-        if (parser->header().samples().empty()) {
+        if (parser.header().samples().empty()) {
             cerr << "Error: No samples in VCF file '" << in_vcf_path << "'.\n";
             throw exception();
         }
@@ -385,11 +380,11 @@ int main (int argc, char* argv[]) {
         // Reconsider the MetaPopInfo in light of the VCF header.
         if (pmap_path.empty()) {
             cerr << "No population map specified, creating one from the VCF header...\n";
-            mpopi.init_names(parser->header().samples());
+            mpopi.init_names(parser.header().samples());
         } else {
             // Intersect the samples present in the population map and the VCF.
             size_t n_samples_before = mpopi.samples().size();
-            mpopi.intersect_with(parser->header().samples());
+            mpopi.intersect_with(parser.header().samples());
             size_t n_rm_samples = n_samples_before - mpopi.samples().size();
             if (n_rm_samples > 0) {
                 cerr << "Warning: Of the samples listed in the population map, "
@@ -415,16 +410,16 @@ int main (int argc, char* argv[]) {
 
         vcf_records->push_back(VcfRecord());
         VcfRecord* rec = & vcf_records->back();
-        while (parser->next_record(*rec)) {
+        while (parser.next_record(*rec)) {
             // Check for a SNP.
             if (not rec->is_snp()) {
-                skipped_notsnp.push_back(parser->line_number());
+                skipped_notsnp.push_back(parser.line_number());
                 continue;
             }
 
             // Check for a filtered-out SNP
             if (strncmp(rec->filters(), ".", 2) != 0 && strncmp(rec->filters(), "PASS", 5) != 0) {
-                skipped_filter.push_back(parser->line_number());
+                skipped_filter.push_back(parser.line_number());
                 continue;
             }
 
@@ -449,7 +444,7 @@ int main (int argc, char* argv[]) {
         }
 
         catalog = create_catalog(*vcf_records);
-        vcf_header.reset(new VcfHeader(parser->header()));
+        vcf_header.reset(new VcfHeader(parser.header()));
     }
 
     //

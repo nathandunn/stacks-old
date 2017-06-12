@@ -44,27 +44,9 @@
 #include "utils.h"
 #include "stacks.h"
 
-using std::out_of_range;
-
-class VcfAbstractParser;
 class VcfHeader;
 
 namespace Vcf {
-
-const size_t base_fields_no = 8; // CHROM POS ID REF ALT QUAL FILTER INFO [FORMAT SAMPLE ...]]
-const string base_fields = "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO";
-const size_t chrom = 0;
-const size_t pos = 1;
-const size_t id = 2;
-const size_t ref = 3;
-const size_t alt = 4;
-const size_t qual = 5;
-const size_t filter = 6;
-const size_t info = 7;
-const size_t format = 8;
-const size_t first_sample = 9;
-
-const string base_header = "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO";
 
 // enum for record types
 enum class RType {
@@ -74,14 +56,6 @@ enum class RType {
     symbolic,  // ALT is e.g. "<DUP:TANDEM>"
     breakend   // ALT is e.g. "G]17:198982]"
 };
-
-// Constants for the parser.
-const size_t line_buf_size = 4096;
-
-// Open the given VCF file using VcfParser or VcfGzParser, depending on the
-// suffix of the file. Throws on failure.
-// (The pointee is dynamically allocated and should be deleted.)
-unique_ptr<VcfAbstractParser> adaptive_open(const string& path);
 
 } //namespace Vcf
 
@@ -145,18 +119,6 @@ public:
     void append_info(const string& s);
     void append_format(const string& s);
     void append_sample(const string& s);
-
-    // TODO Deprecated functions.
-    Vcf::RType& type_m();
-    string& chrom_m();
-    size_t& pos_m();
-    string& id_m();
-    vector<string>& alleles_m();
-    string& qual_m();
-    vector<string>& filter_m();
-    vector<string>& info_m();
-    vector<string>& format_m();
-    vector<string>& samples_m();
 
     inline size_t index_of_gt_subfield(const string& key) const; // SIZE_MAX if not found.
     inline string parse_gt_subfield(const char* sample, size_t index) const;
@@ -239,12 +201,14 @@ public:
     void add_meta(const VcfMeta& m) {meta_.push_back(m);}
     void add_sample(const string& s) {samples_.push_back(s); sample_indexes_.insert({s, samples_.size()-1});}
 
+    static const string std_fields;
+
 private:
     void init_meta(const string& version);
 };
 
 /*
- * VcfAbstractParser
+ * VcfParser
  * ==========
  *
  * Main class for parsing VCF. The derived non-abstract classes
@@ -262,78 +226,43 @@ private:
  *    'symbolic' or 'breakend', with only the fields CHROM, POS,
  *    ID and REF filled in.
  */
-class VcfAbstractParser {
-protected:
+class VcfParser {
     const string path_;
     VcfHeader header_;
+    size_t line_number_; // 1-based.
 
-    size_t line_number_;
-    char line_[Vcf::line_buf_size];
-    bool eol_; // Set by check_eol(). True if the buffer reaches the end of the currently parsed line.
-    bool eof_; // Set by getline(). True if EOF was reached.
-    vector<char*> tabs_; // Vector of pointers to {first_tab, second_tab, ..., \0 } in [line_].
-    vector<char*> bounds_; // Vector of pointers to {leading_tab, first_sep, second_sep, ..., (trailing \t or \0) } in [line_].
-    size_t sample_index_; // Index of the current (next) sample.
+    bool is_gzipped_;
+    // Variables for plain text VCFs.
+    ifstream ifs_;
+    string ifsbuffer_;
+    // Variables for compressed VCFs.
+    gzFile gzfile_;
+    char* gzbuffer_;
+    size_t gzbuffer_size_;
+    size_t gzline_len_;
+    static const size_t gzbuffer_init_size = 65536;
 
-    virtual void getline(char* ptr, size_t n) =0;
-    virtual void check_eol() =0; // rem. The implementation in gzparser relies on [tabs_] to access the end of the string in [line_].
-    inline void read_to_eol(); // Reads while [eol_] is false.
+    // Wrappers to hide the above.
+    bool getline();
+    const char* line() const {assert(line_len() > 0); return is_gzipped_ ? gzbuffer_ : ifsbuffer_.c_str();}
+    size_t line_len() const {return is_gzipped_ ? gzline_len_ : ifsbuffer_.length();}
 
-    // Add a sample to [record.samples_] if [samples_to_keep_.at(sample_index_)] is true.
-    inline void add_sample(VcfRecord& record, char* tab1, char* tab2);
+    // Parse the header.
+    void read_header();
 
 public:
-    VcfAbstractParser(const string& path);
-    virtual ~VcfAbstractParser() {}
-
-    // Assess the state of the underlying file.
-    virtual bool fail() =0;
+    VcfParser(const string& path);
+    virtual ~VcfParser() {if (is_gzipped_) {gzclose(gzfile_); delete[] gzbuffer_;}}
 
     // Getters.
     const string& path() const {return path_;};
     const VcfHeader& header() const {return header_;};
     size_t line_number() const {return line_number_;}
 
-    // Parse the header.
-    void read_header();
-
-    // Read a record. Returns false on EOF, true otherwise.
-    bool next_record(VcfRecord& record);
+    // Reads a record.
+    bool next_record(VcfRecord& rec)
+        {if (!getline()) return false; rec.assign(line(), line_len(), header_); return true;}
 };
-
-/*
- * VcfParser
- * =========
- * Implements VcfAbstractParser for plain text files.
- */
-class VcfParser : public VcfAbstractParser {
-    ifstream file_;
-    inline void getline(char* ptr, size_t n);
-    void check_eol() {eol_ = ! file_.fail(); file_.clear();}
-public:
-    VcfParser(const string& path) : VcfAbstractParser(path), file_(path) {check_open(file_, path);}
-    bool fail() {return file_.fail();}
-};
-
-#ifdef HAVE_LIBZ
-/*
- * VcfGzParser
- * ==========
- * Implements VcfAbstractParser for gzipped files.
- */
-class VcfGzParser : public VcfAbstractParser {
-    gzFile file_;
-    inline void getline(char* ptr, size_t n);
-    inline void check_eol();
-
-    VcfGzParser(VcfGzParser& p) = delete; // No copy constructor.
-    VcfGzParser& operator=(VcfGzParser& p) = delete;
-public:
-    VcfGzParser(const string& path);
-    ~VcfGzParser() {if(file_) gzclose(file_);}
-    bool fail() {return file_ == NULL;}
-};
-#endif // HAVE_LIBZ
 
 /*
  * VcfWriter
@@ -439,18 +368,6 @@ void VcfRecord::append_sample(const string& s) {
     if (sample0_i_ == SIZE_MAX)
         sample0_i_ = strings_.size();
     append_str(s);
-}
-
-inline void
-get_bounds(vector<char*>& bounds, char* tab1, char* tab2, char sep)
-{
-    bounds.clear();
-    bounds.push_back(tab1);
-    do {
-        bounds.push_back(strchr(bounds.back()+1, sep)); // this is last+1 if tab1==tab2
-    } while (bounds.back());
-    bounds.pop_back();
-    bounds.push_back(tab2);
 }
 
 inline
@@ -574,61 +491,5 @@ bool VcfRecord::is_snp() const {
             return false;
     return true;
 }
-
-inline
-void VcfAbstractParser::read_to_eol()
-{
-    while(!eol_) {
-        getline(line_, Vcf::line_buf_size);
-        if(eof_) {
-            eol_=true;
-        } else {
-            tabs_.clear();
-            tabs_.push_back(line_+strlen(line_));
-            check_eol();
-        }
-    }
-}
-
-inline
-void VcfAbstractParser::add_sample(VcfRecord& record, char* tab1, char* tab2)
-{
-    if(tab2 == tab1+1)
-        cerr << "Warning: malformed VCF record line (empty SAMPLE field should be marked by a dot)."
-             << " Line " << line_number_ << " in file " << path_ << "'.\n";
-
-    record.samples_m().push_back(string(tab1+1, tab2));
-
-    ++sample_index_;
-}
-
-inline
-void VcfParser::getline(char* ptr, size_t n) {
-    file_.getline(ptr, n);
-    if(file_.eof()) {
-        eof_=file_.fail();
-        if(!eof_)
-            cerr << "Notice: File '" << path_ << "' does not end with a newline.\n";
-    }
-}
-
-#ifdef HAVE_LIBZ
-inline
-void VcfGzParser::getline(char* buf, size_t n) {
-    if (gzgets(file_, buf, n) == NULL)
-        eof_ = true;
-}
-
-inline
-void VcfGzParser::check_eol() {
-    if(*(tabs_.back()-1) == '\n') { // rem. safe, gzgets returns NULL on EOF
-        eol_ = true;
-        tabs_.back() = tabs_.back()-1;
-        *tabs_.back() = '\0';
-    } else {
-        eol_= false;
-    }
-}
-#endif // HAVE_LIBZ
 
 #endif // __VCF_H__
