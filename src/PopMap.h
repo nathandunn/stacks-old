@@ -446,11 +446,7 @@ int PopMap<LocusT>::populate(map<int, LocusT*>& catalog,
 
         const VcfRecord& rec = records[loc->id]; // n.b. assumes locus ID == record index.
         int ad_index;
-        try {
-            ad_index = rec.index_of_gt_subfield("AD");
-        } catch (exception& e) {
-            ad_index = -1;
-        }
+        ad_index = rec.index_of_gt_subfield("AD");
 
         for (size_t s = 0; s < metapopinfo.samples().size(); ++s) {
             size_t vcf_index = header.sample_indexes().at(metapopinfo.samples()[s].name);

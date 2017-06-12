@@ -7,6 +7,129 @@
 
 using namespace std;
 
+void VcfRecord::assign(const char* rec, size_t len, const VcfHeader& header) {
+    buffer_.resize(len+1);
+    memcpy(buffer_.data(), rec, len+1);
+    if (buffer_[len-1] == '\n') {
+        buffer_[len-1] = '\0';
+        if (buffer_[len-2] == '\r')
+            buffer_[len-2] = '\0';
+    }
+
+    // Parse the record.
+    size_t n_exp_fields = header.samples().empty() ? 8 : 9 + header.samples().size();
+    auto wrong_n_fields = [&rec, &len, &n_exp_fields](size_t obs){
+        cerr << "Error: Expected VCF record to have "
+             << n_exp_fields << " fields, not " << obs << "."
+             << "Offending record (" << len << " characters) is:\n"
+             << rec << '\n';
+        throw exception();
+    };
+
+    size_t n_fields = 1;
+    char* p = buffer_.data();
+    char* q;
+    auto next_field = [&p, &q, &n_fields, &wrong_n_fields]() {
+        q = p;
+        p = strchr(p, '\t');
+        if (!p)
+            wrong_n_fields(n_fields);
+        ++n_fields;
+        *p = '\0';
+        ++p;
+    };
+
+    // chrom
+    next_field();
+
+    // pos
+    next_field();
+    strings_.push_back(q - buffer_.data());
+
+    // id
+    next_field();
+    strings_.push_back(q - buffer_.data());
+
+    // alleles (ref + alt)
+    next_field();
+    strings_.push_back(q - buffer_.data());
+    next_field();
+    if (*q != '.') { // If ALT is '.', we don't record the pointer to it.
+        strings_.push_back(q - buffer_.data());
+        while(q = strchr(q, ',')) {
+            *q = '\0';
+            ++q;
+            strings_.push_back(q - buffer_.data());
+        }
+    }
+
+    // filters
+    filters_i_ = strings_.size();
+    next_field();
+    strings_.push_back(q - buffer_.data());
+
+    // qual
+    next_field();
+    strings_.push_back(q - buffer_.data());
+
+    if (header.samples().empty()) {
+        // info (last field)
+        if (n_fields != n_exp_fields)
+            wrong_n_fields(n_fields);
+        strings_.push_back(q - buffer_.data());
+        while(p = strchr(p, ':')) {
+            *p = '\0';
+            ++p;
+            strings_.push_back(p - buffer_.data());
+        }
+        format0_i_ = SIZE_MAX;
+        sample0_i_ = SIZE_MAX;
+    } else {
+        // info
+        next_field();
+        strings_.push_back(q - buffer_.data());
+        while(q = strchr(q, ';')) {
+            *q = '\0';
+            ++q;
+            strings_.push_back(q - buffer_.data());
+        }
+
+        // format
+        format0_i_ = strings_.size();
+        next_field();
+        strings_.push_back(q - buffer_.data());
+        while(q = strchr(q, ':')) {
+            *q = '\0';
+            ++q;
+            strings_.push_back(q - buffer_.data());
+        }
+
+        // samples (last fields)
+        sample0_i_ = strings_.size();
+        strings_.push_back(p - buffer_.data());
+        while(p = strchr(p, '\t')) {
+            *p = '\0';
+            ++p;
+            ++n_fields;
+            strings_.push_back(p - buffer_.data());
+        }
+        if (n_fields != n_exp_fields)
+            wrong_n_fields(n_fields);
+    }
+}
+
+Vcf::RType VcfRecord::type() const {
+    if (n_alleles() == 1)
+        return Vcf::RType::invariant;
+    for (size_t i=0; i<n_alleles(); ++i) {
+        if (strchr(allele(i), '<'))
+            return Vcf::RType::symbolic;
+        else if (strchr(allele(i), '[') || strchr(allele(i), ']'))
+            return Vcf::RType::breakend;
+    }
+    return Vcf::RType::expl;
+}
+
 string VcfRecord::util::fmt_info_af(const vector<double>& alt_freqs) {
     stringstream ss;
     ss << std::setprecision(3);
@@ -538,7 +661,7 @@ void VcfWriter::write_record(const VcfRecord& r) {
 
     file_ << r.chrom()
           << "\t" << r.pos()
-          << "\t" << (*r.id() == '\0' ? "." : r.id())
+          << "\t" << r.id()
           << "\t" << r.allele(0);
 
     //ALT
@@ -546,24 +669,16 @@ void VcfWriter::write_record(const VcfRecord& r) {
     if (r.n_alleles() == 1) {
         file_ << ".";
     } else {
-        assert(r.n_alleles() > 1);
         file_ << r.allele(1);
         for (size_t i=2; i<r.n_alleles(); ++i)
             file_ << "," << r.allele(i);
     }
 
     //QUAL
-    file_ << "\t" << (*r.qual() == '\0' ? "." : r.qual());
+    file_ << "\t" << r.qual();
 
     //FILTER
-    file_ << "\t";
-    if (r.n_filters() == 0) {
-        file_ << ".";
-    } else {
-        file_ << r.filter(0);
-        for (size_t i=1; i<r.n_filters(); ++i)
-            file_ << ";" << r.filter(i);
-    }
+    file_ << "\t" << r.filters();
 
     //INFO
     file_ << "\t";
@@ -587,9 +702,7 @@ void VcfWriter::write_record(const VcfRecord& r) {
         }
 
         //SAMPLES
-        if (r.n_samples() != header_.samples().size())
-            throw exception();
-
+        assert(r.n_samples() != header_.samples().size());
         for (size_t i=0; i<r.n_samples(); ++i)
             file_ << "\t" << r.sample(i);
     }

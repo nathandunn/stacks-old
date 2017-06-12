@@ -91,58 +91,74 @@ unique_ptr<VcfAbstractParser> adaptive_open(const string& path);
  * Datastructure to store VCF records
  */
 class VcfRecord {
-    string chrom_; // required
-    size_t pos_; // required
-    string id_;
-    Vcf::RType type_;
-    vector<string> alleles_; // allele 0 is REF and is required ; case insensitive
-    string qual_;
-    vector<string> filter_;
-    vector<string> info_;
-    vector<string> format_;
-    vector<string> samples_;
-    //map<string, size_t> allele_indexes_;
-    //void refresh_allele_indexes();
+    vector<char> buffer_;
+    vector<size_t> strings_; // Positions of all independent c-strings in the buffer.
+
+    size_t pos_i_() const {return 0;} // Index in strings_ of the position c-string.
+    size_t id_i_() const {return 1;}
+    size_t allele0_i_() const {return 2;}
+    size_t filters_i_;
+    size_t qual_i_() const {return filters_i_+1;}
+    size_t info0_i_() const {return filters_i_+2;}
+    size_t format0_i_;
+    size_t sample0_i_;
+
+    const char* i2str(size_t i) const {return (char*) &buffer_[strings_.at(i)];}
+
+    void append_str(const string& s) {append_str(s.c_str(), s.length());}
+    void append_str(const char* str, size_t len);
 
 public:
     VcfRecord()
-    : chrom_(), pos_(-1), id_(), type_(Vcf::RType::null), alleles_(), qual_(), filter_(), info_(),
-      format_(), samples_()
+    : buffer_(), strings_(), filters_i_(SIZE_MAX), format0_i_(SIZE_MAX), sample0_i_(SIZE_MAX)
     {}
 
-    const Vcf::RType& type() const {return type_;}
+    void assign(const char* rec, size_t len, const VcfHeader& header);
+    bool check_record() const; // Not implemented. Check that empty fields are '.', etc.
 
-    size_t n_alleles() const {return alleles_.size();}
-    size_t n_filters() const {return filter_.size();}
-    size_t n_infos() const {return info_.size();}
-    size_t n_formats() const {return format_.size();}
-    size_t n_samples() const {return samples_.size();}
+    const char* chrom()          const {return buffer_.data();}
+         size_t pos()            const {return atoi(i2str(pos_i_()));}
+    const char* id()             const {return i2str(id_i_());}
+    const char* allele(size_t i) const {return i2str(allele0_i_() + i);}
+    const char* filters()        const {return i2str(filters_i_);}
+    const char* qual()           const {return i2str(qual_i_());}
+    const char* info(size_t i)   const {return i2str(info0_i_() + i);}
+    const char* format(size_t i) const {return i2str(format0_i_ + i);} // (Will throw if the field doesn't exit.)
+    const char* sample(size_t i) const {return i2str(sample0_i_ + i);}
 
-    const char* chrom() const {return chrom_.c_str();}
-    size_t pos() const {return pos_;}
-    const char* id() const {return id_.c_str();}
-    const char* allele(size_t i) const {return alleles_[i].c_str();}
-    const char* qual() const {return qual_.c_str();}
-    const char* filter(size_t i) const {return filter_[i].c_str();}
-    const char* info(size_t i) const {return info_[i].c_str();}
-    const char* format(size_t i) const {return format_[i].c_str();}
-    const char* sample(size_t i) const {return samples_[i].c_str();}
+    size_t n_alleles() const {return filters_i_ - allele0_i_();}
+    size_t n_infos()   const {return format0_i_ - info0_i_();}
+    size_t n_formats() const {return sample0_i_ - format0_i_;}
+    size_t n_samples() const {return strings_.size() - sample0_i_;}
 
-    string& chrom_m() {return chrom_;} // for "modifiable"
-    size_t& pos_m() {return pos_;}
-    string& id_m() {return id_;}
-    Vcf::RType& type_m() {return type_;}
-    vector<string>& alleles_m() {return alleles_;}
-    string& qual_m() {return qual_;}
-    vector<string>& filter_m() {return filter_;}
-    vector<string>& info_m() {return info_;}
-    vector<string>& format_m() {return format_;}
-    vector<string>& samples_m() {return samples_;}
+    Vcf::RType type() const;
 
-    // Clears all the members.
-    inline void clear();
+    // Record creation functions.
+    void clear();
+    void append_chrom(const string& s);
+    void append_pos(size_t pos);
+    void append_id(const string& s);
+    void append_allele(Nt2 nt);
+    void append_allele(const string& s);
+    void append_filters(const string& s);
+    void append_qual(const string& s);
+    void append_info(const string& s);
+    void append_format(const string& s);
+    void append_sample(const string& s);
 
-    inline size_t index_of_gt_subfield(const string& key) const;
+    // TODO Deprecated functions.
+    Vcf::RType& type_m();
+    string& chrom_m();
+    size_t& pos_m();
+    string& id_m();
+    vector<string>& alleles_m();
+    string& qual_m();
+    vector<string>& filter_m();
+    vector<string>& info_m();
+    vector<string>& format_m();
+    vector<string>& samples_m();
+
+    inline size_t index_of_gt_subfield(const string& key) const; // SIZE_MAX if not found.
     inline string parse_gt_subfield(const char* sample, size_t index) const;
 
     // Returns (first allele, second allele), '-1' meaning no data.
@@ -346,6 +362,85 @@ private:
  * ==========
  */
 
+inline
+void VcfRecord::append_str(const char* str, size_t len) {
+    strings_.push_back(buffer_.size());
+    buffer_.resize(buffer_.size()+len+1);
+    memcpy(buffer_.data(), str, len+1);
+}
+
+inline
+void VcfRecord::append_chrom(const string& s) {
+    assert(buffer_.empty());
+    append_str(s);
+}
+
+inline
+void VcfRecord::append_pos(size_t pos) {
+    assert(strings_.empty());
+    append_str(to_string(pos));
+}
+
+inline
+void VcfRecord::append_id(const string& s) {
+    assert(strings_.size()==1);
+    append_str(s);
+}
+
+inline
+void VcfRecord::append_allele(Nt2 nt) {
+    assert(strings_.size() > 1);
+    assert(filters_i_ == SIZE_MAX);
+    char a[2] {char(nt), '\0'};
+    append_str(a, 1);
+}
+
+inline
+void VcfRecord::append_allele(const string& s) {
+    assert(strings_.size() > 1);
+    assert(filters_i_ == SIZE_MAX);
+    append_str(s);
+}
+
+inline
+void VcfRecord::append_filters(const string& s) {
+    assert(strings_.size() > 2);
+    assert(filters_i_ == SIZE_MAX);
+    filters_i_ = strings_.size();
+    append_str(s);
+}
+
+inline
+void VcfRecord::append_qual(const string& s) {
+    assert(filters_i_ != SIZE_MAX);
+    assert(strings_.size() == filters_i_ + 1);
+    append_str(s);
+}
+
+inline
+void VcfRecord::append_info(const string& s) {
+    assert(strings_.size() > filters_i_ + 1);
+    assert(format0_i_ == SIZE_MAX);
+    append_str(s);
+}
+
+inline
+void VcfRecord::append_format(const string& s) {
+    assert(strings_.size() > filters_i_ + 2);
+    assert(sample0_i_ == SIZE_MAX);
+    if (format0_i_ == SIZE_MAX)
+        format0_i_ = strings_.size();
+    append_str(s);
+}
+
+inline
+void VcfRecord::append_sample(const string& s) {
+    assert(format0_i_ != SIZE_MAX);
+    if (sample0_i_ == SIZE_MAX)
+        sample0_i_ = strings_.size();
+    append_str(s);
+}
+
 inline void
 get_bounds(vector<char*>& bounds, char* tab1, char* tab2, char sep)
 {
@@ -360,16 +455,11 @@ get_bounds(vector<char*>& bounds, char* tab1, char* tab2, char sep)
 
 inline
 void VcfRecord::clear() {
-    chrom_m().clear();
-    pos_m() = -1;
-    id_m().clear();
-    type_m() = Vcf::RType::null;
-    alleles_m().clear();
-    qual_m().clear();
-    filter_m().clear();
-    info_m().clear();
-    format_m().clear();
-    samples_m().clear();
+    buffer_.clear();
+    strings_.clear();
+    filters_i_ = SIZE_MAX;
+    format0_i_ = SIZE_MAX;
+    sample0_i_ = SIZE_MAX;
 }
 
 inline
@@ -377,7 +467,7 @@ size_t VcfRecord::index_of_gt_subfield(const string& key) const {
     for (size_t i=0; i<n_formats(); ++i)
         if (strcmp(key.c_str(), format(i)) == 0)
             return i;
-    throw out_of_range(key);
+    return SIZE_MAX;
 }
 
 inline
@@ -479,13 +569,9 @@ inline pair<int, int> VcfRecord::parse_genotype_nochecks(const char* sample) con
 
 inline
 bool VcfRecord::is_snp() const {
-    if (type() != Vcf::RType::expl)
-        return false;
-
     for (size_t i=0; i<n_alleles(); ++i)
         if (strlen(allele(i)) > 1)
             return false;
-
     return true;
 }
 
