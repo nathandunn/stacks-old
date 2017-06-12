@@ -366,6 +366,7 @@ write_vcf(map<int, CSLocus *> &catalog,
 
     VcfHeader header;
     header.add_std_meta();
+    header.add_meta(VcfMeta::predefs::info_locori);
     for(auto& s : mpopi.samples())
         header.add_sample(s.name);
     VcfWriter writer (path, move(header));
@@ -514,7 +515,6 @@ write_vcf_haplotypes(map<int, CSLocus *> &catalog,
             rec.append_chrom(string(loc->loc.chr));
             rec.append_pos(loc->sort_bp() + 1);
             rec.append_id(to_string(loc->id));
-            rec.append_info(string("locori=") + (loc->loc.strand == strand_plus ? "p" : "m"));
 
             //alleles
             vector<pair<string, double> > ordered_hap (hap_freq.begin(), hap_freq.end());
@@ -530,6 +530,7 @@ write_vcf_haplotypes(map<int, CSLocus *> &catalog,
             rec.append_filters("PASS");
 
             //info
+            rec.append_info(string("locori=") + (loc->loc.strand == strand_plus ? "p" : "m"));
             stringstream ss;
             ss << n_alleles/2;
             rec.append_info(string("NS=") + ss.str());

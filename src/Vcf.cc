@@ -45,13 +45,11 @@ void VcfHeader::add_std_meta(const string& version) {
 }
 
 void VcfRecord::assign(const char* rec, size_t len, const VcfHeader& header) {
+    assert(rec[len-1] != '\n');
+
     buffer_.resize(len+1);
     memcpy(buffer_.data(), rec, len+1);
-    if (buffer_[len-1] == '\n') {
-        buffer_[len-1] = '\0';
-        if (buffer_[len-2] == '\r')
-            buffer_[len-2] = '\0';
-    }
+    strings_.clear();
 
     // Parse the record.
     size_t n_exp_fields = header.samples().empty() ? 8 : 9 + header.samples().size();
@@ -100,12 +98,12 @@ void VcfRecord::assign(const char* rec, size_t len, const VcfHeader& header) {
         }
     }
 
-    // filters
-    filters_i_ = strings_.size();
+    // qual
+    qual_i_ = strings_.size();
     next_field();
     strings_.push_back(q - buffer_.data());
 
-    // qual
+    // filters
     next_field();
     strings_.push_back(q - buffer_.data());
 
@@ -271,17 +269,30 @@ bool VcfRecord::util::build_haps(pair<string,string>& haplotypes, const vector<c
     return complete;
 }
 
+VcfParser::VcfParser(const string& path) : file_(path), header_() {
+    FileT ftype = guess_file_type(path);
+    if (ftype != FileT::vcf && ftype != FileT::gzvcf) {
+        cerr << "Error: File '" << path << "' : expected '.vcf(.gz)' suffix.\n";
+        throw exception();
+    }
+    read_header();
+}
+
 void
 VcfParser::read_header()
 {
-    auto malformed = [this] () {
+    const char* line = NULL;
+    size_t len;
+
+    auto malformed = [this, &line] () {
         cerr << "Error: Malformed VCF header."
-             << " At line " << file_.line_number() << " in file '" << file_.path() << "'.\n";
+             << " At line " << file_.line_number() << " in file '" << file_.path() << "'";
+        if (line)
+            cerr << ":\n" << line << "\n";
+        else
+            cerr << ".\n";
         throw exception();
     };
-
-    const char* line;
-    size_t len;
 
     // Meta header lines.
     bool not_eof;
@@ -306,7 +317,7 @@ VcfParser::read_header()
         const char* end = line + len;
 
         // Check that FORMAT is present.
-        const char format[] = "\tformat";
+        const char format[] = "\tFORMAT";
         const size_t format_len = sizeof(format) - 1;
         if(strncmp(p, format, format_len) != 0)
             malformed();
@@ -340,7 +351,7 @@ void VcfWriter::write_header() {
 void VcfWriter::write_record(const VcfRecord& r) {
 
     file_ << r.chrom()
-          << "\t" << r.pos()
+          << "\t" << r.pos() + 1
           << "\t" << r.id()
           << "\t" << r.allele(0);
 
@@ -378,7 +389,7 @@ void VcfWriter::write_record(const VcfRecord& r) {
             file_ << ":" << r.format(i);
 
         //SAMPLES
-        assert(r.n_samples() != header_.samples().size());
+        assert(r.n_samples() == header_.samples().size());
         for (size_t i=0; i<r.n_samples(); ++i)
             file_ << "\t" << r.sample(i);
     }

@@ -674,10 +674,14 @@ void write_one_locus(
         VcfRecord rec;
         rec.append_chrom(to_string(loc_id));
         rec.append_pos(i+1);
+        rec.append_id();
 
         // Alleles.
         for (Nt2 nt : vcf_alleles)
             rec.append_allele(nt);
+
+        rec.append_qual();
+        rec.append_filters();
 
         if(rec.n_alleles() == 1) {
             // Fixed site.
