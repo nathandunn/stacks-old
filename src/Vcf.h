@@ -95,9 +95,9 @@ class VcfRecord {
     size_t pos_i_() const {return 0;} // Index in strings_ of the position c-string.
     size_t id_i_() const {return 1;}
     size_t allele0_i_() const {return 2;}
-    size_t filters_i_;
-    size_t qual_i_() const {return filters_i_+1;}
-    size_t info0_i_() const {return filters_i_+2;}
+    size_t qual_i_;
+    size_t filters_i_() const {return qual_i_+1;}
+    size_t info0_i_() const {return qual_i_+2;}
     size_t format0_i_;
     size_t sample0_i_;
 
@@ -108,23 +108,23 @@ class VcfRecord {
 
 public:
     VcfRecord()
-    : buffer_(), strings_(), filters_i_(SIZE_MAX), format0_i_(SIZE_MAX), sample0_i_(SIZE_MAX)
+    : buffer_(), strings_(), qual_i_(SIZE_MAX), format0_i_(SIZE_MAX), sample0_i_(SIZE_MAX)
     {}
 
     void assign(const char* rec, size_t len, const VcfHeader& header);
     bool check_record() const; // Not implemented. Check that empty fields are '.', etc.
 
     const char* chrom()          const {return buffer_.data();}
-         size_t pos()            const {return atoi(i2str(pos_i_()));}
+         size_t pos()            const {return atoi(i2str(pos_i_())) - 1;} // 0-based.
     const char* id()             const {return i2str(id_i_());}
     const char* allele(size_t i) const {return i2str(allele0_i_() + i);}
-    const char* filters()        const {return i2str(filters_i_);}
-    const char* qual()           const {return i2str(qual_i_());}
+    const char* qual()           const {return i2str(qual_i_);}
+    const char* filters()        const {return i2str(filters_i_());}
     const char* info(size_t i)   const {return i2str(info0_i_() + i);}
     const char* format(size_t i) const {return i2str(format0_i_ + i);} // (Will throw if the field doesn't exit.)
     const char* sample(size_t i) const {return i2str(sample0_i_ + i);}
 
-    size_t n_alleles() const {return filters_i_ - allele0_i_();}
+    size_t n_alleles() const {return qual_i_ - allele0_i_();}
     size_t n_infos()   const {return format0_i_ - info0_i_();}
     size_t n_formats() const {return sample0_i_ - format0_i_;}
     size_t n_samples() const {return strings_.size() - sample0_i_;}
@@ -143,11 +143,11 @@ public:
     void clear();
     void append_chrom(const string& s);
     void append_pos(size_t pos);
-    void append_id(const string& s);
+    void append_id(const string& s = ".");
     void append_allele(Nt2 nt);
     void append_allele(const string& s);
-    void append_filters(const string& s);
-    void append_qual(const string& s);
+    void append_qual(const string& s = ".");
+    void append_filters(const string& s = ".");
     void append_info(const string& s);
     void append_format(const string& s);
     void append_sample(const string& s);
@@ -179,15 +179,21 @@ class VcfParser {
     void read_header();
 
 public:
-    VcfParser(const string& path) : file_(path), header_() {read_header();}
+    VcfParser(const string& path);
 
     bool next_record(VcfRecord& rec) {
+    try {
         const char* line;
         size_t len;
         if (!file_.getline(line, len))
             return false;
         rec.assign(line, len, header_);
         return true;
+    } catch (const exception& e) {
+        cerr << "Error: At line " << file_.line_number()
+             << " in file '" << file_.path () << "'.\n";
+        throw e;
+    }
     }
 
     const VcfHeader& header() const {return header_;};
@@ -226,13 +232,14 @@ inline
 void VcfRecord::append_str(const char* str, size_t len) {
     strings_.push_back(buffer_.size());
     buffer_.resize(buffer_.size()+len+1);
-    memcpy(buffer_.data(), str, len+1);
+    memcpy(buffer_.data() + strings_.back(), str, len+1);
 }
 
 inline
 void VcfRecord::append_chrom(const string& s) {
     assert(buffer_.empty());
-    append_str(s);
+    buffer_.resize(buffer_.size()+s.length()+1);
+    memcpy(buffer_.data(), s.c_str(), s.length()+1);
 }
 
 inline
@@ -250,7 +257,7 @@ void VcfRecord::append_id(const string& s) {
 inline
 void VcfRecord::append_allele(Nt2 nt) {
     assert(strings_.size() > 1);
-    assert(filters_i_ == SIZE_MAX);
+    assert(qual_i_ == SIZE_MAX);
     char a[2] {char(nt), '\0'};
     append_str(a, 1);
 }
@@ -258,35 +265,37 @@ void VcfRecord::append_allele(Nt2 nt) {
 inline
 void VcfRecord::append_allele(const string& s) {
     assert(strings_.size() > 1);
-    assert(filters_i_ == SIZE_MAX);
-    append_str(s);
-}
-
-inline
-void VcfRecord::append_filters(const string& s) {
-    assert(strings_.size() > 2);
-    assert(filters_i_ == SIZE_MAX);
-    filters_i_ = strings_.size();
+    assert(qual_i_ == SIZE_MAX);
     append_str(s);
 }
 
 inline
 void VcfRecord::append_qual(const string& s) {
-    assert(filters_i_ != SIZE_MAX);
-    assert(strings_.size() == filters_i_ + 1);
+    assert(strings_.size() > 2);
+    assert(qual_i_ == SIZE_MAX);
+    qual_i_ = strings_.size();
+    append_str(s);
+}
+
+inline
+void VcfRecord::append_filters(const string& s) {
+    assert(qual_i_ != SIZE_MAX);
+    assert(strings_.size() == qual_i_ + 1);
     append_str(s);
 }
 
 inline
 void VcfRecord::append_info(const string& s) {
-    assert(strings_.size() > filters_i_ + 1);
+    assert(qual_i_ != SIZE_MAX);
+    assert(strings_.size() > qual_i_ + 1);
     assert(format0_i_ == SIZE_MAX);
     append_str(s);
 }
 
 inline
 void VcfRecord::append_format(const string& s) {
-    assert(strings_.size() > filters_i_ + 2);
+    assert(qual_i_ != SIZE_MAX);
+    assert(strings_.size() > qual_i_ + 2);
     assert(sample0_i_ == SIZE_MAX);
     if (format0_i_ == SIZE_MAX)
         format0_i_ = strings_.size();
@@ -305,7 +314,7 @@ inline
 void VcfRecord::clear() {
     buffer_.clear();
     strings_.clear();
-    filters_i_ = SIZE_MAX;
+    qual_i_ = SIZE_MAX;
     format0_i_ = SIZE_MAX;
     sample0_i_ = SIZE_MAX;
 }
@@ -345,7 +354,7 @@ pair<int, int> VcfRecord::parse_genotype(const char* sample) const {
 
     assert(sample != NULL && sample[0] != '\0');
     if (n_formats() == 0
-            || strcmp(format(0), "GT") == 0
+            || strcmp(format(0), "GT") != 0
             || sample[0] == '.') {
         return genotype;
     }

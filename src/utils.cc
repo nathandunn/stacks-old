@@ -25,6 +25,9 @@
 // jcatchen@uoregon.edu
 // University of Oregon
 //
+
+#include <regex>
+
 #include "utils.h"
 
 using namespace std;
@@ -310,13 +313,14 @@ VersatileLineReader::VersatileLineReader(const string& path)
   ifs_(), ifsbuffer_(),
   gzfile_(NULL), gzbuffer_(NULL), gzbuffer_size_(0), gzline_len_(0)
 {
-    FileT ftype = guess_file_type(path_);
-    if (ftype == FileT::vcf) {
-        is_gzipped_ = false;
+    std::smatch m;
+    std::regex_search(path, m, std::regex("\\.[Gg][Zz]$"));
+    is_gzipped_ = !m.empty();
+
+    if (!is_gzipped_) {
         ifs_.open(path_);
         check_open(ifs_, path_);
-    } else if (ftype == FileT::gzvcf) {
-        is_gzipped_ = true;
+    } else {
         gzfile_ = gzopen(path_.c_str(), "rb");
         check_open(gzfile_, path_);
         gzbuffer_size_ = gzbuffer_init_size;
@@ -340,10 +344,9 @@ bool VersatileLineReader::getline(const char*& line, size_t& len) {
     if (!is_gzipped_) {
         if (!std::getline(ifs_, ifsbuffer_))
             return false;
-        if (ifsbuffer_.back() != '\n')
+        if (ifs_.eof())
+            // Doesn't end with an '\n'.
             truncated();
-        // Remove the '\n'.
-        ifsbuffer_.pop_back();
         if (ifsbuffer_.back() == '\r')
             // Remove the '\r'.
             ifsbuffer_.pop_back();
