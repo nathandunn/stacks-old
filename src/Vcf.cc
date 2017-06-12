@@ -7,6 +7,8 @@
 
 using namespace std;
 
+const string VcfHeader::std_fields = "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO";
+
 void VcfRecord::assign(const char* rec, size_t len, const VcfHeader& header) {
     buffer_.resize(len+1);
     memcpy(buffer_.data(), rec, len+1);
@@ -56,8 +58,8 @@ void VcfRecord::assign(const char* rec, size_t len, const VcfHeader& header) {
     next_field();
     if (*q != '.') { // If ALT is '.', we don't record the pointer to it.
         strings_.push_back(q - buffer_.data());
-        while(q = strchr(q, ',')) {
-            *q = '\0';
+        while((q = strchr(q, ','))) {
+            *q = '\0'; // ALT fields become null-separated.
             ++q;
             strings_.push_back(q - buffer_.data());
         }
@@ -77,8 +79,8 @@ void VcfRecord::assign(const char* rec, size_t len, const VcfHeader& header) {
         if (n_fields != n_exp_fields)
             wrong_n_fields(n_fields);
         strings_.push_back(q - buffer_.data());
-        while(p = strchr(p, ':')) {
-            *p = '\0';
+        while((p = strchr(p, ';'))) {
+            *p = '\0'; // INFO fields become null-separated.
             ++p;
             strings_.push_back(p - buffer_.data());
         }
@@ -88,7 +90,7 @@ void VcfRecord::assign(const char* rec, size_t len, const VcfHeader& header) {
         // info
         next_field();
         strings_.push_back(q - buffer_.data());
-        while(q = strchr(q, ';')) {
+        while((q = strchr(q, ';'))) {
             *q = '\0';
             ++q;
             strings_.push_back(q - buffer_.data());
@@ -98,8 +100,8 @@ void VcfRecord::assign(const char* rec, size_t len, const VcfHeader& header) {
         format0_i_ = strings_.size();
         next_field();
         strings_.push_back(q - buffer_.data());
-        while(q = strchr(q, ':')) {
-            *q = '\0';
+        while((q = strchr(q, ':'))) {
+            *q = '\0'; // FORMAT fields become null-separated.
             ++q;
             strings_.push_back(q - buffer_.data());
         }
@@ -107,7 +109,7 @@ void VcfRecord::assign(const char* rec, size_t len, const VcfHeader& header) {
         // samples (last fields)
         sample0_i_ = strings_.size();
         strings_.push_back(p - buffer_.data());
-        while(p = strchr(p, '\t')) {
+        while((p = strchr(p, '\t'))) {
             *p = '\0';
             ++p;
             ++n_fields;
@@ -272,14 +274,31 @@ void VcfHeader::init_meta(const string& version) {
     add_meta(VcfMeta("source", string("\"Stacks v") + VERSION + "\""));
 }
 
-VcfAbstractParser::VcfAbstractParser(const string& path)
-: path_(path), header_(), line_number_(0), eol_(true), eof_(false), tabs_(), bounds_(), sample_index_(-1)
+VcfParser::VcfParser(const string& path)
+: path_(path), header_(), line_number_(0),
+  is_gzipped_(false), ifs_(), ifsbuffer_(),
+  gzfile_(NULL), gzbuffer_(NULL), gzbuffer_size_(0), gzline_len_(0)
 {
-    memset(line_, '\0', Vcf::line_buf_size);
+    FileT ftype = guess_file_type(path_);
+    if (ftype == FileT::vcf) {
+        is_gzipped_ = false;
+        ifs_.open(path_);
+        check_open(ifs_, path_);
+    } else if (ftype == FileT::gzvcf) {
+        is_gzipped_ = true;
+        gzfile_ = gzopen(path_.c_str(), "rb");
+        check_open(gzfile_, path_);
+        gzbuffer_size_ = gzbuffer_init_size;
+        gzbuffer_ = new char[gzbuffer_size_];
+    } else {
+        cerr << "Error: File '" << path_ << "' : expected '.vcf(.gz)' suffix.\n";
+        throw exception();
+    }
+    read_header();
 }
 
 void
-VcfAbstractParser::read_header()
+VcfParser::read_header()
 {
     auto malformed = [this] () {
         cerr << "Error: Malformed header."
@@ -287,357 +306,103 @@ VcfAbstractParser::read_header()
         throw exception();
     };
 
-    while(true) {
-        getline(line_, Vcf::line_buf_size);
-        ++line_number_;
-        if(eof_)
-            malformed();
-
-        if (line_[0] != '#')
-            malformed();
-
-        if(line_[1] == '#') {
-            // Meta header line.
-
-            char* equal = strchr(line_, '=');
-            if(equal == NULL) {
-                // (Notice: Skipping missing '=')
-                tabs_.clear();
-                tabs_.push_back(line_+strlen(line_));
-                check_eol();
-                read_to_eol();
-                continue;
-            }
-            char* end = equal + strlen(equal);
-
-            // Check the length of the line (discard lines that don't fit in the buffer).
-            tabs_.clear();
-            tabs_.push_back(end);
-            check_eol();
-            if(!eol_) {
-                // (Notice: Skipping long line)
-                read_to_eol();
-                continue;
-            }
-
-            string key = string(line_+2, equal);
-            transform(key.begin(), key.end(), key.begin(), ::toupper);
-            header_.add_meta(VcfMeta(key, string(equal+1, end)));
-
+    // Meta header lines.
+    while(getline() && strncmp(line(), "##", 2) == 0) {
+        const char* equal = strchr(line(), '=');
+        if(!equal) {
+            // Skip header lines missing the '='.
             continue;
         }
-        break;
+        header_.add_meta(VcfMeta(string(line()+2, equal), string(equal+1)));
     }
 
     // Final header line.
-
-    if(strncmp(line_, Vcf::base_fields.c_str(), Vcf::base_fields.length()) != 0)
+    if(strncmp(line(), VcfHeader::std_fields.c_str(), VcfHeader::std_fields.length()) != 0)
         malformed();
 
-    // Get tabs.
-    tabs_.clear();
-    tabs_.push_back(strchr(line_, '\t')); //rem. one tab guaranteed
-    while (tabs_.back())
-        tabs_.push_back(strchr(tabs_.back()+1, '\t'));
-    tabs_.pop_back();
-    tabs_.push_back(tabs_.back() + strlen(tabs_.back())); // final '\0'
-    check_eol();
+    // Parse sample names, if any.
+    if(line_len() > VcfHeader::std_fields.length()) {
+        const char* p = line() + VcfHeader::std_fields.length();
+        const char* end = line() + line_len();
 
-    // Check the number of tabs.
-    if(!(tabs_.size() == Vcf::base_fields_no or tabs_.size() >= Vcf::base_fields_no+2))
-        malformed();
+        // Check that FORMAT is present.
+        const char format[] = "\tformat";
+        const size_t format_len = sizeof(format) - 1;
+        if(strncmp(p, format, format_len) != 0)
+            malformed();
+        p += format_len;
+        if (*p != '\t')
+            malformed();
 
-    // Check windows line endings.
-    if(*(tabs_.back()-1) == '\r') {
-        tabs_.back() = tabs_.back()-1;
-        *tabs_.back() = '\0';
+        do {
+            ++p;
+            const char* next = strchr(p, '\t');
+            if (!next)
+                next = end;
+            header_.add_sample(string(p, next));
+            p = next;
+        } while (p != end);
     }
-
-    // Parse sample names.
-    if(tabs_.size() >= Vcf::base_fields_no+2) {
-        for(size_t i=Vcf::first_sample-1; i < tabs_.size()-2; ++i)
-            header_.add_sample(string(tabs_[i]+1, tabs_[i+1]));
-
-        while(!eol_){
-            // Buffer wasn't long enough : parse until eol is found.
-            // Copy the truncated name at the beginning of the buffer.
-            size_t last_field_len = tabs_.back() - *(tabs_.end()-2);
-            *line_ = '\t';
-            strcpy(line_+1, *(tabs_.end()-2)+1);
-
-            getline(line_+last_field_len, Vcf::line_buf_size-last_field_len);
-            if(eof_)
-                malformed();
-
-            // Get tabs.
-            tabs_.clear();
-            tabs_.push_back(line_);
-            while (tabs_.back())
-                tabs_.push_back(strchr(tabs_.back()+1, '\t'));
-            tabs_.pop_back();
-            tabs_.push_back(tabs_.back() + strlen(tabs_.back()));
-            check_eol();
-
-            // Check windows line endings.
-            if(*(tabs_.back()-1) == '\r') {
-                tabs_.back() = tabs_.back()-1;
-                *tabs_.back() = '\0';
-            }
-
-            for(size_t i = 0; i<tabs_.size()-2;++i)
-                header_.add_sample(string(tabs_[i]+1, tabs_[i+1]));
-        }
-        header_.add_sample(string(*(tabs_.end()-2)+1, tabs_.back()));
-    }
-
-    return;
 }
 
-#ifdef HAVE_LIBZ
-VcfGzParser::VcfGzParser(const string& path)
-: VcfAbstractParser(path), file_(NULL)
-{
-    file_ = gzopen(path_.c_str(), "rb");
-    check_open(file_, path);
-#if ZLIB_VERNUM >= 0x1240
-    gzbuffer(file_, libz_buffer_size);
-#endif
-}
-
-#endif // HAVE_LIBZ
-
-unique_ptr<VcfAbstractParser>
-Vcf::adaptive_open(const string& path)
-{
-    FileT filet = guess_file_type(path);
-    if (filet == FileT::vcf) {
-        return unique_ptr<VcfAbstractParser>(new VcfParser(path));
-#ifdef HAVE_LIBZ
-    } else if (filet == FileT::gzvcf) {
-        return unique_ptr<VcfAbstractParser>(new VcfGzParser(path));
-#endif
-    } else {
-        cerr << "Error: File '" << path << "' : expected '.vcf(.gz)' suffix.\n";
+bool VcfParser::getline() {
+    auto truncated = [this]() {
+        cerr << "Error: While reading '" << path_ << "' (file may be truncated).\n";
         throw exception();
-    }
-}
+    };
 
-bool
-VcfAbstractParser::next_record(VcfRecord& record)
-{
-    getline(line_, Vcf::line_buf_size);
-    if(eof_)
-        return false;
+    if (!is_gzipped_) {
+        if (!std::getline(ifs_, ifsbuffer_))
+            return false;
+        if (ifsbuffer_.back() != '\n')
+            truncated();
+        // Remove the '\n'.
+        ifsbuffer_.pop_back();
+        if (ifsbuffer_.back() == '\r')
+            // Remove the '\r'.
+            ifsbuffer_.pop_back();
+
+    } else {
+        if (!gzgets(gzfile_, gzbuffer_, gzbuffer_size_))
+            return false;
+        gzline_len_ = strlen(gzbuffer_);
+
+        // Check the contents of the buffer.
+        while (gzbuffer_[gzline_len_ - 1] != '\n') {
+            if (gzline_len_ < gzbuffer_size_ - 1)
+                // The buffer was long enough but file didn't end with a newline.
+                truncated();
+
+            assert(gzline_len_ == gzbuffer_size_ - 1);
+
+            // The buffer wasn't long enough.
+            // Get a new, wider buffer & copy what we've already read.
+            char* old_buffer = gzbuffer_;
+            gzbuffer_size_ *= 2;
+            gzbuffer_ = new char[gzbuffer_size_];
+            memcpy(gzbuffer_, old_buffer, gzline_len_ + 1);
+            delete[] old_buffer;
+
+            // Continue reading the line.
+            char* start = gzbuffer_ + gzline_len_;
+            assert(*start == '\0');
+            if (!gzgets(gzfile_, start, gzbuffer_size_ - gzline_len_))
+                // EOF; this means that the last character read by the previous
+                // call was the last of the file. And it wasn't a newline.
+                truncated();
+            gzline_len_ += strlen(start);
+        }
+        // Remove the '\n'.
+        gzbuffer_[gzline_len_ - 1] = '\0';
+        --gzline_len_;
+        if (gzbuffer_[gzline_len_ - 1] == '\r') {
+            // Remove the '\r'.
+            gzbuffer_[gzline_len_ - 1] = '\0';
+            --gzline_len_;
+        }
+    }
+
     ++line_number_;
-
-    record.clear();
-
-    // Get tabs.
-    tabs_.clear();
-    tabs_.push_back(strchr(line_, '\t'));
-    while(tabs_.back())
-        tabs_.push_back(strchr(tabs_.back()+1, '\t'));
-    tabs_.pop_back();
-    if(tabs_.size() > 0)
-        tabs_.push_back(tabs_.back() + strlen(tabs_.back()));
-    else
-        tabs_.push_back(line_ + strlen(line_));
-    check_eol();
-
-    /* Check the number of fields (should be ==8 or >=10 depending on the
-     * presence of samples) :
-     * If the line fits in the buffer but the number of fields is wrong,
-     * raise an error.
-     * If the fixed fields don't fit in the buffer, return a null record. */
-    if(eol_) {
-        if(tabs_.size() < Vcf::base_fields_no + (header_.samples().empty() ? 0 : 2)) {
-            cerr << "Error: malformed VCF record line (at least "
-                    << Vcf::base_fields_no + (header_.samples().empty() ? 0 : 2)
-                    << " fields required).\nLine " << line_number_ << " in file '" << path_ << "'.\n";
-            throw exception ();
-        }
-    } else {
-        if(header_.samples().empty() || tabs_.size() < Vcf::base_fields_no + 2) {
-            cerr << "Warning: In file '" << path_ << "': skipping the very long record at line "
-                 << line_number_ << ".\n";
-            read_to_eol();
-            return true;
-        }
-    }
-
-    // Check windows line endings.
-    if(*(tabs_.back()-1) == '\r') {
-        tabs_.back() = tabs_.back()-1;
-        *tabs_.back() = '\0';
-    }
-
-    // Separate all substrings (replace \t's with \0's).
-    for(size_t i = 0; i<tabs_.size()-1;++i)
-        *tabs_[i] = '\0';
-
-    // CHROM
-    if(line_ == tabs_[Vcf::chrom]) {
-        cerr << "Warning: Skipping malformed VCF record (missing CHROM value)."
-                << " Line " << line_number_ << " in file '" << path_ << "'.\n";
-        // Skip this record.
-        // ([record.type] is still [null].)
-        return true;
-    }
-    record.chrom_m().assign(line_, tabs_[Vcf::chrom]);
-
-    // POS
-    if(tabs_[Vcf::pos-1]+1 == tabs_[Vcf::pos]
-        || *(tabs_[Vcf::pos-1]+1) == '.' ){
-        cerr << "Warning: Skipping malformed VCF record (missing POS value)."
-                << " Line " << line_number_ << " in file '" << path_ << "'.\n";
-        // Skip this record.
-        // ([record.type] is still [null].)
-        return true;
-    }
-    record.pos_m() = stoi(tabs_[Vcf::pos-1]+1) -1 ; // VCF is 1-based
-
-    // ID
-    if(tabs_[Vcf::id-1]+1 == tabs_[Vcf::id])
-        cerr << "Notice: Empty ID field should be marked by a dot."
-                << " Line " << line_number_ << " in file '" << path_ << "'.\n";
-    if(*(tabs_[Vcf::id-1]+1) != '.')
-        record.id_m().assign(tabs_[Vcf::id-1]+1, tabs_[Vcf::id]);
-
-    // REF
-    if(tabs_[Vcf::ref-1]+1 == tabs_[Vcf::ref]
-        || *(tabs_[Vcf::ref-1]+1) == '.' ) {
-        cerr << "Warning: malformed VCF record (missing REF value)."
-                << " Line " << line_number_ << " in file '" << path_ << "'.\n";
-        // Skip this record.
-        // ([record.type] is still [null].)
-        return true;
-    }
-    record.alleles_m().push_back(string(tabs_[Vcf::ref-1]+1, tabs_[Vcf::ref]));
-
-    // ALT & determine the type of the record
-    if(tabs_[Vcf::alt-1]+1 == tabs_[Vcf::alt]) {
-        cerr << "Warning: Skipping malformed VCF record (expected ALT field to be marked by a dot)."
-                << " Line " << line_number_ << " in file '" << path_ << "'.\n";
-        // Skip this record.
-        // ([record.type] is still [null].)
-        return true;
-    } else if(*(tabs_[Vcf::alt-1]+1) == '.') {
-        record.type_m() = Vcf::RType::invariant;
-    } else {
-        get_bounds(bounds_, tabs_[Vcf::alt-1], tabs_[Vcf::alt], ',');
-        for (size_t i = 0; i < bounds_.size()-1; ++i ) {
-            record.alleles_m().push_back(string(bounds_.at(i)+1, bounds_.at(i+1)));
-            if (record.alleles_m().back().empty()) {
-                record.alleles_m().pop_back();
-                cerr << "Warning: Skipping malformed VCF record (malformed ALT field)."
-                     << " Line " << line_number_ << " in file '" << path_ << "'.\n";
-                // Skip this record.
-                // ([record.type] is still [null].)
-                return true;
-            }
-        }
-
-        if (strchr(tabs_[Vcf::alt-1]+1, '[') || strchr(tabs_[Vcf::alt-1]+1, ']'))
-            record.type_m() = Vcf::RType::breakend;
-        else if (strchr(tabs_[Vcf::alt-1]+1, '<'))
-            record.type_m() = Vcf::RType::symbolic;
-        else
-            record.type_m() = Vcf::RType::expl;
-    }
-
-    // Do not parse symbolic & breakend records.
-    if (record.type() == Vcf::RType::symbolic || record.type() == Vcf::RType::breakend) {
-        read_to_eol();
-        return true;
-    }
-
-    // QUAL
-    if(tabs_[Vcf::qual-1]+1 == tabs_[Vcf::qual])
-        cerr << "Notice: Empty QUAL field should be marked by a dot."
-             << " Line " << line_number_ << " in file '" << path_ << "'.\n";
-    if(*(tabs_[Vcf::qual-1]+1) != '.')
-        record.qual_m().assign(tabs_[Vcf::qual-1]+1, tabs_[Vcf::qual]);
-
-    // FILTER
-    if(tabs_[Vcf::filter-1]+1 == tabs_[Vcf::filter])
-        cerr << "Notice: Empty FILTER field should be marked by a dot."
-             << " Line " << line_number_ << " in file '" << path_ << "'.\n";
-    if(*(tabs_[Vcf::filter-1]+1) != '.') {
-        get_bounds(bounds_, tabs_[Vcf::filter-1], tabs_[Vcf::filter],';');
-        for(size_t i = 0; i < bounds_.size()-1; ++i )
-            record.filter_m().push_back(string(bounds_.at(i)+1, bounds_.at(i+1)));
-    }
-
-    // INFO
-    if(tabs_[Vcf::info-1]+1 == tabs_[Vcf::info])
-        cerr << "Notice: Empty INFO field should be marked by a dot."
-             << " Line " << line_number_ << " in file '" << path_ << "'.\n";
-    if(*(tabs_[Vcf::info-1]+1) != '.') {
-        get_bounds(bounds_, tabs_[Vcf::info-1], tabs_[Vcf::info], ';');
-        for(size_t i = 0; i < bounds_.size()-1; ++i )
-                record.info_m().push_back(string(bounds_[i]+1, bounds_[i+1]));
-    }
-
-    // FORMAT
-    if (!header_.samples().empty() && *(tabs_[Vcf::format-1]+1) != '.') {
-        if(tabs_[Vcf::format-1]+1 == tabs_[Vcf::format])
-            cerr << "Notice: Empty FORMAT field should be marked by a dot."
-                 << " Line " << line_number_ << " in file '" << path_ << "'.\n";
-
-        get_bounds(bounds_, tabs_[Vcf::format-1], tabs_[Vcf::format],':');
-        for(size_t i = 0; i < bounds_.size()-1; ++i )
-            record.format_m().push_back(string(bounds_.at(i)+1, bounds_.at(i+1)));
-
-        // SAMPLES
-        sample_index_ = 0;
-        for (size_t s = Vcf::base_fields_no; s < tabs_.size()-2; ++s) //n.b. -2
-            add_sample(record, tabs_[s], tabs_[s+1]);
-
-        // If the record line was not read entirely, copy the trucated sample field
-        // to the beggining of the buffer and read some more.
-        while (!eol_) {
-            size_t lastfieldlen = tabs_.back() - *(tabs_.end()-2);
-            *line_ = '\t';
-            strcpy(line_+1, *(tabs_.end()-2)+1);
-
-            getline(line_+lastfieldlen, Vcf::line_buf_size-lastfieldlen);
-            if(eof_) {
-                cerr << "Warning: Encountered end of file while reading a record.\n";
-                record.type_m() = Vcf::RType::null;
-                return false;
-            }
-
-            // Get tabs.
-            tabs_.clear();
-            tabs_.push_back(line_);
-            while (tabs_.back())
-                tabs_.push_back(strchr(tabs_.back()+1, '\t'));
-            tabs_.pop_back();
-            tabs_.push_back(tabs_.back() + strlen(tabs_.back()));
-            check_eol();
-
-            // Windows line endings.
-            if(*(tabs_.back()-1) == '\r') {
-                tabs_.back() = tabs_.back()-1;
-                *tabs_.back() = '\0';
-            }
-            for(size_t i = 0; i<tabs_.size()-2;++i) {
-                *tabs_[i+1] = '\0';
-                add_sample(record, tabs_[i], tabs_[i+1]);
-            }
-        }
-        //the actual last sample
-        add_sample(record, *(tabs_.end()-2), tabs_.back());
-
-        if(sample_index_ != header_.samples().size()) {
-            cerr << "Error: malformed VCF record ("
-                 << header_.samples().size() << " SAMPLE fields expected, "
-                 << sample_index_ <<  " found). File '" << path_ << "', line "
-                 << line_number_ << ".\n";
-            throw exception();
-        }
-    }
-
     return true;
 }
 
@@ -645,7 +410,7 @@ void VcfWriter::write_header() {
     for(const VcfMeta& m : header_.meta())
         file_ << "##" << m.key() << "=" << m.value() << "\n";
 
-    file_ << Vcf::base_header;
+    file_ << VcfHeader::std_fields;
     if(not header_.samples().empty())
         file_ << "\tFORMAT";
     for(const string& s : header_.samples())
@@ -693,13 +458,9 @@ void VcfWriter::write_record(const VcfRecord& r) {
     if (not header_.samples().empty()) {
         //FORMAT
         file_ << "\t";
-        if (r.n_formats() == 0) {
-            file_ << ".";
-        } else {
-            file_ << r.format(0);
-            for (size_t i=1; i<r.n_formats(); ++i)
-                file_ << ":" << r.format(i);
-        }
+        file_ << r.format(0);
+        for (size_t i=1; i<r.n_formats(); ++i)
+            file_ << ":" << r.format(i);
 
         //SAMPLES
         assert(r.n_samples() != header_.samples().size());
@@ -709,3 +470,4 @@ void VcfWriter::write_record(const VcfRecord& r) {
 
     file_ << "\n";
 }
+

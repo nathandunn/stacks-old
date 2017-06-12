@@ -23,13 +23,13 @@ public:
 };
 
 class VcfCLocReader {
-    unique_ptr<VcfAbstractParser> vcf_f_;
+    VcfParser vcf_f_;
     VcfRecord next_rec_;
     bool eof_;
 public:
     VcfCLocReader(const string& vcf_path);
 
-    const VcfHeader& header() const {return vcf_f_->header();}
+    const VcfHeader& header() const {return vcf_f_.header();}
     void set_sample_ids(MetaPopInfo& mpopi) const;
 
     // Reads one locus. Returns false on EOF.
@@ -125,14 +125,12 @@ bool BamCLocReader::read_one_locus(CLocReadSet& readset) {
 
 inline
 VcfCLocReader::VcfCLocReader(const string& vcf_path)
-        : vcf_f_(Vcf::adaptive_open(vcf_path)),
+        : vcf_f_(vcf_path),
           next_rec_(),
           eof_(false)
 {
-    vcf_f_->read_header();
-
     // Read the very first record.
-    if(!vcf_f_->next_record(next_rec_))
+    if(!vcf_f_.next_record(next_rec_))
         eof_ = true;
 }
 
@@ -157,7 +155,7 @@ bool VcfCLocReader::read_one_locus(vector<VcfRecord>& records) {
     // Read all the records of the locus, and one more.
     while (strcmp(records.back().chrom(), curr_chrom.c_str()) == 0) {
         records.push_back(VcfRecord());
-        if (!vcf_f_->next_record(records.back())) {
+        if (!vcf_f_.next_record(records.back())) {
             eof_ = true;
             break;
         }
