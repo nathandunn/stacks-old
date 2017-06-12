@@ -106,13 +106,7 @@ try {
 
     string o_vcf_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".vcf";
     VcfHeader vcf_header;
-    vcf_header.add_meta(VcfMeta::predefs::info_DP);
-    vcf_header.add_meta(VcfMeta::predefs::info_AF);
-    vcf_header.add_meta(VcfMeta::predefs::info_AD);
-    vcf_header.add_meta(VcfMeta::predefs::format_GT);
-    vcf_header.add_meta(VcfMeta::predefs::format_DP);
-    vcf_header.add_meta(VcfMeta::predefs::format_AD);
-    vcf_header.add_meta(VcfMeta::predefs::format_GL);
+    vcf_header.add_std_meta();
     for(auto& s : bam_fh.mpopi().samples())
         vcf_header.add_sample(s.name);
     o_vcf_f.reset(new VcfWriter(o_vcf_path, move(vcf_header)));
