@@ -210,58 +210,29 @@ private:
 /*
  * VcfParser
  * ==========
- *
- * Main class for parsing VCF. The derived non-abstract classes
- * VcfParser and VcfGzParser only add the file_ attribute and
- * implement the getline(), eof() and check_eol() methods.
- *
- * At present, the parser does not handle :
- * -- records for which the fixed fields (CHROM to FORMAT) do not
- *    fit in the buffer. Such records usually correspond to large
- *    indels with several alleles. In these cases, the record
- *    passed to next_record() will be empty and have the default
- *    type 'null'.
- * -- records describing symbolic or breakends alleles. In these
- *    cases the record passed to next_record() will be of type
- *    'symbolic' or 'breakend', with only the fields CHROM, POS,
- *    ID and REF filled in.
  */
 class VcfParser {
-    const string path_;
+    VersatileLineReader file_;
     VcfHeader header_;
-    size_t line_number_; // 1-based.
-
-    bool is_gzipped_;
-    // Variables for plain text VCFs.
-    ifstream ifs_;
-    string ifsbuffer_;
-    // Variables for compressed VCFs.
-    gzFile gzfile_;
-    char* gzbuffer_;
-    size_t gzbuffer_size_;
-    size_t gzline_len_;
-    static const size_t gzbuffer_init_size = 65536;
-
-    // Wrappers to hide the above.
-    bool getline();
-    const char* line() const {assert(line_len() > 0); return is_gzipped_ ? gzbuffer_ : ifsbuffer_.c_str();}
-    size_t line_len() const {return is_gzipped_ ? gzline_len_ : ifsbuffer_.length();}
 
     // Parse the header.
     void read_header();
 
 public:
-    VcfParser(const string& path);
-    virtual ~VcfParser() {if (is_gzipped_) {gzclose(gzfile_); delete[] gzbuffer_;}}
+    VcfParser(const string& path) : file_(path), header_() {read_header();}
 
-    // Getters.
-    const string& path() const {return path_;};
+    bool next_record(VcfRecord& rec) {
+        const char* line;
+        size_t len;
+        if (!file_.getline(line, len))
+            return false;
+        rec.assign(line, len, header_);
+        return true;
+    }
+
     const VcfHeader& header() const {return header_;};
-    size_t line_number() const {return line_number_;}
-
-    // Reads a record.
-    bool next_record(VcfRecord& rec)
-        {if (!getline()) return false; rec.assign(line(), line_len(), header_); return true;}
+    const string& path() const {return file_.path();};
+    size_t line_number() const {return file_.line_number();}
 };
 
 /*

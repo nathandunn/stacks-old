@@ -274,56 +274,39 @@ void VcfHeader::init_meta(const string& version) {
     add_meta(VcfMeta("source", string("\"Stacks v") + VERSION + "\""));
 }
 
-VcfParser::VcfParser(const string& path)
-: path_(path), header_(), line_number_(0),
-  is_gzipped_(false), ifs_(), ifsbuffer_(),
-  gzfile_(NULL), gzbuffer_(NULL), gzbuffer_size_(0), gzline_len_(0)
-{
-    FileT ftype = guess_file_type(path_);
-    if (ftype == FileT::vcf) {
-        is_gzipped_ = false;
-        ifs_.open(path_);
-        check_open(ifs_, path_);
-    } else if (ftype == FileT::gzvcf) {
-        is_gzipped_ = true;
-        gzfile_ = gzopen(path_.c_str(), "rb");
-        check_open(gzfile_, path_);
-        gzbuffer_size_ = gzbuffer_init_size;
-        gzbuffer_ = new char[gzbuffer_size_];
-    } else {
-        cerr << "Error: File '" << path_ << "' : expected '.vcf(.gz)' suffix.\n";
-        throw exception();
-    }
-    read_header();
-}
-
 void
 VcfParser::read_header()
 {
     auto malformed = [this] () {
-        cerr << "Error: Malformed header."
-             << " At line " << line_number_ << " in file '" << path_ << "'.\n";
+        cerr << "Error: Malformed VCF header."
+             << " At line " << file_.line_number() << " in file '" << file_.path() << "'.\n";
         throw exception();
     };
 
+    const char* line;
+    size_t len;
+
     // Meta header lines.
-    while(getline() && strncmp(line(), "##", 2) == 0) {
-        const char* equal = strchr(line(), '=');
+    bool not_eof;
+    while((not_eof = file_.getline(line, len)) && strncmp(line, "##", 2) == 0) {
+        const char* equal = strchr(line+2, '=');
         if(!equal) {
             // Skip header lines missing the '='.
             continue;
         }
-        header_.add_meta(VcfMeta(string(line()+2, equal), string(equal+1)));
+        header_.add_meta(VcfMeta(string(line+2, equal), string(equal+1)));
     }
+    if (!not_eof)
+        malformed();
 
     // Final header line.
-    if(strncmp(line(), VcfHeader::std_fields.c_str(), VcfHeader::std_fields.length()) != 0)
+    if(strncmp(line, VcfHeader::std_fields.c_str(), VcfHeader::std_fields.length()) != 0)
         malformed();
 
     // Parse sample names, if any.
-    if(line_len() > VcfHeader::std_fields.length()) {
-        const char* p = line() + VcfHeader::std_fields.length();
-        const char* end = line() + line_len();
+    if(len > VcfHeader::std_fields.length()) {
+        const char* p = line + VcfHeader::std_fields.length();
+        const char* end = line + len;
 
         // Check that FORMAT is present.
         const char format[] = "\tformat";
@@ -343,67 +326,6 @@ VcfParser::read_header()
             p = next;
         } while (p != end);
     }
-}
-
-bool VcfParser::getline() {
-    auto truncated = [this]() {
-        cerr << "Error: While reading '" << path_ << "' (file may be truncated).\n";
-        throw exception();
-    };
-
-    if (!is_gzipped_) {
-        if (!std::getline(ifs_, ifsbuffer_))
-            return false;
-        if (ifsbuffer_.back() != '\n')
-            truncated();
-        // Remove the '\n'.
-        ifsbuffer_.pop_back();
-        if (ifsbuffer_.back() == '\r')
-            // Remove the '\r'.
-            ifsbuffer_.pop_back();
-
-    } else {
-        if (!gzgets(gzfile_, gzbuffer_, gzbuffer_size_))
-            return false;
-        gzline_len_ = strlen(gzbuffer_);
-
-        // Check the contents of the buffer.
-        while (gzbuffer_[gzline_len_ - 1] != '\n') {
-            if (gzline_len_ < gzbuffer_size_ - 1)
-                // The buffer was long enough but file didn't end with a newline.
-                truncated();
-
-            assert(gzline_len_ == gzbuffer_size_ - 1);
-
-            // The buffer wasn't long enough.
-            // Get a new, wider buffer & copy what we've already read.
-            char* old_buffer = gzbuffer_;
-            gzbuffer_size_ *= 2;
-            gzbuffer_ = new char[gzbuffer_size_];
-            memcpy(gzbuffer_, old_buffer, gzline_len_ + 1);
-            delete[] old_buffer;
-
-            // Continue reading the line.
-            char* start = gzbuffer_ + gzline_len_;
-            assert(*start == '\0');
-            if (!gzgets(gzfile_, start, gzbuffer_size_ - gzline_len_))
-                // EOF; this means that the last character read by the previous
-                // call was the last of the file. And it wasn't a newline.
-                truncated();
-            gzline_len_ += strlen(start);
-        }
-        // Remove the '\n'.
-        gzbuffer_[gzline_len_ - 1] = '\0';
-        --gzline_len_;
-        if (gzbuffer_[gzline_len_ - 1] == '\r') {
-            // Remove the '\r'.
-            gzbuffer_[gzline_len_ - 1] = '\0';
-            --gzline_len_;
-        }
-    }
-
-    ++line_number_;
-    return true;
 }
 
 void VcfWriter::write_header() {
