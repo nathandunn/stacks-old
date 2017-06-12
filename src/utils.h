@@ -114,6 +114,37 @@ void check_open (const gzFile fs, const string& path)
     {if (fs == NULL) {cerr << "Error: Failed to gz-open file '" << path << "'.\n"; throw exception();}}
 
 //
+// Class to read lines from a plain text or compressed file indifferently.
+//
+class VersatileLineReader {
+    const string path_;
+    size_t line_number_;
+    bool is_gzipped_;
+
+    ifstream ifs_;
+    string ifsbuffer_;
+
+    gzFile gzfile_;
+    char* gzbuffer_;
+    size_t gzbuffer_size_;
+    size_t gzline_len_;
+    static const size_t gzbuffer_init_size = 65536;
+
+public:
+    VersatileLineReader(const string& path);
+    ~VersatileLineReader();
+
+    // Reads one line from the file, removing the trailing '\n' (and '\r', if any).
+    // Returns false on EOF, or throws an exception if the file doesn't end with a newline.
+    // e.g.:
+    // const char* line; size_t len; while (file.getline(line, len)) {...}
+    bool getline(const char*& line, size_t& len);
+
+    const string& path() const {return path_;}
+    size_t line_number() const {return line_number_;} // 1-based.
+};
+
+//
 // Wrapper for directory parsing functions.
 // e.g. for(DirIterator e (path); e; ++e) {...}
 //
