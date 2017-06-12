@@ -423,7 +423,7 @@ int main (int argc, char* argv[]) {
             }
 
             // Check for a filtered-out SNP
-            if (rec->n_filters() > 0 && strcmp(rec->filter(0), "PASS") != 0) {
+            if (strncmp(rec->filters(), ".", 2) != 0 && strncmp(rec->filters(), "PASS", 5) != 0) {
                 skipped_filter.push_back(parser->line_number());
                 continue;
             }
