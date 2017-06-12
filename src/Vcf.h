@@ -21,129 +21,9 @@
 #ifndef __VCF_H__
 #define __VCF_H__
 
-#include "config.h"
-
-#include <fstream>
-#include <iostream>
-#include <exception>
-#include <stdexcept>
-#include <utility>
-#include <cstring>
-#include <cstdlib>
-#include <string>
-#include <vector>
-#include <set>
-#include <map>
-
-#ifdef HAVE_LIBZ
-#include <zlib.h>
-#endif
-
 #include "constants.h"
 #include "nucleotides.h"
 #include "utils.h"
-#include "stacks.h"
-
-class VcfHeader;
-
-namespace Vcf {
-
-// enum for record types
-enum class RType {
-    null,
-    expl,      // Record with explicitly written alleles, e.g. SNPs, small indels or entirely defined haplotypes
-    invariant, // ALT is empty
-    symbolic,  // ALT is e.g. "<DUP:TANDEM>"
-    breakend   // ALT is e.g. "G]17:198982]"
-};
-
-} //namespace Vcf
-
-/*
- * VcfRecord
- * ==========
- * Datastructure to store VCF records
- */
-class VcfRecord {
-    vector<char> buffer_;
-    vector<size_t> strings_; // Positions of all independent c-strings in the buffer.
-
-    size_t pos_i_() const {return 0;} // Index in strings_ of the position c-string.
-    size_t id_i_() const {return 1;}
-    size_t allele0_i_() const {return 2;}
-    size_t filters_i_;
-    size_t qual_i_() const {return filters_i_+1;}
-    size_t info0_i_() const {return filters_i_+2;}
-    size_t format0_i_;
-    size_t sample0_i_;
-
-    const char* i2str(size_t i) const {return (char*) &buffer_[strings_.at(i)];}
-
-    void append_str(const string& s) {append_str(s.c_str(), s.length());}
-    void append_str(const char* str, size_t len);
-
-public:
-    VcfRecord()
-    : buffer_(), strings_(), filters_i_(SIZE_MAX), format0_i_(SIZE_MAX), sample0_i_(SIZE_MAX)
-    {}
-
-    void assign(const char* rec, size_t len, const VcfHeader& header);
-    bool check_record() const; // Not implemented. Check that empty fields are '.', etc.
-
-    const char* chrom()          const {return buffer_.data();}
-         size_t pos()            const {return atoi(i2str(pos_i_()));}
-    const char* id()             const {return i2str(id_i_());}
-    const char* allele(size_t i) const {return i2str(allele0_i_() + i);}
-    const char* filters()        const {return i2str(filters_i_);}
-    const char* qual()           const {return i2str(qual_i_());}
-    const char* info(size_t i)   const {return i2str(info0_i_() + i);}
-    const char* format(size_t i) const {return i2str(format0_i_ + i);} // (Will throw if the field doesn't exit.)
-    const char* sample(size_t i) const {return i2str(sample0_i_ + i);}
-
-    size_t n_alleles() const {return filters_i_ - allele0_i_();}
-    size_t n_infos()   const {return format0_i_ - info0_i_();}
-    size_t n_formats() const {return sample0_i_ - format0_i_;}
-    size_t n_samples() const {return strings_.size() - sample0_i_;}
-
-    Vcf::RType type() const;
-
-    // Record creation functions.
-    void clear();
-    void append_chrom(const string& s);
-    void append_pos(size_t pos);
-    void append_id(const string& s);
-    void append_allele(Nt2 nt);
-    void append_allele(const string& s);
-    void append_filters(const string& s);
-    void append_qual(const string& s);
-    void append_info(const string& s);
-    void append_format(const string& s);
-    void append_sample(const string& s);
-
-    inline size_t index_of_gt_subfield(const string& key) const; // SIZE_MAX if not found.
-    inline string parse_gt_subfield(const char* sample, size_t index) const;
-
-    // Returns (first allele, second allele), '-1' meaning no data.
-    // (The second version is for use with internal, stacks-generated files.)
-    inline pair<int, int> parse_genotype(const char* sample) const;
-    inline pair<int, int> parse_genotype_nochecks(const char* sample) const;
-
-    inline bool is_snp() const;
-
-    struct util {
-        static string fmt_info_af(const vector<double>& alt_freqs);
-        static string fmt_gt_gl(const vector<Nt2>& alleles, const GtLiks& liks);
-        static GtLiks parse_gt_gl(const vector<Nt2>& alleles, const string& gl);
-        static size_t n_genotypes(size_t n_alleles) {return (n_alleles*(n_alleles+1))/2;}
-
-        // Builds the haplotypes of a sample over a set of (phased) records.
-        // (At most one phase set is expected.)
-        // Returns false if the haplotypes were incomplete (N's).
-        static bool build_haps(pair<string,string>& haplotypes,
-                                  const vector<const VcfRecord*>& snp_records,
-                                  size_t sample_index);
-    };
-};
 
 /*
  * VcfMeta
@@ -205,6 +85,90 @@ public:
 
 private:
     void init_meta(const string& version);
+};
+
+/*
+ * VcfRecord
+ * ==========
+ * Datastructure to store VCF records
+ */
+class VcfRecord {
+    vector<char> buffer_;
+    vector<size_t> strings_; // Positions of all independent c-strings in the buffer.
+
+    size_t pos_i_() const {return 0;} // Index in strings_ of the position c-string.
+    size_t id_i_() const {return 1;}
+    size_t allele0_i_() const {return 2;}
+    size_t filters_i_;
+    size_t qual_i_() const {return filters_i_+1;}
+    size_t info0_i_() const {return filters_i_+2;}
+    size_t format0_i_;
+    size_t sample0_i_;
+
+    const char* i2str(size_t i) const {return (char*) &buffer_[strings_.at(i)];}
+
+    void append_str(const string& s) {append_str(s.c_str(), s.length());}
+    void append_str(const char* str, size_t len);
+
+public:
+    VcfRecord()
+    : buffer_(), strings_(), filters_i_(SIZE_MAX), format0_i_(SIZE_MAX), sample0_i_(SIZE_MAX)
+    {}
+
+    void assign(const char* rec, size_t len, const VcfHeader& header);
+    bool check_record() const; // Not implemented. Check that empty fields are '.', etc.
+
+    const char* chrom()          const {return buffer_.data();}
+         size_t pos()            const {return atoi(i2str(pos_i_()));}
+    const char* id()             const {return i2str(id_i_());}
+    const char* allele(size_t i) const {return i2str(allele0_i_() + i);}
+    const char* filters()        const {return i2str(filters_i_);}
+    const char* qual()           const {return i2str(qual_i_());}
+    const char* info(size_t i)   const {return i2str(info0_i_() + i);}
+    const char* format(size_t i) const {return i2str(format0_i_ + i);} // (Will throw if the field doesn't exit.)
+    const char* sample(size_t i) const {return i2str(sample0_i_ + i);}
+
+    size_t n_alleles() const {return filters_i_ - allele0_i_();}
+    size_t n_infos()   const {return format0_i_ - info0_i_();}
+    size_t n_formats() const {return sample0_i_ - format0_i_;}
+    size_t n_samples() const {return strings_.size() - sample0_i_;}
+
+    bool is_snp() const;
+
+    // Returns (first allele, second allele), '-1' meaning no data.
+    // (The second version is for use with internal, stacks-generated files.)
+    pair<int, int> parse_genotype(const char* sample) const;
+    pair<int, int> parse_genotype_nochecks(const char* sample) const;
+
+    size_t index_of_gt_subfield(const string& key) const; // SIZE_MAX if not found.
+    string parse_gt_subfield(const char* sample, size_t index) const;
+
+    // Record creation functions.
+    void clear();
+    void append_chrom(const string& s);
+    void append_pos(size_t pos);
+    void append_id(const string& s);
+    void append_allele(Nt2 nt);
+    void append_allele(const string& s);
+    void append_filters(const string& s);
+    void append_qual(const string& s);
+    void append_info(const string& s);
+    void append_format(const string& s);
+    void append_sample(const string& s);
+
+    struct util {
+        static string fmt_info_af(const vector<double>& alt_freqs);
+        static string fmt_gt_gl(const vector<Nt2>& alleles, const GtLiks& liks);
+        static GtLiks parse_gt_gl(const vector<Nt2>& alleles, const string& gl);
+        static size_t n_genotypes(size_t n_alleles) {return (n_alleles*(n_alleles+1))/2;}
+
+        // Builds the haplotypes of a sample over a set of (phased) records.
+        // (At most one phase set is expected.)
+        // Returns false if the haplotypes were incomplete (N's).
+        static bool build_haps(pair<string,string>& haplotypes,
+                                  const vector<const VcfRecord*>& snp_records,
+                                  size_t sample_index);
+    };
 };
 
 /*
