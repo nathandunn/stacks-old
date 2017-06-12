@@ -21,7 +21,7 @@ const VcfMeta VcfMeta::predefs::info_locori ("INFO","<ID=locori,Number=1,Type=Ch
 
 const string VcfHeader::std_fields = "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO";
 
-void VcfHeader::init_meta(const string& version) {
+void VcfHeader::add_std_meta(const string& version) {
     add_meta(VcfMeta("fileformat", version));
 
     time_t t;
@@ -31,6 +31,17 @@ void VcfHeader::init_meta(const string& version) {
     add_meta(VcfMeta("fileDate", date));
 
     add_meta(VcfMeta("source", string("\"Stacks v") + VERSION + "\""));
+
+    add_meta(VcfMeta::predefs::info_AD);
+    add_meta(VcfMeta::predefs::info_AF);
+    add_meta(VcfMeta::predefs::info_DP);
+    add_meta(VcfMeta::predefs::info_NS);
+    add_meta(VcfMeta::predefs::format_AD);
+    add_meta(VcfMeta::predefs::format_DP);
+    add_meta(VcfMeta::predefs::format_HQ);
+    add_meta(VcfMeta::predefs::format_GL);
+    add_meta(VcfMeta::predefs::format_GQ);
+    add_meta(VcfMeta::predefs::format_GT);
 }
 
 void VcfRecord::assign(const char* rec, size_t len, const VcfHeader& header) {

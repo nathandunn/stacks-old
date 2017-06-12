@@ -261,12 +261,7 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
     log_fh << "\n#\n# Generating SNP-based VCF export.\n#\n";
 
     VcfHeader header;
-    header.add_meta(VcfMeta::predefs::info_NS);
-    header.add_meta(VcfMeta::predefs::info_AF);
-    header.add_meta(VcfMeta::predefs::format_GT);
-    header.add_meta(VcfMeta::predefs::format_DP);
-    header.add_meta(VcfMeta::predefs::format_AD);
-    header.add_meta(VcfMeta::predefs::format_GL);
+    header.add_std_meta();
     for(auto& s : mpopi.samples())
         header.add_sample(s.name);
     VcfWriter writer (path, move(header));
@@ -370,13 +365,7 @@ write_vcf(map<int, CSLocus *> &catalog,
     cerr << "Writing population data to VCF file '" << path << "'\n";
 
     VcfHeader header;
-    header.add_meta(VcfMeta::predefs::info_NS);
-    header.add_meta(VcfMeta::predefs::info_AF);
-    header.add_meta(VcfMeta::predefs::info_locori);
-    header.add_meta(VcfMeta::predefs::format_GT);
-    header.add_meta(VcfMeta::predefs::format_DP);
-    header.add_meta(VcfMeta::predefs::format_AD);
-    header.add_meta(VcfMeta::predefs::format_GL);
+    header.add_std_meta();
     for(auto& s : mpopi.samples())
         header.add_sample(s.name);
     VcfWriter writer (path, move(header));
@@ -492,11 +481,7 @@ write_vcf_haplotypes(map<int, CSLocus *> &catalog,
     cerr << "Writing population data haplotypes to VCF file '" << path << "'\n";
 
     VcfHeader header;
-    header.add_meta(VcfMeta::predefs::info_NS);
-    header.add_meta(VcfMeta::predefs::info_AF);
-    header.add_meta(VcfMeta::predefs::info_locori);
-    header.add_meta(VcfMeta::predefs::format_GT);
-    header.add_meta(VcfMeta::predefs::format_DP);
+    header.add_std_meta();
     for(auto& s : mpopi.samples())
         header.add_sample(s.name);
     VcfWriter writer (path, move(header));

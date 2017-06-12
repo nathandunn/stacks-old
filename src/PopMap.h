@@ -318,7 +318,7 @@ void PopMap<LocusT>::populate(map<int, LocusT*>& catalog,
         model.resize(cloc.len, 'U');
         pair<string,string> obshaps;
         for (size_t sample=0; sample<metapopinfo.samples().size(); ++sample) {
-            size_t sample_vcf_i = header.sample_indexes().at(metapopinfo.samples()[sample].name);
+            size_t sample_vcf_i = header.sample_index(metapopinfo.samples()[sample].name);
             bool no_data = true;
 
             // Get the sample's model string.
@@ -449,7 +449,7 @@ int PopMap<LocusT>::populate(map<int, LocusT*>& catalog,
         ad_index = rec.index_of_gt_subfield("AD");
 
         for (size_t s = 0; s < metapopinfo.samples().size(); ++s) {
-            size_t vcf_index = header.sample_indexes().at(metapopinfo.samples()[s].name);
+            size_t vcf_index = header.sample_index(metapopinfo.samples()[s].name);
             const char* sample = rec.sample(vcf_index);
 
             pair<int, int> gt = rec.parse_genotype(sample);

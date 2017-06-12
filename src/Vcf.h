@@ -65,26 +65,22 @@ public:
 class VcfHeader {
     vector<string> samples_;
     vector<VcfMeta> meta_;
-
     map<string, size_t> sample_indexes_;
-    // map<string, vector<size_t> > meta_indexes;
+
 public:
-    VcfHeader(const string& version = "VCFv4.2")
-        : samples_(), meta_()
-        {init_meta(version);}
+    VcfHeader() : samples_(), meta_() {}
 
     const vector<VcfMeta>& meta() const {return meta_;}
     const vector<string>& samples() const {return samples_;}
-    const map<string, size_t>& sample_indexes() const {return sample_indexes_;}
+    const size_t sample_index(const string& sample) const {return sample_indexes_.at(sample);}
 
-    // Adds the meta lines VERSION, FILEDATE and SOURCE
     void add_meta(const VcfMeta& m) {meta_.push_back(m);}
     void add_sample(const string& s) {samples_.push_back(s); sample_indexes_.insert({s, samples_.size()-1});}
 
-    static const string std_fields;
+    // Creates a standard header.
+    void add_std_meta(const string& version = "VCFv4.2");
 
-private:
-    void init_meta(const string& version);
+    static const string std_fields;
 };
 
 /*
