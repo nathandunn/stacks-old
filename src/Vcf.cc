@@ -5,9 +5,33 @@
 
 #include "Vcf.h"
 
-using namespace std;
+const VcfMeta VcfMeta::predefs::info_AD ("INFO","<ID=AD,Number=R,Type=Integer,Description=\"Total Depth for Each Allele\">");
+const VcfMeta VcfMeta::predefs::info_AF ("INFO","<ID=AF,Number=A,Type=Float,Description=\"Allele Frequency\">");
+const VcfMeta VcfMeta::predefs::info_DP ("INFO","<ID=DP,Number=1,Type=Integer,Description=\"Total Depth\">");
+const VcfMeta VcfMeta::predefs::info_NS ("INFO","<ID=NS,Number=1,Type=Integer,Description=\"Number of Samples With Data\">");
+
+const VcfMeta VcfMeta::predefs::format_AD ("FORMAT","<ID=AD,Number=R,Type=Integer,Description=\"Allele Depth\">");
+const VcfMeta VcfMeta::predefs::format_DP ("FORMAT","<ID=DP,Number=1,Type=Integer,Description=\"Read Depth\">");
+const VcfMeta VcfMeta::predefs::format_HQ ("FORMAT","<ID=HQ,Number=2,Type=Integer,Description=\"Haplotype Quality\">");
+const VcfMeta VcfMeta::predefs::format_GL ("FORMAT","<ID=GL,Number=G,Type=Float,Description=\"Genotype Likelihood\">");
+const VcfMeta VcfMeta::predefs::format_GQ ("FORMAT","<ID=GQ,Number=1,Type=Integer,Description=\"Genotype Quality\">");
+const VcfMeta VcfMeta::predefs::format_GT ("FORMAT","<ID=GT,Number=1,Type=String,Description=\"Genotype\">");
+
+const VcfMeta VcfMeta::predefs::info_locori ("INFO","<ID=locori,Number=1,Type=Character,Description=\"Orientation the corresponding Stacks locus aligns in\">");
 
 const string VcfHeader::std_fields = "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO";
+
+void VcfHeader::init_meta(const string& version) {
+    add_meta(VcfMeta("fileformat", version));
+
+    time_t t;
+    time(&t);
+    char date[9];
+    strftime(date, 9, "%Y%m%d", localtime(&t));
+    add_meta(VcfMeta("fileDate", date));
+
+    add_meta(VcfMeta("source", string("\"Stacks v") + VERSION + "\""));
+}
 
 void VcfRecord::assign(const char* rec, size_t len, const VcfHeader& header) {
     buffer_.resize(len+1);
@@ -118,18 +142,6 @@ void VcfRecord::assign(const char* rec, size_t len, const VcfHeader& header) {
         if (n_fields != n_exp_fields)
             wrong_n_fields(n_fields);
     }
-}
-
-Vcf::RType VcfRecord::type() const {
-    if (n_alleles() == 1)
-        return Vcf::RType::invariant;
-    for (size_t i=0; i<n_alleles(); ++i) {
-        if (strchr(allele(i), '<'))
-            return Vcf::RType::symbolic;
-        else if (strchr(allele(i), '[') || strchr(allele(i), ']'))
-            return Vcf::RType::breakend;
-    }
-    return Vcf::RType::expl;
 }
 
 string VcfRecord::util::fmt_info_af(const vector<double>& alt_freqs) {
@@ -248,32 +260,6 @@ bool VcfRecord::util::build_haps(pair<string,string>& haplotypes, const vector<c
     return complete;
 }
 
-const VcfMeta VcfMeta::predefs::info_AD ("INFO","<ID=AD,Number=R,Type=Integer,Description=\"Total Depth for Each Allele\">");
-const VcfMeta VcfMeta::predefs::info_AF ("INFO","<ID=AF,Number=A,Type=Float,Description=\"Allele Frequency\">");
-const VcfMeta VcfMeta::predefs::info_DP ("INFO","<ID=DP,Number=1,Type=Integer,Description=\"Total Depth\">");
-const VcfMeta VcfMeta::predefs::info_NS ("INFO","<ID=NS,Number=1,Type=Integer,Description=\"Number of Samples With Data\">");
-
-const VcfMeta VcfMeta::predefs::format_AD ("FORMAT","<ID=AD,Number=R,Type=Integer,Description=\"Allele Depth\">");
-const VcfMeta VcfMeta::predefs::format_DP ("FORMAT","<ID=DP,Number=1,Type=Integer,Description=\"Read Depth\">");
-const VcfMeta VcfMeta::predefs::format_HQ ("FORMAT","<ID=HQ,Number=2,Type=Integer,Description=\"Haplotype Quality\">");
-const VcfMeta VcfMeta::predefs::format_GL ("FORMAT","<ID=GL,Number=G,Type=Float,Description=\"Genotype Likelihood\">");
-const VcfMeta VcfMeta::predefs::format_GQ ("FORMAT","<ID=GQ,Number=1,Type=Integer,Description=\"Genotype Quality\">");
-const VcfMeta VcfMeta::predefs::format_GT ("FORMAT","<ID=GT,Number=1,Type=String,Description=\"Genotype\">");
-
-const VcfMeta VcfMeta::predefs::info_locori ("INFO","<ID=locori,Number=1,Type=Character,Description=\"Orientation the corresponding Stacks locus aligns in\">");
-
-void VcfHeader::init_meta(const string& version) {
-    add_meta(VcfMeta("fileformat", version));
-
-    time_t t;
-    time(&t);
-    char date[9];
-    strftime(date, 9, "%Y%m%d", localtime(&t));
-    add_meta(VcfMeta("fileDate", date));
-
-    add_meta(VcfMeta("source", string("\"Stacks v") + VERSION + "\""));
-}
-
 void
 VcfParser::read_header()
 {
@@ -341,10 +327,6 @@ void VcfWriter::write_header() {
 }
 
 void VcfWriter::write_record(const VcfRecord& r) {
-
-    if (r.type() != Vcf::RType::expl)
-        // This is not implemented.
-        throw exception();
 
     file_ << r.chrom()
           << "\t" << r.pos()
