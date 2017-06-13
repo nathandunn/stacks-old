@@ -53,6 +53,16 @@ void load_catalog_matches(string sample,  vector<CatMatch *> &matches) {
             throw exception();
         }
 
+
+        char c = parts[5].at(0);
+        if (parts[5] != "consensus" && c != 'A' && c != 'C' && c != 'G' && c != 'T')
+            // This sample locus was blacklisted, because:
+            // "multi": it matches multiple c-loci
+            // "extra_snp": it has a SNP unknown to the catalog
+            // "ambig_aln": its alignment to the catalog is inconsistent
+            // "none_verified": all its haplotypes are unknown to the catalog
+            continue;
+
         m = new CatMatch;
         m->batch_id  = atoi(parts[1].c_str());
         m->cat_id    = atoi(parts[2].c_str());
