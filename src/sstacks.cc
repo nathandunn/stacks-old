@@ -48,6 +48,7 @@ bool    impute_haplotypes       = true;
 bool    require_uniq_haplotypes = false;
 bool    gapped_alignments       = false;
 searcht search_type             = sequence;
+bool    write_all_matches       = false;
 
 double  min_match_len   = 0.80;
 double  max_gaps        = 2.0;
@@ -654,7 +655,11 @@ find_matches_by_sequence(map<int, Locus *> &sample_1, map<int, QLocus *> &sample
                 uint verified = verify_sequence_match(sample_1, query, loci_hit, haplo_hits,
                                                       min_tag_len, mmatch, nosnps);
                 ver_hap += verified;
-                if (verified == 0) no_haps++;
+                if (verified == 0) {
+                    no_haps++;
+                    if (!loci_hit.empty())
+                        assert(write_all_matches ^ query->matches.empty());
+                }
             }
         }
     }
@@ -686,6 +691,9 @@ int verify_sequence_match(map<int, Locus *> &sample_1, QLocus *query,
     //
     if (loci_hit.size() > 1) {
         mmatch++;
+        if (write_all_matches)
+            for (int cloc_id : loci_hit)
+                query->add_match(cloc_id, "multi");
         return 0;
     }
 
@@ -714,6 +722,8 @@ int verify_sequence_match(map<int, Locus *> &sample_1, QLocus *query,
         //
         if (found == false) {
             nosnps++;
+            if (write_all_matches)
+                query->add_match(cat->id, "extra_snp");
             return 0;
         }
     }
@@ -751,6 +761,12 @@ int verify_sequence_match(map<int, Locus *> &sample_1, QLocus *query,
                 }
             }
         }
+
+    if (verified == 0) {
+        if (write_all_matches)
+            query->add_match(cat->id, "none_verified");
+        return 0;
+    }
 
     return verified;
 }
@@ -971,8 +987,11 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
 
             if (verify_gapped_match(catalog, query, loci_hit, query_hits, mmatches, nosnps, no_haps, bad_aln, ver_hap))
                 matches++;
-            else
+            else {
                 nomatches++;
+                if (!loci_hit.empty())
+                    assert(write_all_matches ^ query->matches.empty());
+            }
         }
 
         //
@@ -1007,6 +1026,9 @@ verify_gapped_match(map<int, Locus *> &catalog, QLocus *query,
         return false;
     } else if (loci_hit.size() > 1) {
         mmatch++;
+        if (write_all_matches)
+            for (int cloc_id : loci_hit)
+                query->add_match(cloc_id, "multi");
         return false;
     }
 
@@ -1031,6 +1053,8 @@ verify_gapped_match(map<int, Locus *> &catalog, QLocus *query,
     }
     if (cigars.size() > 1) {
         bad_aln++;
+        if (write_all_matches)
+                query->add_match(cat->id, "ambig_aln");
         return false;
     }
 
@@ -1065,6 +1089,8 @@ verify_gapped_match(map<int, Locus *> &catalog, QLocus *query,
         //
         if (found == false) {
             nosnps++;
+            if (write_all_matches)
+                query->add_match(cat->id, "extra_snp");
             return false;
         }
     }
@@ -1120,10 +1146,12 @@ verify_gapped_match(map<int, Locus *> &catalog, QLocus *query,
         // }
     }
 
-    if (verified > 0) {
+    if (verified == 0) {
         ver_hits += verified;
     } else {
         no_haps++;
+        if (write_all_matches)
+            query->add_match(cat->id, "none_verified");
         return false;
     }
 
@@ -1316,6 +1344,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"outpath",     required_argument, NULL, 'o'},
             {"in_dir",      required_argument, NULL, 'P'},
             {"popmap",      required_argument, NULL, 'M'},
+            {"write-all-matches", no_argument, NULL, 2001},
             {0, 0, 0, 0}
         };
 
@@ -1369,6 +1398,9 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 'v':
             version();
+            break;
+        case 2001: //write-all-matches
+            write_all_matches = true;
             break;
         case '?':
             // getopt_long already printed an error message.
@@ -1489,6 +1521,12 @@ void help() {
               << "Sheared paired-ends options:\n"
               << "  --pe_reads: path to the sample's paired-end read sequences (if any)." << "\n"
               ;
+
+#ifdef DEBUG
+    cerr << "\n"
+            "Debug options:\n"
+            "  --write-all-matches: Write blacklisted matches. (Compatibility with the web interface?)\n";
+#endif
 
     exit(1);
 }
