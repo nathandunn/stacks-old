@@ -225,7 +225,7 @@ void CLocAlnSet::merge_paired_reads() {
 }
 
 ostream& operator<< (ostream& os, const CLocAlnSet& loc) {
-    os << "ref\t\t" << loc.ref().str();
+    os << "ref\t.\t" << loc.ref().str();
     for (auto& r : loc.reads_)
         os << "\n" << r.name << "\t" << loc.mpopi().samples()[r.sample].name << "\t" << r.aln();
     return os;

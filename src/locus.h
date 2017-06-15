@@ -189,8 +189,8 @@ public:
     int id() const {return id_;}
     const vector<SRead>& reads() const {return reads_;}
           vector<SRead>& reads()       {return reads_;}
-          const vector<SRead>& pe_reads() const {return pe_reads_;}
-                vector<SRead>& pe_reads()       {return pe_reads_;}
+    const vector<SRead>& pe_reads() const {return pe_reads_;}
+          vector<SRead>& pe_reads()       {return pe_reads_;}
 
     void clear() {id_= -1; reads_.clear(); pe_reads_.clear();}
     void id(int id) {id_ = id;}
@@ -217,6 +217,7 @@ public:
     int id() const {return id_;}
     const DNASeq4& ref() const {return ref_;}
     const vector<SAlnRead>& reads() const {return reads_;}
+          vector<SAlnRead>& reads()       {return reads_;}
     const vector<size_t>& sample_reads(size_t sample) const {return reads_per_sample_.at(sample);}
 
     void clear()
