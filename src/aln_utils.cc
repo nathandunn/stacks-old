@@ -24,6 +24,43 @@
 
 #include "aln_utils.h"
 
+// shell:
+// echo "
+// print(', '.join([ ('true' if chr(i) in set('0123456789=DHIMNPSX') else 'false') for i in range(256) ]))
+// " | python3 | fold -s
+const bool is_cigar_char[256] = {
+    false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, true, true, true, true, true, true, true, true,
+    true, true, false, false, false, true, false, false, false, false, false,
+    false, true, false, false, false, true, true, false, false, false, true, true,
+    false, true, false, false, true, false, false, false, false, true, false,
+    false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false,
+    false
+};
+
+ostream& operator<< (ostream& os, const Cigar& cig) {
+    for (auto op : cig)
+        os << op.second << (op.first == '\0' ? '?' : op.first);
+    return os;
+}
+
 string
 invert_cigar(string cigar)
 {
@@ -514,4 +551,40 @@ std::tuple<uint,uint,uint> cigar_lengths(const Cigar& cigar) {
     }
 
     return std::make_tuple(padded_len, ref_len, seq_len);
+}
+
+void simplify_cigar_to_MDI(Cigar& cig) {
+    if (cig.empty())
+        return;
+
+    // Replace operations with the relevant equivalent in "MDI".
+    for (auto& op : cig) {
+        switch (op.first) {
+        case '=':
+        case 'X': op.first = 'M'; break;
+        case 'S': op.first = 'I'; break;
+        case 'N':
+        case 'H': op.first = 'D'; break;
+        default: break;
+        case 'P': op.first = '\0'; break;
+        }
+    }
+
+    // Collapse identical successive operations.
+    auto prev = cig.rbegin();
+    auto op = ++cig.rbegin(); // n.b. `cig` isn't empty.
+    while(op != cig.rend()) {
+        if (op->first == prev->first) {
+            op->second += prev->second;
+            prev->first = '\0';
+        }
+        ++prev;
+        ++op;
+    }
+
+    // Remove '\0' operations.
+    cig.erase(std::remove_if(
+            cig.begin(), cig.end(),
+            [](const pair<char,uint>& op){return op.first == '\0';}
+            ), cig.end());
 }

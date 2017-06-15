@@ -56,6 +56,8 @@ int stacks_handle_exceptions(const exception& e) {
     return 13;
 }
 
+Cigar dbg_extract_cigar(const string& read_id);
+
 //
 // Argument globals.
 //
@@ -72,6 +74,7 @@ bool write_gfa = false;
 bool write_alns = false;
 bool write_hapgraphs = false;
 bool vcf_write_depths = false;
+bool dbg_true_alns = false;
 
 //
 // Extra globals.
@@ -123,10 +126,11 @@ try {
         check_open(o_aln_f, o_aln_path);
         o_aln_f <<
             "# This prints observed read haplotypes:\n"
-            "# loc=39\n"
-            "# sample=BT_2827.13\n"
-            "# cols=$(grep -E \"^$loc\\b\" batch_1.rystacks.vcf | awk '$5!=\".\"' | cut -f2 | paste -sd ',') # (SNPs.)\n"
-            "# sed -n \"/^BEGIN $loc\\b/,/^END $loc\\b/ p\" batch_1.rystacks.alns | grep \"$sample\" | cut -f3 | cut -c$cols | sort | uniq -c | sort -nr\n";
+            "# show_loc() { loc=$1; sed -n \"/^END $loc\\b/ q; /^BEGIN $loc\\b/,$ p\" ${RY_DIR:-.}/batch_1.rystacks.alns | tail -n+2; }\n"
+            "# snp_cols() { loc=$1; awk \"\\$1==$loc; \\$1>$loc {exit}\" ${RY_DIR:-.}/batch_1.rystacks.vcf | awk '$5!=\".\"' | cut -f2 | paste -sd ','; }\n"
+            "# show_haps() { loc=$1; cols=$2; spl=$3; show_loc $loc | grep \"\\b$spl\\b\" | cut -f3 | cut -c \"$cols\" | sort; }\n"
+            "# true_loci() { loc=$1; spl=$2; show_loc $loc | grep \"\\b$spl\\b\" | grep -v ref | cut -d: -f1 | sort -u; }\n"
+            ;
     }
 
     if (write_hapgraphs) {
@@ -185,78 +189,140 @@ bool process_one_locus(CLocReadSet&& loc) {
     //
     CLocAlnSet pe_aln_loc (loc.mpopi());
     pe_aln_loc.id(loc.id());
-    do { // (Avoiding nested ifs.)
-        if (loc.pe_reads().empty())
-            break;
+    if (!dbg_true_alns) {
+        do { // (Avoiding nested ifs.)
+            if (loc.pe_reads().empty())
+                break;
 
-        //
-        // Assemble the reads.
-        //
-        string pe_contig;
-        vector<const DNASeq4*> seqs_to_assemble;
-        for (const Read& r : loc.pe_reads())
-            seqs_to_assemble.push_back(&r.seq);
+            //
+            // Assemble the reads.
+            //
+            string pe_contig;
+            vector<const DNASeq4*> seqs_to_assemble;
+            for (const Read& r : loc.pe_reads())
+                seqs_to_assemble.push_back(&r.seq);
 
-        Graph graph (km_length);
-        graph.rebuild(seqs_to_assemble, min_km_count);
-        if (graph.empty())
-            break;
+            Graph graph (km_length);
+            graph.rebuild(seqs_to_assemble, min_km_count);
+            if (graph.empty()) {
+                logger->l << "% loc " << loc.id() << " discarded_pe_reads bc low_cov\n";
+                break;
+            }
 
-        if (write_gfa)
-            graph.dump_gfa(in_dir + to_string(loc.id()) + ".gfa");
+            if (write_gfa)
+                graph.dump_gfa(in_dir + to_string(loc.id()) + ".gfa");
 
-        vector<const SPath*> best_path;
-        if (!graph.find_best_path(best_path))
-            // Not a DAG.
-            break;
+            vector<const SPath*> best_path;
+            if (!graph.find_best_path(best_path)) {
+                // Not a DAG.
+                logger->l << "% loc " << loc.id() << " discarded_pe_reads bc not_DAG\n";
+                break;
+            }
 
-         //
-        // Align each read to the contig.
-        //
-        string ctg = SPath::contig_str(best_path.begin(), best_path.end(), km_length);
-        pe_aln_loc.ref(DNASeq4(ctg));
+             //
+            // Align each read to the contig.
+            //
+            string ctg = SPath::contig_str(best_path.begin(), best_path.end(), km_length);
+            pe_aln_loc.ref(DNASeq4(ctg));
 
-        GappedAln aligner;
-        for (SRead& r : loc.pe_reads()) {
-            string seq = r.seq.str();
-            aligner.init(r.seq.length(), ctg.length());
-            aligner.align(seq, ctg);
-            Cigar cigar;
-            parse_cigar(aligner.result().cigar.c_str(), cigar);
-            if (cigar.size() > 10)
-                // Read didn't align, discard it. xxx Refine this.
-                continue;
-            pe_aln_loc.add(SAlnRead(move((Read&)r), move(cigar), r.sample));
+            GappedAln aligner;
+            for (SRead& r : loc.pe_reads()) {
+                string seq = r.seq.str();
+                aligner.init(r.seq.length(), ctg.length());
+                aligner.align(seq, ctg);
+                Cigar cigar;
+                parse_cigar(aligner.result().cigar.c_str(), cigar);
+                if (cigar.size() > 10)
+                    // Read didn't align, discard it. xxx Refine this.
+                    continue;
+                pe_aln_loc.add(SAlnRead(move((Read&)r), move(cigar), r.sample));
+            }
+        } while (false);
+
+    } else {
+        // Use true alignments. Expect "cig2=STRING" in the read IDs.
+        if (!loc.pe_reads().empty()) {
+            for (SRead& r : loc.pe_reads()) {
+                Cigar cigar = dbg_extract_cigar(r.name);
+                simplify_cigar_to_MDI(cigar);
+                if (pe_aln_loc.ref().empty())
+                    pe_aln_loc.ref(DNASeq4(string(cigar_length_ref(cigar), 'N')));
+                if (cigar_length_ref(cigar) != pe_aln_loc.ref().length()) {
+                    cerr << "Error: DEBUG: ref-length of cig2 in read '" << r.name
+                         << "' was expected to be " << pe_aln_loc.ref().length()
+                         << ", not " << cigar_length_ref(cigar) << ".\n";
+                    throw exception();
+                }
+                pe_aln_loc.add(SAlnRead(move((Read&)r), move(cigar), r.sample));
+            }
         }
-    } while (false);
-
-    // Build the foward-reads object.
-
-    CLocAlnSet fw_aln_loc (loc.mpopi(), loc.id());
-    fw_aln_loc.ref(DNASeq4(loc.reads().at(0).seq));
-    for (SRead& r : loc.reads()) {
-        if (r.seq.length() != fw_aln_loc.ref().length()) {
-            cerr << "DEBUG: Error: Can't handle reads of different legnths.\n"; //xxx
-            throw exception();
-        }
-        fw_aln_loc.add(SAlnRead(move((Read&)r), {{'M',r.seq.length()}}, r.sample));
     }
+
+    //
+    // Build the foward-reads object.
+    //
+    CLocAlnSet fw_aln_loc (loc.mpopi(), loc.id());
+    if (!dbg_true_alns) {
+        fw_aln_loc.ref(DNASeq4(loc.reads().at(0).seq));
+        for (SRead& r : loc.reads()) {
+            if (r.seq.length() != fw_aln_loc.ref().length()) {
+                cerr << "DEBUG: Error: Can't handle reads of different legnths.\n"; //xxx
+                throw exception();
+            }
+            fw_aln_loc.add(SAlnRead(move((Read&)r), {{'M',r.seq.length()}}, r.sample));
+        }
+    } else {
+        // Use true alignments. Expect "cig1=STRING" in the read IDs.
+        for (SRead& r : loc.reads()) {
+            Cigar cigar = dbg_extract_cigar(r.name);
+            simplify_cigar_to_MDI(cigar);
+            if (fw_aln_loc.ref().empty())
+                fw_aln_loc.ref(DNASeq4(string(cigar_length_ref(cigar), 'N')));
+            if (cigar_length_ref(cigar) != pe_aln_loc.ref().length()) {
+                cerr << "Error: DEBUG: ref-length of cig1 in read '" << r.name
+                     << "' was expected to be " << pe_aln_loc.ref().length()
+                     << ", not " << cigar_length_ref(cigar) << ".\n";
+                throw exception();
+            }
+            fw_aln_loc.add(SAlnRead(move((Read&)r), move(cigar), r.sample));
+        }
+    }
+    loc.clear();
 
     //
     // Merge the forward & paired-end contigs.
     //
-    CLocAlnSet aln_loc (loc.mpopi(), loc.id());
-    if (pe_aln_loc.reads().empty()) {
-        aln_loc = move(fw_aln_loc);
+    CLocAlnSet aln_loc (fw_aln_loc.mpopi(), fw_aln_loc.id());
+    if (!dbg_true_alns) {
+        if (pe_aln_loc.reads().empty()) {
+            aln_loc = move(fw_aln_loc);
+        } else {
+            CLocAlnSet dummy (fw_aln_loc.mpopi(), fw_aln_loc.id());
+            dummy.ref(DNASeq4(string(10, 'N')));
+            aln_loc = CLocAlnSet::juxtapose(
+                    move(fw_aln_loc),
+                    CLocAlnSet::juxtapose(move(dummy), move(pe_aln_loc))
+                    );
+            aln_loc.merge_paired_reads();
+        }
+
     } else {
-        CLocAlnSet dummy (loc.mpopi(), loc.id());
-        dummy.ref(DNASeq4(string(10, 'N')));
-        aln_loc = CLocAlnSet::juxtapose(
-                move(fw_aln_loc),
-                CLocAlnSet::juxtapose(move(dummy), move(pe_aln_loc))
-                );
-        aln_loc.merge_paired_reads();
+        // With true alignments, everything should be in the same reference already.
+        aln_loc = move(fw_aln_loc);
+        if (!pe_aln_loc.reads().empty()) {
+            if (pe_aln_loc.ref().length() != aln_loc.ref().length()) {
+                cerr << "Error: DEBUG: locus length is " << aln_loc.ref().length()
+                     << " for the forward locus half and " << pe_aln_loc.ref().length()
+                     << " for the reverse half.\n";
+                throw exception();
+            }
+            for (SAlnRead& r : pe_aln_loc.reads())
+                aln_loc.add(move(r));
+            aln_loc.merge_paired_reads();
+        }
     }
+    fw_aln_loc.clear();
+    pe_aln_loc.clear();
 
     if (write_alns)
         o_aln_f << "BEGIN " << aln_loc.id() << "\n"
@@ -422,7 +488,7 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
                 for (Nt2 allele : alleles)
                     o_hapgraphs_f << "\t\t" << nodeid(col, allele)
                                   << " [label=<"
-                                  << "<sup><font point-size=\"10\">" << col << "</font></sup>" << allele
+                                  << "<sup><font point-size=\"10\">" << col+1 << "</font></sup>" << allele
                                   << ">];\n";
             }
 
@@ -921,6 +987,40 @@ void write_one_locus(
     */
 }
 
+Cigar dbg_extract_cigar(const string& read_id) {
+    static const char keyword1[] = "cig1=";
+    static const char keyword2[] = "cig2=";
+    static const size_t kw_len = sizeof(keyword1) - 1;
+    static_assert(sizeof(keyword1) == sizeof(keyword2), "");
+
+    Cigar cigar;
+
+    // Find the start.
+    const char* cig_start = read_id.c_str();
+    const char* kw = keyword1;
+    if (read_id.back() == '2' && read_id.at(read_id.length()-2) == '/')
+        kw = keyword2;
+    while (*cig_start != '\0'
+            && ! (*cig_start == kw[0] && strncmp(cig_start, kw, kw_len) == 0))
+        ++cig_start;
+    if (*cig_start == '\0') {
+        cerr << "Error: DEBUG: Coulnd't find cigar in read ID '" << read_id
+             << "'; expected 'cigar=.+[^A-Z0-9]'.\n";
+        throw exception();
+    }
+    cig_start += kw_len;
+
+    // Find the end.
+    const char* cig_past = cig_start;
+    while(*cig_past != '\0' && is_cigar_char[uint(*cig_past)])
+        ++cig_past;
+
+    // Extract the cigar.
+    parse_cigar(string(cig_start, cig_past).c_str(), cigar, true);
+
+    return cigar;
+}
+
 const string help_string = string() +
         prog_name + " " + VERSION  + "\n" +
         prog_name + " -P in_dir\n"
@@ -928,19 +1028,23 @@ const string help_string = string() +
         "  -P: input directory (must contain a batch_X.catalog.bam file)\n"
         "  -b: batch ID (default: guess)\n"
         "  -W,--whitelist: a whitelist of locus IDs\n"
+        "\n"
+        "Model options:"
         "  --model: model to use to call variants and genotypes;\n"
         "           one of snp (default), marukihigh, or marukilow\n"
+        "  --var-alpha: alpha threshold for discovering SNPs (default: 0.05)\n"
         "  --gt-alpha: alpha threshold for calling genotypes (default: 0.05)\n"
-        "  --var-alpha: alpha threshold for discovering variants (default: 0.05)\n"
         "\n"
         "Debug options:\n"
         "  --kmer-length: kmer length (default: 31)\n"
-        "  --min-cov: minimum coverage to consider a kmer (default: 2)\n"
+        "  --min-kmer-cov: minimum coverage to consider a kmer (default: 2)\n"
         "  --no-haps: disable phasing\n"
         "  --gfa: output a GFA file for each locus\n"
         "  --alns: output a file showing the contigs & alignments\n"
         "  --hap-graphs: output a dot graph file showing phasing information\n"
         "  --depths: write detailed depth data in the output VCF\n"
+        "  --true-alns: use true alignments (for simulated data; read IDs must\n"
+        "               include 'cig1=...' and 'cig2=...' fields.\n"
         "\n"
         ;
 
@@ -964,7 +1068,8 @@ try {
         {"var-alpha",    required_argument, NULL,  1008},
         {"whitelist",    required_argument, NULL,  'W'},
         {"kmer-length",  required_argument, NULL,  1001},
-        {"min-cov",      required_argument, NULL,  1002},
+        {"min-kmer-cov", required_argument, NULL,  1002},
+        {"true-alns",    no_argument,       NULL,  1011},
         {"no-haps",      no_argument,       NULL,  1009},
         {"gfa",          no_argument,       NULL,  1003},
         {"alns",         no_argument,       NULL,  1004},
@@ -1021,6 +1126,9 @@ try {
             break;
         case 1002://min-cov
             min_km_count = atoi(optarg);
+            break;
+        case 1011://true-alns
+            dbg_true_alns = true;
             break;
         case 1009://no-haps
             write_haplotypes = false;

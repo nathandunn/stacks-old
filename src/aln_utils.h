@@ -31,6 +31,10 @@
 
 typedef vector<pair<char, uint>> Cigar;
 
+extern const bool is_cigar_char[256];
+
+ostream& operator<< (ostream&, const Cigar&);
+
 string invert_cigar(string);
 int    parse_cigar(const char*, Cigar&, bool check_correctness = false);
 string apply_cigar_to_seq(const char*, Cigar&);
@@ -44,6 +48,8 @@ inline uint cigar_length_ref(const Cigar& c) {return std::get<1>(cigar_lengths(c
 inline uint cigar_length_query(const Cigar& c) {return std::get<2>(cigar_lengths(c));}
 void cigar_extend_right(Cigar&, size_t);
 void cigar_extend_left(Cigar&, size_t);
+
+void simplify_cigar_to_MDI(Cigar&); // Makes all operations to be one of 'M', 'D' or 'I'.
 
 #include "locus.h"
 int    adjust_snps_for_gaps(Cigar&, Locus*);
