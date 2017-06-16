@@ -1,7 +1,4 @@
-#include <algorithm>
 #include <ctime>
-#include <iomanip>
-#include <sstream>
 
 #include "Vcf.h"
 
@@ -47,8 +44,7 @@ void VcfHeader::add_std_meta(const string& version) {
 void VcfRecord::assign(const char* rec, size_t len, const VcfHeader& header) {
     assert(rec[len-1] != '\n');
 
-    buffer_.resize(len+1);
-    memcpy(buffer_.data(), rec, len+1);
+    buffer_.assign(rec, rec+len+1);
     strings_.clear();
 
     // Parse the record.
