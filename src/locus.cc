@@ -115,6 +115,148 @@ bp_compare(Locus *a, Locus *b)
     return (a->sort_bp() < b->sort_bp());
 }
 
+int
+adjust_snps_for_gaps(Cigar &cigar, Locus *loc)
+{
+    uint   size = cigar.size();
+    char   op;
+    uint   dist, bp, stop, offset, snp_index;
+
+    bp        = 0;
+    offset    = 0;
+    snp_index = 0;
+
+    for (uint i = 0; i < size; i++)  {
+        op   = cigar[i].first;
+        dist = cigar[i].second;
+
+        switch(op) {
+        case 'D':
+            offset += dist;
+            break;
+        case 'I':
+        case 'M':
+        case 'S':
+            stop = bp + dist;
+            while (bp < stop && snp_index < loc->snps.size()) {
+                if (loc->snps[snp_index]->col == bp) {
+                    loc->snps[snp_index]->col += offset;
+                    snp_index++;
+                }
+                bp++;
+            }
+            break;
+        default:
+            break;
+        }
+    }
+
+    return 0;
+}
+
+int
+adjust_and_add_snps_for_gaps(Cigar &cigar, Locus *loc)
+{
+    uint   size = cigar.size();
+    char   op;
+    uint   dist, bp, new_bp, stop, snp_cnt;
+    SNP   *s;
+
+    bp      = 0;
+    new_bp  = 0;
+    snp_cnt = loc->snps.size();
+
+    vector<SNP *> snps;
+
+    for (uint i = 0; i < size; i++)  {
+        op   = cigar[i].first;
+        dist = cigar[i].second;
+
+        switch(op) {
+        case 'D':
+            stop = new_bp + dist;
+            while (new_bp < stop) {
+                s = new SNP;
+                s->col    = new_bp;
+                s->type   = snp_type_unk;
+                s->rank_1 = 'N';
+                snps.push_back(s);
+                new_bp++;
+            }
+            break;
+        case 'I':
+        case 'M':
+        case 'S':
+            stop = bp + dist > snp_cnt ? snp_cnt : bp + dist;
+            while (bp < stop) {
+                loc->snps[bp]->col = new_bp;
+                snps.push_back(loc->snps[bp]);
+                bp++;
+                new_bp++;
+            }
+            break;
+        default:
+            break;
+        }
+    }
+
+    loc->snps.clear();
+
+    for (uint i = 0; i < snps.size(); i++)
+        loc->snps.push_back(snps[i]);
+
+    return 0;
+}
+
+int
+remove_snps_from_gaps(Cigar &cigar, Locus *loc)
+{
+    uint   size = cigar.size();
+    char   op;
+    uint   dist, bp, new_bp, stop, snp_cnt;
+
+    bp      = 0;
+    new_bp  = 0;
+    snp_cnt = loc->snps.size();
+
+    vector<SNP *> snps;
+
+    for (uint i = 0; i < size; i++)  {
+        op   = cigar[i].first;
+        dist = cigar[i].second;
+
+        switch(op) {
+        case 'D':
+            stop = bp + dist;
+            while (bp < stop) {
+                delete loc->snps[bp];
+                bp++;
+            }
+            break;
+        case 'I':
+        case 'M':
+        case 'S':
+            stop = bp + dist > snp_cnt ? snp_cnt : bp + dist;
+            while (bp < stop) {
+                loc->snps[bp]->col = new_bp;
+                snps.push_back(loc->snps[bp]);
+                bp++;
+                new_bp++;
+            }
+            break;
+        default:
+            break;
+        }
+    }
+
+    loc->snps.clear();
+
+    for (uint i = 0; i < snps.size(); i++)
+        loc->snps.push_back(snps[i]);
+
+    return 0;
+}
+
 QLocus::~QLocus()
 {
     vector<Match *>::iterator it;

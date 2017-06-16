@@ -21,13 +21,9 @@
 #ifndef __ALN_UTILS_H__
 #define __ALN_UTILS_H__
 
-#include <utility>
-#include <string>
-#include <vector>
 #include <tuple>
 
 #include "constants.h"
-#include "utils.h"
 
 typedef vector<pair<char, uint>> Cigar;
 
@@ -50,11 +46,6 @@ void cigar_extend_right(Cigar&, size_t);
 void cigar_extend_left(Cigar&, size_t);
 
 void simplify_cigar_to_MDI(Cigar&); // Makes all operations to be one of 'M', 'D' or 'I'.
-
-#include "locus.h"
-int    adjust_snps_for_gaps(Cigar&, Locus*);
-int    adjust_and_add_snps_for_gaps(Cigar&, Locus*);
-int    remove_snps_from_gaps(Cigar&, Locus*);
 
 //
 // Inline definitions.
