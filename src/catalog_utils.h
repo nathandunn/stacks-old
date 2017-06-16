@@ -57,7 +57,7 @@ int implement_random_snp_whitelist(map<int, CSLocus *> &, PopSum<CSLocus> *, map
  *       VCF format requires these field), and strand "strand_plus".
  * [snps] Use the ref+alt alleles.
  *     [col] Always set to 0 (first nucleotide in the consensus).
- *     [type] "snp_type_het" if the alt field is not empty, otherwise "snp_type_hom".
+ *     [type] always 'unk', on the premise that it is not used by populations.
  *     [lratio] Always set to 0.
  *     [rank_1] The ref allele.
  *     [rank_2], [rank_3], [rank_4] The alt allele(s).

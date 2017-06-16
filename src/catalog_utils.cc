@@ -388,6 +388,7 @@ map<int, CSLocus*> create_catalog(const vector<VcfRecord>& records) {
         loc->snps.push_back(new SNP());
         SNP& snp = *loc->snps.back();
         snp.col = 0;
+        snp.type = snp_type_unk;
         vector<char*> snp_alleles = {&snp.rank_1, &snp.rank_2, &snp.rank_3, &snp.rank_4};
         try {
             for (size_t i=0; i<rec.n_alleles(); ++i) {
@@ -409,7 +410,6 @@ map<int, CSLocus*> create_catalog(const vector<VcfRecord>& records) {
             catalog.erase(i);
             continue;
         }
-        snp.type = *snp_alleles[2] == 0 ? snp_type_hom : snp_type_het;
 
         loc->populate_alleles();
     }
