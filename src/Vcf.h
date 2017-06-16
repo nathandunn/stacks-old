@@ -136,8 +136,8 @@ public:
     pair<int, int> parse_genotype(const char* sample) const;
     pair<int, int> parse_genotype_nochecks(const char* sample) const;
 
-    size_t index_of_gt_subfield(const string& key) const; // SIZE_MAX if not found.
-    string parse_gt_subfield(const char* sample, size_t index) const;
+    size_t index_of_gt_subfield(const char* key) const; // SIZE_MAX if not found.
+    string parse_gt_subfield(const char* sample, size_t index) const; // xxx Remove this; create parse_gt_ad.
 
     // Record creation functions.
     void clear();
@@ -156,14 +156,16 @@ public:
         static string fmt_info_af(const vector<double>& alt_freqs);
         static string fmt_gt_gl(const vector<Nt2>& alleles, const GtLiks& liks);
         static GtLiks parse_gt_gl(const vector<Nt2>& alleles, const string& gl);
+
+        static void skip_gt_subfields(const char** start, size_t n);
         static size_t n_genotypes(size_t n_alleles) {return (n_alleles*(n_alleles+1))/2;}
 
         // Builds the haplotypes of a sample over a set of (phased) records.
         // (At most one phase set is expected.)
         // Returns false if the haplotypes were incomplete (N's).
-        static bool build_haps(pair<string,string>& haplotypes,
-                                  const vector<const VcfRecord*>& snp_records,
-                                  size_t sample_index);
+        static void build_haps(pair<string,string>& haplotypes,
+                               const vector<const VcfRecord*>& snp_records,
+                               size_t sample_index);
     };
 };
 
@@ -320,28 +322,24 @@ void VcfRecord::clear() {
 }
 
 inline
-size_t VcfRecord::index_of_gt_subfield(const string& key) const {
+size_t VcfRecord::index_of_gt_subfield(const char* key) const {
     for (size_t i=0; i<n_formats(); ++i)
-        if (strcmp(key.c_str(), format(i)) == 0)
+        if (strcmp(key, format(i)) == 0)
             return i;
     return SIZE_MAX;
 }
 
 inline
 string VcfRecord::parse_gt_subfield(const char* sample, size_t index) const {
-    string subf;
-
-    // Skip the first [index] colons.
+    // Got to the subfield.
     const char* first = sample;
-    for(size_t i=0; i<index; ++i) {
-        first = strchr(first, ':');
-        if (first == NULL)
-            // The requested field is not explicitly written, return the empty string.
-            return subf;
-        else
-            first += 1;
-    }
+    util::skip_gt_subfields(&first, index);
 
+    // Make it a std::string.
+    string subf;
+    if (first == NULL)
+        // The requested field is not explicitly written, return the empty string.
+        return subf;
     const char* last = strchr(first, ':');
     subf = last == NULL ? string(first) : string(first, last);
     return subf;
@@ -430,6 +428,17 @@ bool VcfRecord::is_snp() const {
         if (strlen(allele(i)) > 1)
             return false;
     return true;
+}
+
+inline
+void VcfRecord::util::skip_gt_subfields(const char** start, size_t n) {
+    for(size_t i=0; i<n; ++i) {
+        *start = strchr(*start, ':');
+        if (*start == NULL)
+            return;
+        ++*start;
+    }
+    return;
 }
 
 #endif // __VCF_H__

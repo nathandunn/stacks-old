@@ -460,8 +460,15 @@ CSLocus* new_cslocus(const Seq& consensus, const vector<VcfRecord>& records, int
     if (!snp_records.empty()) {
         pair<string,string> haplotypes;
         for (size_t sample=0; sample<records.at(0).n_samples(); ++sample) {
-            if (VcfRecord::util::build_haps(haplotypes, snp_records, sample)) {
-                // Complete haplotypes.
+            VcfRecord::util::build_haps(haplotypes, snp_records, sample);
+            bool complete = true;
+            for (size_t i=0; i<snp_records.size(); ++i) {
+                if (haplotypes.first[i] == 'N' || haplotypes.second[i] == 'N') {
+                    complete = false;
+                    break;
+                }
+            }
+            if (complete) {
                 ++loc->alleles[haplotypes.first];
                 ++loc->alleles[haplotypes.second];
             }

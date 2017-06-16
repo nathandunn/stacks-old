@@ -225,44 +225,59 @@ GtLiks VcfRecord::util::parse_gt_gl(const vector<Nt2>& alleles, const string& gl
     return liks;
 }
 
-bool VcfRecord::util::build_haps(pair<string,string>& haplotypes, const vector<const VcfRecord*>& snp_records, size_t sample_index) {
+void VcfRecord::util::build_haps(
+        pair<string,string>& haplotypes,
+        const vector<const VcfRecord*>& snp_records,
+        size_t sample_index
+        ) {
     haplotypes.first.resize(snp_records.size(), 'N');
     haplotypes.second.resize(snp_records.size(), 'N');
 
     #ifdef DEBUG
-    size_t phase_set (-1);
+    // rystacks should have written a single non-null phase set.
+    size_t phase_set = SIZE_MAX;
     #endif
-    bool complete = true;
+
     for (size_t i=0; i<snp_records.size(); ++i) {
-        // For each SNP...
-        // Parse the genotype.
         const VcfRecord& rec = *snp_records[i];
-        pair<int,int> gt = rec.parse_genotype_nochecks(rec.sample(sample_index));
+        assert(rec.n_formats() >= 2 && strcmp(rec.format(1), "PS") == 0);
+
+        // Parse the genotype.
+        const char* sample = rec.sample(sample_index);
+        pair<int,int> gt = rec.parse_genotype_nochecks(sample);
 
         // Record the (phased) alleles.
         if (gt.first == -1) {
-            complete = false;
+            // No call.
             haplotypes.first[i] = 'N';
             haplotypes.second[i] = 'N';
             continue;
+        } else if (gt.first == gt.second) {
+            // Sample is homozygote for this SNP.
+            char nt = rec.allele(gt.first)[0];
+            haplotypes.first[i] = nt;
+            haplotypes.second[i] = nt;
+        } else {
+            // Sample is heterozygote for this SNP.
+            const char* ps = sample;
+            util::skip_gt_subfields(&ps, 1);
+            assert(ps != NULL);
+            if (ps[0] == '.') {
+                // This genotype couldn't be phased.
+                haplotypes.first[i] = 'N';
+                haplotypes.second[i] = 'N';
+            } else {
+                #ifdef DEBUG
+                if (phase_set == SIZE_MAX)
+                    phase_set = atoi(ps);
+                else
+                    assert(atoi(ps) == phase_set);
+                #endif DEBUG
+                haplotypes.first[i] = rec.allele(gt.first)[0];
+                haplotypes.first[i] = rec.allele(gt.second)[i];
+            }
         }
-        haplotypes.first[i] = rec.allele(gt.first)[0];
-        haplotypes.second[i] = rec.allele(gt.second)[0];
-
-        #ifdef DEBUG
-        // Check that there is only one phase set.
-        assert(rec.n_formats() >= 2 && strcmp(rec.format(1), "PS") == 0);
-        if (gt.first != gt.second) {
-            size_t ps = stoi(rec.parse_gt_subfield(rec.sample(sample_index), 1));
-            if (phase_set == size_t(-1))
-                phase_set = ps;
-            else
-                assert(ps == phase_set);
-        }
-        #endif
     }
-
-    return complete;
 }
 
 VcfParser::VcfParser(const string& path) : file_(path), header_() {
