@@ -28,7 +28,6 @@
 #include <algorithm>
 #include <utility>
 
-class Locus; // Forward-declaration of Locus is required by aln_utils.h.
 #include "constants.h"
 #include "stacks.h"
 #include "MetaPopInfo.h"
@@ -42,6 +41,12 @@ typedef struct match {
     string      cigar;
     uint        dist;
 } Match;
+
+class Locus;
+bool bp_compare(Locus *, Locus *);
+int  adjust_snps_for_gaps(Cigar&, Locus*);
+int  adjust_and_add_snps_for_gaps(Cigar&, Locus*);
+int  remove_snps_from_gaps(Cigar&, Locus*);
 
 class Locus {
  public:
@@ -161,8 +166,6 @@ public:
                                   //   genotype, translated for a particular map type.
     double chisq;             // Chi squared p-value testing the null hypothesis of no segregation distortion.
 };
-
-bool bp_compare(Locus *, Locus *);
 
 // SRead: a Read belonging to a Sample.
 struct SRead : Read {
