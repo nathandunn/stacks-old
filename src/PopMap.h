@@ -306,14 +306,6 @@ void PopMap<LocusT>::populate(map<int, LocusT*>& catalog,
         LocusT& cloc = *cloc_pair.second;
         const vector<VcfRecord>& cloc_records = cloci_records.at(cloc.id);
 
-        vector<const VcfRecord*> snp_records;
-        for (auto& rec : cloc_records) {
-            if (rec.n_alleles() > 1) {
-                assert(rec.is_snp());
-                snp_records.push_back(&rec);
-            }
-        }
-
         string model;
         model.resize(cloc.len, 'U');
         pair<string,string> obshaps;
@@ -372,16 +364,39 @@ void PopMap<LocusT>::populate(map<int, LocusT*>& catalog,
                 d->model = new char[cloc.len+1];
                 strncpy(d->model, model.c_str(), cloc.len+1);
                 d->cigar = NULL;
-                if (snp_records.empty()) {
+                if (cloc.snps.empty()) {
                     d->obshap.push_back(new char[10]);
                     strncpy(d->obshap[0], "consensus", 10);
                 } else {
+                    // Build the haplotypes from the records. (Note: We can't get
+                    // the indexes of the SNP records directly from `cloc.snps`
+                    // as the records vector skips columns without any calls.
+                    vector<const VcfRecord*> snp_records;
+                    for (auto& rec : cloc_records) {
+                        if (rec.n_alleles() > 1) {
+                            assert(rec.pos() == cloc.snps.at(snp_records.size())->col);
+                            snp_records.push_back(&rec);
+                        }
+                    }
+                    assert(snp_records.size() == cloc.snps.size());
                     VcfRecord::util::build_haps(obshaps, snp_records, sample_vcf_i);
-                    assert(obshaps.first.length() == snp_records.size());
+
+                    // Record the haplotypes.
                     for (size_t i=0; i<2; ++i)
                         d->obshap.push_back(new char[snp_records.size()+1]);
                     strncpy(d->obshap[0], obshaps.first.c_str(), snp_records.size()+1);
                     strncpy(d->obshap[1], obshaps.second.c_str(), snp_records.size()+1);
+
+                    // Discard het calls that aren't phased, so that the model is
+                    // always 'U' (rather than 'E') where the obshaps are 'N'.
+                    for (size_t snp_i=0; snp_i<cloc.snps.size(); ++snp_i) {
+                        if (d->obshap[0][snp_i] == 'N') {
+                            size_t col = cloc.snps[snp_i]->col;
+                            assert(d->model[col] == 'U' || d->model[col] == 'E');
+                            if (d->model[col] == 'E')
+                                d->model[col] = 'U';
+                        }
+                    }
                 }
                 for (size_t i=0; i<d->obshap.size(); ++i)
                     d->depth.push_back(0);
