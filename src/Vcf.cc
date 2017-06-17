@@ -269,10 +269,10 @@ void VcfRecord::util::build_haps(
             } else {
                 #ifdef DEBUG
                 if (phase_set == SIZE_MAX)
-                    phase_set = atoi(ps);
+                    phase_set = atol(ps);
                 else
-                    assert(atoi(ps) == phase_set);
-                #endif DEBUG
+                    assert(size_t(atol(ps)) == phase_set);
+                #endif
                 haplotypes.first[i] = rec.allele(gt.first)[0];
                 haplotypes.first[i] = rec.allele(gt.second)[i];
             }
