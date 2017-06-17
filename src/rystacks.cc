@@ -356,15 +356,6 @@ bool process_one_locus(CLocReadSet&& loc) {
     if (write_haplotypes) {
         set<size_t> inconsistent_samples;
         phase_data = phase_hets(calls, aln_loc, inconsistent_samples);
-        /* TODO {
-        for (size_t sample : inconsistent_samples) {
-            // Observed haplotypes are inconsistent given the sample's diploidy.
-            for (size_t i=0; i<aln_loc.ref().length(); ++i) {
-                depths[i].samples[sample] = Counts<Nt2>();
-                calls[i].discard_sample(sample);
-            }
-        }
-        // TODO } */
     }
 
     write_one_locus(aln_loc, depths, calls, phase_data);
@@ -630,10 +621,14 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
                 break;
         }
 
-        // Record haplotypes.
         if (inconsistent) {
             inconsistent_samples.insert(sample);
         } else {
+            // Record haplotypes.
+            // Iterate over pairs of haplotypes; overlaps become 'phase sets'.
+            // There may be three or more haplotypes but in this case, because
+            // these haplotypes are compatible by construction, phased/overlapping
+            // columns are disjoint across all pairs.
             for (size_t i=0; i<haps.size(); ++i) {
                 if (haps[i].empty())
                     // Deleted remnant of a merger.
@@ -643,10 +638,6 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
                     if (haps[j].empty())
                         continue;
 
-                    // Each pair of haplotypes becomes one 'phase set'.
-                    // N.B. There is more than one pair only if there are three or more
-                    // haplotypes but in this case, because these haplotypes are compatible
-                    // by construction, phased columns are disjoint across all pairs.
                     size_t phase_set = SIZE_MAX;
                     for (size_t het_i=0; het_i<het_snps.size(); ++het_i) {
                         Nt4 hapi_nt = haps[i][het_i];
@@ -672,6 +663,7 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
                     phased_samples[sample][col] = PhasedHet({col, alleles[0], alleles[1]});
                 }
             }
+            assert(!phased_samples[sample].empty());
         }
     }
     if (write_hapgraphs)
