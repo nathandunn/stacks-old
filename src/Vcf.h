@@ -424,6 +424,8 @@ inline pair<int, int> VcfRecord::parse_genotype_nochecks(const char* sample) con
 
 inline
 bool VcfRecord::is_snp() const {
+    if (n_alleles() < 2)
+        return false;
     for (size_t i=0; i<n_alleles(); ++i)
         if (strlen(allele(i)) > 1)
             return false;
