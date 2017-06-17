@@ -324,7 +324,10 @@ void PopMap<LocusT>::populate(map<int, LocusT*>& catalog,
             // Get the sample's model string.
             auto rec = cloc_records.begin();
             for (size_t col=0; col<cloc.len; ++col) {
-                if (rec->pos() != col) {
+                if (rec == cloc_records.end()) {
+                    // No more VCF records.
+                    break;
+                } else if (rec->pos() != col) {
                     // No VCF record for this column, skip it.
                     assert(model[col] == 'U'); // Position never changes as it's missing for all samples.
                     continue;
