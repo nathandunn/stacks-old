@@ -43,6 +43,7 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
                                          const CLocAlnSet& aln_loc,
                                          set<size_t>& inconsistent_samples
                                          );
+void rm_supernumerary_phase_sets(vector<map<size_t,PhasedHet>>& phase_data);
 void write_one_locus(const CLocAlnSet& aln_loc,
                      const vector<SiteCounts>& depths,
                      const vector<SiteCall>& calls,
@@ -356,6 +357,7 @@ bool process_one_locus(CLocReadSet&& loc) {
     if (write_haplotypes) {
         set<size_t> inconsistent_samples;
         phase_data = phase_hets(calls, aln_loc, inconsistent_samples);
+        rm_supernumerary_phase_sets(phase_data);
     }
 
     write_one_locus(aln_loc, depths, calls, phase_data);
@@ -670,6 +672,29 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
         o_hapgraphs_f << "}\n";
 
     return phased_samples;
+}
+
+void rm_supernumerary_phase_sets(vector<map<size_t,PhasedHet>>& phase_data) {
+    // We only keep one phase set per sample.
+    for (auto& sample : phase_data) {
+        if (sample.empty())
+            continue;
+        // Tally phase sets & find the one with the most SNPs.
+        map<size_t,size_t> phase_set_sizes;
+        for (auto& phasedhet : sample)
+            ++phase_set_sizes[phasedhet.second.phase_set];
+        auto best_ps = phase_set_sizes.begin();
+        for (auto ps=++phase_set_sizes.begin(); ps!=phase_set_sizes.end(); ++ps)
+            if (ps->second > best_ps->second)
+                best_ps = ps;
+        // Remove all phase sets but one.
+        for (auto phasedhet=sample.begin(); phasedhet!=sample.end();) {
+            if (phasedhet->second.phase_set == best_ps->first)
+                ++phasedhet;
+            else
+                sample.erase(phasedhet++);
+        }
+    }
 }
 
 void write_one_locus(
