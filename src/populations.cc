@@ -516,9 +516,11 @@ int main (int argc, char* argv[]) {
     } else if (input_mode == InputMode::stacks2) {
         // Using Stacks v2 files.
         pmap->populate(catalog, *cloci_vcf_records, *vcf_header);
+        cloci_vcf_records.reset();
     } else if (input_mode == InputMode::vcf) {
         // ...or using VCF records.
         pmap->populate(catalog, *vcf_records, *vcf_header);
+        vcf_records.reset();
     }
 
     //
