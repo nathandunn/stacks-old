@@ -26,6 +26,7 @@ void run();
 bool quiet = false;
 string prefix_path;
 string pe_reads_path;
+bool dbg_reversed_pe_reads = false;
 
 //
 // Extra globals.
@@ -292,7 +293,7 @@ void run() {
                                 target_i,
                                 0,
                                 {{'S', stack.first.length()}},
-                                stack.first.rev_compl(),
+                                dbg_reversed_pe_reads ? stack.first : stack.first.rev_compl(),
                                 sample_id
                                 );
                         rec.write_to(bam_f);
@@ -344,6 +345,12 @@ void parse_command_line(int argc, char* argv[]) {
             "  -s,--prefix: prefix path for the sample. (Required.)\n"
             "  -f,--pe-reads: path to the file containing the sample's paired-end read sequences, if any.\n"
             "\n"
+#ifdef DEBUG
+            "Debug options:\n"
+            "  --reversed-pe-reads: for simulated paired-end reads written on the same\n"
+            "                       strand as the forward ones\n"
+            "\n"
+#endif
             ;
 
     const auto bad_args = [&help_string](){
@@ -357,6 +364,7 @@ void parse_command_line(int argc, char* argv[]) {
         {"version",      no_argument,       NULL,  1000},
         {"prefix",       required_argument, NULL, 's'},
         {"pe-reads",     required_argument, NULL, 'f'},
+        {"reversed-pe-reads", no_argument,  NULL, 2000},
         {0, 0, 0, 0}
     };
 
@@ -387,6 +395,9 @@ void parse_command_line(int argc, char* argv[]) {
             break;
         case 'f':
             pe_reads_path = optarg;
+            break;
+        case 2000: // reversed-pe-reads
+            dbg_reversed_pe_reads = true;
             break;
         default:
             bad_args();
