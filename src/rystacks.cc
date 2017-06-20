@@ -85,7 +85,7 @@ int batch_id = -1;
 set<int> locus_wl;
 bool ignore_pe_reads = false;
 
-modelt model_type = snp;
+modelt model_type = marukilow;
 unique_ptr<const Model> model;
 
 size_t km_length = 31;
@@ -1056,19 +1056,23 @@ const string help_string = string() +
         prog_name + " " + VERSION  + "\n" +
         prog_name + " -P in_dir\n"
         "\n"
-        "  -P: input directory (must contain a batch_X.catalog.bam file)\n"
+        "  -P: input directory*program will look for IN_DIR/batch_X.catalog.bam\n"
         "  -b: batch ID (default: guess)\n"
         "  -W,--whitelist: a whitelist of locus IDs\n"
         "  --ignore-pe-reads: ignore paired-end reads, if any\n"
         "\n"
+        "  * The input directory must contain a 'batch_X.catalog.bam' file, that\n"
+        "  the user should generate after the tsv2bam runs with e.g.:\n"
+        "    samtools merge ./batch_1.catalog.bam ./*.matches.bam\n"
+        "\n"
         "Model options:\n"
-        "  --model: model to use to call variants and genotypes;\n"
-        "           one of snp (default), marukihigh, or marukilow\n"
+        "  --model: model to use to call variants and genotypes; one of\n"
+        "           marukilow (default), marukihigh, or snp\n"
         "  --var-alpha: alpha threshold for discovering SNPs (default: 0.05)\n"
         "  --gt-alpha: alpha threshold for calling genotypes (default: 0.05)\n"
         "\n"
         "Expert options:\n"
-        "  --kmer-length: kmer length (default: 31)\n"
+        "  --kmer-length: kmer length for the de Bruijn graph (default: 31)\n"
         "  --min-kmer-cov: minimum coverage to consider a kmer (default: 2)\n"
         "\n"
 #ifdef DEBUG
