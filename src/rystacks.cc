@@ -40,10 +40,7 @@ public:
 };
 
 class LocusProcessor {
-    const bool use_pe_reads_;
-
 public:
-    LocusProcessor(bool use_pe_reads);
     void operator() (CLocReadSet&& loc);
 
     size_t n_calls;
@@ -85,17 +82,20 @@ Cigar dbg_extract_cigar(const string& read_id);
 bool quiet = false;
 string in_dir;
 int batch_id = -1;
-modelt model_type = snp;
-unique_ptr<const Model> model;
 set<int> locus_wl;
 bool ignore_pe_reads = false;
+
+modelt model_type = snp;
+unique_ptr<const Model> model;
+
 size_t km_length = 31;
 size_t min_km_count = 2;
-bool write_haplotypes = true;
-bool write_gfa = false;
-bool write_alns = false;
-bool write_hapgraphs = false;
-bool vcf_write_depths = false;
+
+bool dbg_no_haplotypes = false;
+bool dbg_write_gfa = false;
+bool dbg_write_alns = false;
+bool dbg_write_hapgraphs = false;
+bool dbg_write_nt_depths = false;
 bool dbg_true_alns = false;
 
 //
@@ -144,7 +144,7 @@ try {
         vcf_header.add_sample(s.name);
     o_vcf_f.reset(new VcfWriter(o_vcf_path, move(vcf_header)));
 
-    if (write_alns) {
+    if (dbg_write_alns) {
         string o_aln_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".alns";
         o_aln_f.open(o_aln_path);
         check_open(o_aln_f, o_aln_path);
@@ -157,7 +157,7 @@ try {
             ;
     }
 
-    if (write_hapgraphs) {
+    if (dbg_write_hapgraphs) {
         string o_hapgraphs_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".hapgraphs.dot";
         o_hapgraphs_f.open(o_hapgraphs_path);
         check_open(o_hapgraphs_f, o_hapgraphs_path);
@@ -171,7 +171,7 @@ try {
     //
     // Process every locus
     //
-    LocusProcessor loc_proc (!ignore_pe_reads);
+    LocusProcessor loc_proc {};
     CLocReadSet loc (bam_fh.mpopi());
     if (locus_wl.empty()) {
         // No whitelist.
@@ -227,7 +227,7 @@ try {
 
     // Cleanup & return.
     gzclose(o_gzfasta_f);
-    if (write_hapgraphs)
+    if (dbg_write_hapgraphs)
         o_hapgraphs_f << "}\n";
     cout << prog_name << " is done.\n";
     return 0;
@@ -253,15 +253,6 @@ void SnpAlleleCooccurrenceCounter::clear() {
             cooccurences_[i*n_snps_+j] = array<array<size_t,4>,4>();
 }
 
-LocusProcessor::LocusProcessor(bool use_pe_reads)
-    : use_pe_reads_(use_pe_reads),
-      n_calls(0),
-      n_badly_phased_samples(),
-      n_loci_w_pe_reads(0),
-      n_loci_almost_no_pe_reads(0),
-      n_loci_pe_graph_not_dag(0)
-{}
-
 size_t LocusProcessor::n_loci_phasing_issues() const {
     size_t n = 0;
     for (auto& elem : n_badly_phased_samples)
@@ -278,7 +269,7 @@ void LocusProcessor::operator() (CLocReadSet&& loc) {
     //
     CLocAlnSet pe_aln_loc (loc.mpopi());
     pe_aln_loc.id(loc.id());
-    if (use_pe_reads_) {
+    if (!ignore_pe_reads) {
         if (!dbg_true_alns) {
             do { // (Avoiding nested ifs.)
                 if (loc.pe_reads().empty())
@@ -300,7 +291,7 @@ void LocusProcessor::operator() (CLocReadSet&& loc) {
                     break;
                 }
 
-                if (write_gfa)
+                if (dbg_write_gfa)
                     graph.dump_gfa(in_dir + to_string(loc.id()) + ".gfa");
 
                 vector<const SPath*> best_path;
@@ -416,7 +407,7 @@ void LocusProcessor::operator() (CLocReadSet&& loc) {
     fw_aln_loc.clear();
     pe_aln_loc.clear();
 
-    if (write_alns)
+    if (dbg_write_alns)
         o_aln_f << "BEGIN " << aln_loc.id() << "\n"
                 << aln_loc
                 << "\nEND " << aln_loc.id() << "\n";
@@ -445,7 +436,7 @@ void LocusProcessor::operator() (CLocReadSet&& loc) {
 
     // Call haplotypes.
     vector<map<size_t,PhasedHet>> phase_data;
-    if (write_haplotypes) {
+    if (!dbg_no_haplotypes) {
         set<size_t> inconsistent_samples;
         phase_data = phase_hets(calls, aln_loc, inconsistent_samples);
         if (!inconsistent_samples.empty())
@@ -472,7 +463,7 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
     if (snp_cols.empty())
         return phased_samples;
 
-    if (write_hapgraphs) {
+    if (dbg_write_hapgraphs) {
         o_hapgraphs_f << "subgraph cluster_loc" << aln_loc.id() << " {\n"
                       << "\tlabel=\"locus " << aln_loc.id() << "\";\n"
                       << "\t# snp columns: ";
@@ -543,7 +534,7 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
         }
 
         // Write the dot graph, if required.
-        if (write_hapgraphs) {
+        if (dbg_write_hapgraphs) {
             auto nodeid = [&aln_loc,&sample](size_t col, Nt2 allele)
                     {return string("l")+to_string(aln_loc.id())+"s"+to_string(sample)+"c"+to_string(col)+char(allele);};
 
@@ -761,7 +752,7 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
             assert(!phased_samples[sample].empty());
         }
     }
-    if (write_hapgraphs)
+    if (dbg_write_hapgraphs)
         o_hapgraphs_f << "}\n";
 
     return phased_samples;
@@ -868,7 +859,7 @@ void LocusProcessor::write_one_locus (
             // Info/AD.
             Nt2 ref_nt = sitecall.alleles().begin()->first;
             rec.append_info(string("AD=") + to_string(sitedepths.tot[ref_nt]));
-            if (vcf_write_depths) {
+            if (dbg_write_nt_depths) {
                 // Info/cnts.
                 stringstream cnts;
                 join(sitedepths.tot.arr(), ',', cnts);
@@ -904,7 +895,7 @@ void LocusProcessor::write_one_locus (
             for (auto nt=++vcf_alleles.begin(); nt!=vcf_alleles.end(); ++nt) // rem. always >1 alleles.
                 alt_freqs.push_back(sitecall.alleles().at(*nt));
             rec.append_info(VcfRecord::util::fmt_info_af(alt_freqs));
-            if (vcf_write_depths) {
+            if (dbg_write_nt_depths) {
                 // Info/cnts.
                 stringstream cnts;
                 join(sitedepths.tot.arr(), ',', cnts);
@@ -913,7 +904,7 @@ void LocusProcessor::write_one_locus (
 
             // Format.
             rec.append_format("GT");
-            if (write_haplotypes)
+            if (!dbg_no_haplotypes)
                 rec.append_format("PS"); // Phase set.
             rec.append_format("DP");
             rec.append_format("AD");
@@ -937,11 +928,11 @@ void LocusProcessor::write_one_locus (
                 case snp_type_hom:
                     gt[0] = vcf_allele_indexes.at(scall.nt0());
                     genotype << gt[0] << '/' << gt[0];
-                    if (write_haplotypes)
+                    if (!dbg_no_haplotypes)
                         genotype << ":.";
                     break;
                 case snp_type_het:
-                    if (write_haplotypes) {
+                    if (!dbg_no_haplotypes) {
                         assert(!phase_data.empty());
                         auto itr = phase_data[sample].find(i);
                         if (itr != phase_data[sample].end()) {
@@ -968,7 +959,7 @@ void LocusProcessor::write_one_locus (
                     break;
                 default:
                     genotype << '.';
-                    if (write_haplotypes)
+                    if (!dbg_no_haplotypes)
                         genotype << ":.";
                     break;
                 }
@@ -984,7 +975,7 @@ void LocusProcessor::write_one_locus (
                 // GL field.
                 genotype << ':' << VcfRecord::util::fmt_gt_gl(vcf_alleles, scall.lnls());
                 // cnts field.
-                if (vcf_write_depths) {
+                if (dbg_write_nt_depths) {
                     genotype << ":";
                     join(sdepths.arr(), ',', genotype);
                 }
@@ -1068,7 +1059,7 @@ const string help_string = string() +
         "  -P: input directory (must contain a batch_X.catalog.bam file)\n"
         "  -b: batch ID (default: guess)\n"
         "  -W,--whitelist: a whitelist of locus IDs\n"
-        "  --ignore-pe-reads: ignore paired-end reads present in the input, if any\n"
+        "  --ignore-pe-reads: ignore paired-end reads, if any\n"
         "\n"
         "Model options:"
         "  --model: model to use to call variants and genotypes;\n"
@@ -1076,9 +1067,12 @@ const string help_string = string() +
         "  --var-alpha: alpha threshold for discovering SNPs (default: 0.05)\n"
         "  --gt-alpha: alpha threshold for calling genotypes (default: 0.05)\n"
         "\n"
-        "Debug options:\n"
+        "Expert options:\n"
         "  --kmer-length: kmer length (default: 31)\n"
         "  --min-kmer-cov: minimum coverage to consider a kmer (default: 2)\n"
+        "\n"
+#ifdef DEBUG
+        "Debug options:\n"
         "  --no-haps: disable phasing\n"
         "  --gfa: output a GFA file for each locus\n"
         "  --alns: output a file showing the contigs & alignments\n"
@@ -1087,6 +1081,7 @@ const string help_string = string() +
         "  --true-alns: use true alignments (for simulated data; read IDs must\n"
         "               include 'cig1=...' and 'cig2=...' fields.\n"
         "\n"
+#endif
         ;
 
 void parse_command_line(int argc, char* argv[]) {
@@ -1176,19 +1171,19 @@ try {
             dbg_true_alns = true;
             break;
         case 1009://no-haps
-            write_haplotypes = false;
+            dbg_no_haplotypes = true;
             break;
         case 1003://gfa
-            write_gfa = true;
+            dbg_write_gfa = true;
             break;
         case 1004://aln
-            write_alns = true;
+            dbg_write_alns = true;
             break;
         case 1010://hap-graphs
-            write_hapgraphs = true;
+            dbg_write_hapgraphs = true;
             break;
         case 1007://depths
-            vcf_write_depths = true;
+            dbg_write_nt_depths = true;
             break;
         case '?':
             bad_args();
