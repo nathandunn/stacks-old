@@ -36,18 +36,43 @@ public:
         {for(size_t i=0; i<n_snps_; ++i) for(size_t j=i+1; j<n_snps_; ++j) cooccurences_[i*n_snps_+j] = array<array<size_t,4>,4>();}
 };
 
+class LocusProcessor {
+    const bool use_pe_reads_;
+
+public:
+    LocusProcessor(bool use_pe_reads);
+    void operator() (CLocReadSet&& loc);
+
+    size_t n_calls;
+    map<pair<size_t,size_t>,size_t> n_badly_phased_samples; // { {n_bad_samples, n_tot_samples} : count }
+
+    size_t n_loci_w_pe_reads;
+    size_t n_loci_almost_no_pe_reads;
+    size_t n_loci_pe_graph_not_dag;
+
+    size_t n_loci_phasing_issues() const;
+    size_t n_loci_no_almost_no_pe_reads() const {return n_calls - n_loci_w_pe_reads - n_loci_almost_no_pe_reads;}
+    size_t n_loci_usable_pe_reads() const {return n_loci_w_pe_reads - n_loci_almost_no_pe_reads - n_loci_pe_graph_not_dag;}
+
+private:
+    vector<map<size_t,PhasedHet>> phase_hets (
+            const vector<SiteCall>& calls,
+            const CLocAlnSet& aln_loc,
+            set<size_t>& inconsistent_samples
+    ) const;
+    void rm_supernumerary_phase_sets (
+            vector<map<size_t,PhasedHet>>& phase_data
+    ) const;
+    void write_one_locus (
+            const CLocAlnSet& aln_loc,
+            const vector<SiteCounts>& depths,
+            const vector<SiteCall>& calls,
+            const vector<map<size_t,PhasedHet>>& phase_data // {col : phasedhet} maps, for all samples
+    ) const;
+};
+
 void parse_command_line(int argc, char* argv[]);
 void report_options(ostream& os);
-bool process_one_locus(CLocReadSet&& loc);
-vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
-                                         const CLocAlnSet& aln_loc,
-                                         set<size_t>& inconsistent_samples
-                                         );
-void rm_supernumerary_phase_sets(vector<map<size_t,PhasedHet>>& phase_data);
-void write_one_locus(const CLocAlnSet& aln_loc,
-                     const vector<SiteCounts>& depths,
-                     const vector<SiteCall>& calls,
-                     const vector<map<size_t,PhasedHet>>& phase_data); // {col : phasedhet} maps, for all samples
 
 int stacks_handle_exceptions(const exception& e) {
     std::cerr << "Aborted.";
@@ -68,6 +93,7 @@ int batch_id = -1;
 modelt model_type = snp;
 unique_ptr<const Model> model;
 set<int> locus_wl;
+bool ignore_pe_reads = false;
 size_t km_length = 31;
 size_t min_km_count = 2;
 bool write_haplotypes = true;
@@ -91,19 +117,27 @@ ofstream o_hapgraphs_f;
 int main(int argc, char** argv) {
 try {
 
+    //
     // Parse arguments.
+    //
     parse_command_line(argc, argv);
 
+    //
     // Open the log.
+    //
     string lg_path = in_dir + prog_name + ".log";
     logger.reset(new LogAlterator(lg_path, quiet, argc, argv));
     report_options(cout);
     cout << "\n" << flush;
 
+    //
     // Open the BAM file and parse the header.
+    //
     BamCLocReader bam_fh (in_dir + "batch_" + to_string(batch_id) + ".catalog.bam");
 
+    //
     // Open the output files.
+    //
     string o_gzfasta_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".fa.gz";
     o_gzfasta_f = gzopen(o_gzfasta_path.c_str(), "wb");
     check_open(o_gzfasta_f, o_gzfasta_path);
@@ -145,39 +179,67 @@ try {
                       << "edge[color=\"grey60\",fontsize=12,labeljust=\"l\"];\n";
     }
 
+    //
     // Process every locus
-    size_t n_loci = locus_wl.empty() ? bam_fh.n_loci() : locus_wl.size();
-    size_t n_processed = 0;
-    size_t n_discarded = 0;
-    cout << "Processing all loci...\n" << flush;
+    //
+    LocusProcessor loc_proc (!ignore_pe_reads);
     CLocReadSet loc (bam_fh.mpopi());
     if (locus_wl.empty()) {
         // No whitelist.
-        ProgressMeter progress (cout, n_loci);
+        cout << "Processing all loci...\n" << flush;
+        ProgressMeter progress (cout, bam_fh.n_loci());
         while (bam_fh.read_one_locus(loc)) {
-            if (!process_one_locus(move(loc)))
-                ++n_discarded;
-            ++n_processed;
+            loc_proc(move(loc));
             ++progress;
         }
         progress.done();
 
     } else {
+        cout << "Processing whitelisted loci...\n" << flush;
         while (bam_fh.read_one_locus(loc) && !locus_wl.empty()) {
             if (locus_wl.count(loc.id())) {
-                if (!process_one_locus(move(loc)))
-                    ++n_discarded;
+                loc_proc(move(loc));
                 locus_wl.erase(loc.id());
-                ++n_processed;
             }
         }
     }
-    cout << "Processed " << n_processed << " loci; retained " << (n_processed-n_discarded) << " of them.\n";
 
+    //
+    // Report statistics on the analysis.
+    //
+    {
+        size_t tot = loc_proc.n_calls;
+        size_t ph = loc_proc.n_loci_phasing_issues();
+        auto pct = [tot](size_t n) {return as_percentage((double) n / tot) ;};
+        cout << "\n"
+             << "Processed " << tot << " loci:\n"
+             << "  (All loci are always conserved)\n"
+             << "  " << ph << " loci had phasing issues (" << pct(ph) << ")\n"
+             ;
+        if (loc_proc.n_loci_w_pe_reads > 0) {
+            size_t no_pe = loc_proc.n_loci_no_almost_no_pe_reads();
+            size_t pe_dag = loc_proc.n_loci_pe_graph_not_dag;
+            size_t pe_good = loc_proc.n_loci_usable_pe_reads();
+            assert(!ignore_pe_reads);
+            cout << "  " << no_pe << " loci had no or almost no paired-end reads (" << pct(no_pe) << ")\n"
+                 << "  " << pe_dag << " loci had paired-end reads that couldn't be assembled into a contig (" << pct(pe_dag) << ")\n"
+                 << "  " << pe_good << " loci had usable paired-end reads (" << pct(pe_good) << ")\n"
+                 ;
+        }
+        cout << "\n";
+
+        logger->l << "##BEGIN badly_phased\n"
+                  << "# cat *.log | sed -n '/^##BEGIN badly_phased/,/^##END/ p' *.log | cut -c2- | grep -v \\#\n"
+                  << "#n_tot_samples\tn_bad_samples\tn_loci\n";
+        for (auto& elem : loc_proc.n_badly_phased_samples)
+            logger->l << '#' << elem.first.second << '\t' << elem.first.first << '\t' << elem.second << '\n';
+        logger->l << "##END badly_phased\n" << "#\n";
+    }
+
+    // Cleanup & return.
     gzclose(o_gzfasta_f);
     if (write_hapgraphs)
         o_hapgraphs_f << "}\n";
-
     cout << prog_name << " is done.\n";
     return 0;
 
@@ -186,79 +248,99 @@ try {
 }
 }
 
-bool process_one_locus(CLocReadSet&& loc) {
+LocusProcessor::LocusProcessor(bool use_pe_reads)
+    : use_pe_reads_(use_pe_reads),
+      n_calls(0),
+      n_badly_phased_samples(),
+      n_loci_w_pe_reads(0),
+      n_loci_almost_no_pe_reads(0),
+      n_loci_pe_graph_not_dag(0)
+{}
+
+size_t LocusProcessor::n_loci_phasing_issues() const {
+    size_t n = 0;
+    for (auto& elem : n_badly_phased_samples)
+        n += elem.second;
+    return n;
+}
+
+void LocusProcessor::operator() (CLocReadSet&& loc) {
     assert(!loc.reads().empty());
+    ++n_calls;
 
     //
     // Process the paired-end reads.
     //
     CLocAlnSet pe_aln_loc (loc.mpopi());
     pe_aln_loc.id(loc.id());
-    if (!dbg_true_alns) {
-        do { // (Avoiding nested ifs.)
-            if (loc.pe_reads().empty())
-                break;
+    if (use_pe_reads_) {
+        if (!dbg_true_alns) {
+            do { // (Avoiding nested ifs.)
+                if (loc.pe_reads().empty())
+                    break;
+                ++n_loci_w_pe_reads;
 
-            //
-            // Assemble the reads.
-            //
-            string pe_contig;
-            vector<const DNASeq4*> seqs_to_assemble;
-            for (const Read& r : loc.pe_reads())
-                seqs_to_assemble.push_back(&r.seq);
+                //
+                // Assemble the reads.
+                //
+                string pe_contig;
+                vector<const DNASeq4*> seqs_to_assemble;
+                for (const Read& r : loc.pe_reads())
+                    seqs_to_assemble.push_back(&r.seq);
 
-            Graph graph (km_length);
-            graph.rebuild(seqs_to_assemble, min_km_count);
-            if (graph.empty()) {
-                logger->l << "% loc " << loc.id() << " discarded_pe_reads bc low_cov\n";
-                break;
-            }
-
-            if (write_gfa)
-                graph.dump_gfa(in_dir + to_string(loc.id()) + ".gfa");
-
-            vector<const SPath*> best_path;
-            if (!graph.find_best_path(best_path)) {
-                // Not a DAG.
-                logger->l << "% loc " << loc.id() << " discarded_pe_reads bc not_DAG\n";
-                break;
-            }
-
-             //
-            // Align each read to the contig.
-            //
-            string ctg = SPath::contig_str(best_path.begin(), best_path.end(), km_length);
-            pe_aln_loc.ref(DNASeq4(ctg));
-
-            GappedAln aligner;
-            for (SRead& r : loc.pe_reads()) {
-                string seq = r.seq.str();
-                aligner.init(r.seq.length(), ctg.length());
-                aligner.align(seq, ctg);
-                Cigar cigar;
-                parse_cigar(aligner.result().cigar.c_str(), cigar);
-                if (cigar.size() > 10)
-                    // Read didn't align, discard it. xxx Refine this.
-                    continue;
-                pe_aln_loc.add(SAlnRead(move((Read&)r), move(cigar), r.sample));
-            }
-        } while (false);
-
-    } else {
-        // Use true alignments. Expect "cig2=STRING" in the read IDs.
-        if (!loc.pe_reads().empty()) {
-            for (SRead& r : loc.pe_reads()) {
-                Cigar cigar = dbg_extract_cigar(r.name);
-                simplify_cigar_to_MDI(cigar);
-                if (pe_aln_loc.ref().empty())
-                    pe_aln_loc.ref(DNASeq4(string(cigar_length_ref(cigar), 'N')));
-                if (cigar_length_ref(cigar) != pe_aln_loc.ref().length()) {
-                    cerr << "Error: DEBUG: ref-length of cig2 in read '" << r.name
-                         << "' was expected to be " << pe_aln_loc.ref().length()
-                         << ", not " << cigar_length_ref(cigar) << ".\n";
-                    throw exception();
+                Graph graph (km_length);
+                graph.rebuild(seqs_to_assemble, min_km_count);
+                if (graph.empty()) {
+                    ++n_loci_almost_no_pe_reads;
+                    break;
                 }
-                pe_aln_loc.add(SAlnRead(move((Read&)r), move(cigar), r.sample));
+
+                if (write_gfa)
+                    graph.dump_gfa(in_dir + to_string(loc.id()) + ".gfa");
+
+                vector<const SPath*> best_path;
+                if (!graph.find_best_path(best_path)) {
+                    // Not a DAG.
+                    ++n_loci_pe_graph_not_dag;
+                    break;
+                }
+
+                //
+                // Align each read to the contig.
+                //
+                string ctg = SPath::contig_str(best_path.begin(), best_path.end(), km_length);
+                pe_aln_loc.ref(DNASeq4(ctg));
+
+                GappedAln aligner;
+                for (SRead& r : loc.pe_reads()) {
+                    string seq = r.seq.str();
+                    aligner.init(r.seq.length(), ctg.length());
+                    aligner.align(seq, ctg);
+                    Cigar cigar;
+                    parse_cigar(aligner.result().cigar.c_str(), cigar);
+                    if (cigar.size() > 10)
+                        // Read didn't align, discard it. xxx Refine this.
+                        continue;
+                    pe_aln_loc.add(SAlnRead(move((Read&)r), move(cigar), r.sample));
+                }
+            } while (false);
+
+        } else {
+            // Use true alignments. Expect "cig2=STRING" in the read IDs.
+            if (!loc.pe_reads().empty()) {
+                for (SRead& r : loc.pe_reads()) {
+                    Cigar cigar = dbg_extract_cigar(r.name);
+                    simplify_cigar_to_MDI(cigar);
+                    if (pe_aln_loc.ref().empty())
+                        pe_aln_loc.ref(DNASeq4(string(cigar_length_ref(cigar), 'N')));
+                    if (cigar_length_ref(cigar) != pe_aln_loc.ref().length()) {
+                        cerr << "Error: DEBUG: ref-length of cig2 in read '" << r.name
+                             << "' was expected to be " << pe_aln_loc.ref().length()
+                             << ", not " << cigar_length_ref(cigar) << ".\n";
+                        throw exception();
+                    }
+                    pe_aln_loc.add(SAlnRead(move((Read&)r), move(cigar), r.sample));
+                }
             }
         }
     }
@@ -361,18 +443,20 @@ bool process_one_locus(CLocReadSet&& loc) {
     if (write_haplotypes) {
         set<size_t> inconsistent_samples;
         phase_data = phase_hets(calls, aln_loc, inconsistent_samples);
+        if (!inconsistent_samples.empty())
+            ++n_badly_phased_samples[ {inconsistent_samples.size(), aln_loc.n_samples()} ];
+
         rm_supernumerary_phase_sets(phase_data);
     }
 
     write_one_locus(aln_loc, depths, calls, phase_data);
-
-    return true;
 }
 
-vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
-                                         const CLocAlnSet& aln_loc,
-                                         set<size_t>& inconsistent_samples
-                                         ){
+vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
+        const vector<SiteCall>& calls,
+        const CLocAlnSet& aln_loc,
+        set<size_t>& inconsistent_samples
+) const {
     vector<map<size_t,PhasedHet>> phased_samples (aln_loc.mpopi().samples().size());
 
     vector<size_t> snp_cols; // The SNPs of this locus.
@@ -678,7 +762,9 @@ vector<map<size_t,PhasedHet>> phase_hets(const vector<SiteCall>& calls,
     return phased_samples;
 }
 
-void rm_supernumerary_phase_sets(vector<map<size_t,PhasedHet>>& phase_data) {
+void LocusProcessor::rm_supernumerary_phase_sets (
+        vector<map<size_t,PhasedHet>>& phase_data
+) const {
     // We only keep one phase set per sample.
     for (auto& sample : phase_data) {
         if (sample.empty())
@@ -701,13 +787,12 @@ void rm_supernumerary_phase_sets(vector<map<size_t,PhasedHet>>& phase_data) {
     }
 }
 
-void write_one_locus(
+void LocusProcessor::write_one_locus (
         const CLocAlnSet& aln_loc,
         const vector<SiteCounts>& depths,
         const vector<SiteCall>& calls,
         const vector<map<size_t,PhasedHet>>& phase_data
-        ){
-
+) const {
     size_t loc_id = aln_loc.id();
     const DNASeq4& ref = aln_loc.ref();
     const MetaPopInfo& mpopi = aln_loc.mpopi();
@@ -1049,6 +1134,7 @@ const string help_string = string() +
         "  -P: input directory (must contain a batch_X.catalog.bam file)\n"
         "  -b: batch ID (default: guess)\n"
         "  -W,--whitelist: a whitelist of locus IDs\n"
+        "  --ignore-pe-reads: ignore paired-end reads present in the input, if any\n"
         "\n"
         "Model options:"
         "  --model: model to use to call variants and genotypes;\n"
@@ -1084,10 +1170,11 @@ try {
         {"quiet",        no_argument,       NULL,  'q'},
         {"in-dir",       required_argument, NULL,  'P'},
         {"batch-id",     required_argument, NULL,  'b'},
+        {"whitelist",    required_argument, NULL,  'W'},
+        {"ignore-pe-reads", no_argument,    NULL,  1012},
         {"model",        required_argument, NULL,  1006},
         {"gt-alpha",     required_argument, NULL,  1005},
         {"var-alpha",    required_argument, NULL,  1008},
-        {"whitelist",    required_argument, NULL,  'W'},
         {"kmer-length",  required_argument, NULL,  1001},
         {"min-kmer-cov", required_argument, NULL,  1002},
         {"true-alns",    no_argument,       NULL,  1011},
@@ -1141,6 +1228,9 @@ try {
             break;
         case 'W':
             wl_path = optarg;
+            break;
+        case 1012: //ignore-pe-reads
+            ignore_pe_reads = true;
             break;
         case 1001://kmer-length
             km_length = atoi(optarg);
@@ -1238,6 +1328,8 @@ void report_options(ostream& os) {
 
     if (!locus_wl.empty())
         os << "  Whitelist of " << locus_wl.size() << " loci.\n";
+    if (ignore_pe_reads)
+        os << "  Ignoring paired-end reads.\n";
     if (km_length != 31)
         os << "  Kmer length: " << km_length << "\n";
     if (min_km_count != 2)
