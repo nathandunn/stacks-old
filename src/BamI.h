@@ -121,6 +121,7 @@ public:
 
     bam_hdr_t* h() {return h_;}
 
+    size_t n_ref_chroms() const {return h_->n_targets;}
     const char* chrom_str(int32_t index) const {
         if (index >= h_->n_targets)
             throw std::out_of_range("out_of_range in BamHeader::chrom_str");
