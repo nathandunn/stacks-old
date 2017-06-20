@@ -16,6 +16,14 @@
 
 using namespace std;
 
+int stacks_handle_exceptions(const exception& e) {
+    std::cerr << "Aborted.";
+    if (typeid(e) != typeid(std::exception))
+        std::cerr << " (" << e.what() << ")";
+    std::cerr << "\n";
+    return 13;
+}
+
 struct PhasedHet {
     size_t phase_set; // N.B. The convention in VCF is to use the column of the first phased SNP for this.
     Nt2 left_allele;
@@ -26,14 +34,9 @@ class SnpAlleleCooccurrenceCounter {
     size_t n_snps_;
     vector<array<array<size_t,4>,4>> cooccurences_;
 public:
-    SnpAlleleCooccurrenceCounter(size_t n_snps)
-        : n_snps_(n_snps),
-          cooccurences_(n_snps_*n_snps_) // n*n matrix, athough we only use the i<j half.
-        {}
-    size_t& at(size_t snp_i1, Nt2 snp1_allele, size_t snp_i2, Nt2 snp2_allele)
-        {assert(snp_i1 < snp_i2); return cooccurences_[snp_i1*n_snps_+snp_i2][size_t(snp1_allele)][size_t(snp2_allele)];}
-    void clear()
-        {for(size_t i=0; i<n_snps_; ++i) for(size_t j=i+1; j<n_snps_; ++j) cooccurences_[i*n_snps_+j] = array<array<size_t,4>,4>();}
+    SnpAlleleCooccurrenceCounter(size_t n_snps);
+    size_t& at(size_t snp_i1, Nt2 snp1_allele, size_t snp_i2, Nt2 snp2_allele);
+    void clear();
 };
 
 class LocusProcessor {
@@ -74,14 +77,6 @@ private:
 void parse_command_line(int argc, char* argv[]);
 void report_options(ostream& os);
 
-int stacks_handle_exceptions(const exception& e) {
-    std::cerr << "Aborted.";
-    if (typeid(e) != typeid(std::exception))
-        std::cerr << " (" << e.what() << ")";
-    std::cerr << "\n";
-    return 13;
-}
-
 Cigar dbg_extract_cigar(const string& read_id);
 
 //
@@ -104,7 +99,7 @@ bool vcf_write_depths = false;
 bool dbg_true_alns = false;
 
 //
-// Extra globals.
+// Additional globals.
 //
 const string prog_name = "rystacks";
 unique_ptr<LogAlterator> logger;
@@ -240,6 +235,22 @@ try {
 } catch (const std::exception& e) {
     return stacks_handle_exceptions(e);
 }
+}
+
+SnpAlleleCooccurrenceCounter::SnpAlleleCooccurrenceCounter(size_t n_snps)
+    : n_snps_(n_snps),
+      cooccurences_(n_snps_*n_snps_) // n*n matrix, athough we only use the i<j half.
+    {}
+
+size_t& SnpAlleleCooccurrenceCounter::at(size_t snp_i1, Nt2 snp1_allele, size_t snp_i2, Nt2 snp2_allele) {
+    assert(snp_i1 < snp_i2);
+    return cooccurences_[snp_i1*n_snps_+snp_i2][size_t(snp1_allele)][size_t(snp2_allele)];
+}
+
+void SnpAlleleCooccurrenceCounter::clear() {
+    for(size_t i=0; i<n_snps_; ++i)
+        for(size_t j=i+1; j<n_snps_; ++j)
+            cooccurences_[i*n_snps_+j] = array<array<size_t,4>,4>();
 }
 
 LocusProcessor::LocusProcessor(bool use_pe_reads)
