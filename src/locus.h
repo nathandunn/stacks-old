@@ -230,6 +230,8 @@ public:
     void add(SAlnRead&& r);
     void merge_paired_reads();
 
+    size_t n_samples() const {size_t n=0; for(auto& reads : reads_per_sample_) if (!reads.empty()) ++n; return n;}
+
     friend ostream& operator<< (ostream& os, const CLocAlnSet& loc);
 
     static CLocAlnSet juxtapose(CLocAlnSet&& left, CLocAlnSet&& right);
