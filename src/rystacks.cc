@@ -146,29 +146,33 @@ try {
     }
 
     // Process every locus
+    size_t n_loci = locus_wl.empty() ? bam_fh.n_loci() : locus_wl.size();
+    size_t n_processed = 0;
+    size_t n_discarded = 0;
     cout << "Processing all loci...\n" << flush;
     CLocReadSet loc (bam_fh.mpopi());
-    size_t n_loci = 0;
-    size_t n_discarded = 0;
     if (locus_wl.empty()) {
         // No whitelist.
+        ProgressMeter progress (cout, n_loci);
         while (bam_fh.read_one_locus(loc)) {
-            ++n_loci;
             if (!process_one_locus(move(loc)))
                 ++n_discarded;
+            ++n_processed;
+            ++progress;
         }
+        progress.done();
 
     } else {
         while (bam_fh.read_one_locus(loc) && !locus_wl.empty()) {
             if (locus_wl.count(loc.id())) {
-                ++n_loci;
                 if (!process_one_locus(move(loc)))
                     ++n_discarded;
                 locus_wl.erase(loc.id());
+                ++n_processed;
             }
         }
     }
-    cout << "Processed " << n_loci << " loci; retained " << (n_loci-n_discarded) << " of them.\n";
+    cout << "Processed " << n_processed << " loci; retained " << (n_processed-n_discarded) << " of them.\n";
 
     gzclose(o_gzfasta_f);
     if (write_hapgraphs)

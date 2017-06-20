@@ -98,6 +98,36 @@ string to_string(const FileT& ft) {
     return "?!";
 }
 
+ProgressMeter& ProgressMeter::operator++() {
+    assert(n_done_ != n_max_);
+    ++n_done_;
+
+    if (n_done_ >= next_) {
+        if (n_done_ >= size_t(n_max_ * 0.5)) {
+            os_ << "50%...\n";
+            next_ = SIZE_MAX;
+        } else if (n_done_ >= size_t(n_max_ * 0.2)) {
+            os_ << "20%...\n";
+            next_ = n_max_ * 0.5;
+        } else if (n_done_ >= size_t(n_max_ * 0.1)) {
+            os_ << "10%...\n";
+            next_ = n_max_ * 0.2;
+        } else if (n_done_ >= size_t(n_max_ * 0.05)) {
+            os_ << "5%...\n";
+            next_ = n_max_ * 0.1;
+        } else if (n_done_ >= size_t(n_max_ * 0.02)) {
+            os_ << "2%...\n";
+            next_ = n_max_ * 0.05;
+        } else {
+            os_ << "1%...\n";
+            next_ = n_max_ * 0.02;
+        }
+        os_ << flush;
+    }
+
+    return *this;
+}
+
 LogAlterator::LogAlterator(const string& log_path, bool quiet, int argc, char** argv)
         : l(log_path)
         , o(cout.rdbuf())

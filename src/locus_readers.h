@@ -16,6 +16,7 @@ public:
     BamCLocReader(const string& bam_path);
     ~BamCLocReader() {if (bam_f_) delete bam_f_;}
 
+    size_t n_loci() const {return bam_f_->h().n_ref_chroms();}
     const MetaPopInfo& mpopi() const {return mpopi_;}
 
     // Reads one locus. Returns false on EOF.

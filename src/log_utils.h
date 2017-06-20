@@ -34,6 +34,22 @@ string as_percentage(double d);
 
 string to_string(const FileT& ft);
 
+
+// ProgressMeter
+// ==========
+// Reports 1-2-5-10-20-50% completeness to the given stream.
+class ProgressMeter {
+    ostream& os_;
+    size_t n_max_;
+    size_t n_done_;
+    size_t next_;
+
+public:
+    ProgressMeter(ostream& os, size_t n_operations) : os_(os), n_max_(n_operations), n_done_(0), next_(n_max_*0.01) {}
+    ProgressMeter& operator++();
+    void done() {assert(n_done_ == n_max_); os_ << "100%\n";}
+};
+
 // TeeBuf
 // ==========
 // A streambuf which tees to two streambufs.
