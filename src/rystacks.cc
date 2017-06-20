@@ -149,12 +149,6 @@ try {
         vcf_header.add_sample(s.name);
     o_vcf_f.reset(new VcfWriter(o_vcf_path, move(vcf_header)));
 
-    /*  //xxx disabled
-    string o_models_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".tsv";
-    o_models_f.open(o_models_path);
-    check_open(o_models_f, o_models_path);
-    */
-
     if (write_alns) {
         string o_aln_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".alns";
         o_aln_f.open(o_aln_path);
@@ -1020,77 +1014,6 @@ void LocusProcessor::write_one_locus (
     gzputs(o_gzfasta_f, "\n");
     gzputs(o_gzfasta_f, ref.str().c_str());
     gzputs(o_gzfasta_f, "\n");
-
-    //
-    // Models/tsv output. //xxx disabled
-    // LOCID \t LINETYPE \t SAMPLEID \t CONTENTS
-    //
-    /*
-    // Consensus.
-    o_models_f << loc_id << "\tconsensus\t\t" << ref << "\n";
-
-    // Model.
-    o_models_f << loc_id << "\tmodel\t\t";
-    for (auto& c : calls)
-        o_models_f << c.alleles().size();
-    o_models_f << "\n";
-
-    // Depth.
-    // One two-digit hex number per position (max 0xFF).
-    o_models_f << loc_id << "\tdepth\t\t" << std::hex;
-    for (size_t i=0; i<ref.length(); ++i) {
-        size_t dp = depths[i].tot.sum();
-        if (dp <= 0xF)
-            o_models_f << "0" << dp;
-        else if (dp <= 0xFF)
-            o_models_f << dp;
-        else
-            o_models_f << 0xFF;
-    }
-    o_models_f << std::dec << "\n";
-
-    // For each sample.
-    for (size_t s=0; s<mpopi.samples().size(); ++s) {
-        int sample_id = mpopi.samples()[s].id;
-
-        // Model.
-        o_models_f << loc_id << "\ts_model\t" << sample_id << "\t";
-        for (size_t i=0; i<ref.length(); ++i) {
-            const SiteCall& c = calls[i];
-            if (c.alleles().size() == 0) {
-                o_models_f << "U";
-            } else if (c.alleles().size() == 1) {
-                o_models_f << "O";
-            } else {
-                switch (c.sample_calls()[s].call()) {
-                case snp_type_hom: o_models_f << "O"; break;
-                case snp_type_het: o_models_f << "E"; break;
-                case snp_type_unk: o_models_f << "U"; break;
-                }
-            }
-        }
-        o_models_f << "\n";
-
-        // Depths.
-        // Four two-digit hex numbers (A,C,T,G) per position.
-        o_models_f << loc_id << "\ts_depths\t" << sample_id << "\t" << std::hex;
-        for (size_t i=0; i<ref.length(); ++i) {
-            // For each site...
-            const SiteCounts& sitedepths = depths[i];
-            for (Nt2 nt : Nt2::all) {
-                // For each of A, C, G and T...
-                size_t dp = sitedepths.samples[s][nt];
-                if (dp <= 0xF)
-                    o_models_f << "0" << dp;
-                else if (dp <= 0xFF)
-                    o_models_f << dp;
-                else
-                    o_models_f << 0xFF;
-            }
-        }
-        o_models_f << std::dec << "\n";
-    }
-    */
 }
 
 Cigar dbg_extract_cigar(const string& read_id) {
