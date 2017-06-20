@@ -1061,7 +1061,7 @@ const string help_string = string() +
         "  -W,--whitelist: a whitelist of locus IDs\n"
         "  --ignore-pe-reads: ignore paired-end reads, if any\n"
         "\n"
-        "Model options:"
+        "Model options:\n"
         "  --model: model to use to call variants and genotypes;\n"
         "           one of snp (default), marukihigh, or marukilow\n"
         "  --var-alpha: alpha threshold for discovering SNPs (default: 0.05)\n"
