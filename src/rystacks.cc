@@ -51,7 +51,7 @@ public:
     size_t n_loci_pe_graph_not_dag;
 
     size_t n_loci_phasing_issues() const;
-    size_t n_loci_no_almost_no_pe_reads() const {return n_calls - n_loci_w_pe_reads - n_loci_almost_no_pe_reads;}
+    size_t n_loci_no_pe_reads() const {return n_calls - n_loci_w_pe_reads;}
     size_t n_loci_usable_pe_reads() const {return n_loci_w_pe_reads - n_loci_almost_no_pe_reads - n_loci_pe_graph_not_dag;}
 
 private:
@@ -206,7 +206,7 @@ try {
              << "  " << ph << " loci had phasing issues (" << pct(ph) << ")\n"
              ;
         if (loc_proc.n_loci_w_pe_reads > 0) {
-            size_t no_pe = loc_proc.n_loci_no_almost_no_pe_reads();
+            size_t no_pe = loc_proc.n_loci_no_pe_reads() + loc_proc.n_loci_almost_no_pe_reads;
             size_t pe_dag = loc_proc.n_loci_pe_graph_not_dag;
             size_t pe_good = loc_proc.n_loci_usable_pe_reads();
             assert(!ignore_pe_reads);
