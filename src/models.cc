@@ -814,7 +814,9 @@ SiteCall MarukiLowModel::call(const SiteCounts& depths) const {
     }
 
     // 3. Initial major allele frequency.
-    double p = 0.5 * double(3*n_M_tot + n_m_tot - dp_tot) / (2*n_M_tot + 2*n_m_tot - dp_tot);
+    double p = (2*n_M_tot + 2*n_m_tot > dp_tot) ?
+            0.5 * double(3*n_M_tot + n_m_tot - dp_tot) / (2*n_M_tot + 2*n_m_tot - dp_tot)
+            : 0.5; // if `n_M_tot == n_m_tot == dp_tot / 4`.
 
     // 4. Initial disequilibrium coefficient.
     auto flush_freq = [](double& f) {
