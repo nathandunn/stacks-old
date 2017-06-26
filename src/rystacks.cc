@@ -227,6 +227,7 @@ try {
 
     // Cleanup & return.
     gzclose(o_gzfasta_f);
+    model.reset();
     if (dbg_write_hapgraphs)
         o_hapgraphs_f << "}\n";
     cout << prog_name << " is done.\n";
