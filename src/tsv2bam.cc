@@ -217,9 +217,9 @@ void run() {
     {
         cerr << "Writing the header...\n";
         string sample_name = prefix_path.substr(prefix_path.find_last_of('/')+1);
-        string header_text = string() +
-                "@HD\tVN:1.5\tSO:coordinate\n"
-                "@RG\tID:" + to_string(sample_id) + "\tSM:" + sample_name + "\tid:" + to_string(sample_id) + "\n";
+        stringstream header_text;
+        header_text << "@HD\tVN:1.5\tSO:coordinate\n"
+                    << "@RG\tID:" << sample_id << "\tSM:" << sample_name << "\tid:" << sample_id << "\n";
 
         // For samtools-merge to be happy, we must provide the complete list of
         // catalog loci. So we actually have to load the catalog.
@@ -240,17 +240,22 @@ void run() {
 
             targets.reserve(catalog.size());
             for (auto& cloc : catalog) {
+                // Add the @SQ line. Length is mandatory; all loci declare to be 10000bp.
+                header_text << "@SQ\tSN:" << cloc.first << "\tLN:10000";
+                if (cloc.second->loc.chr != NULL) {
+                    const PhyLoc& pos = cloc.second->loc;
+                    header_text << "\tpos1:" << pos.chr
+                                << ':' << (pos.bp+1)
+                                << ':' << (pos.strand == strand_plus ? '+' : '-');
+                }
+                header_text << "\n";
                 targets.push_back(cloc.first);
                 delete cloc.second;
             }
         }
 
-        // Add the @SQ lines. Length is mandatory; all loci declare to be 10000bp.
-        for (int id : targets)
-            header_text += string() + "@SQ\tSN:" + to_string(id) + "\tLN:10000\n";
-
         // Write it.
-        write_bam_header(bam_f, header_text);
+        write_bam_header(bam_f, header_text.str());
     }
 
     //
