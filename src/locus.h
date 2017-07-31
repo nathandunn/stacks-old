@@ -182,14 +182,16 @@ struct SAlnRead : AlnRead {
 class CLocReadSet {
     const MetaPopInfo& mpopi_;
     int id_; // Catalog locus ID
+    PhyLoc aln_pos_;
     vector<SRead> reads_; // Forward reads. Order is arbitrary.
     vector<SRead> pe_reads_; // Paired-end reads. Order and size are arbitrary.
 
 public:
-    CLocReadSet(const MetaPopInfo& mpopi) : mpopi_(mpopi), id_(-1), reads_(), pe_reads_() {}
+    CLocReadSet(const MetaPopInfo& mpopi) : mpopi_(mpopi), id_(-1), aln_pos_(), reads_(), pe_reads_() {}
 
     const MetaPopInfo& mpopi() const {return mpopi_;}
     int id() const {return id_;}
+    const PhyLoc& pos() const {return aln_pos_;}
     const vector<SRead>& reads() const {return reads_;}
           vector<SRead>& reads()       {return reads_;}
     const vector<SRead>& pe_reads() const {return pe_reads_;}
@@ -197,6 +199,7 @@ public:
 
     void clear() {id_= -1; reads_.clear(); pe_reads_.clear();}
     void id(int id) {id_ = id;}
+    void pos(const PhyLoc& p) {aln_pos_ = p;}
     void add(SRead&& r) {reads_.push_back(move(r));}
     void add_pe(SRead&& r) {pe_reads_.push_back(move(r));}
 };
@@ -204,20 +207,21 @@ public:
 class CLocAlnSet {
     const MetaPopInfo* mpopi_;
     int id_; // Catalog locus ID
+    PhyLoc aln_pos_;
     DNASeq4 ref_;
     vector<SAlnRead> reads_;
     vector<vector<size_t>> reads_per_sample_; // `at(sample)` is a vector of indexes in `reads_`.
 
 public:
-    CLocAlnSet(const MetaPopInfo& mpopi, int id)
-        : mpopi_(&mpopi), id_(id), ref_(), reads_(), reads_per_sample_(mpopi_->samples().size())
+    CLocAlnSet(const MetaPopInfo& mpopi)
+        : mpopi_(&mpopi), id_(-1), aln_pos_(), ref_(), reads_(), reads_per_sample_(mpopi_->samples().size())
         {}
-    CLocAlnSet(const MetaPopInfo& mpopi) : CLocAlnSet(mpopi, -1) {}
     CLocAlnSet(CLocAlnSet&&) = default;
     CLocAlnSet& operator= (CLocAlnSet&&) = default;
 
     const MetaPopInfo& mpopi() const {return *mpopi_;}
     int id() const {return id_;}
+    const PhyLoc& pos() const {return aln_pos_;}
     const DNASeq4& ref() const {return ref_;}
     const vector<SAlnRead>& reads() const {return reads_;}
           vector<SAlnRead>& reads()       {return reads_;}
@@ -225,8 +229,9 @@ public:
 
     void clear()
         {id_= -1; ref_ = DNASeq4(); reads_.clear(); reads_per_sample_ = vector<vector<size_t>>(mpopi().samples().size());}
-    void id(int id) {id_ = id;}
-    void ref(DNASeq4&& ref) {ref_ = move(ref);}
+    void id(int i) {id_ = i;}
+    void pos(const PhyLoc& p) {aln_pos_ = p;}
+    void ref(DNASeq4&& s) {ref_ = move(s);}
     void add(SAlnRead&& r);
     void merge_paired_reads();
 

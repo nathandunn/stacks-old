@@ -57,6 +57,7 @@ public:
         this->strand = strnd;
         strcpy(this->chr,  chr);
     }
+    PhyLoc(const string& s); // Expects "CHROM:BP1(:[+-])?".
 
     ~PhyLoc() {
         if (chr != NULL)
@@ -73,6 +74,7 @@ public:
     }
 
     void clear() {if(chr!=NULL) {delete[] chr; chr=NULL;} bp=0; strand=strand_plus;}
+    bool empty() const {return chr == NULL;}
     friend void swap(PhyLoc& p, PhyLoc& q);
     bool operator==(const PhyLoc& other) const;
     bool operator<(const PhyLoc& other) const;
