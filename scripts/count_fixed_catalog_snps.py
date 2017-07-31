@@ -231,8 +231,6 @@ def count_catalog_snps(path, batch_id, catalog_snps):
         gzipped = False;
         fh = open(path + "batch_" + str(batch_id) + ".catalog.snps.tsv", "r")
 
-    out_fh = open(out_path + "batch_" + str(batch_id) + ".catalog.snps.tsv", "w")
-
     snp_cnt = 0
 
     for line in fh:
