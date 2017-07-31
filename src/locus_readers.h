@@ -11,6 +11,7 @@ class BamCLocReader {
     Bam* bam_f_;
     MetaPopInfo mpopi_;
     map<string, size_t> rg_to_sample_;
+    vector<const char*> loci_aln_positions_;
 
 public:
     BamCLocReader(const string& bam_path);
@@ -51,27 +52,119 @@ BamCLocReader::BamCLocReader(const string& bam_path)
 
     bam_f_ = new Bam(bam_path.c_str());
 
-    // Get the list of samples from the header.
-    BamHeader::ReadGroups read_groups = bam_f_->h().read_groups();
+    //
+    // Create the MetaPopInfo object from the header.
+    //
+    {
+        vector<string> rg_ids;
+        vector<string> samples;
+        vector<int> sample_ids;
 
-    // Create the MetaPopInfo object.
-    vector<string> samples;
-    for (auto& rg : read_groups)
-        samples.push_back(rg.second.at("SM"));
-    mpopi_.init_names(samples);
+        // Parse the @RG header lines.
+        const char* p = bam_f_->h().text();
+        size_t line = 1;
+        try {
+            while (true) {
+                if (strncmp(p, "@RG\t", 4) == 0) {
+                    // Sample line.
+                    rg_ids.push_back(string());
+                    samples.push_back(string());
+                    sample_ids.push_back(-1);
 
-    // Parse sample IDs, if any.
-    for (auto& rg : read_groups) {
-        auto id = rg.second.find("id");
-        if (id != rg.second.end())
-            mpopi_.set_sample_id(mpopi_.get_sample_index(rg.second.at("SM")), stoi(id->second));
+                    p += 4;
+                    while (*p && *p != '\n') {
+                        const char* q = p;
+                        while (*p && *p != '\n' && *p != '\t')
+                            ++p;
+
+                        if (strncmp(q, "ID:", 3) == 0) {
+                            rg_ids.back() = string(q+3, p);
+                        } else if (strncmp(q, "SM:", 3) == 0) {
+                            samples.back() = string(q+3, p);
+                        } else if (strncmp(q, "id:", 3) == 0) {
+                            char* end;
+                            sample_ids.back() = strtol(q+3, &end, 10);
+                            if (end != p)
+                                throw exception();
+                        }
+                        if (*p == '\t')
+                            ++p;
+                    }
+
+                    if (rg_ids.back().empty() || samples.back().empty() || sample_ids.back() == -1)
+                        throw exception();
+                }
+
+                p = strchr(p, '\n');
+                if (p == NULL)
+                    break;
+                ++p;
+                ++line;
+            }
+        } catch (exception&) {
+            cerr << "Error: Malformed BAM header, at line " << line << ".\n";
+            throw;
+        }
+
+        // Initialize the MetaPopInfo.
+        mpopi_.init_names(samples);
+
+        // Set the sample IDs.
+        assert(sample_ids.size() == samples.size());
+        for (size_t s=0; s<samples.size(); ++s)
+            mpopi_.set_sample_id(mpopi_.get_sample_index(samples[s]),sample_ids[s]);
+
+        // Initialize `rg_to_sample_`.
+        assert(rg_ids.size() == samples.size());
+        for (size_t s=0; s<mpopi_.samples().size(); ++s)
+            rg_to_sample_[rg_ids[s]] = mpopi_.get_sample_index(samples[s]);
     }
 
-    // Fill the (read group : sample) map.
-    for (auto& rg : read_groups)
-        rg_to_sample_.insert({rg.first, mpopi_.get_sample_index(rg.second.at("SM"))});
+    //
+    // If the first locus has alignment information: this is a ref-based analysis,
+    // record all the alignment positions. Otherwise, assume it's a de novo analysis.
+    //
+    {
+        const char* p = bam_f_->h().text();
+        size_t line = 1;
+        while (true) {
+            if (strncmp(p, "@SQ\t", 4) == 0) {
+                loci_aln_positions_.push_back(NULL);
+                while (*p && *p != '\n') {
+                    if (strncmp(p, "pos:", 4) == 0) {
+                        loci_aln_positions_.back() = p+4;
+                        break; // Skip the rest of the line.
+                    }
+                    while (*p && *p != '\n' && *p != '\t')
+                        ++p;
+                    if (*p == '\t')
+                        ++p;
+                }
+                if (loci_aln_positions_.back() == NULL) {
+                    if (loci_aln_positions_.size() == 1) {
+                        // de novo.
+                        loci_aln_positions_ = vector<const char*>();
+                        break;
+                    } else {
+                        cerr << "Error: In BAM header, at line " << line
+                             << ": alignment information is missing.\n";
+                        throw exception();
+                    }
+                }
+            }
 
+            p = strchr(p, '\n');
+            if (p == NULL)
+                break;
+            ++p;
+            ++line;
+        }
+        assert(loci_aln_positions_.empty() || loci_aln_positions_.size() == bam_f_->h().n_ref_chroms());
+    }
+
+    //
     // Read the very first record.
+    //
     if (!bam_f_->next_record()) {
         cerr << "Error: No records in BAM file '" << bam_path << "'.\n";
         throw exception();
@@ -101,6 +194,13 @@ bool BamCLocReader::read_one_locus(CLocReadSet& readset) {
     }
     last_chrom = curr_chrom;
     readset.id(atoi(bam_f_->h().chrom_str(curr_chrom)));
+    if (!loci_aln_positions_.empty()) {
+        const char* p = loci_aln_positions_.at(curr_chrom);
+        const char* q = p;
+        while (*q && *q != '\n' && *q != '\t')
+            ++q;
+        readset.pos(PhyLoc(string(p, q)));
+    }
 
     // Read all the reads of the locus, and one more.
     do {

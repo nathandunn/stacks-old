@@ -4,6 +4,38 @@
 #include "utils.h"
 #include "Seq.h"
 
+PhyLoc::PhyLoc(const string& s) : PhyLoc() {
+    try {
+        // Chromosome.
+        const char* p = strchr(s.c_str(), ':');
+        if (p == NULL)
+            throw exception();
+        chr = new char[p-s.c_str()+1];
+        strncpy(chr, s.c_str(), p-s.c_str());
+        chr[p-s.c_str()] = '\0';
+
+        // BP.
+        ++p;
+        char* end;
+        bp = strtol(p, &end, 10) + 1;
+        if (end == p)
+            throw exception();
+
+        // Strand.
+        if (*end != '\0') {
+            if (*end != ':')
+                throw exception();
+            p = end + 1;
+            if (!( (*p == '+' || *p == '-') && *(p+1) == '\0' ) )
+                throw exception();
+            strand = (*p == '+') ? strand_plus : strand_minus;
+        }
+    } catch (exception&) {
+        cerr << "Error: Malformed genomic position '" << s << "'.\n";
+        throw;
+    }
+}
+
 Seq::Seq() {
     this->id       = NULL;
     this->seq      = NULL;

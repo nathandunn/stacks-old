@@ -114,18 +114,24 @@ class BamHeader {
 public:
     BamHeader() : h_(NULL) {}
     ~BamHeader() {if (h_!=NULL) bam_hdr_destroy(h_);}
-
-    // n.b. sam_hdr_read() calls bam_hdr_init()
     void init() {h_ = bam_hdr_init();}
-    void init(bam_hdr_t* h) {h_ = h;}
+    void init(samFile* bam_f) {h_ = sam_hdr_read(bam_f);}
 
-    bam_hdr_t* h() {return h_;}
+    const bam_hdr_t* h() const {return h_;}
+          bam_hdr_t* h()       {return h_;}
+
+    const char* text() const {return h_->text;}
 
     size_t n_ref_chroms() const {return h_->n_targets;}
     const char* chrom_str(int32_t index) const {
         if (index >= h_->n_targets)
             throw std::out_of_range("out_of_range in BamHeader::chrom_str");
         return h_->target_name[index];
+    }
+    size_t chrom_len(int32_t index) const {
+        if (index >= h_->n_targets)
+            throw std::out_of_range("out_of_range in BamHeader::chrom_len");
+        return h_->target_len[index];
     }
 
     typedef map<string, map<string, string>> ReadGroups; // map of ( ID: (TAG: VALUE) )
@@ -145,7 +151,7 @@ public:
             cerr << "Error: Failed to open BAM file '" << path << "'.\n";
             throw exception();
         }
-        hdr.init(sam_hdr_read(bam_fh));
+        hdr.init(bam_fh);
     };
     ~Bam() {hts_close(bam_fh);};
 

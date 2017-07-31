@@ -217,12 +217,11 @@ try {
         }
         cout << "\n";
 
-        logger->l << "##BEGIN badly_phased\n"
-                  << "# cat *.log | sed -n '/^##BEGIN badly_phased/,/^##END/ p' *.log | cut -c2- | grep -v \\#\n"
-                  << "#n_tot_samples\tn_bad_samples\tn_loci\n";
+        logger->l << "#BEGIN badly_phased\n"
+                  << "n_tot_samples\tn_bad_samples\tn_loci\n";
         for (auto& elem : loc_proc.n_badly_phased_samples)
-            logger->l << '#' << elem.first.second << '\t' << elem.first.first << '\t' << elem.second << '\n';
-        logger->l << "##END badly_phased\n" << "#\n";
+            logger->l << elem.first.second << '\t' << elem.first.first << '\t' << elem.second << '\n';
+        logger->l << "#END badly_phased\n";
     }
 
     // Cleanup & return.
@@ -270,6 +269,7 @@ void LocusProcessor::operator() (CLocReadSet&& loc) {
     //
     CLocAlnSet pe_aln_loc (loc.mpopi());
     pe_aln_loc.id(loc.id());
+    pe_aln_loc.pos(loc.pos());
     if (!ignore_pe_reads) {
         if (!dbg_true_alns) {
             do { // (Avoiding nested ifs.)
@@ -345,7 +345,9 @@ void LocusProcessor::operator() (CLocReadSet&& loc) {
     //
     // Build the foward-reads object.
     //
-    CLocAlnSet fw_aln_loc (loc.mpopi(), loc.id());
+    CLocAlnSet fw_aln_loc (loc.mpopi());
+    fw_aln_loc.id(loc.id());
+    fw_aln_loc.pos(loc.pos());
     if (!dbg_true_alns) {
         fw_aln_loc.ref(DNASeq4(loc.reads().at(0).seq));
         for (SRead& r : loc.reads()) {
@@ -376,12 +378,15 @@ void LocusProcessor::operator() (CLocReadSet&& loc) {
     //
     // Merge the forward & paired-end contigs.
     //
-    CLocAlnSet aln_loc (fw_aln_loc.mpopi(), fw_aln_loc.id());
+    CLocAlnSet aln_loc (fw_aln_loc.mpopi());
+    aln_loc.id(fw_aln_loc.id());
+    aln_loc.pos(fw_aln_loc.pos());
     if (!dbg_true_alns) {
         if (pe_aln_loc.reads().empty()) {
             aln_loc = move(fw_aln_loc);
         } else {
-            CLocAlnSet dummy (fw_aln_loc.mpopi(), fw_aln_loc.id());
+            CLocAlnSet dummy (fw_aln_loc.mpopi());
+            dummy.id(fw_aln_loc.id());
             dummy.ref(DNASeq4(string(10, 'N')));
             aln_loc = CLocAlnSet::juxtapose(
                     move(fw_aln_loc),
@@ -1007,6 +1012,14 @@ void LocusProcessor::write_one_locus (
     // Write the fasta record.
     gzputs(o_gzfasta_f, ">");
     gzputs(o_gzfasta_f, to_string(loc_id).c_str());
+    if (!aln_loc.pos().empty()) {
+        const PhyLoc& p = aln_loc.pos();
+        gzputs(o_gzfasta_f, " pos=");
+        gzputs(o_gzfasta_f, p.chr);
+        gzputs(o_gzfasta_f, ":");
+        gzputs(o_gzfasta_f, to_string(p.bp+1).c_str());
+        gzputs(o_gzfasta_f, p.strand == strand_plus ? ":+" : ":-");
+    }
     gzputs(o_gzfasta_f, " NS=");
     gzputs(o_gzfasta_f, to_string(n_remaining_samples).c_str());
     if (n_remaining_samples != samples_w_reads.size()) {
