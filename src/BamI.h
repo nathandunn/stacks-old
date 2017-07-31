@@ -257,7 +257,12 @@ Bam::next_seq(Seq& s)
                 clipped += op.second;
         double pct_clipped = (double) clipped / seq.length();
 
-        s = Seq(rec.qname().c_str(), seq.c_str(), qual.c_str(),
+        string name = rec.qname();
+        if (rec.is_read1())
+            name += "/1";
+        else if (rec.is_read2())
+            name += "/2";
+        s = Seq(name.c_str(), seq.c_str(), qual.c_str(),
                 hdr.chrom_str(rec.chrom()), bp, strand,
                 rec.aln_type(), pct_clipped, rec.mapq());
 
