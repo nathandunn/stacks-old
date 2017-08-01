@@ -351,7 +351,7 @@ sub initialize_samples {
             }
 
             if ($found == false) {
-                die("Unable to find sample '$sample' in directory '$sample_path' as specified in the population map, '$popmap_path'.\n");
+                die("Error: Failed to open '$sample_path$sample.(fq|fq.gz|fa|etc.)'.\n");
             }
         }
 
@@ -798,7 +798,7 @@ sub parse_command_line {
         elsif ($_ =~ /^--samples$/) {
             $sample_path = shift @ARGV;
             
-        } elsif ($_ =~ /^-O$/) { 
+        } elsif ($_ =~ /^-O$/ || $_ =~ /^--popmap$/) { 
 	    $popmap_path = shift @ARGV;
 	    push(@_populations, "-M " . $popmap_path); 
 
@@ -938,50 +938,45 @@ sub usage {
     version();
 
     print STDERR <<EOQ; 
-denovo_map.pl -p path -r path [-s path] -o path [-t] [-m min_cov] [-M mismatches] [-n mismatches] [-T num_threads] [-A type] [-O popmap] [-B db -b batch_id -D "desc"] [-S -i num] [-e path] [-d] [-h]
-    b: batch ID representing this dataset (an integer, e.g. 1, 2, 3).
-    o: path to write pipeline output files.
-    O: if analyzing one or more populations, specify a pOpulation map.
-    A: if processing a genetic map, specify the cross type, 'CP', 'F2', 'BC1', 'DH', or 'GEN'.
-    T: specify the number of threads to execute.
-    e: executable path, location of pipeline programs.
-    d: perform a dry run. Do not actually execute any programs, just print what would be executed.
-    h: display this help message.
+denovo_map.pl --samples dir --popmap path -o dir (assembly options) -b batch_id (database options) [-X prog:"opts" ...]
+denovo_map.pl -s path [-s path ...] -o dir (assembly options) -b batch_id (database options) [-X prog:"opts" ...]
+denovo_map.pl -p path -r path -o path -A type (assembly options) -b batch_id (database options) [-X prog:"opts" ...]
 
-  Specify each sample separately:
-      p: path to a FASTQ/FASTA file containing one set of parent sequences from a mapping cross.
-      r: path to a FASTQ/FASTA file containing one set of progeny sequences from a mapping cross.
-      s: path to a FASTQ/FASTA file containing an individual sample from a population.
-  Specify a path to samples and provide a population map:
-      --samples <path>: specify a path to the directory of samples (samples will be read from population map).
+  Input files:
+    --samples: path to the directory containing the samples reads files.
+    --popmap: path to a population map file (format is "<name> TAB <pop>", one sample per line).
+  or
+    s: path to a file containing the reads of one sample.
+  or
+    p: path to a file containing the reads of one parent, in a mapping cross.
+    r: path to a file containing the reads of one progeny, in a mapping cross.
+
+  General options:
+    o: path to an output directory.
+    b: a numeric database ID for this run (e.g. 1).
+    A: for a mapping cross, specify the type; one of 'CP', 'F2', 'BC1', 'DH', or 'GEN'.
+    X: additional options for specific pipeline components, e.g. -X "populations: -p 3 -r 0.50".
+    T: the number of threads/CPUs to use (default: 1).
+    d: Dry run. Do not actually execute anything, just print the commands that would be executed.
 
   Stack assembly options:
-    m: specify a minimum number of identical, raw reads required to create a stack.
-    M: specify the number of mismatches allowed between loci when processing a single individual (default 2).
-    n: specify the number of mismatches allowed between loci when building the catalog (default 1).
-    --gapped: perform gapped assemblies in ustacks, cstacks, and sstacks (default: off).
+    M: number of mismatches allowed between stacks within individuals (for ustacks).
+    n: number of mismatches allowed between stacks between individuals (for cstacks).
+    --gapped: perform gapped comparisons (for ustacks, cstacks, sstacks; default: off).
 
-    Advanced (rarely used) options:
-      P: specify a minimum number of identical, raw reads required to create a stack in 'progeny' individuals.
-      N: specify the number of mismatches allowed when aligning secondary reads to primary stacks (default M+2).
-      t: remove, or break up, highly repetitive RAD-Tags in the ustacks program.
-      H: disable calling haplotypes from secondary reads.
+  SNP model options:
+    --alpha: significance level at which to call genotypes (for ustacks; default: 0.05).
+    For the bounded model:
+      --bound_low <num>: lower bound for epsilon, the error rate, between 0 and 1.0 (default 0.0).
+      --bound_high <num>: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1.0).
 
   Database options:
-    B: specify a database to load data into.
+    S: disable database interaction.
+    B: specify an SQL database to load data into.
     D: a description of this batch to be stored in the database.
-    S: disable recording SQL data in the database.
     i: starting sample_id, this is determined automatically if database interaction is enabled.
     --create_db: create the database specified by '-B' and populate the tables.
     --overw_db: delete the database before creating a new copy of it (turns on --create_db).
-
-  SNP Model Options (these options are passed on to ustacks):
-    --bound_low <num>: lower bound for epsilon, the error rate, between 0 and 1.0 (default 0).
-    --bound_high <num>: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1).
-    --alpha <num>: chi square significance level required to call a heterozygote or homozygote, either 0.1, 0.05 (default), 0.01, or 0.001.
-
-  Arbitrary command line options:
-    -X "program:option": pass a command line option to one of the pipeline components, e.g.'-X "ustacks:--max_locus_stacks 4"'.
 
 EOQ
 

@@ -80,7 +80,7 @@ double qchisq(double alpha, size_t df) {
     try {
         return table[df-1].at(alpha);
     } catch (std::out_of_range&) {
-        cerr << "Error: Unsupported alpha value '" << alpha << "'.\n";
+        cerr << "Error: Unsupported alpha value '" << alpha << "'; pick one of 0.05, 0.01, 0.005, 0.001...\n";
         throw std::invalid_argument("qchisq");
     }
 }
