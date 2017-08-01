@@ -431,7 +431,23 @@ CSLocus* new_cslocus(const Seq& consensus, const vector<VcfRecord>& records, int
     loc->add_consensus(consensus.seq);
 
     // loc
-    loc->loc = PhyLoc("", 0, strand_plus);
+    // If the analysis is reference-based, there will be a ' pos=...' field on
+    // the fasta ID line.
+    assert(loc->loc.empty());
+    const char* p = consensus.id;
+    while ((p = strchr(p, ' ')) != NULL) {
+        ++p;
+        if (strncmp(p, "pos=", 4)) {
+            p += 4;
+            const char* q = p;
+            while (*q && *q != ' ')
+                ++q;
+            loc->loc = PhyLoc(string(p, q));
+            break;
+        }
+    }
+    if (loc->loc.empty())
+        loc->loc = PhyLoc("", 0, strand_plus); // n.b. Not the same as PhyLoc(); with this `PhyLoc::chr != NULL`.
 
     // snps
     vector<const VcfRecord*> snp_records;
