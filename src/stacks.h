@@ -329,44 +329,6 @@ public:
 //
 
 inline
-void swap(PhyLoc& p, PhyLoc& q) {
-    char* chr = p.chr_;
-    p.chr_ = q.chr_;
-    q.chr_ = chr;
-
-    const uint bp = p.bp;
-    p.bp = q.bp;
-    q.bp = bp;
-
-    const strand_type strand = p.strand;
-    p.strand = q.strand;
-    q.strand = strand;
-}
-
-inline
-bool PhyLoc::operator==(const PhyLoc& other) const {
-    if (bp == other.bp
-            && strand == other.strand
-            && strcmp(chr_, other.chr_) == 0)
-        return true;
-    else
-        return false;
-}
-
-inline
-bool PhyLoc::operator<(const PhyLoc& other) const {
-    const int chrcmp = strcmp(chr_, other.chr_);
-    if (chrcmp != 0)
-        // Alphanumeric.
-        return chrcmp < 0;
-    else if (bp != other.bp)
-        return bp < other.bp;
-    else
-        // Minus strand first.
-        return strand == strand_minus && other.strand == strand_plus;
-}
-
-inline
 PStack::PStack(const PStack& other)
         : id(other.id)
         , count (other.count)
