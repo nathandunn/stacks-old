@@ -31,6 +31,7 @@ use strict;
 use POSIX;
 use File::Temp qw/ mktemp /;
 use File::Spec;
+use File::Which;
 use constant stacks_version => "_VERSION_";
 
 use constant true  => 1;
@@ -56,12 +57,14 @@ my $sample_id    = 1;
 my $desc         = ""; # Database description of this dataset
 my $date         = ""; # Date relevent to this data, formatted for SQL: 2009-05-31
 my $gzip         = false;
+my $v2           = false;
+my $paired       = false;
 
 my @parents;
 my @progeny;
 my @samples;
 
-my (@_ustacks, @_cstacks, @_sstacks, @_genotypes, @_populations);
+my (@_ustacks, @_cstacks, @_sstacks, @_tsv2bam, @_samtools_merge, @_rystacks, @_genotypes, @_populations);
 
 my $cmd_str = $0 . " " . join(" ", @ARGV);
 
@@ -72,12 +75,10 @@ my $cnf = (-e $ENV{"HOME"} . "/.my.cnf") ? $ENV{"HOME"} . "/.my.cnf" : $mysql_co
 #
 # Check for the existence of the necessary pipeline programs
 #
-die ("Unable to find '" . $exe_path . "ustacks'.\n")          if (!-e $exe_path . "ustacks"          || !-x $exe_path . "ustacks");
-die ("Unable to find '" . $exe_path . "cstacks'.\n")          if (!-e $exe_path . "cstacks"          || !-x $exe_path . "cstacks");
-die ("Unable to find '" . $exe_path . "sstacks'.\n")          if (!-e $exe_path . "sstacks"          || !-x $exe_path . "sstacks");
-die ("Unable to find '" . $exe_path . "genotypes'.\n")        if (!-e $exe_path . "genotypes"        || !-x $exe_path . "genotypes");
-die ("Unable to find '" . $exe_path . "populations'.\n")      if (!-e $exe_path . "populations"      || !-x $exe_path . "populations");
-die ("Unable to find '" . $exe_path . "index_radtags.pl'.\n") if (!-e $exe_path . "index_radtags.pl" || !-x $exe_path . "index_radtags.pl");
+foreach my $prog ("ustacks", "cstacks", "sstacks", "tsv2bam", "rystacks", "genotypes", "populations", "index_radtags.pl") {
+    die "Unable to find '" . $exe_path . $prog . "'.\n" if (!-e $exe_path . $prog || !-x $exe_path . $prog);
+}
+die("Unable to find 'samtools'.\n") if (! which "samtools");
 
 my ($log, $log_fh, $sample);
 
@@ -231,13 +232,87 @@ sub execute_stacks {
         check_return_value($rv, $log_fh);
     }
 
+    if ($v2) {
+        #
+        # Sort the reads according by catalog locus / run tsv2bam.
+        # TODO: Update after parallelizing tsv2bam.
+        #
+        print STDERR "Sorting reads by RAD locus...\n";
+        foreach $sample (@parents, @progeny, @samples) {
+            $cmd = $exe_path . "tsv2bam -s $out_path/$sample->{'file'}";
+            if ($paired) {
+                $cmd .= " -f $sample->{'path_pe'}";
+            }
+            foreach (@_tsv2bam) {
+                $cmd .= " " . $_;
+            }
+            $cmd .= " 2>&1";
+            print STDERR  "  $cmd\n";
+            print $log_fh "$cmd\n\n";
+        	if (!$dry_run) {
+                open($pipe_fh, "$cmd |");
+                while (<$pipe_fh>) {
+                    print $log_fh $_;
+                }
+                close($pipe_fh);
+                my $rv = $? >> 8;
+                check_return_value($rv, $log_fh);
+        	}
+        }
+        
+        #
+        # Merge the matches.bam files / run samtools merge.
+        #    
+        $cmd = "samtools merge $out_path/batch_$batch_id.catalog.bam";
+        foreach $sample (@parents, @progeny, @samples) {
+            $cmd .= " $out_path/$sample->{'file'}.matches.bam";
+        }
+        foreach (@_samtools_merge) {
+            $cmd .= " " . $_;
+        }
+        $cmd .= " 2>&1";
+        print STDERR  "  $cmd\n";
+        print $log_fh "$cmd\n\n";
+    	if (!$dry_run) {
+            open($pipe_fh, "$cmd |");
+            while (<$pipe_fh>) {
+                print $log_fh $_;
+            }
+            close($pipe_fh);
+            my $rv = $? >> 8;
+            check_return_value($rv, $log_fh);
+    	}
+    	
+    	#
+    	# Call genotypes / run rystacks.
+    	# TODO: Update after renaming rystacks.
+    	#
+        print STDERR "Calling variants, genotypes and haplotypes...\n";
+    	$cmd = $exe_path . "rystacks -P $out_path";
+    	foreach (@_rystacks) {
+    	    $cmd .= " " . $_;
+    	}
+        $cmd .= " 2>&1";
+        print STDERR  "  $cmd\n";
+        print $log_fh "$cmd\n\n";
+    	if (!$dry_run) {
+            open($pipe_fh, "$cmd |");
+            while (<$pipe_fh>) {
+                print $log_fh $_;
+            }
+            close($pipe_fh);
+            my $rv = $? >> 8;
+            check_return_value($rv, $log_fh);
+    	}
+    }
+    
     if ($data_type eq "map") {
         #
         # Generate a set of observed haplotypes and a set of markers and generic genotypes
         #
         printf(STDERR "Generating genotypes...\n");
 
-        $cmd = $exe_path . "genotypes -b $batch_id -P $out_path -r 1 -c -s " . join(" ", @_genotypes) . " 2>&1";
+        $cmd = $exe_path . "genotypes" . ($v2 ? " --v2" : "") . " -b $batch_id -P $out_path -r 1 -c -s " . join(" ", @_genotypes) . " 2>&1";
         print STDERR  "$cmd\n";
         print $log_fh "$cmd\n";
 
@@ -254,8 +329,8 @@ sub execute_stacks {
     } else {
         printf(STDERR "Calculating population-level summary statistics\n");
 
-        $cmd = $exe_path . "populations -b $batch_id -P $out_path -s " . join(" ", @_populations) . " 2>&1";
-        print STDERR  "$cmd\n";
+        $cmd = $exe_path . "populations" . ($v2 ? " --v2" : "") . " -b $batch_id -P $out_path -s " . join(" ", @_populations) . " 2>&1";
+        print STDERR  "  $cmd\n";
         print $log_fh "$cmd\n";
 
         if ($dry_run == 0) {
@@ -327,20 +402,21 @@ sub initialize_samples {
         #
         # If a population map was specified and no samples were provided on the command line.
         #
-        my ($i, $extension);
+        my ($i, $extension, $extension_pe);
         my $first = true;
         foreach $sample (@{$sample_list}) {
             if ($first) {
                 $first = false;
                 my $found = false;
                 for ($i = 0; $i < scalar(@suffixes); $i++) {
-                    if (-e $sample_path . $sample . "." . $suffixes[$i]) {
+                    if (!$paired && -e $sample_path . $sample . "." . $suffixes[$i]) {
                         $found = true;
                         $extension = "." . $suffixes[$i];
                         last;
                     } elsif (-e $sample_path . $sample . ".1." . $suffixes[$i]) {
                         $found = true;
                         $extension = ".1." . $suffixes[$i];
+                        $extension_pe = ".2." . $suffixes[$i];
                         last;
                     }
                 }
@@ -363,6 +439,14 @@ sub initialize_samples {
                                'suffix' => $suffixes[$i],
                                'type'   => "sample",
                                'fmt'    => $fmts[$i]});
+            if ($paired) {
+                my $path_pe = $sample_path . $sample . $extension_pe;
+                if (! -e $path_pe) {
+                    print STDERR "Error: Failed to open '$path'.\n";
+                    exit 1;
+                }
+                $samples[-1]->{'path_pe'} = $path_pe;
+            }
         }
 
     } else {
@@ -786,7 +870,7 @@ sub parse_command_line {
 
     while (@ARGV) {
 	$_ = shift @ARGV;
-        if    ($_ =~ /^-v$/) { version(); exit(); }
+        if    ($_ =~ /^-v$/) { version(); exit 1; }
 	elsif ($_ =~ /^-h$/) { usage(); }
 	elsif ($_ =~ /^-p$/) { push(@parents, { 'path' => shift @ARGV }); }
 	elsif ($_ =~ /^-r$/) { push(@progeny, { 'path' => shift @ARGV }); }
@@ -802,6 +886,8 @@ sub parse_command_line {
 	elsif ($_ =~ /^-B$/) { $db        = shift @ARGV; }
 	elsif ($_ =~ /^-m$/) { $min_cov   = shift @ARGV; }
 	elsif ($_ =~ /^-P$/) { $min_rcov  = shift @ARGV; }
+	elsif ($_ =~ /^--v2$/) { $v2  = true; }
+	elsif ($_ =~ /^--paired-ends$/) { $paired  = true; }
         elsif ($_ =~ /^--samples$/) {
             $sample_path = shift @ARGV;
             
@@ -883,6 +969,15 @@ sub parse_command_line {
 	    } elsif ($prog eq "sstacks") {
 		push(@_sstacks, $opt); 
 
+	    } elsif ($prog eq "tsv2bam") {
+		push(@_tsv2bam, $opt); 
+
+	    } elsif ($prog eq "samtools_merge") {
+		push(@_samtools_merge, $opt); 
+
+	    } elsif ($prog eq "rystacks") {
+		push(@_rystacks, $opt); 
+
 	    } elsif ($prog eq "genotypes") {
 		push(@_genotypes, $opt); 
 
@@ -926,6 +1021,11 @@ sub parse_command_line {
 	usage();
     }
 
+    if ($paired && !$v2) {
+        print STDERR "Error: Option --paired requires --v2.\n";
+        usage();
+    }
+
     if (length($sample_path) > 0) {
         $sample_path .= "/" if (substr($sample_path, -1) ne "/");
     }
@@ -959,6 +1059,7 @@ denovo_map.pl -p path -r path -o path -A type (assembly options) -b batch_id (da
     r: path to a file containing the reads of one progeny, in a mapping cross.
 
   General options:
+    --v2: Use the v2 pipeline.
     o: path to an output directory.
     b: a numeric database ID for this run (e.g. 1).
     A: for a mapping cross, specify the type; one of 'CP', 'F2', 'BC1', 'DH', or 'GEN'.
@@ -977,6 +1078,9 @@ denovo_map.pl -p path -r path -o path -A type (assembly options) -b batch_id (da
       --bound_low <num>: lower bound for epsilon, the error rate, between 0 and 1.0 (default 0.0).
       --bound_high <num>: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1.0).
 
+  Paired-end options:
+    --paired-ends: after assembling RAD loci, assemble mini-contigs with paired-end reads.
+
   Database options:
     S: disable database interaction.
     B: specify an SQL database to load data into.
@@ -987,5 +1091,5 @@ denovo_map.pl -p path -r path -o path -A type (assembly options) -b batch_id (da
 
 EOQ
 
-    exit(0);
+    exit 1;
 }
