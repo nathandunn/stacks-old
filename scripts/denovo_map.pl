@@ -139,7 +139,7 @@ sub execute_stacks {
             $sample_id = $sample_ids->{$sample->{'file'}};
         }
 
-        $path = $sample->{'path'} . $sample->{'file'} . "." . $sample->{'suffix'};
+        $path = $sample->{'path'};
         
         if ($sample->{'type'} eq "sample") {
             $cmd = $exe_path . "ustacks -t $sample->{'fmt'} -f $path -o $out_path -i $sample_id $minc "  . join(" ", @_ustacks) . " 2>&1";
@@ -320,8 +320,6 @@ sub parse_population_map {
 sub initialize_samples {
     my ($parents, $progeny, $samples, $sample_list, $pop_ids, $grp_ids) = @_;
 
-    my ($local_gzip, $file, $prefix, $suffix, $path, $found, $i);
-
     if (scalar(@{$sample_list}) > 0 && scalar(@{$samples}) == 0) {
         my @suffixes = ("fq",    "fastq", "fq.gz",   "fastq.gz", "fa",    "fasta", "fa.gz",   "fasta.gz");
         my @fmts     = ("fastq", "fastq", "gzfastq", "gzfastq",  "fasta", "fasta", "gzfasta", "gzfasta");
@@ -329,36 +327,49 @@ sub initialize_samples {
         #
         # If a population map was specified and no samples were provided on the command line.
         #
+        my ($i, $extension);
+        my $first = true;
         foreach $sample (@{$sample_list}) {
-            $found = false;
-            
-            for ($i = 0; $i < scalar(@suffixes); $i++) {
-                $path = $sample_path . $sample . "." . $suffixes[$i];
-                if (-e $path) {
-
-                    if ($i == 2 || $i == 3 || $i == 6 || $i == 7) {
-                        $gzip = true;
+            if ($first) {
+                $first = false;
+                my $found = false;
+                for ($i = 0; $i < scalar(@suffixes); $i++) {
+                    if (-e $sample_path . $sample . "." . $suffixes[$i]) {
+                        $found = true;
+                        $extension = "." . $suffixes[$i];
+                        last;
+                    } elsif (-e $sample_path . $sample . ".1." . $suffixes[$i]) {
+                        $found = true;
+                        $extension = ".1." . $suffixes[$i];
+                        last;
                     }
-
-                    push(@{$samples}, {'path'   => $sample_path,
-                                       'file'   => $sample,
-                                       'suffix' => $suffixes[$i],
-                                       'type'   => "sample",
-                                       'fmt'    => $fmts[$i]});
-                    $found = true;
-                    last;
+                }
+                if (!$found) {
+                    print STDERR "Error: Failed to find the first reads file '$sample_path$sample(.1).(fq|fastq|fa|fasta)(.gz)'.\n";
+                    exit 1;
+                }
+                if ($i == 2 || $i == 3 || $i == 6 || $i == 7) {
+                    $gzip = true;
                 }
             }
-
-            if ($found == false) {
-                die("Error: Failed to open '$sample_path$sample.(fq|fq.gz|fa|etc.)'.\n");
+            
+            my $path = $sample_path . $sample . $extension;
+            if (! -e $path) {
+                print STDERR "Error: Failed to open '$path'.\n";
+                exit 1;
             }
+            push(@{$samples}, {'path'   => $path,
+                               'file'   => $sample,
+                               'suffix' => $suffixes[$i],
+                               'type'   => "sample",
+                               'fmt'    => $fmts[$i]});
         }
 
     } else {
         #
         # Process any samples that were specified on the command line.
         #
+        my ($prefix, $suffix, $dir, $file, $local_gzip);
         foreach $sample (@{$parents}, @{$progeny}, @{$samples}) {
             $local_gzip = false;
 
@@ -374,13 +385,11 @@ sub initialize_samples {
             $sample->{'suffix'} .= ".gz" if ($local_gzip == true);
 
             if ($prefix =~ /^.*\/.+$/) {
-                ($path, $file) = ($prefix =~ /^(.*\/)(.+)$/);
+                ($dir, $file) = ($prefix =~ /^(.*\/)(.+)$/);
             } else {
+                $dir = "";
                 $file = $prefix;
-                $path = "";
             }
-
-            $sample->{'path'} = $path;
             $sample->{'file'} = $file;
             
             if ($local_gzip == true) {
@@ -401,10 +410,8 @@ sub initialize_samples {
                 }
             }
 
-            $path = $sample->{'path'} . $sample->{'file'} . "." . $sample->{'suffix'};
-
-            if (!-e $path) {
-                die("Unable to locate sample file '$path'\n");
+            if ($sample->{'path'} != $dir . $sample->{'file'} . "." . $sample->{'suffix'}) {
+                die("This should never happen.");
             }
         }
 
