@@ -984,7 +984,7 @@ apply_locus_constraints(map<int, CSLocus *> &catalog,
             if (verbose)
                 log_fh << "removed_locus\t"
                        << loc->id << "\t"
-                       << loc->loc.chr << "\t"
+                       << loc->loc.chr() << "\t"
                        << loc->sort_bp() +1 << "\t"
                        << 0 << "\tfailed_population_limit\n";
         }
@@ -1133,7 +1133,7 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
                     if (verbose) {
                         log_fh << "pruned_polymorphic_site\t"
                                << loc->id << "\t"
-                               << loc->loc.chr << "\t"
+                               << loc->loc.chr() << "\t"
                                << loc->sort_bp(loc->snps[i]->col) +1 << "\t"
                                << loc->snps[i]->col << "\t";
                         if (inc_prune)
@@ -1157,7 +1157,7 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
                 if (verbose)
                     log_fh << "removed_locus\t"
                            << loc->id << "\t"
-                           << loc->loc.chr << "\t"
+                           << loc->loc.chr() << "\t"
                            << loc->sort_bp() +1 << "\t"
                            << 0 << "\tno_snps_remaining\n";
                 blacklist.insert(loc->id);
@@ -1248,7 +1248,7 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
                     if (verbose) {
                         log_fh << "pruned_polymorphic_site\t"
                                << loc->id << "\t"
-                               << loc->loc.chr << "\t"
+                               << loc->loc.chr() << "\t"
                                << loc->sort_bp(loc->snps[i]->col) +1 << "\t"
                                << loc->snps[i]->col << "\t";
                         if (inc_prune)
@@ -1272,7 +1272,7 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
                 if (verbose)
                     log_fh << "removed_locus\t"
                            << loc->id << "\t"
-                           << loc->loc.chr << "\t"
+                           << loc->loc.chr() << "\t"
                            << loc->sort_bp() +1 << "\t"
                            << 0 << "\tno_snps_remaining\n";
                 blacklist.insert(loc->id);
@@ -1294,8 +1294,8 @@ order_unordered_loci(map<int, CSLocus *> &catalog)
 
     for (it = catalog.begin(); it != catalog.end(); it++) {
         loc = it->second;
-        if (strlen(loc->loc.chr) > 0)
-            chrs.insert(loc->loc.chr);
+        if (!loc->loc.empty())
+            chrs.insert(loc->loc.chr());
     }
 
     //
@@ -1309,10 +1309,7 @@ order_unordered_loci(map<int, CSLocus *> &catalog)
     uint bp = 1;
     for (it = catalog.begin(); it != catalog.end(); it++) {
         loc = it->second;
-        loc->loc.chr = new char[3];
-        strcpy(loc->loc.chr, "un");
-        loc->loc.bp  = bp;
-
+        loc->loc = PhyLoc("un", bp);
         bp += strlen(loc->con);
     }
 
@@ -2222,7 +2219,7 @@ int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
 
             uint k = 0;
             for (uint n = start; n < end; n++) {
-                fh << loc->id << "\t" << loc->loc.chr << "\t" << loc->sort_bp(n) +1;
+                fh << loc->id << "\t" << loc->loc.chr() << "\t" << loc->sort_bp(n) +1;
 
                 if (snp_locs.count(n) == 0) {
                     for (int j = 0; j < pmap->sample_cnt(); j++) {
@@ -3964,7 +3961,7 @@ calculate_summary_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Pop
 
                         fh << batch_id << "\t"
                            << loc->id << "\t"
-                           << loc->loc.chr << "\t"
+                           << loc->loc.chr() << "\t"
                            << loc->sort_bp(i) + 1 << "\t"
                            << i << "\t"
                            << mpopi.pops()[j].name << "\t";
@@ -5048,8 +5045,8 @@ write_generic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, bool write_gt
         if (expand_id) {
             if (loc->annotation.length() > 0)
                 id << "\t" << loc->id << "\t" << loc->annotation;
-            else if (strlen(loc->loc.chr) > 0)
-                id << "\t" << loc->id << "\t" << loc->loc.chr << "_" << loc->loc.bp +1;
+            else if (strlen(loc->loc.chr()) > 0)
+                id << "\t" << loc->id << "\t" << loc->loc.chr() << "_" << loc->loc.bp +1;
             else
                 id << "\t" << loc->id << "\t";
         }

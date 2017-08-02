@@ -10,9 +10,9 @@ PhyLoc::PhyLoc(const string& s) : PhyLoc() {
         const char* p = strchr(s.c_str(), ':');
         if (p == NULL || p == s.c_str())
             throw exception();
-        chr = new char[p-s.c_str()+1];
-        strncpy(chr, s.c_str(), p-s.c_str());
-        chr[p-s.c_str()] = '\0';
+        chr_ = new char[p-s.c_str()+1];
+        strncpy(chr_, s.c_str(), p-s.c_str());
+        chr_[p-s.c_str()] = '\0';
 
         // BP.
         ++p;

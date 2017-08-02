@@ -101,7 +101,7 @@ void PStack::extend(const PhyLoc& phyloc, int length) {
     if (this->seq == NULL)
         return;
 
-    assert(strcmp(phyloc.chr, loc.chr) == 0
+    assert(strcmp(phyloc.chr(), loc.chr()) == 0
            && phyloc.strand == loc.strand);
 
     if (loc.strand == strand_plus) {

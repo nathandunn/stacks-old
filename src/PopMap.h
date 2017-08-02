@@ -555,8 +555,8 @@ int PopMap<LocusT>::order_loci(const map<int, LocusT*> &catalog)
     typename map<int, LocusT*>::const_iterator it;
 
     for (it = catalog.begin(); it != catalog.end(); it++) {
-        if (strlen(it->second->loc.chr) > 0)
-            this->ordered_loci[it->second->loc.chr].push_back(it->second);
+        if (!it->second->loc.empty())
+            this->ordered_loci[it->second->loc.chr()].push_back(it->second);
     }
 
     //

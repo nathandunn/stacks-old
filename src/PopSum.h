@@ -378,7 +378,7 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
                     log_fh << "within_population\t"
                            << "incompatible_locus\t"
                            << loc->id << "\t"
-                           << loc->loc.chr << "\t"
+                           << loc->loc.chr() << "\t"
                            << loc->sort_bp(loc->snps[k]->col) +1 << "\t"
                            << loc->snps[k]->col << "\t"
                            << pop.name << "\n";

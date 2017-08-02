@@ -185,7 +185,7 @@ find_matches_by_genomic_loc(map<int, Locus *> &sample_1, map<int, QLocus *> &sam
     map<string, set<int> > locations;
     for (j = sample_1.begin(); j != sample_1.end(); j++) {
         snprintf(id, id_len - 1, "%s|%d|%c",
-                 j->second->loc.chr,
+                 j->second->loc.chr(),
                  j->second->loc.bp,
                  j->second->loc.strand == strand_plus ? '+' : '-');
         locations[id].insert(j->second->id);
@@ -216,7 +216,7 @@ find_matches_by_genomic_loc(map<int, Locus *> &sample_1, map<int, QLocus *> &sam
 
             i = sample_2.find(keys[k]);
             snprintf(id, id_len - 1, "%s|%d|%c",
-                     i->second->loc.chr,
+                     i->second->loc.chr(),
                      i->second->loc.bp,
                      i->second->loc.strand == strand_plus ? '+' : '-');
 

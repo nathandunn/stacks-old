@@ -122,7 +122,7 @@ void populate_merged_tags(map<int, PStack *> &unique, map<int, MergedStack *> &m
     //
     for (i = unique.begin(); i != unique.end(); i++) {
         snprintf(id, id_len - 1, "%s|%d|%s",
-                 i->second->loc.chr,
+                 i->second->loc.chr(),
                  i->second->loc.bp,
                  i->second->loc.strand == strand_plus ? "+" : "-");
         locations[id].insert(i->second->id);
@@ -139,7 +139,7 @@ void populate_merged_tags(map<int, PStack *> &unique, map<int, MergedStack *> &m
         //
         s = k->second.begin();
         m->add_consensus(unique[*s]->seq);
-        m->loc.set(unique[*s]->loc.chr, unique[*s]->loc.bp, unique[*s]->loc.strand);
+        m->loc.set(unique[*s]->loc.chr(), unique[*s]->loc.bp, unique[*s]->loc.strand);
 
         //
         // Record the individual stacks that were aligned together.
@@ -240,7 +240,7 @@ int reduce_radtags(HashMap &radtags, map<int, PStack *> &unique) {
             for (sit = (*it).second.begin(); sit != (*it).second.end(); sit++) {
                 if (strcmp((*sit)->loc_str, lit->first.c_str()) == 0) {
                     u->add_id((*sit)->id);
-                    u->loc.set((*sit)->loc.chr, (*sit)->loc.bp, (*sit)->loc.strand);
+                    u->loc.set((*sit)->loc.chr(), (*sit)->loc.bp, (*sit)->loc.strand);
                 }
             }
 

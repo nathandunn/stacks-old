@@ -198,7 +198,7 @@ int update_catalog_index(map<int, CLocus *> &catalog, map<string, int> &cat_inde
 
     for (j = catalog.begin(); j != catalog.end(); j++) {
         snprintf(id, id_len - 1, "%s|%d|%c",
-                 j->second->loc.chr,
+                 j->second->loc.chr(),
                  j->second->loc.bp,
                  j->second->loc.strand == strand_plus ? '+' : '-');
 
@@ -484,7 +484,7 @@ int add_unique_tag(pair<int, string> &sample_file, map<int, CLocus *> &catalog, 
     //
     // Add the physical genome location of this locus.
     //
-    c->loc.set(qloc->loc.chr, qloc->loc.bp, qloc->loc.strand);
+    c->loc.set(qloc->loc.chr(), qloc->loc.bp, qloc->loc.strand);
 
     catalog[c->id] = c;
 
@@ -966,7 +966,7 @@ int find_matches_by_genomic_loc(map<string, int> &cat_index, map<int, QLocus *> 
             i = sample.find(keys[k]);
 
             snprintf(id, id_len - 1, "%s|%d|%c",
-                     i->second->loc.chr,
+                     i->second->loc.chr(),
                      i->second->loc.bp,
                      i->second->loc.strand == strand_plus ? '+' : '-');
 
@@ -1570,7 +1570,7 @@ write_simple_output(CLocus *tag, ofstream &cat_file, ofstream &snp_file, ofstrea
         "0"          << "\t" <<
         batch_id     << "\t" <<
         tag->id      << "\t" <<
-        tag->loc.chr << "\t" <<
+        tag->loc.chr() << "\t" <<
         tag->loc.bp  << "\t" <<
         (tag->loc.strand == strand_plus ? "+" : "-") << "\t" <<
         "consensus"  << "\t" <<
@@ -1647,7 +1647,7 @@ write_gzip_output(CLocus *tag, gzFile &cat_file, gzFile &snp_file, gzFile &all_f
         "0"          << "\t" <<
         batch_id     << "\t" <<
         tag->id      << "\t" <<
-        tag->loc.chr << "\t" <<
+        tag->loc.chr() << "\t" <<
         tag->loc.bp  << "\t" <<
         (tag->loc.strand == strand_plus ? "+" : "-") << "\t" <<
         "consensus"  << "\t" <<

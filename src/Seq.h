@@ -27,54 +27,55 @@ enum strand_type {strand_plus, strand_minus};
 enum class AlnT {null, primary, secondary, supplementary};
 
 class PhyLoc {
+    char* chr_;
 public:
-    char       *chr;
+    const char* chr() const {if(chr_==NULL) throw std::out_of_range("PhyLoc::chr"); return chr_;}
     uint        bp;
     strand_type strand;
 
     PhyLoc() {
-        chr    = NULL;
+        chr_   = NULL;
         bp     = 0;
         strand = strand_plus;
     }
     PhyLoc(const PhyLoc& other)
-        : chr(NULL), bp(other.bp), strand(other.strand) {
-        if (other.chr != NULL) {
-            chr = new char[strlen(other.chr)+1];
-            strcpy(chr, other.chr);
+        : chr_(NULL), bp(other.bp), strand(other.strand) {
+        if (other.chr_ != NULL) {
+            chr_ = new char[strlen(other.chr())+1];
+            strcpy(chr_, other.chr_);
         }
     }
     PhyLoc& operator=(const PhyLoc& other) {PhyLoc cp (other); swap(*this, cp); return *this;}
     PhyLoc(const char *chr, uint bp) {
-        this->chr    = new char[strlen(chr)  + 1];
+        this->chr_   = new char[strlen(chr)  + 1];
         this->bp     = bp;
         this->strand = strand_plus;
-        strcpy(this->chr,  chr);
+        strcpy(this->chr_,  chr);
     }
     PhyLoc(const char *chr, uint bp, strand_type strnd) {
-        this->chr    = new char[strlen(chr)  + 1];
+        this->chr_   = new char[strlen(chr)  + 1];
         this->bp     = bp;
         this->strand = strnd;
-        strcpy(this->chr,  chr);
+        strcpy(this->chr_,  chr);
     }
     PhyLoc(const string& s); // Expects "CHROM:BP1(:[+-])?".
 
     ~PhyLoc() {
-        if (chr != NULL)
-            delete [] chr;
+        if (chr_ != NULL)
+            delete [] chr_;
     }
 
     void set(const char *ochr, uint obp, strand_type ostrand) {
-        if (chr != NULL)
-            delete[] chr;
-        chr    = new char[strlen(ochr)+1];
-        strcpy(chr,  ochr);
+        if (chr_ != NULL)
+            delete[] chr_;
+        chr_   = new char[strlen(ochr)+1];
+        strcpy(chr_,  ochr);
         bp     = obp;
         strand = ostrand;
     }
 
-    void clear() {if(chr!=NULL) {delete[] chr; chr=NULL;} bp=0; strand=strand_plus;}
-    bool empty() const {return chr == NULL || strlen(chr) == 0;}
+    void clear() {if(chr_!=NULL) {delete[] chr_; chr_=NULL;} bp=0; strand=strand_plus;}
+    bool empty() const {return chr_ == NULL || strlen(chr_) == 0;}
     friend void swap(PhyLoc& p, PhyLoc& q);
     bool operator==(const PhyLoc& other) const;
     bool operator<(const PhyLoc& other) const;
