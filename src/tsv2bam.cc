@@ -242,7 +242,7 @@ void run() {
             for (auto& cloc : catalog) {
                 // Add the @SQ line. Length is mandatory; all loci declare to be 10000bp.
                 header_text << "@SQ\tSN:" << cloc.first << "\tLN:10000";
-                if (cloc.second->loc.chr != NULL) {
+                if (!cloc.second->loc.empty()) {
                     const PhyLoc& pos = cloc.second->loc;
                     header_text << "\tpos:" << pos.chr
                                 << ':' << (pos.bp+1)

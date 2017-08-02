@@ -74,7 +74,7 @@ public:
     }
 
     void clear() {if(chr!=NULL) {delete[] chr; chr=NULL;} bp=0; strand=strand_plus;}
-    bool empty() const {return chr == NULL;}
+    bool empty() const {return chr == NULL || strlen(chr) == 0;}
     friend void swap(PhyLoc& p, PhyLoc& q);
     bool operator==(const PhyLoc& other) const;
     bool operator<(const PhyLoc& other) const;
