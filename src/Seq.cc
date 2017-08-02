@@ -8,7 +8,7 @@ PhyLoc::PhyLoc(const string& s) : PhyLoc() {
     try {
         // Chromosome.
         const char* p = strchr(s.c_str(), ':');
-        if (p == NULL)
+        if (p == NULL || p == s.c_str())
             throw exception();
         chr = new char[p-s.c_str()+1];
         strncpy(chr, s.c_str(), p-s.c_str());
