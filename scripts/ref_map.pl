@@ -31,6 +31,7 @@ use strict;
 use POSIX;
 use File::Temp qw/ mktemp /;
 use File::Spec;
+use File::Which;
 use constant stacks_version => "_VERSION_";
 
 use constant true  => 1;
@@ -55,12 +56,13 @@ my $sample_id    = 1;
 my $desc         = ""; # Database description of this dataset
 my $date         = ""; # Date relevent to this data, formatted for SQL: 2009-05-31
 my $gzip         = false;
+my $v2           = false;
 
 my @parents;
 my @progeny;
 my @samples;
 
-my (@_pstacks, @_cstacks, @_sstacks, @_genotypes, @_populations);
+my (@_pstacks, @_cstacks, @_sstacks, @_tsv2bam, @_samtools_merge, @_rystacks, @_genotypes, @_populations);
 
 my $cmd_str = $0 . " " . join(" ", @ARGV);
 
@@ -71,12 +73,10 @@ my $cnf = (-e $ENV{"HOME"} . "/.my.cnf") ? $ENV{"HOME"} . "/.my.cnf" : $mysql_co
 #
 # Check for the existence of the necessary pipeline programs
 #
-die ("Unable to find '" . $exe_path . "pstacks'.\n")          if (!-e $exe_path . "pstacks"          || !-x $exe_path . "pstacks");
-die ("Unable to find '" . $exe_path . "cstacks'.\n")          if (!-e $exe_path . "cstacks"          || !-x $exe_path . "cstacks");
-die ("Unable to find '" . $exe_path . "sstacks'.\n")          if (!-e $exe_path . "sstacks"          || !-x $exe_path . "sstacks");
-die ("Unable to find '" . $exe_path . "genotypes'.\n")        if (!-e $exe_path . "genotypes"        || !-x $exe_path . "genotypes");
-die ("Unable to find '" . $exe_path . "populations'.\n")      if (!-e $exe_path . "populations"      || !-x $exe_path . "populations");
-die ("Unable to find '" . $exe_path . "index_radtags.pl'.\n") if (!-e $exe_path . "index_radtags.pl" || !-x $exe_path . "index_radtags.pl");
+foreach my $prog ("pstacks", "cstacks", "sstacks", "tsv2bam", "rystacks", "genotypes", "populations", "index_radtags.pl") {
+    die "Unable to find '" . $exe_path . $prog . "'.\n" if (!-e $exe_path . $prog || !-x $exe_path . $prog);
+}
+die("Unable to find 'samtools'.\n") if (! which "samtools");
 
 my ($log, $log_fh, $sample);
 
@@ -230,7 +230,7 @@ sub execute_stacks {
         #
         printf(STDERR "Generating genotypes...\n");
 
-        $cmd = $exe_path . "genotypes -b $batch_id -P $out_path -r 1 -c -s " . join(" ", @_genotypes) . " 2>&1";
+        $cmd = $exe_path . "genotypes" . ($v2 ? " --v2" : "") . " -b $batch_id -P $out_path -r 1 -c -s " . join(" ", @_genotypes) . " 2>&1";
         print STDERR  "$cmd\n";
         print $log_fh "$cmd\n";
 
@@ -247,8 +247,8 @@ sub execute_stacks {
     } else {
         printf(STDERR "Calculating population-level summary statistics\n");
 
-        $cmd = $exe_path . "populations -b $batch_id -P $out_path -s " . join(" ", @_populations) . " 2>&1";
-        print STDERR  "$cmd\n";
+        $cmd = $exe_path . "populations" . ($v2 ? " --v2" : "") . " -b $batch_id -P $out_path -s " . join(" ", @_populations) . " 2>&1";
+        print STDERR  "  $cmd\n";
         print $log_fh "$cmd\n";
 
         if ($dry_run == 0) {
@@ -759,7 +759,7 @@ sub parse_command_line {
 
     while (@ARGV) {
 	$_ = shift @ARGV;
-        if    ($_ =~ /^-v$/) { version(); exit(); }
+        if    ($_ =~ /^-v$/) { version(); exit 1; }
 	elsif ($_ =~ /^-h$/) { usage(); }
 	elsif ($_ =~ /^-p$/) { push(@parents, { 'path' => shift @ARGV }); }
 	elsif ($_ =~ /^-r$/) { push(@progeny, { 'path' => shift @ARGV }); }
@@ -775,6 +775,7 @@ sub parse_command_line {
 	elsif ($_ =~ /^-B$/) { $db        = shift @ARGV; }
 	elsif ($_ =~ /^-m$/) { $min_cov   = shift @ARGV; }
 	elsif ($_ =~ /^-P$/) { $min_rcov  = shift @ARGV; }
+	elsif ($_ =~ /^--v2$/) { $v2  = true; }
         elsif ($_ =~ /^--samples$/) {
             $sample_path = shift @ARGV;
             
@@ -837,6 +838,15 @@ sub parse_command_line {
 
 	    } elsif ($prog eq "genotypes") {
 		push(@_genotypes, $opt); 
+
+            } elsif ($prog eq "tsv2bam") {
+                push(@_tsv2bam, $opt); 
+
+            } elsif ($prog eq "samtools_merge") {
+                push(@_samtools_merge, $opt); 
+
+            } elsif ($prog eq "rystacks") {
+                push(@_rystacks, $opt); 
 
 	    } elsif ($prog eq "populations") {
 		push(@_populations, $opt); 
@@ -911,6 +921,7 @@ ref_map.pl -p path -r path -o path -A type -b batch_id (database options) [-X pr
     r: path to a file containing the reads of one progeny, in a mapping cross.
 
   General options:
+    --v2: use the v2 pipeline.
     o: path to an output directory.
     b: a numeric database ID for this run (e.g. 1).
     A: for a mapping cross, specify the type; one of 'CP', 'F2', 'BC1', 'DH', or 'GEN'.
@@ -934,5 +945,5 @@ ref_map.pl -p path -r path -o path -A type -b batch_id (database options) [-X pr
 
 EOQ
 
-    exit(0);
+    exit 1;
 }
