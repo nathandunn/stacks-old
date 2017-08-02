@@ -139,8 +139,8 @@ write_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
                        << "_Allele_" << k
                        << " ["       << mpopi.samples()[j].name;
 
-                    if (strcmp(loc->loc.chr, "un") != 0)
-                        fh << "; " << loc->loc.chr << ", " << loc->sort_bp() + 1 << ", " << (loc->loc.strand == strand_plus ? "+" : "-");
+                    if (strcmp(loc->loc.chr(), "un") != 0)
+                        fh << "; " << loc->loc.chr() << ", " << loc->sort_bp() + 1 << ", " << (loc->loc.strand == strand_plus ? "+" : "-");
                     fh << "]\n"
                        << seq << "\n";
                 }
@@ -202,8 +202,8 @@ write_strict_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
                        << "_Locus_"  << d[j]->id
                        << "_Allele_" << 0
                        << " ["       << mpopi.samples()[j].name;
-                    if (strcmp(loc->loc.chr, "un") != 0)
-                        fh << "; " << loc->loc.chr << ", " << loc->sort_bp() + 1 << ", " << (loc->loc.strand == strand_plus ? "+" : "-");
+                    if (strcmp(loc->loc.chr(), "un") != 0)
+                        fh << "; " << loc->loc.chr() << ", " << loc->sort_bp() + 1 << ", " << (loc->loc.strand == strand_plus ? "+" : "-");
                     fh << "]\n"
                        << seq << "\n";
 
@@ -212,8 +212,8 @@ write_strict_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
                        << "_Locus_"  << d[j]->id
                        << "_Allele_" << 1
                        << " ["       << mpopi.samples()[j].name;
-                    if (strcmp(loc->loc.chr, "un") != 0)
-                        fh << "; " << loc->loc.chr << ", " << loc->sort_bp() + 1 << ", " << (loc->loc.strand == strand_plus ? "+" : "-");
+                    if (strcmp(loc->loc.chr(), "un") != 0)
+                        fh << "; " << loc->loc.chr() << ", " << loc->sort_bp() + 1 << ", " << (loc->loc.strand == strand_plus ? "+" : "-");
                     fh << "]\n"
                        << seq << "\n";
 
@@ -229,8 +229,8 @@ write_strict_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
                            << "_Locus_"  << d[j]->id
                            << "_Allele_" << k
                            << " ["       <<  mpopi.samples()[j].name;
-                        if (strcmp(loc->loc.chr, "un") != 0)
-                            fh << "; " << loc->loc.chr << ", " << loc->sort_bp() + 1 << ", " << (loc->loc.strand == strand_plus ? "+" : "-");
+                        if (strcmp(loc->loc.chr(), "un") != 0)
+                            fh << "; " << loc->loc.chr() << ", " << loc->sort_bp() + 1 << ", " << (loc->loc.strand == strand_plus ? "+" : "-");
                         fh << "]\n"
                            << seq << "\n";
                     }
@@ -294,7 +294,7 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
             sprintf(freq_alt, "%0.3f", 1 - sites[pos]->p_freq);
 
             VcfRecord rec;
-            rec.append_chrom(string(loc->loc.chr));
+            rec.append_chrom(string(loc->loc.chr()));
             rec.append_pos(loc->sort_bp(col) + 1);
             rec.append_id(to_string(loc->id) + "_" + to_string(col));
             rec.append_allele(Nt2(loc->loc.strand == strand_plus ? ref : reverse(ref)));
@@ -409,7 +409,7 @@ write_vcf(map<int, CSLocus *> &catalog,
             sprintf(freq_alt, "%0.3f", 1 - t->nucs[col].p_freq);
 
             VcfRecord rec;
-            rec.append_chrom(string(loc->loc.chr));
+            rec.append_chrom(string(loc->loc.chr()));
             rec.append_pos(loc->sort_bp(col) + 1);
             rec.append_id(to_string(loc->id) + "_" + to_string(col));
             rec.append_allele(Nt2(loc->loc.strand == strand_plus ? ref : reverse(ref)));
@@ -512,7 +512,7 @@ write_vcf_haplotypes(map<int, CSLocus *> &catalog,
             //
 
             VcfRecord rec;
-            rec.append_chrom(string(loc->loc.chr));
+            rec.append_chrom(string(loc->loc.chr()));
             rec.append_pos(loc->sort_bp() + 1);
             rec.append_id(to_string(loc->id));
 
@@ -1426,7 +1426,7 @@ write_treemix(map<int, CSLocus *> &catalog,
                     continue;
 
                 fh << sstr.str().substr(0, sstr.str().length() - 1) << "\n";
-                log_fh << line << "\t" << loc->id << "\t" << col << "\t" << loc->loc.chr << "\t" << loc->sort_bp(col) + 1 << "\n";
+                log_fh << line << "\t" << loc->id << "\t" << col << "\t" << loc->loc.chr() << "\t" << loc->sort_bp(col) + 1 << "\n";
                 line++;
             }
         }
@@ -2917,7 +2917,7 @@ write_fullseq_phylip(map<int, CSLocus *> &catalog,
             delete [] seq;
 
             log_fh << line << "\t" << loc->id;
-            if (loci_ordered) log_fh << "\t" << loc->loc.chr << "\t" << loc->sort_bp() + 1;
+            if (loci_ordered) log_fh << "\t" << loc->loc.chr() << "\t" << loc->sort_bp() + 1;
             log_fh << "\n";
 
             for (size_t i_pop=0; i_pop<mpopi.pops().size(); ++i_pop) {

@@ -1357,7 +1357,7 @@ write_results(string file, map<int, Locus *> &m)
         sstr << "0" << "\t"
              << tag_1->sample_id << "\t"
              << tag_1->id << "\t"
-             << tag_1->loc.chr << "\t"
+             << tag_1->loc.chr() << "\t"
              << tag_1->loc.bp << "\t"
              << (tag_1->loc.strand == strand_plus ? "+" : "-") << "\t"
              << "consensus" << "\t"

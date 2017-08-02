@@ -1015,7 +1015,7 @@ void LocusProcessor::write_one_locus (
     if (!aln_loc.pos().empty()) {
         const PhyLoc& p = aln_loc.pos();
         gzputs(o_gzfasta_f, " pos=");
-        gzputs(o_gzfasta_f, p.chr);
+        gzputs(o_gzfasta_f, p.chr());
         gzputs(o_gzfasta_f, ":");
         gzputs(o_gzfasta_f, to_string(p.bp+1).c_str());
         gzputs(o_gzfasta_f, p.strand == strand_plus ? ":+" : ":-");

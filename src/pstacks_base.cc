@@ -342,7 +342,7 @@ int write_results(map<int, MergedStack *> &m,
         sstr << "0" << "\t"
              << sql_id << "\t"
              << tag_1->id << "\t"
-             << tag_1->loc.chr << "\t"
+             << tag_1->loc.chr() << "\t"
              << tag_1->loc.bp << "\t"
              << (tag_1->loc.strand == strand_plus ? "+" : "-") << "\t"
              << "consensus\t" << "\t\t"

@@ -276,7 +276,7 @@ int write_sql(map<int, MergedStack *> &m, map<int, PStack *> &u) {
             tags << "0" << "\t"
                  << sql_id << "\t"
                  << tag_id << "\t"
-                 << tag_1->loc.chr << "\t"
+                 << tag_1->loc.chr() << "\t"
                  << tag_1->loc.bp + (*s)->col << "\t"
                  << "consensus\t" << "\t\t"
                  << tag_1->con[(*s)->col] << "\t"
@@ -344,7 +344,7 @@ int write_sql(map<int, MergedStack *> &m, map<int, PStack *> &u) {
         pile << "0" << "\t"
              << sql_id << "\t"
              << tag_1->id << "\t"
-             << tag_1->loc.chr << "\t"
+             << tag_1->loc.chr() << "\t"
              << tag_1->loc.bp << "\t"
              << "consensus\t" << "\t\t"
              << tag_1->con << "\n";
@@ -384,7 +384,7 @@ int populate_merged_tags(map<int, PStack *> &unique, map<int, MergedStack *> &me
     // Create a map of each unique Stack that has been aligned to the same genomic location.
     //
     for (i = unique.begin(); i != unique.end(); i++) {
-        snprintf(id, id_len - 1, "%s_%d", i->second->loc.chr, i->second->loc.bp);
+        snprintf(id, id_len - 1, "%s_%d", i->second->loc.chr(), i->second->loc.bp);
         locations[id].insert(i->second->id);
     }
 
@@ -399,9 +399,7 @@ int populate_merged_tags(map<int, PStack *> &unique, map<int, MergedStack *> &me
         //
         s = k->second.begin();
         m->add_consensus(unique[*s]->seq);
-        strncpy(m->loc.chr, unique[*s]->loc.chr, id_len - 1);
-        m->loc.chr[id_len] = '\0';
-        m->loc.bp = unique[*s]->loc.bp;
+        m->loc.set(unique[*s]->loc.chr(), unique[*s]->loc.bp, strand_plus);
 
         //
         // Record the individual stacks that were aligned together.
@@ -461,7 +459,7 @@ int reduce_radtags(HashMap &radtags, map<int, PStack *> &unique) {
             for (sit = (*it).second.begin(); sit != (*it).second.end(); sit++) {
                 if (strcmp((*sit)->loc_str, lit->first.c_str()) == 0) {
                     u->add_id((*sit)->id);
-                    u->loc.set((*sit)->loc.chr, (*sit)->loc.bp, (*sit)->loc.strand);
+                    u->loc.set((*sit)->loc.chr(), (*sit)->loc.bp, (*sit)->loc.strand);
                 }
             }
 

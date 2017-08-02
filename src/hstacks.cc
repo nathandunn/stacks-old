@@ -547,7 +547,7 @@ int write_homologous_loci(map<int, HLocus *> &samples) {
             "0"              << "\t" <<
             batch_id         << "\t" <<
             id               << "\t" <<
-            tag_1->loc.chr   << "\t" <<
+            tag_1->loc.chr() << "\t" <<
             tag_1->loc.bp    << "\t" <<
             "consensus"      << "\t" <<
             0                << "\t" <<
@@ -619,7 +619,7 @@ int write_homologous_loci(map<int, HLocus *> &samples) {
                 "0"              << "\t" <<
                 batch_id         << "\t" <<
                 id               << "\t" <<
-                tag_2->loc.chr   << "\t" <<
+                tag_2->loc.chr() << "\t" <<
                 tag_2->loc.bp    << "\t" <<
                 "primary"        << "\t" <<
                 sub_id           << "\t" <<

@@ -330,9 +330,9 @@ public:
 
 inline
 void swap(PhyLoc& p, PhyLoc& q) {
-    char* chr = p.chr;
-    p.chr = q.chr;
-    q.chr = chr;
+    char* chr = p.chr_;
+    p.chr_ = q.chr_;
+    q.chr_ = chr;
 
     const uint bp = p.bp;
     p.bp = q.bp;
@@ -347,7 +347,7 @@ inline
 bool PhyLoc::operator==(const PhyLoc& other) const {
     if (bp == other.bp
             && strand == other.strand
-            && strcmp(chr, other.chr) == 0)
+            && strcmp(chr_, other.chr_) == 0)
         return true;
     else
         return false;
@@ -355,7 +355,7 @@ bool PhyLoc::operator==(const PhyLoc& other) const {
 
 inline
 bool PhyLoc::operator<(const PhyLoc& other) const {
-    const int chrcmp = strcmp(chr, other.chr);
+    const int chrcmp = strcmp(chr_, other.chr_);
     if (chrcmp != 0)
         // Alphanumeric.
         return chrcmp < 0;

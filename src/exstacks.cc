@@ -69,8 +69,8 @@ int main (int argc, char* argv[]) {
     // First, bin loci according to chromosome and record a list of all chromosomes.
     //
     for (i = sample.begin(); i != sample.end(); i++) {
-        sorted[i->second->loc.chr].push_back(i->second);
-        chrs.insert(i->second->loc.chr);
+        sorted[i->second->loc.chr()].push_back(i->second);
+        chrs.insert(i->second->loc.chr());
     }
 
     //
@@ -107,7 +107,7 @@ int write_simple_output(Locus *tag) {
 
     cout <<
         "  Locus: " <<
-        tag->id    << ", chr: " << tag->loc.chr << " " << tag->loc.bp << "bp; " <<
+        tag->id    << ", chr: " << tag->loc.chr() << " " << tag->loc.bp << "bp; " <<
         tag->con    << "\n";
 
     //

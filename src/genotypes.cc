@@ -2075,7 +2075,7 @@ int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
 
             uint k = 0;
             for (uint n = start; n < end; n++) {
-                fh << loc->id << "\t" << loc->loc.chr << "\t" << loc->loc.bp + n;
+                fh << loc->id << "\t" << loc->loc.chr() << "\t" << loc->loc.bp + n;
 
                 if (snp_locs.count(n) == 0) {
                     for (int j = 0; j < pmap->sample_cnt(); j++) {
@@ -2189,8 +2189,8 @@ int write_generic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<int, 
         if (expand_id) {
             if (loc->annotation.length() > 0)
                 id << "\t" << loc->id << "\t" << loc->annotation;
-            else if (strlen(loc->loc.chr) > 0)
-                id << "\t" << loc->id << "\t" << loc->loc.chr << "_" << loc->loc.bp;
+            else if (strlen(loc->loc.chr()) > 0)
+                id << "\t" << loc->id << "\t" << loc->loc.chr() << "_" << loc->loc.bp;
             else
                 id << "\t" << loc->id << "\t";
         }
@@ -2293,8 +2293,8 @@ write_joinmap(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<string, s
 
             if (loc->annotation.length() > 0)
                 id << loc->id << "\t" << loc->annotation;
-            else if (strlen(loc->loc.chr) > 0)
-                id << loc->id << "\t" << loc->loc.chr << "_" << loc->loc.bp;
+            else if (strlen(loc->loc.chr()) > 0)
+                id << loc->id << "\t" << loc->loc.chr() << "_" << loc->loc.bp;
             else
                 id << loc->id << "\t";
 
@@ -2551,7 +2551,7 @@ write_rqtl(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<string, stri
         fh << ",";
 
         string chr;
-        chr = strlen(loc->loc.chr) > 0 ? loc->loc.chr : "1";
+        chr = strlen(loc->loc.chr()) > 0 ? loc->loc.chr() : "1";
 
         fh << chr;
     }

@@ -244,7 +244,7 @@ void run() {
                 header_text << "@SQ\tSN:" << cloc.first << "\tLN:10000";
                 if (!cloc.second->loc.empty()) {
                     const PhyLoc& pos = cloc.second->loc;
-                    header_text << "\tpos:" << pos.chr
+                    header_text << "\tpos:" << pos.chr()
                                 << ':' << (pos.bp+1)
                                 << ':' << (pos.strand == strand_plus ? '+' : '-');
                 }
