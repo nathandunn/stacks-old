@@ -31,7 +31,7 @@ using namespace std;
 //
 FileT   in_file_type;
 string  in_file;
-string  out_path;
+string  prefix_path;
 int     num_threads       = 1;
 int     sql_id            = -1;
 bool    call_sec_hapl     = true;
@@ -191,7 +191,7 @@ int main (int argc, char* argv[]) {
 
     count_raw_reads(unique, remainders, merged);
 
-    cerr << "Writing loci, SNPs, and alleles to '" << out_path << "'...\n";
+    cerr << "Writing tags, SNPs, and alleles files...\n";
     write_results(merged, unique, remainders);
     cerr << "done.\n";
 
@@ -1381,9 +1381,7 @@ int deleverage(map<int, Stack *> &unique,
     //
     if (dump_graph) {
         stringstream gout_file;
-        size_t pos_1 = in_file.find_last_of("/");
-        size_t pos_2 = in_file.find_last_of(".");
-        gout_file << out_path << in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) << "_" << keys[0] << ".dot";
+        gout_file << prefix_path << "_" << keys[0] << ".dot";
         string vis = mst->vis(true);
         ofstream gvis(gout_file.str().c_str());
         gvis << vis;
@@ -1813,20 +1811,12 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
     load_seq_ids(seq_ids);
 
     //
-    // Parse the input file name to create the output files
+    // Create the output file names.
     //
-    size_t pos_1 = in_file.find_last_of("/");
-    size_t pos_2 = in_file.find_last_of(".");
-
-    if (in_file.substr(pos_2) == ".gz") {
-        in_file = in_file.substr(0, pos_2);
-        pos_2   = in_file.find_last_of(".");
-    }
-
-    string tag_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".tags.tsv";
-    string snp_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".snps.tsv";
-    string all_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".alleles.tsv";
-    string mod_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".models.tsv";
+    string tag_file = prefix_path + ".tags.tsv";
+    string snp_file = prefix_path + ".snps.tsv";
+    string all_file = prefix_path + ".alleles.tsv";
+    string mod_file = prefix_path + ".models.tsv";
 
     if (gzip) {
         tag_file += ".gz";
@@ -2109,7 +2099,7 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
     // If specified, output reads not utilized in any stacks.
     //
     if (retain_rem_reads) {
-        string unused_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".unused.fa";
+        string unused_file = prefix_path + ".unused.fa";
 
         gzFile   gz_unused=NULL;
         ofstream unused;
@@ -2457,8 +2447,10 @@ long double factorial(int i) {
 }
 
 int parse_command_line(int argc, char* argv[]) {
-    int c;
+    string out_path;
+    string sample_name;
 
+    int c;
     while (1) {
         static struct option long_options[] = {
             {"help",             no_argument,       NULL, 'h'},
@@ -2466,6 +2458,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"infile_type",      required_argument, NULL, 't'},
             {"file",             required_argument, NULL, 'f'},
             {"outpath",          required_argument, NULL, 'o'},
+            {"name",             required_argument, NULL, 1001},
             {"id",               required_argument, NULL, 'i'},
             {"min_cov",          required_argument, NULL, 'm'},
             {"max_dist",         required_argument, NULL, 'M'},
@@ -2493,7 +2486,7 @@ int parse_command_line(int argc, char* argv[]) {
         // getopt_long stores the option index here.
         int option_index = 0;
 
-        c = getopt_long(argc, argv, "GhHvdrgRA:L:U:f:o:i:m:e:p:t:M:N:K:k:T:X:x:", long_options, &option_index);
+        c = getopt_long(argc, argv, "GhHvdrgRA:L:U:f:o:s:i:m:e:p:t:M:N:K:k:T:X:x:", long_options, &option_index);
 
         // Detect the end of the options.
         if (c == -1)
@@ -2522,6 +2515,9 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 'o':
             out_path = optarg;
+            break;
+        case 1001:
+            sample_name = optarg;
             break;
         case 'i':
             sql_id = is_integer(optarg);
@@ -2653,16 +2649,28 @@ int parse_command_line(int argc, char* argv[]) {
         }
     }
 
+    // Set `prefix_path`.
+    if (out_path.length() == 0)
+        out_path = ".";
+    if (out_path.at(out_path.length() - 1) != '/')
+        out_path += "/";
+    if (sample_name.empty()) {
+        size_t pos_1 = in_file.find_last_of("/");
+        size_t pos_2 = in_file.find_last_of(".");
+        if (in_file.substr(pos_2) == ".gz")
+            pos_2 = in_file.substr(0, pos_2).find_last_of(".");
+        if (pos_2 == string::npos || pos_2 <= pos_1 + 1) {
+            cerr << "Failed to guess the sample's name.\n";
+            help();
+        }
+        sample_name = in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1));
+    }
+    prefix_path = out_path + sample_name;
+
     if (sql_id < 0) {
         cerr << "A sample ID must be provided.\n";
         help();
     }
-
-    if (out_path.length() == 0)
-        out_path = ".";
-
-    if (out_path.at(out_path.length() - 1) != '/')
-        out_path += "/";
 
     if (model_type == ::fixed && barcode_err_freq == 0) {
         cerr << "You must specify the barcode error frequency.\n";
@@ -2689,6 +2697,7 @@ void help() {
               << "  N: Maximum distance allowed to align secondary reads to primary stacks (default: M + 2).\n"
               << "  p: enable parallel execution with num_threads threads.\n"
               << "  t: input file type. Supported types: fasta, fastq, gzfasta, or gzfastq (default: guess).\n"
+              << "  --name: a name for the sample (default: input file name minus the suffix).\n"
               << "  R: retain unused reads.\n"
               << "  H: disable calling haplotypes from secondary reads.\n"
               << "\n"
