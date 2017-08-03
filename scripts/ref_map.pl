@@ -94,7 +94,7 @@ open($log_fh, ">$log") or die("Unable to open log file '$log'; $!\n");
 
 print $log_fh 
     "ref_map.pl version ", stacks_version, " started at ", strftime("%Y-%m-%d %H:%M:%S", (localtime(time))), "\n",
-    $cmd_str, "\n\n";
+    $cmd_str, "\n";
 
 initialize_database($log_fh, \@parents, \@progeny, \@samples, \%sample_ids) if ($sql == true);
 
@@ -132,10 +132,10 @@ sub execute_stacks {
     #
     # Assemble RAD loci in each individual.
     #
+    print STDERR "Indentifying unique stacks...\n";
+    print $log_fh "\npstacks\n==========\n";
     foreach $sample (@parents, @progeny, @samples) {
-
-        printf("Identifying unique stacks; file % 3s of % 3s [%s]\n", $i, $num_files, $sample->{'file'});
-        printf($log_fh "Identifying unique stacks; file % 3s of % 3s [%s]\n", $i, $num_files, $sample->{'file'});
+        print $log_fh "\nSample $i of $num_files '$sample->{'file'}'\n----------\n";
 
         if (scalar(keys %{$sample_ids}) > 0) {
             $sample_id = $sample_ids->{$sample->{'file'}};
@@ -176,11 +176,14 @@ sub execute_stacks {
     }
 
     write_depths_of_cov(\@depths_of_cov, $log_fh);
+    print STDERR "\n";
 
     #
     # Generate catalog of RAD loci.
     #
     print STDERR "Generating catalog...\n";
+    print $log_fh "\ncstacks\n==========\n";
+
     my $file_paths = "";
     foreach $sample (@parents, @samples) {
         $file_paths .= "-s $out_path/$sample->{'file'} ";
@@ -205,6 +208,7 @@ sub execute_stacks {
     #
     $file_paths = "";
     print STDERR "Matching samples to the catalog...\n";
+    print $log_fh "\nsstacks\n==========\n";
 
     foreach $sample (@parents, @progeny, @samples) {
         $file_paths .= "-s $out_path/$sample->{'file'} ";
@@ -229,6 +233,7 @@ sub execute_stacks {
         # Generate a set of observed haplotypes and a set of markers and generic genotypes
         #
         printf(STDERR "Generating genotypes...\n");
+        print $log_fh "\ngenotypes\n==========\n";
 
         $cmd = $exe_path . "genotypes" . ($v2 ? " --v2" : "") . " -b $batch_id -P $out_path -r 1 -c -s " . join(" ", @_genotypes) . " 2>&1";
         print STDERR  "$cmd\n";
@@ -245,6 +250,7 @@ sub execute_stacks {
 
     } else {
         printf(STDERR "Calculating population-level summary statistics\n");
+        print $log_fh "\npopulations\n==========\n";
 
         $cmd = $exe_path . "populations" . ($v2 ? " --v2" : "") . " -b $batch_id -P $out_path -s " . join(" ", @_populations) . " 2>&1";
         print STDERR  "  $cmd\n";
@@ -700,8 +706,6 @@ sub write_depths_of_cov {
 	print STDERR  $a->[0], ": ", $a->[1], "x\n";
 	print $log_fh $a->[0], ": ", $a->[1], "x\n";
     }
-    print STDERR "\n";
-    print $log_fh "\n";
 }
 
 sub import_sql_file {
