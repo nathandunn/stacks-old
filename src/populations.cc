@@ -306,7 +306,7 @@ int main (int argc, char* argv[]) {
 
         // Open the files.
         string catalog_fa_path = in_path + "batch_" + to_string(batch_id) + ".rystacks.fa.gz";
-        string catalog_vcf_path = in_path + "batch_" + to_string(batch_id) + ".rystacks.vcf";
+        string catalog_vcf_path = in_path + "batch_" + to_string(batch_id) + ".rystacks.vcf.gz";
         GzFasta fasta_f (catalog_fa_path);
         VcfCLocReader reader (catalog_vcf_path);
 

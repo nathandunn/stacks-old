@@ -401,3 +401,22 @@ bool VersatileLineReader::getline(const char*& line, size_t& len) {
     ++line_number_;
     return true;
 }
+
+VersatileWriter::VersatileWriter(const string& path)
+: path_(path),
+  is_gzipped_(false),
+  ofs_(),
+  gzfile_()
+{
+    std::smatch m;
+    std::regex_search(path, m, std::regex("\\.[Gg][Zz]$"));
+    is_gzipped_ = !m.empty();
+
+    if (!is_gzipped_) {
+        ofs_.open(path_);
+        check_open(ofs_, path_);
+    } else {
+        gzfile_ = gzopen(path_.c_str(), "wb");
+        check_open(gzfile_, path_);
+    }
+}
