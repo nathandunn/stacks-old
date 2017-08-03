@@ -236,8 +236,10 @@ sub execute_stacks {
         print STDERR "Sorting reads by RAD locus...\n";
         print $log_fh "\ntsv2bam\n==========\n";
 
+        $i = 1;
         foreach $sample (@parents, @progeny, @samples) {
             print $log_fh "\nSample $i of $num_files '$sample->{'file'}'\n----------\n";
+            $i++;
 
             $cmd = $exe_path . "tsv2bam -s $out_path/$sample->{'file'}";
             foreach (@_tsv2bam) {
