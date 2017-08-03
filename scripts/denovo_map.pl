@@ -108,11 +108,14 @@ print $log_fh "\ndenovo_map.pl completed at ", strftime("%Y-%m-%d %H:%M:%S", (lo
 close($log_fh);
 
 sub check_return_value {
+    # $? is a 16 bit int. Exit code is given by `$? & 255` if the process was 
+    # terminated by a signal, and by `$? >> 8` if it exited normally.
     my ($rv, $log_fh) = @_;
     if ($rv != 0) {
-        my $msg = "\ndenovo_map.pl: Aborted because the last command failed. (" . $rv . ")\n";
+        my $msg = "\nref_map.pl: Aborted because the last command failed. (" . ($rv & 255 ? $rv : $rv >> 8) . ")\n";
         print $log_fh $msg;
-        die($msg);
+        print STDERR $msg;
+        exit 1;
     }
 }
 
@@ -167,8 +170,7 @@ sub execute_stacks {
                 push(@results, $_);
             }
             close($pipe_fh);
-            my $rv = $? >> 8;
-            check_return_value($rv, $log_fh);
+            check_return_value($?, $log_fh);
 
             #
             # Pull the depth of coverage from ustacks.
@@ -210,8 +212,7 @@ sub execute_stacks {
             if ($_ =~ /failed/i) { print STDERR "Catalog construction failed.\n"; exit(1); }
         }
         close($pipe_fh);
-        my $rv = $? >> 8;
-        check_return_value($rv, $log_fh);
+        check_return_value($?, $log_fh);
     }
 
     #
@@ -235,8 +236,7 @@ sub execute_stacks {
             print $log_fh $_;
         }
         close($pipe_fh);
-        my $rv = $? >> 8;
-        check_return_value($rv, $log_fh);
+        check_return_value($?, $log_fh);
     }
 
     if ($v2) {
@@ -262,8 +262,7 @@ sub execute_stacks {
                     print $log_fh $_;
                 }
                 close($pipe_fh);
-                my $rv = $? >> 8;
-                check_return_value($rv, $log_fh);
+                check_return_value($?, $log_fh);
         	}
         }
         
@@ -286,8 +285,7 @@ sub execute_stacks {
                 print $log_fh $_;
             }
             close($pipe_fh);
-            my $rv = $? >> 8;
-            check_return_value($rv, $log_fh);
+            check_return_value($?, $log_fh);
     	}
     	
     	#
@@ -308,8 +306,7 @@ sub execute_stacks {
                 print $log_fh $_;
             }
             close($pipe_fh);
-            my $rv = $? >> 8;
-            check_return_value($rv, $log_fh);
+            check_return_value($?, $log_fh);
     	}
     }
     
@@ -329,8 +326,7 @@ sub execute_stacks {
                 print $log_fh $_;
             }
             close($pipe_fh);
-            my $rv = $? >> 8;
-            check_return_value($rv, $log_fh);
+            check_return_value($?, $log_fh);
         }
 
     } else {
@@ -346,8 +342,7 @@ sub execute_stacks {
                 print $log_fh $_;
             }
             close($pipe_fh);
-            my $rv = $? >> 8;
-            check_return_value($rv, $log_fh);
+            check_return_value($?, $log_fh);
         }
     }
 }
