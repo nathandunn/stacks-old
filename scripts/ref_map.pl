@@ -228,6 +228,82 @@ sub execute_stacks {
         check_return_value($?, $log_fh);
     }
 
+    if ($v2) {
+        #
+        # Sort the reads according by catalog locus / run tsv2bam.
+        # TODO: Update after parallelizing tsv2bam.
+        #
+        print STDERR "Sorting reads by RAD locus...\n";
+        print $log_fh "\ntsv2bam\n==========\n";
+
+        foreach $sample (@parents, @progeny, @samples) {
+            print $log_fh "\nSample $i of $num_files '$sample->{'file'}'\n----------\n";
+
+            $cmd = $exe_path . "tsv2bam -s $out_path/$sample->{'file'}";
+            foreach (@_tsv2bam) {
+                $cmd .= " " . $_;
+            }
+            $cmd .= " 2>&1";
+            print STDERR  "  $cmd\n";
+            print $log_fh "$cmd\n\n";
+        	if (!$dry_run) {
+                open($pipe_fh, "$cmd |");
+                while (<$pipe_fh>) {
+                    print $log_fh $_;
+                }
+                close($pipe_fh);
+                check_return_value($?, $log_fh);
+        	}
+        }
+        
+        #
+        # Merge the matches.bam files / run samtools merge.
+        #
+        print $log_fh "\nsamtools merge\n----------\n";
+
+        $cmd = "samtools merge $out_path/batch_$batch_id.catalog.bam";
+        foreach $sample (@parents, @progeny, @samples) {
+            $cmd .= " $out_path/$sample->{'file'}.matches.bam";
+        }
+        foreach (@_samtools_merge) {
+            $cmd .= " " . $_;
+        }
+        $cmd .= " 2>&1";
+        print STDERR  "  $cmd\n";
+        print $log_fh "$cmd\n\n";
+    	if (!$dry_run) {
+            open($pipe_fh, "$cmd |");
+            while (<$pipe_fh>) {
+                print $log_fh $_;
+            }
+            close($pipe_fh);
+            check_return_value($?, $log_fh);
+    	}
+    	
+    	#
+    	# Call genotypes / run rystacks.
+    	# TODO: Update after renaming rystacks.
+    	#
+        print STDERR "Calling variants, genotypes and haplotypes...\n";
+        print $log_fh "\nrystacks\n==========\n";
+
+    	$cmd = $exe_path . "rystacks -P $out_path";
+    	foreach (@_rystacks) {
+    	    $cmd .= " " . $_;
+    	}
+        $cmd .= " 2>&1";
+        print STDERR  "  $cmd\n";
+        print $log_fh "$cmd\n\n";
+    	if (!$dry_run) {
+            open($pipe_fh, "$cmd |");
+            while (<$pipe_fh>) {
+                print $log_fh $_;
+            }
+            close($pipe_fh);
+            check_return_value($?, $log_fh);
+    	}
+    }
+
     if ($data_type eq "map") {
         #
         # Generate a set of observed haplotypes and a set of markers and generic genotypes
