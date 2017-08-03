@@ -137,7 +137,7 @@ try {
     o_gzfasta_f = gzopen(o_gzfasta_path.c_str(), "wb");
     check_open(o_gzfasta_f, o_gzfasta_path);
 
-    string o_vcf_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".vcf";
+    string o_vcf_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".vcf.gz";
     VcfHeader vcf_header;
     vcf_header.add_std_meta();
     for(auto& s : bam_fh.mpopi().samples())

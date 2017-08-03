@@ -210,13 +210,13 @@ public:
 class VcfWriter {
 private:
     const string path_;
-    ofstream file_;
+    VersatileWriter file_;
     const VcfHeader header_;
 
 public:
     VcfWriter(const string& path, VcfHeader&& header)
-        : path_(path), file_(path), header_(header)
-        {check_open(file_, path_); write_header();}
+        : file_(path), header_(header)
+        {write_header();}
 
     const VcfHeader& header() const {return header_;}
     void write_record(const VcfRecord& r);

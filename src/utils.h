@@ -144,6 +144,25 @@ public:
     size_t line_number() const {return line_number_;} // 1-based.
 };
 
+class VersatileWriter {
+    const string path_;
+    bool is_gzipped_;
+    ofstream ofs_;
+    gzFile gzfile_;
+
+public:
+    VersatileWriter(const string& path);
+    ~VersatileWriter() {if(is_gzipped_) gzclose(gzfile_);}
+
+    const string& path() const {return path_;}
+    friend VersatileWriter& operator<< (VersatileWriter& w, const char* s)
+        {if (w.is_gzipped_) gzputs(w.gzfile_, s); else w.ofs_ << s; return w;}
+    friend VersatileWriter& operator<< (VersatileWriter& w, const string& s)
+        {if (w.is_gzipped_) gzwrite(w.gzfile_, s.c_str(), s.length()); else w.ofs_ << s; return w;}
+    friend VersatileWriter& operator<< (VersatileWriter& w, int i);
+    friend VersatileWriter& operator<< (VersatileWriter& w, size_t i);
+};
+
 //
 // Wrapper for directory parsing functions.
 // e.g. for(DirIterator e (path); e; ++e) {...}
@@ -188,6 +207,30 @@ void strip_read_number(string& read_name) {
     cerr << "Error: Unrecognized read name format: expected '"
          << read_name << "' to end with /1, /2, _1 or _2.\n";
     throw exception();
+}
+
+inline
+VersatileWriter& operator<< (VersatileWriter& w, int i) {
+    if (w.is_gzipped_) {
+        char buf[16];
+        sprintf(buf, "%d", i);
+        gzputs(w.gzfile_, buf);
+    } else {
+        w.ofs_ << i;
+    }
+    return w;
+}
+
+inline
+VersatileWriter& operator<< (VersatileWriter& w, size_t i) {
+    if (w.is_gzipped_) {
+        char buf[32];
+        sprintf(buf, "%zu", i);
+        gzputs(w.gzfile_, buf);
+    } else {
+        w.ofs_ << i;
+    }
+    return w;
 }
 
 #endif // __UTILS_H__
