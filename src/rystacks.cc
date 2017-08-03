@@ -120,7 +120,7 @@ try {
     //
     // Open the log.
     //
-    string lg_path = in_dir + prog_name + ".log";
+    string lg_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".log";
     logger.reset(new LogAlterator(lg_path, quiet, argc, argv));
     report_options(cout);
     cout << "\n" << flush;
@@ -217,11 +217,11 @@ try {
         }
         cout << "\n";
 
-        logger->l << "#BEGIN badly_phased\n"
+        logger->l << "BEGIN badly_phased\n"
                   << "n_tot_samples\tn_bad_samples\tn_loci\n";
         for (auto& elem : loc_proc.n_badly_phased_samples)
             logger->l << elem.first.second << '\t' << elem.first.first << '\t' << elem.second << '\n';
-        logger->l << "#END badly_phased\n";
+        logger->l << "END badly_phased\n\n";
     }
 
     // Cleanup & return.
