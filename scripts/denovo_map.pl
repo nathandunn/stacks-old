@@ -120,10 +120,10 @@ sub execute_stacks {
     my ($log_fh, $sample_id, $parents, $progeny, $samples, $sample_ids) = @_;
     
     my (@results, @depths_of_cov);
-    my ($pop_cnt, $sample, $num_files, $i, $cmd, $pipe_fh, $path, $cat_file);
+    my ($pop_cnt, $sample, $num_files, $i, $cmd, $pipe_fh, $cat_file);
 
-    my $minc  = $min_cov  > 0 ? "-m $min_cov"  : "";
-    my $minrc = $min_rcov > 0 ? "-m $min_rcov" : $minc;
+    my $minc  = $min_cov  > 0 ? " -m $min_cov"  : "";
+    my $minrc = $min_rcov > 0 ? " -m $min_rcov" : $minc;
 
     $i         = 1;
     $num_files = scalar(@{$parents}) + scalar(@{$progeny}) + scalar(@{$samples});
@@ -140,15 +140,22 @@ sub execute_stacks {
             $sample_id = $sample_ids->{$sample->{'file'}};
         }
 
-        $path = $sample->{'path'};
-        
+        $cmd = $exe_path . "ustacks -t $sample->{'fmt'} -f $sample->{'path'} -o $out_path -i $sample_id";
         if ($sample->{'type'} eq "sample") {
-            $cmd = $exe_path . "ustacks -t $sample->{'fmt'} -f $path -o $out_path -i $sample_id $minc "  . join(" ", @_ustacks) . " 2>&1";
+            $cmd .= $minc;
         } elsif ($sample->{'type'} eq "parent") {
-            $cmd = $exe_path . "ustacks -t $sample->{'fmt'} -f $path -o $out_path -i $sample_id $minc "  . join(" ", @_ustacks) . " 2>&1";
+            $cmd .= $minc;
         } elsif ($sample->{'type'} eq "progeny") {
-            $cmd = $exe_path . "ustacks -t $sample->{'fmt'} -f $path -o $out_path -i $sample_id $minrc " . join(" ", @_ustacks) . " 2>&1";
+            $cmd = $minrc;
         }
+        if ($sample->{'path'} !~ /$sample->{'file'}.$sample->{'suffix'}$/) {
+            # Guessing the sample name from the input path won't work.
+            $cmd .= " --name " . $sample->{'file'};
+        }
+        foreach (@_ustacks) {
+            $cmd .= " " . $_;
+        }
+        $cmd .= " 2>&1";
         print STDERR  "  $cmd\n";
         print $log_fh "$cmd\n";
 
