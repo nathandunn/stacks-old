@@ -437,7 +437,7 @@ CSLocus* new_cslocus(const Seq& consensus, const vector<VcfRecord>& records, int
     const char* p = consensus.id;
     while ((p = strchr(p, ' ')) != NULL) {
         ++p;
-        if (strncmp(p, "pos=", 4)) {
+        if (strncmp(p, "pos=", 4) == 0) {
             p += 4;
             const char* q = p;
             while (*q && *q != ' ')
