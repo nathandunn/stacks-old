@@ -162,7 +162,7 @@ int main (int argc, char* argv[]) {
     //
     // Remove highly repetitive stacks.
     //
-    size_t n_high_cov;
+    size_t n_high_cov = 0;
     if (remove_rep_stacks) {
         calc_triggers(cov_mean, cov_stdev, 1);
         cerr << "Removing repetitive stacks (cov > " << removal_trigger << ")...\n";
