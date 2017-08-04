@@ -2018,7 +2018,7 @@ int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
     // Count the number of markers that have enough samples to output.
     //
     map<int, CSLocus *>::iterator cit;
-    CSLocus *loc;
+    const CSLocus *loc;
     int num_loci = 0;
 
     for (cit = catalog.begin(); cit != catalog.end(); cit++) {
@@ -2037,14 +2037,14 @@ int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
     //
     // Output each locus.
     //
-    map<string, vector<CSLocus *> >::iterator it;
+    map<string, vector<CSLocus *> >::const_iterator it;
     int  a, b;
 
     uint  rcnt = renz_cnt[enz];
     uint  rlen = renz_len[enz];
     char *p;
 
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
         for (uint i = 0; i < it->second.size(); i++) {
             loc = it->second[i];
 
