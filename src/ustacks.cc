@@ -23,6 +23,7 @@
 //
 
 #include "ustacks.h"
+#include "log_utils.h"
 
 using namespace std;
 
@@ -49,8 +50,9 @@ int     max_rem_dist      = -1;
 bool    gapped_alignments = false;
 double  min_match_len     = 0.80;
 double  max_gaps          = 2.0;
-int     deleverage_trigger;
+//int     deleverage_trigger;
 int     removal_trigger;
+
 //
 // For use with the multinomial model to call fixed nucleotides.
 //
@@ -69,14 +71,21 @@ int main (int argc, char* argv[]) {
     if (max_rem_dist == -1) max_rem_dist = max_utag_dist + 2;
 
     cerr << "ustacks parameters selected:\n"
+         << "  Input file: '" << in_file << "'\n"
          << "  Sample ID: " << sql_id << "\n"
-         << "  Min depth of coverage to create a stack: " << min_merge_cov << "\n"
-         << "  Max distance allowed between stacks: " << max_utag_dist << "\n"
+         << "  Min depth of coverage to create a stack (m): " << min_merge_cov << "\n"
+         << "  Repeat removal algorithm: " << (remove_rep_stacks ? "enabled" : "disabled") << "\n"
+         << "  Max distance allowed between stacks (M): " << max_utag_dist << "\n"
          << "  Max distance allowed to align secondary reads: " << max_rem_dist << "\n"
          << "  Max number of stacks allowed per de novo locus: " << max_subgraph << "\n"
-         << "  Deleveraging algorithm: " << (deleverage_stacks ? "enabled" : "disabled") << "\n"
-         << "  Removal algorithm: " << (remove_rep_stacks ? "enabled" : "disabled") << "\n"
-         << "  Model type: ";
+         << "  Deleveraging algorithm: " << (deleverage_stacks ? "enabled" : "disabled") << "\n";
+    if (gapped_alignments) {
+        cerr << "  Gapped assembly: enabled\n"
+             << "  Minimum alignment length: " << min_match_len << "\n";
+    } else {
+        cerr << "  Gapped assembly: disabled\n";
+    }
+    cerr << "  Model type: ";
     switch (model_type) {
     case snp:
         cerr << "SNP\n";
@@ -91,27 +100,15 @@ int main (int argc, char* argv[]) {
         DOES_NOT_HAPPEN;
         break;
     }
-    cerr << "  Alpha significance level for model: " << alpha << "\n"
-         << "  Gapped alignments: " << (gapped_alignments ? "enabled" : "disabled") << "\n";
+    cerr << "  Alpha significance level for model: " << alpha << "\n";
+    cerr << flush;
 
     //
     // Set limits to call het or homozygote according to chi-square distribution with one
     // degree of freedom:
     //   http://en.wikipedia.org/wiki/Chi-squared_distribution#Table_of_.CF.872_value_vs_p-value
     //
-    if (alpha == 0.1) {
-        heterozygote_limit = -2.71;
-        homozygote_limit   =  2.71;
-    } else if (alpha == 0.05) {
-        heterozygote_limit = -3.84;
-        homozygote_limit   =  3.84;
-    } else if (alpha == 0.01) {
-        heterozygote_limit = -6.64;
-        homozygote_limit   =  6.64;
-    } else if (alpha == 0.001) {
-        heterozygote_limit = -10.83;
-        homozygote_limit   =  10.83;
-    }
+    set_model_thresholds(alpha);
 
     //
     // Set the number of OpenMP parallel threads to execute.
@@ -120,77 +117,125 @@ int main (int argc, char* argv[]) {
     omp_set_num_threads(num_threads);
     #endif
 
-    DNASeqHashMap*    radtags = new DNASeqHashMap();
-    map<int, Rem *>   remainders;
-    set<int>          merge_map;
+    //
+    // Load the reads and build primary & secondary stacks.
+    //
+
+    cerr << "\n" << "Loading RAD-Tags...";
+
+    size_t n_reads, n_u_reads, n_r_reads;
+    DNASeqHashMap radtags;
     map<int, Stack *> unique;
+    map<int, Rem *>   remainders;
+    load_radtags(in_file, radtags, n_reads);
+    reduce_radtags(radtags, unique, remainders, n_u_reads, n_r_reads);
+    radtags = DNASeqHashMap();
 
-    load_radtags(in_file, *radtags);
+    cerr << "\n"
+         << "Loaded " << n_reads << " reads; formed:\n"
+         << "  " << unique.size() << " stacks representing "
+         << n_u_reads << " primary reads (" << as_percentage((double)n_u_reads/n_reads) << ")\n"
+         << "  " << remainders.size() << " secondary stacks representing "
+         << n_r_reads << " secondary reads (" << as_percentage((double)n_r_reads/n_reads) << ")\n"
+         << flush;
 
-    reduce_radtags(*radtags, unique, remainders);
-
-    delete radtags;
-
-    // dump_unique_tags(unique);
-
-    double cov_mean, cov_stdev, cov_max;
-
+    //
+    // Initialize the MergedStack object.
+    //
     map<int, MergedStack *> merged;
     populate_merged_tags(unique, merged);
-    cerr << merged.size() << " initial stacks were populated; " << remainders.size() << " stacks were set aside as secondary reads.\n";
-    calc_coverage_distribution(unique, remainders, merged, cov_mean, cov_stdev, cov_max);
-    cerr << "Initial coverage mean: " << cov_mean << "; Std Dev: " << cov_stdev << "; Max: " << cov_max << "\n";
 
-    calc_triggers(cov_mean, cov_stdev, 1, deleverage_trigger, removal_trigger);
-    cerr << "Deleveraging trigger: " << deleverage_trigger << "; Removal trigger: " << removal_trigger << "\n";
+    double cov_mean, cov_stdev, cov_max, n_used_reads;
+    ostream cerr_copy (cerr.rdbuf());
+    cerr_copy << std::fixed << std::setprecision(2);
+    auto report_cov = [&]() {
+        cerr_copy << "mean=" << cov_mean << "; stdev=" << cov_stdev << "; max=" << size_t(cov_max)
+                  << "; n_reads=" << size_t(n_used_reads) << "(" << as_percentage(n_used_reads/n_reads) << ")";
+    };
+
+    calc_coverage_distribution(merged, cov_mean, cov_stdev, cov_max, n_used_reads);
+    cerr << "\n";
+    cerr << "Stack coverage: ";
+    report_cov();
+    cerr << "\n";
+
+    //
+    // Remove highly repetitive stacks.
+    //
+    size_t n_high_cov;
     if (remove_rep_stacks) {
-        cerr << "Calculating distance for removing repetitive stacks.\n";
+        calc_triggers(cov_mean, cov_stdev, 1);
+        cerr << "Removing repetitive stacks (cov > " << removal_trigger << ")...\n";
         calc_kmer_distance(merged, 1);
-        cerr << "Removing repetitive stacks.\n";
-        remove_repetitive_stacks(unique, merged);
+        assert(merged.size() == unique.size());
+        n_high_cov = remove_repetitive_stacks(merged);
+        cerr << "Blacklisted " << n_high_cov << " stacks.\n";
+
+        calc_coverage_distribution(merged, cov_mean, cov_stdev, cov_max, n_used_reads);
+        cerr << "Coverage after repeat removal: ";
+        report_cov();
+        cerr << "\n";
     }
-    calc_coverage_distribution(unique, remainders, merged, cov_mean, cov_stdev, cov_max);
-    cerr << "Post-Repeat Removal, coverage depth Mean: " << cov_mean << "; Std Dev: " << cov_stdev << "; Max: " << cov_max << "\n";
 
-    cerr << "Calculating distance between stacks...\n";
+    //
+    // Assemble loci (merge primary stacks).
+    //
+    cerr << "Assembling stacks (max. dist. M=" << max_utag_dist << ")...\n";
     calc_kmer_distance(merged, max_utag_dist);
+    size_t n_blacklisted;
+    merge_stacks(merged, n_blacklisted);
+    cerr << "Assembled " << unique.size()-n_high_cov << " stacks into " << merged.size()
+         << "; blacklisted " << n_blacklisted << " stacks.\n";
+    calc_coverage_distribution(merged, cov_mean, cov_stdev, cov_max, n_used_reads);
+    cerr << "Coverage after assembling stacks: ";
+    report_cov();
+    cerr << "\n";
 
-    cerr << "Merging stacks, maximum allowed distance: " << max_utag_dist << " nucleotide(s)\n";
-    merge_stacks(unique, remainders, merged, merge_map, max_utag_dist);
-
+    //
+    // Merge secondary stacks.
+    //
+    cerr << "Merging secondary stacks (max. dist. N=" << max_rem_dist << " from consensus)...\n";
     call_consensus(merged, unique, remainders, false);
-
-    calc_coverage_distribution(unique, remainders, merged, cov_mean, cov_stdev, cov_max);
-    cerr << "After merging, coverage depth Mean: " << cov_mean << "; Std Dev: " << cov_stdev << "; Max: " << cov_max << "\n";
-
-    //dump_merged_tags(merged);
-
-    cerr << "Merging remainder radtags\n";
     merge_remainders(merged, remainders);
 
-    calc_coverage_distribution(unique, remainders, merged, cov_mean, cov_stdev, cov_max);
-    cerr << "After remainders merged, coverage depth Mean: " << cov_mean << "; Std Dev: " << cov_stdev << "; Max: " << cov_max << "\n";
+    calc_coverage_distribution(merged, cov_mean, cov_stdev, cov_max, n_used_reads);
+    cerr << "Coverage after merging secondary stacks: ";
+    report_cov();
+    cerr << "\n";
 
+    //
+    // Merge loci based on alignments.
+    //
     if (gapped_alignments) {
+        cerr << "Assembling stacks, allowing for gaps (min. match length " << as_percentage(min_match_len) << ")...\n";
+        const size_t n_ungapped_loci = merged.size();
         call_consensus(merged, unique, remainders, false);
-
-        cerr << "Searching for gaps between merged stacks...\n";
-        search_for_gaps(merged, min_match_len);
-
+        search_for_gaps(merged);
         merge_gapped_alns(unique, remainders, merged);
+        cerr << "Assembled " << n_ungapped_loci << " stacks into " << merged.size() << " stacks.\n";
 
-        calc_coverage_distribution(unique, remainders, merged, cov_mean, cov_stdev, cov_max);
-        cerr << "After gapped alignments, coverage depth Mean: " << cov_mean << "; Std Dev: " << cov_stdev << "; Max: " << cov_max << "\n";
+        calc_coverage_distribution(merged, cov_mean, cov_stdev, cov_max, n_used_reads);
+        cerr << "Coverage after gapped assembly: ";
+        report_cov();
+        cerr << "\n";
     }
+
+    //
+    // Report how many reads were used.
+    //
+    cerr << "\n" << "Final coverage: ";
+    report_cov();
+    cerr << "\n";
 
     //
     // Call the final consensus sequence and invoke the SNP model.
     //
-    cerr << "Calling final consensus sequences, invoking SNP-calling model...\n";
+    cerr << "Calling consensus sequences and haplotypes for catalog assembly...\n";
     call_consensus(merged, unique, remainders, true);
 
-    count_raw_reads(unique, remainders, merged);
-
+    //
+    // Write output files.
+    //
     cerr << "Writing tags, SNPs, and alleles files...\n";
     write_results(merged, unique, remainders);
     cerr << "done.\n";
@@ -314,9 +359,6 @@ merge_gapped_alns(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, Merg
         id++;
     }
 
-    uint new_cnt = new_merged.size();
-    uint old_cnt = merged.size();
-
     //
     // Free the memory from the old map of merged tags.
     //
@@ -324,11 +366,6 @@ merge_gapped_alns(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, Merg
         delete it->second;
 
     merged = new_merged;
-
-    cerr << "  " << old_cnt << " stacks merged into " << new_cnt
-         << " stacks; merged " << merge_cnt
-         << " gapped alignments.\n";
-
     return 0;
 }
 
@@ -442,7 +479,7 @@ edit_gaps(vector<pair<char, uint> > &cigar, char *seq)
 }
 
 int
-search_for_gaps(map<int, MergedStack *> &merged, double min_match_len)
+search_for_gaps(map<int, MergedStack *> &merged)
 {
     //
     // Search for loci that can be merged with a gapped alignment.
@@ -473,7 +510,7 @@ search_for_gaps(map<int, MergedStack *> &merged, double min_match_len)
     //
     int min_hits = (round((double) con_len * min_match_len) - (kmer_len * max_gaps)) - kmer_len + 1;
 
-    cerr << "  Searching with a k-mer length of " << kmer_len << " (" << num_kmers << " k-mers per read); " << min_hits << " k-mer hits required.\n";
+    //cerr << "  Searching with a k-mer length of " << kmer_len << " (" << num_kmers << " k-mers per read); " << min_hits << " k-mer hits required.\n";
 
     populate_kmer_hash(merged, kmer_map, kmer_map_keys, kmer_len);
 
@@ -579,13 +616,6 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
         tot += it->second->count();
     }
 
-    cerr << "  " << tot << " remainder sequences left to merge.\n";
-
-    if (max_rem_dist <= 0) {
-        cerr << "  Matched 0 remainder reads; unable to match " << tot << " remainder reads.\n";
-        return 0;
-    }
-
     //
     // Calculate the number of k-mers we will generate. If kmer_len == 0,
     // determine the optimal length for k-mers.
@@ -599,9 +629,9 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
     //
     int min_hits = calc_min_kmer_matches(kmer_len, max_rem_dist, con_len, set_kmer_len ? true : false);
 
-    cerr << "  Distance allowed between stacks: " << max_rem_dist
-         << "; searching with a k-mer length of " << kmer_len << " (" << num_kmers << " k-mers per read); "
-         << min_hits << " k-mer hits required.\n";
+    //cerr << "  Distance allowed between stacks: " << max_rem_dist
+    //     << "; searching with a k-mer length of " << kmer_len << " (" << num_kmers << " k-mers per read); "
+    //     << min_hits << " k-mer hits required.\n";
 
     KmerHashMap    kmer_map;
     vector<char *> kmer_map_keys;
@@ -679,7 +709,9 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
                 r->utilized = true;
                 #pragma omp critical
                 {
-                    merged[min_id]->remtags.push_back(it->first);
+                    MergedStack* mtag = merged[min_id];
+                    mtag->remtags.push_back(it->first);
+                    mtag->count += it->second->count();
                     utilized += it->second->count();
                 }
             }
@@ -695,10 +727,6 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
     }
 
     free_kmer_hash(kmer_map, kmer_map_keys);
-    //delete [] buf;
-
-    cerr << "  Matched " << utilized << " remainder reads; unable to match " << tot - utilized << " remainder reads.\n";
-
     return 0;
 }
 
@@ -926,19 +954,21 @@ populate_merged_tags(map<int, Stack *> &unique, map<int, MergedStack *> &merged)
     return 0;
 }
 
-int
-merge_stacks(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, MergedStack *> &merged, set<int> &merge_map, int round)
+void
+merge_stacks(map<int, MergedStack *> &merged, size_t& blist_cnt)
 {
     map<int, MergedStack *> new_merged;
-    map<int, MergedStack *>::iterator it, it_old, it_new;
+    map<int, MergedStack *>::const_iterator it;
+    map<int, MergedStack *>::iterator it_old, it_new;
     MergedStack *tag_1, *tag_2;
+    set<int> merge_map;
     vector<set<int> > merge_lists;
 
     uint index     = 0;
     int  cohort_id  = 0;
     int  id         = 1;
     uint delev_cnt = 0;
-    uint blist_cnt = 0;
+    blist_cnt = 0;
 
     for (it = merged.begin(); it != merged.end(); it++) {
         tag_1 = it->second;
@@ -1030,7 +1060,7 @@ merge_stacks(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, MergedSta
                 vector<MergedStack *> tags;
                 bool delev;
 
-                deleverage(unique, rem, merged, merge_lists[index], cohort_id, tags);
+                deleverage(merged, merge_lists[index], cohort_id, tags);
 
                 if (tags.size() == 1) {
                     delev = false;
@@ -1094,10 +1124,6 @@ merge_stacks(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, MergedSta
         }
     }
 
-    cerr << "  " << merged.size() << " stacks merged into " << new_merged.size()
-         << " loci; deleveraged " << delev_cnt
-         << " loci; blacklisted " << blist_cnt << " loci.\n";
-
     if (new_merged.empty()) {
         cerr << "Error: Couldn't assemble any loci.\n";
         throw exception();
@@ -1110,7 +1136,6 @@ merge_stacks(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, MergedSta
         delete it->second;
 
     swap(merged, new_merged);
-    return 0;
 }
 
 MergedStack *
@@ -1202,8 +1227,8 @@ MergedStack *merge_tags(map<int, MergedStack *> &merged, int *merge_list, int me
     return tag_1;
 }
 
-int
-remove_repetitive_stacks(map<int, Stack *> &unique, map<int, MergedStack *> &merged)
+size_t
+remove_repetitive_stacks(map<int, MergedStack *> &merged)
 {
     //
     // If enabled, check the depth of coverage of each unique tag, and remove
@@ -1218,6 +1243,8 @@ remove_repetitive_stacks(map<int, Stack *> &unique, map<int, MergedStack *> &mer
     map<int, MergedStack *> new_merged;
     MergedStack *tag_1, *tag_2;
     set<int> already_merged;
+
+    const size_t initial_stacks = merged.size();
 
     //
     // First, iterate through the stacks and populate a list of tags that will be removed
@@ -1293,11 +1320,13 @@ remove_repetitive_stacks(map<int, Stack *> &unique, map<int, MergedStack *> &mer
     //
     // Move the non-lumberjack stacks, unmodified, into the new merged map.
     //
+    size_t remaining_stacks = 0;
     for (i = merged.begin(); i != merged.end(); i++) {
         tag_1 = i->second;
 
         if (already_merged.count(tag_1->id) > 0)
             continue;
+        ++remaining_stacks;
 
         set<int> merge_list;
         merge_list.insert(tag_1->id);
@@ -1309,8 +1338,6 @@ remove_repetitive_stacks(map<int, Stack *> &unique, map<int, MergedStack *> &mer
         id++;
     }
 
-    cerr << "  Removed " << already_merged.size() << " stacks.\n";
-
     //
     // Free the memory from the old map of merged tags.
     //
@@ -1318,16 +1345,11 @@ remove_repetitive_stacks(map<int, Stack *> &unique, map<int, MergedStack *> &mer
     for (it = merged.begin(); it != merged.end(); it++)
         delete it->second;
 
-    merged = new_merged;
-
-    cerr << "  " << merged.size() << " stacks remain for merging.\n";
-
-    return 0;
+    merged.swap(new_merged);
+    return initial_stacks - remaining_stacks;
 }
 
-int deleverage(map<int, Stack *> &unique,
-               map<int, Rem *> &rem,
-               map<int, MergedStack *> &merged,
+int deleverage(map<int, MergedStack *> &merged,
                set<int> &merge_list,
                int cohort_id,
                vector<MergedStack *> &deleveraged_tags) {
@@ -1519,9 +1541,9 @@ int calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist) {
     //
     int min_hits = calc_min_kmer_matches(kmer_len, utag_dist, con_len, set_kmer_len ? true : false);
 
-    cerr << "  Distance allowed between stacks: " << utag_dist
-         << "; searching with a k-mer length of " << kmer_len << " (" << num_kmers << " k-mers per read); "
-         << min_hits << " k-mer hits required.\n";
+    //cerr << "  Distance allowed between stacks: " << utag_dist
+    //     << "; searching with a k-mer length of " << kmer_len << " (" << num_kmers << " k-mers per read); "
+    //     << min_hits << " k-mer hits required.\n";
 
     populate_kmer_hash(merged, kmer_map, kmer_map_keys, kmer_len);
 
@@ -1598,66 +1620,73 @@ int calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist) {
     return 0;
 }
 
-int calc_distance(map<int, MergedStack *> &merged, int utag_dist) {
-    //
-    // Calculate the distance (number of mismatches) between each pair
-    // of Radtags. We expect all radtags to be the same length;
-    //
-    map<int, MergedStack *>::iterator it;
-    MergedStack *tag_1, *tag_2;
-    int i, j;
+//int calc_distance(map<int, MergedStack *> &merged, int utag_dist) {
+//    //
+//    // Calculate the distance (number of mismatches) between each pair
+//    // of Radtags. We expect all radtags to be the same length;
+//    //
+//    map<int, MergedStack *>::iterator it;
+//    MergedStack *tag_1, *tag_2;
+//    int i, j;
+//
+//    // OpenMP can't parallelize random access iterators, so we convert
+//    // our map to a vector of integer keys.
+//    vector<int> keys;
+//    for (it = merged.begin(); it != merged.end(); it++)
+//        keys.push_back(it->first);
+//
+//    #pragma omp parallel private(i, j, tag_1, tag_2)
+//    {
+//        #pragma omp for schedule(dynamic)
+//        for (i = 0; i < (int) keys.size(); i++) {
+//
+//            tag_1 = merged[keys[i]];
+//
+//            // Don't compute distances for masked tags
+//            if (tag_1->masked) continue;
+//
+//            int d;
+//
+//            for (j = 0; j < (int) keys.size(); j++) {
+//                tag_2 = merged[keys[j]];
+//
+//                // Don't compute distances for masked tags
+//                if (tag_2->masked) continue;
+//
+//                // Don't compare tag_1 against itself.
+//                if (tag_1 == tag_2) continue;
+//
+//                d = dist(tag_1, tag_2);
+//                //cerr << "  Distance: " << d << "\n";
+//
+//                //
+//                // Store the distance between these two sequences if it is
+//                // below the maximum distance (which governs those
+//                // sequences to be merged in the following step of the
+//                // algorithm.)
+//                //
+//                if (d == utag_dist) {
+//                    tag_1->add_dist(tag_2->id, d);
+//                    //cerr << "  HIT.\n";
+//                }
+//            }
+//
+//            // Sort the vector of distances.
+//            sort(tag_1->dist.begin(), tag_1->dist.end(), compare_dist);
+//        }
+//    }
+//
+//    return 0;
+//}
 
-    // OpenMP can't parallelize random access iterators, so we convert
-    // our map to a vector of integer keys.
-    vector<int> keys;
-    for (it = merged.begin(); it != merged.end(); it++)
-        keys.push_back(it->first);
-
-    #pragma omp parallel private(i, j, tag_1, tag_2)
-    {
-        #pragma omp for schedule(dynamic)
-        for (i = 0; i < (int) keys.size(); i++) {
-
-            tag_1 = merged[keys[i]];
-
-            // Don't compute distances for masked tags
-            if (tag_1->masked) continue;
-
-            int d;
-
-            for (j = 0; j < (int) keys.size(); j++) {
-                tag_2 = merged[keys[j]];
-
-                // Don't compute distances for masked tags
-                if (tag_2->masked) continue;
-
-                // Don't compare tag_1 against itself.
-                if (tag_1 == tag_2) continue;
-
-                d = dist(tag_1, tag_2);
-                //cerr << "  Distance: " << d << "\n";
-
-                //
-                // Store the distance between these two sequences if it is
-                // below the maximum distance (which governs those
-                // sequences to be merged in the following step of the
-                // algorithm.)
-                //
-                if (d == utag_dist) {
-                    tag_1->add_dist(tag_2->id, d);
-                    //cerr << "  HIT.\n";
-                }
-            }
-
-            // Sort the vector of distances.
-            sort(tag_1->dist.begin(), tag_1->dist.end(), compare_dist);
-        }
-    }
-
-    return 0;
-}
-
-int reduce_radtags(DNASeqHashMap &radtags, map<int, Stack *> &unique, map<int, Rem *> &rem) {
+void reduce_radtags(
+        DNASeqHashMap &radtags, map<int, Stack *> &unique,
+        map<int, Rem *> &rem,
+        size_t& n_u_reads,
+        size_t& n_r_reads
+        ) {
+    n_u_reads = 0;
+    n_r_reads = 0;
     DNASeqHashMap::iterator it;
 
     Rem   *r;
@@ -1677,9 +1706,9 @@ int reduce_radtags(DNASeqHashMap &radtags, map<int, Stack *> &unique, map<int, R
 
             for (uint i = 0; i < it->second.ids.size(); i++)
                 r->add_id(it->second.ids[i]);
+            n_r_reads += r->map.size();
 
             rem[r->id] = r;
-            global_id++;
 
         } else {
             //
@@ -1694,100 +1723,48 @@ int reduce_radtags(DNASeqHashMap &radtags, map<int, Stack *> &unique, map<int, R
             // Copy the original Fastq IDs from which this unique radtag was built.
             for (uint i = 0; i < it->second.ids.size(); i++)
                 u->add_id(it->second.ids[i]);
+            n_u_reads += u->map.size();
 
             unique[u->id] = u;
-            global_id++;
         }
+        if (global_id == INT_MAX)
+            throw std::overflow_error("overflow in reduce_radtags()");
+        ++global_id;
     }
 
     if (unique.size() == 0) {
-        cerr << "Error: Unable to form any stacks, data appear to be unique.\n";
+        cerr << "Error: Unable to form any primary stacks.\n";
         exit(1);
     }
-
-    return 0;
 }
 
 void
-calc_coverage_distribution(map<int, Stack *> &unique,
-                           map<int, Rem *> &rem,
-                           map<int, MergedStack *> &merged,
-                           double &mean, double &stdev, double &max)
+calc_coverage_distribution(map<int, MergedStack *> &merged,
+                           double &mean, double &stdev, double &max, double &tot_depth)
 {
     max   = 0.0;
     mean = 0.0;
     stdev = 0.0;
+    tot_depth = 0.0;
 
     size_t not_blacklisted = 0;
     for (const pair<int, MergedStack*>& mtag : merged) {
         if (mtag.second->blacklisted)
             continue;
-
         ++not_blacklisted;
 
-        double depth = 0.0;
-        for (int utag_id : mtag.second->utags)
-            depth += unique[utag_id]->count();
-        for (int remtag_id : mtag.second->remtags)
-            depth += rem[remtag_id]->count();
-
-        mean += depth;
+        double depth = mtag.second->count;
+        tot_depth += depth;
         if (depth > max)
             max = depth;
     }
-    mean /= not_blacklisted;
+    mean = tot_depth / not_blacklisted;
 
-    for (const pair<int, MergedStack*>& mtag : merged) {
-        if (mtag.second->blacklisted)
-            continue;
-
-        double depth = 0.0;
-        for (int utag_id : mtag.second->utags)
-            depth += unique[utag_id]->count();
-        for (int remtag_id : mtag.second->remtags)
-            depth += rem[remtag_id]->count();
-
-        stdev += pow(depth - mean, 2);
-    }
+    for (const pair<int, MergedStack*>& mtag : merged)
+        if (!mtag.second->blacklisted)
+            stdev += pow(mtag.second->count - mean, 2);
     stdev /= not_blacklisted;
     stdev = sqrt(stdev);
-}
-
-int count_raw_reads(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, MergedStack *> &merged) {
-    map<int, MergedStack *>::iterator it;
-    map<int, Stack *>::iterator sit;
-    vector<int>::iterator k;
-    Stack *tag;
-    long int m = 0;
-
-    map<int, int> uniq_ids;
-    map<int, int>::iterator uit;
-
-    for (it = merged.begin(); it != merged.end(); it++) {
-        for (k = it->second->utags.begin(); k != it->second->utags.end(); k++) {
-            tag  = unique[*k];
-            m   += tag->count();
-
-            if (uniq_ids.count(*k) == 0)
-               uniq_ids[*k] = 0;
-            uniq_ids[*k]++;
-        }
-        for (uint j = 0; j < it->second->remtags.size(); j++)
-            m += rem[it->second->remtags[j]]->count();
-            //m += it->second->remtags.size();
-    }
-
-    for (uit = uniq_ids.begin(); uit != uniq_ids.end(); uit++)
-       if (uit->second > 1)
-           cerr << "  Unique stack #" << uit->first << " appears in " << uit->second << " merged stacks.\n";
-
-    cerr << "Number of utilized reads: " << m << "\n";
-
-    //for (sit = unique.begin(); sit != unique.end(); sit++)
-    //   if (uniq_ids.count(sit->first) == 0)
-    //       cerr << "  Stack " << sit->first << ": '" << sit->second->seq << "' unused.\n";
-
-    return 0;
 }
 
 int
@@ -2291,7 +2268,9 @@ int dump_merged_tags(map<int, MergedStack *> &m) {
     return 0;
 }
 
-int load_radtags(string in_file, DNASeqHashMap &radtags) {
+void load_radtags(string in_file, DNASeqHashMap &radtags, size_t& n_reads) {
+    n_reads = 0;
+
     Input *fh = NULL;
 
     if (in_file_type == FileT::fasta)
@@ -2303,9 +2282,8 @@ int load_radtags(string in_file, DNASeqHashMap &radtags) {
     else if (in_file_type == FileT::gzfastq)
         fh = new GzFastq(in_file.c_str());
 
-    cerr << "Parsing " << in_file.c_str() << "\n";
     long  int corrected = 0;
-    long  int i         = 0;
+    size_t i            = 0;
     short int seql      = 0;
     short int prev_seql = 0;
     bool  len_mismatch  = false;
@@ -2315,10 +2293,9 @@ int load_radtags(string in_file, DNASeqHashMap &radtags) {
     c.seq  = new char[max_len];
     c.qual = new char[max_len];
 
-    cerr << "Loading RAD-Tags...";
     while ((fh->next_seq(c)) != 0) {
         if (i % 1000000 == 0 && i>0)
-            cerr << i/1000000 << "M...";
+            cerr << i/1000000 << "M..." << flush;
 
         prev_seql = seql;
         seql      = 0;
@@ -2339,7 +2316,6 @@ int load_radtags(string in_file, DNASeqHashMap &radtags) {
         element->second.add_id(i);
         i++;
     }
-    cerr << "done\n";
 
     if (i == 0) {
         cerr << "Error: Unable to load data from '" << in_file.c_str() << "'.\n";
@@ -2347,14 +2323,11 @@ int load_radtags(string in_file, DNASeqHashMap &radtags) {
     }
     if (len_mismatch)
         cerr << "Warning: different sequence lengths detected, this will interfere with Stacks algorithms.\n";
-
-    cerr << "Loaded " << i << " RAD-Tags.\n"
-            "  Inserted " << radtags.size() << " elements into the RAD-Tags hash map.\n"
-            "  " << corrected << " reads contained uncalled nucleotides that were modified.\n";
+    if (corrected > 0)
+        cerr << "Warning: Input reads contained " << corrected << " uncalled nucleotides.\n";
 
     delete fh;
-
-    return 0;
+    n_reads = i;
 }
 
 int
@@ -2371,7 +2344,7 @@ load_seq_ids(vector<char *> &seq_ids)
     else if (in_file_type == FileT::gzfastq)
         fh = new GzFastq(in_file.c_str());
 
-    cerr << "  Refetching sequencing IDs from " << in_file.c_str() << "... ";
+    cerr << "Refetching read IDs...";
 
     char *id;
     Seq c;
@@ -2384,25 +2357,17 @@ load_seq_ids(vector<char *> &seq_ids)
         strcpy(id, c.id);
         seq_ids.push_back(id);
     }
-    cerr << "read " << seq_ids.size() << " sequence IDs.\n";
 
     delete fh;
-
     return 0;
 }
 
-int
-calc_triggers(double cov_mean,
-              double cov_stdev,
-              double cov_scale,
-              int &deleverage_trigger, int &removal_trigger)
-{
+void
+calc_triggers(double cov_mean, double cov_stdev, double cov_scale) {
 
-    deleverage_trigger = (int) round(cov_mean + cov_stdev * cov_scale);
     removal_trigger    = (int) round(cov_mean + (cov_stdev * 2) * cov_scale);
 
-    return 0;
-
+//    deleverage_trigger = (int) round(cov_mean + cov_stdev * cov_scale);
 //     //
 //     // Calculate the deleverage trigger. Assume RAD-Tags are selected from
 //     // the sample for sequencing randomly, forming a poisson distribution
