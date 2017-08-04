@@ -76,20 +76,22 @@ struct NodeData {
 
 class Node {
     NodeData d_;
-    uchar n_pred_;
+    Node* pred_[4];
     Node* succ_[4];
 
 public:
-    Node() : d_(), n_pred_(0), succ_(), sp_() {}
-    Node(const NodeData& d) : d_(d), n_pred_(0), succ_(), sp_() {}
+    Node() : d_(), pred_(), succ_(), sp_() {}
+    Node(const NodeData& d) : d_(d), pred_(), succ_(), sp_() {}
     ~Node() {}
 
-    void set_succ(size_t nt2, Node* n) {succ_[nt2] = n; ++n->n_pred_;}
+    void set_succ(size_t nt2, Node* n) {succ_[nt2] = n; n->pred_[size_t(d_.km.front())] = this;}
 
-    size_t n_pred() const {return n_pred_;}
+    size_t n_pred() const {return size_t(pred_[0]!=NULL) + size_t(pred_[1]!=NULL) + size_t(pred_[2]!=NULL) + size_t(pred_[3]!=NULL);}
     size_t n_succ() const {return size_t(succ_[0]!=NULL) + size_t(succ_[1]!=NULL) + size_t(succ_[2]!=NULL) + size_t(succ_[3]!=NULL);}
+    const Node* pred(size_t nt2) const {return pred_[nt2];}
+          Node* pred(size_t nt2)       {return pred_[nt2];} // (non-const)
     const Node* succ(size_t nt2) const {return succ_[nt2];}
-          Node* succ(size_t nt2)       {return succ_[nt2];} // (non-const)
+          Node* succ(size_t nt2)       {return succ_[nt2];}
     const Node* first_succ() const {const Node* s = succ_[0]; for (size_t nt2=1; nt2<4; ++nt2) { if (s != NULL) break; s = succ(nt2);} return s;}
           Node* first_succ()       {return (Node*) ((const Node*)this)->first_succ();}
 
@@ -139,6 +141,8 @@ public:
 
     size_t n_pred() const {return first_->n_pred();}
     size_t n_succ() const {return last_->n_succ();}
+    const SPath* pred(size_t nt2) const {const Node* n = first_->pred(nt2); return n == NULL ? NULL : n->sp_;}
+          SPath* pred(size_t nt2)       {return (SPath*) ((const SPath*)this)->pred(nt2);}
     const SPath* succ(size_t nt2) const {const Node* n = last_->succ(nt2); return n == NULL ? NULL : n->sp_;}
           SPath* succ(size_t nt2)       {return (SPath*) ((const SPath*)this)->succ(nt2);}
     const SPath* first_succ() const {const Node* n = last_->first_succ(); return n == NULL ? NULL : n->sp_;}
