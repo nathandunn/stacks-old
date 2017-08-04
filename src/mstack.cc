@@ -106,8 +106,6 @@ int MergedStack::add_dist(const int id, const int dist) {
 DNANSeq **
 MergedStack::gen_matrix(map<int, Stack *> &unique, map<int, Rem *> &rem)
 {
-    Stack *tag;
-
     //
     // Create a two-dimensional array, each row containing one read. For
     // each unique tag that has been merged together, add the sequence for
@@ -116,16 +114,14 @@ MergedStack::gen_matrix(map<int, Stack *> &unique, map<int, Rem *> &rem)
     // We do not allocate memory for the second dimension of the array, we simply
     // reuse the existing char arrays in the unique and rem maps
     //
-    uint cnt = this->count + this->remtags.size();
     if (this->matrix != NULL)
         delete [] this->matrix;
-    this->matrix = new DNANSeq * [cnt];
+    this->matrix = new DNANSeq * [this->count];
 
     vector<int>::iterator j;
     int i = 0;
     for (j = this->utags.begin(); j != this->utags.end(); j++) {
-        tag = unique[*j];
-
+        Stack* tag = unique[*j];
         for (uint k = 0; k < tag->count(); k++) {
             this->matrix[i] = tag->seq;
             i++;
@@ -134,9 +130,13 @@ MergedStack::gen_matrix(map<int, Stack *> &unique, map<int, Rem *> &rem)
 
     // For each remainder tag that has been merged into this Stack, add the sequence.
     for (j = this->remtags.begin(); j != this->remtags.end(); j++) {
-        this->matrix[i] = rem[*j]->seq;
-        i++;
+        Rem* rtag = rem[*j];
+        for (uint k = 0; k < rtag->count(); k++) {
+            this->matrix[i] = rtag->seq;
+            i++;
+        }
     }
+    assert(i == this->count);
 
     return this->matrix;
 }
@@ -183,7 +183,7 @@ MergedStack::calc_likelihood()
     //
     int row, col, tot;
     int length = this->matrix[0]->size();
-    int height = this->count + this->remtags.size();
+    int height = this->count;
     map<char, int> nuc;
     map<char, int>::iterator max, n;
     DNANSeq *d;
