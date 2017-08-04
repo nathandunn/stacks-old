@@ -840,7 +840,7 @@ void vcfcomp_simplify_pmap (map<int, CSLocus*>& catalog, PopMap<CSLocus>* pmap) 
         }
     }
     // Same SNP in different loci.
-    for (auto& chr : pmap->ordered_loci) {
+    for (auto& chr : pmap->ordered_loci()) {
         map<size_t,vector<size_t> > seen_bp0; // (bp, [loc_id's])
         for (CSLocus* loc : chr.second)
             if (not loc->snps.empty())
@@ -1441,7 +1441,7 @@ merge_shared_cutsite_loci(map<int, CSLocus *> &catalog,
     //
     // Iterate over each chromosome.
     //
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    for (it = pmap->ordered_loci_nconst().begin(); it != pmap->ordered_loci_nconst().end(); it++) {
         //
         // Iterate over each ordered locus on this chromosome.
         //
@@ -2166,7 +2166,7 @@ int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
     // Count the number of markers that have enough samples to output.
     //
     map<int, CSLocus *>::iterator cit;
-    CSLocus *loc;
+    const CSLocus *loc;
     int num_loci = 0;
 
     for (cit = catalog.begin(); cit != catalog.end(); cit++) {
@@ -2191,10 +2191,10 @@ int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
     //
     // Output each locus.
     //
-    map<string, vector<CSLocus *> >::iterator it;
+    map<string, vector<CSLocus *> >::const_iterator it;
     int  a, b;
 
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
         for (uint i = 0; i < it->second.size(); i++) {
             loc = it->second[i];
 
@@ -2263,8 +2263,8 @@ int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
 int
 calculate_haplotype_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum)
 {
-    map<string, vector<CSLocus *> >::iterator it;
-    CSLocus  *loc;
+    map<string, vector<CSLocus *> >::const_iterator it;
+    const CSLocus  *loc;
     Datum   **d;
     LocStat  *l;
 
@@ -2328,7 +2328,7 @@ calculate_haplotype_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, P
         cerr << "Generating haplotype-level summary statistics for population '" << pop.name << "'\n";
         map<string, vector<LocStat *> > genome_locstats;
 
-        for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+        for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
 
             if (bootstrap_div)
                 bs = new Bootstrap<LocStat>(2);
@@ -2364,7 +2364,7 @@ calculate_haplotype_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, P
                 bs->add_data(locstats);
         }
 
-        for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+        for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
             vector<LocStat *> &locstats = genome_locstats[it->first];
 
             if (bootstrap_div)
@@ -2511,7 +2511,7 @@ nuc_substitution_identity_max(map<string, int> &hap_index, double **hdists)
 int
 calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum)
 {
-    map<string, vector<CSLocus *> >::iterator it;
+    map<string, vector<CSLocus *> >::const_iterator it;
 
     if (bootstrap_phist)
         cerr << "Calculating halotype F statistics across all populations/groups and bootstrap resampling...\n";
@@ -2542,7 +2542,7 @@ calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pm
     map<string, vector<HapStat *> > genome_hapstats;
 
     uint cnt = 0;
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
         string chr = it->first;
 
         cerr << "  Generating haplotype F statistics for " << chr << "...";
@@ -2553,7 +2553,7 @@ calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pm
 
         #pragma omp parallel
         {
-            CSLocus  *loc;
+            const CSLocus  *loc;
             LocSum  **s;
             Datum   **d;
             HapStat  *h;
@@ -2605,7 +2605,7 @@ calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pm
     }
 
     if (bootstrap_phist) {
-        for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++)
+        for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++)
             bs->execute(genome_hapstats[it->first]);
     }
 
@@ -2694,7 +2694,7 @@ calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pm
        << "Smoothed D_est"  << "\t"
        << "Smoothed D_est P-value"  << "\n";
 
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
         string chr = it->first;
 
         vector<HapStat *> &hapstats = genome_hapstats[chr];
@@ -2753,7 +2753,7 @@ calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pm
 int
 calculate_haplotype_divergence_pairwise(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum)
 {
-    map<string, vector<CSLocus *> >::iterator it;
+    map<string, vector<CSLocus *> >::const_iterator it;
 
     if (bootstrap_phist)
         cerr << "Calculating pairwise halotype F statistics and bootstrap resampling...\n";
@@ -2794,7 +2794,7 @@ calculate_haplotype_divergence_pairwise(map<int, CSLocus *> &catalog, PopMap<CSL
             cerr << "  Processing populations '" << pop_i.name << "' and '" << pop_j.name << "'\n";
 
             uint cnt = 0;
-            for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+            for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
                 string chr = it->first;
 
                 cerr << "    Generating pairwise haplotype F statistics for " << chr << "...";
@@ -2805,7 +2805,7 @@ calculate_haplotype_divergence_pairwise(map<int, CSLocus *> &catalog, PopMap<CSL
 
                 #pragma omp parallel
                 {
-                    CSLocus  *loc;
+                    const CSLocus  *loc;
                     LocSum  **s;
                     Datum   **d;
                     HapStat  *h;
@@ -2857,7 +2857,7 @@ calculate_haplotype_divergence_pairwise(map<int, CSLocus *> &catalog, PopMap<CSL
             }
 
             if (bootstrap_phist) {
-                for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++)
+                for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++)
                     bs->execute(genome_hapstats[it->first]);
             }
 
@@ -2924,7 +2924,7 @@ calculate_haplotype_divergence_pairwise(map<int, CSLocus *> &catalog, PopMap<CSL
                << "Smoothed D_est" << "\t"
                << "Smoothed D_est P-value" << "\n";
 
-            for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+            for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
                 string chr = it->first;
 
                 vector<HapStat *> &hapstats = genome_hapstats[chr];
@@ -3712,8 +3712,8 @@ void log_snps_per_loc_distrib(ostream& log_fh, map<int, CSLocus*>& catalog)
 int
 calculate_summary_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum)
 {
-    map<string, vector<CSLocus *> >::iterator it;
-    CSLocus  *loc;
+    map<string, vector<CSLocus *> >::const_iterator it;
+    const CSLocus  *loc;
     LocSum  **s;
     LocTally *t;
     int       len;
@@ -3806,7 +3806,7 @@ calculate_summary_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Pop
         fis_var_all[j]       = 0.0;
     }
 
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
         for (uint pos = 0; pos < it->second.size(); pos++) {
             loc = it->second[pos];
 
@@ -3938,7 +3938,7 @@ calculate_summary_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Pop
        << "Smoothed Fis P-value" << "\t"
        << "Private"      << "\n";
 
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
         for (uint pos = 0; pos < it->second.size(); pos++) {
             loc = it->second[pos];
 
@@ -4344,11 +4344,11 @@ write_fst_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLo
             if (bootstrap_fst)
                 bs = new Bootstrap<PopPair>(2);
 
-            map<string, vector<CSLocus *> >::iterator it;
+            map<string, vector<CSLocus *> >::const_iterator it;
             map<string, vector<PopPair *> > genome_pairs;
             // int snp_dist[max_snp_dist] = {0};
 
-            for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+            for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
                 string chr = it->first;
 
                 map<uint, uint>    pairs_key;
@@ -4416,7 +4416,7 @@ write_fst_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLo
             // if (bootstrap_fst && bootstrap_type == bs_approx)
             //  bootstrap_fst_approximate_dist(fst_samples, allele_depth_samples, weights, snp_dist, approx_fst_dist);
 
-            for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+            for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
                 string chr = it->first;
                 vector<PopPair *> &pairs = genome_pairs[chr];
 
@@ -4604,7 +4604,7 @@ kernel_smoothed_popstats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Po
     // int snp_dist[max_snp_dist] = {0};
     // int sites_per_snp = 0;
     // int tot_windows = 0;
-    map<string, vector<CSLocus *> >::iterator it;
+    map<string, vector<CSLocus *> >::const_iterator it;
     map<string, vector<SumStat *> > genome_sites;
 
     //
@@ -4617,7 +4617,7 @@ kernel_smoothed_popstats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Po
     if (bootstrap_pifis)
         bs = new Bootstrap<SumStat>(2);
 
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
         vector<SumStat *> &sites = genome_sites[it->first];
 
         ord->order(sites, it->second, pop_id);
@@ -4626,7 +4626,7 @@ kernel_smoothed_popstats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Po
 
     cerr << "    Population '" << mpopi.pops()[pop_id].name << "' contained " << ord->multiple_loci << " nucleotides covered by more than one RAD locus.\n";
 
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
         if (bootstrap_pifis)
             cerr << "    Smoothing and bootstrapping chromosome " << it->first << "\n";
         else
@@ -4658,7 +4658,7 @@ kernel_smoothed_popstats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Po
 //                                          weights, snp_dist, sites_per_snp,
 //                                          approx_fis_dist, approx_pi_dist);
 
-//      for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+//      for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
 
 //          for (uint pos = 0; pos < it->second.size(); pos++) {
 //              loc  = it->second[pos];

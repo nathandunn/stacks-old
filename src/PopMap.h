@@ -101,9 +101,12 @@ class PopMap {
     map<int, int> locus_order;  // LocusID => ArrayIndex; map catalog IDs to their first dimension
                                 // position in the Datum array.
     map<int, int> rev_locus_order;
+    map<string, vector<LocusT *> > ordered_loci_; // Loci ordered by genomic position
 
 public:
-    map<string, vector<LocusT *> > ordered_loci; // Loci ordered by genomic position
+    //
+    // Initialize & amend the PopMap.
+    //
 
     PopMap(const MetaPopInfo& mpopi, int n_loci);
     ~PopMap();
@@ -125,6 +128,11 @@ public:
 
     int order_loci(const map<int, LocusT*>& catalog);
     int prune(set<int>& loc_ids);
+    map<string, vector<LocusT *> >& ordered_loci_nconst() {return ordered_loci_;}
+
+    //
+    // Obtain indexes, etc.
+    //
 
     int loci_cnt() const { return this->num_loci; }
     int locus_index(int id) const {return locus_order.at(id);}
@@ -134,10 +142,17 @@ public:
     int sample_index(int id) const {try {return metapopinfo.get_sample_index(id);} catch (exception&) {return -1;}}
     int rev_sample_index(int index) const {return metapopinfo.samples().at(index).id;}
 
+    const map<string,vector<LocusT*>>& ordered_loci() const {return ordered_loci_;}
+
+    bool blacklisted(int loc_id, int sample_id) const {return blacklist.count({sample_id, loc_id});}
+
+    //
+    // Access the Datums.
+    //
+
     Datum **locus(int id);
     Datum  *datum(int loc_id, int sample_id);
 
-    bool    blacklisted(int loc_id, int sample_id);
 };
 
 template<class LocusT>
@@ -158,12 +173,6 @@ PopMap<LocusT>::PopMap(const MetaPopInfo& mpopi, int num_loci)
 
 template<class LocusT>
 PopMap<LocusT>::~PopMap() {
-
-    typename std::map<string, vector<LocusT *> >::iterator it;
-    for (it = this->ordered_loci.begin(); it != this->ordered_loci.end(); it++)
-        it->second.clear();
-    this->ordered_loci.clear();
-    
     for (int i = 0; i < this->num_loci; i++) {
         for (size_t j = 0; j < metapopinfo.samples().size(); j++)
             delete this->data[i][j];
@@ -550,20 +559,20 @@ int PopMap<LocusT>::populate(map<int, LocusT*>& catalog,
 template<class LocusT>
 int PopMap<LocusT>::order_loci(const map<int, LocusT*> &catalog)
 {
-    this->ordered_loci.clear();
+    this->ordered_loci_.clear();
 
     typename map<int, LocusT*>::const_iterator it;
 
     for (it = catalog.begin(); it != catalog.end(); it++) {
         if (!it->second->loc.empty())
-            this->ordered_loci[it->second->loc.chr()].push_back(it->second);
+            this->ordered_loci_[it->second->loc.chr()].push_back(it->second);
     }
 
     //
     // Sort the catalog loci on each chromosome according to base pair.
     //
     typename map<string, vector<LocusT*> >::iterator cit;
-    for (cit = this->ordered_loci.begin(); cit != this->ordered_loci.end(); cit++)
+    for (cit = this->ordered_loci_.begin(); cit != this->ordered_loci_.end(); cit++)
         sort(cit->second.begin(), cit->second.end(), bp_compare);
 
     return 0;
@@ -612,17 +621,17 @@ int PopMap<LocusT>::prune(set<int> &remove_ids) {
     map<string, vector<LocusT *> > new_ordered_loci;
     typename map<string, vector<LocusT*> >::iterator cit;
 
-    for (cit = this->ordered_loci.begin(); cit != this->ordered_loci.end(); cit++) {
+    for (cit = this->ordered_loci_.begin(); cit != this->ordered_loci_.end(); cit++) {
         for (uint k = 0; k < cit->second.size(); k++) {
             if (remove_ids.count(cit->second[k]->id) == 0)
                 new_ordered_loci[cit->first].push_back(cit->second[k]);
         }
     }
 
-    this->ordered_loci.clear();
-    this->ordered_loci = new_ordered_loci;
+    this->ordered_loci_.clear();
+    this->ordered_loci_ = new_ordered_loci;
 
-    for (cit = this->ordered_loci.begin(); cit != this->ordered_loci.end(); cit++)
+    for (cit = this->ordered_loci_.begin(); cit != this->ordered_loci_.end(); cit++)
         sort(cit->second.begin(), cit->second.end(), bp_compare);
 
     return new_size;
@@ -636,14 +645,6 @@ Datum **PopMap<LocusT>::locus(int id) {
 template<class LocusT>
 Datum  *PopMap<LocusT>::datum(int loc_id, int sample_id) {
     return this->data[this->locus_order[loc_id]][metapopinfo.get_sample_index(sample_id)];
-}
-
-template<class LocusT>
-bool PopMap<LocusT>::blacklisted(int locus, int sample) {
-    if (this->blacklist.count(make_pair(sample, locus)) > 0)
-        return true;
-    else
-        return false;
 }
 
 #endif // __POPMAP_H__

@@ -110,12 +110,12 @@ write_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
         exit(1);
     }
 
-    map<string, vector<CSLocus *> >::iterator it;
+    map<string, vector<CSLocus *> >::const_iterator it;
     CSLocus *loc;
     Datum  **d;
     char    *seq;
 
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
         for (uint pos = 0; pos < it->second.size(); pos++) {
             loc = it->second[pos];
             d   = pmap->locus(loc->id);
@@ -172,12 +172,12 @@ write_strict_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
         exit(1);
     }
 
-    map<string, vector<CSLocus *> >::iterator it;
+    map<string, vector<CSLocus *> >::const_iterator it;
     CSLocus *loc;
     Datum  **d;
     char    *seq;
 
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
         for (uint pos = 0; pos < it->second.size(); pos++) {
             loc = it->second[pos];
             d   = pmap->locus(loc->id);
@@ -269,7 +269,7 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
     // We need to order the SNPs taking into account overlapping loci.
     OLocTally<NucTally> *ord = new OLocTally<NucTally>(psum, log_fh);
 
-    for (auto it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    for (auto it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
         vector<NucTally *> sites;
         ord->order(sites, it->second);
 
@@ -371,15 +371,15 @@ write_vcf(map<int, CSLocus *> &catalog,
         header.add_sample(s.name);
     VcfWriter writer (path, move(header));
 
-    map<string, vector<CSLocus *> >::iterator it;
+    map<string, vector<CSLocus *> >::const_iterator it;
     CSLocus *loc;
     Datum   **d;
     LocTally *t;
 
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
 
         // We need to order the SNPs so negative and positive strand SNPs are properly ordered.
-        vector<GenPos> ordered_loci;
+        vector<GenPos> ordered_snps;
         for (uint pos = 0; pos < it->second.size(); pos++) {
             loc = it->second[pos];
             t   = psum->locus_tally(loc->id);
@@ -387,14 +387,14 @@ write_vcf(map<int, CSLocus *> &catalog,
             for (uint i = 0; i < loc->snps.size(); i++) {
                 uint16_t col = loc->snps[i]->col;
                 if (t->nucs[col].allele_cnt == 2)
-                    ordered_loci.push_back(GenPos(loc->id, i, loc->sort_bp(col)));
+                    ordered_snps.push_back(GenPos(loc->id, i, loc->sort_bp(col)));
             }
         }
-        sort(ordered_loci.begin(), ordered_loci.end());
+        sort(ordered_snps.begin(), ordered_snps.end());
 
-        for (uint pos = 0; pos < ordered_loci.size(); pos++) {
-            loc = catalog[ordered_loci[pos].id];
-            uint16_t col = loc->snps[ordered_loci[pos].snp_index]->col;
+        for (uint pos = 0; pos < ordered_snps.size(); pos++) {
+            loc = catalog[ordered_snps[pos].id];
+            uint16_t col = loc->snps[ordered_snps[pos].snp_index]->col;
             int snp_index = loc->snp_index(col);
             if (snp_index < 0) {
                 cerr << "Warning: unable to locate SNP call in column " << col << " for locus #" << loc->id << "\n";
@@ -434,7 +434,7 @@ write_vcf(map<int, CSLocus *> &catalog,
                     sample << "./.:" << d[j]->tot_depth << ":.,.";
                 } else {
                     char allele1, allele2;
-                    tally_observed_haplotypes(d[j]->obshap, ordered_loci[pos].snp_index, allele1, allele2);
+                    tally_observed_haplotypes(d[j]->obshap, ordered_snps[pos].snp_index, allele1, allele2);
 
                     if (allele1 == 0) {
                         // More than two alleles in this sample
@@ -491,7 +491,7 @@ write_vcf_haplotypes(map<int, CSLocus *> &catalog,
     Datum   **d;
     char      allele[id_len];
 
-    for (auto chr = pmap->ordered_loci.begin(); chr != pmap->ordered_loci.end(); chr++) {
+    for (auto chr = pmap->ordered_loci().begin(); chr != pmap->ordered_loci().end(); chr++) {
         for (uint pos = 0; pos < chr->second.size(); pos++) {
             loc = chr->second[pos];
             d   = pmap->locus(loc->id);
@@ -772,7 +772,7 @@ write_genepop_ordered(map<int, CSLocus *> &catalog,
     fh << "Stacks version " << VERSION << "; Genepop version 4.1.3; " << date << "\n";
 
     map<string, vector<NucTally *> > genome_sites;
-    map<string, vector<CSLocus *> >::iterator it;
+    map<string, vector<CSLocus *> >::const_iterator it;
     CSLocus  *loc;
     Datum   **d;
     LocSum  **s;
@@ -787,9 +787,9 @@ write_genepop_ordered(map<int, CSLocus *> &catalog,
     //
     // Output all the loci on the second line, comma-separated.
     //
-    int chrs = pmap->ordered_loci.size();
+    int chrs = pmap->ordered_loci().size();
     int cnt  = 0;
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
         vector<NucTally *> &sites = genome_sites[it->first];
         ord->order(sites, it->second);
         cnt++;
@@ -815,7 +815,7 @@ write_genepop_ordered(map<int, CSLocus *> &catalog,
 
             fh << mpopi.samples()[j].name << ",";
 
-            for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+            for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
                 vector<NucTally *> &sites = genome_sites[it->first];
 
                 for (uint pos = 0; pos < sites.size(); pos++) {
@@ -909,13 +909,13 @@ write_structure(map<int, CSLocus *> &catalog,
     //
     fh << "# Stacks v" << VERSION << "; " << " Structure v2.3; " << date << "\n";
 
-    map<string, vector<CSLocus *> >::iterator it;
+    map<string, vector<CSLocus *> >::const_iterator it;
     CSLocus  *loc;
     Datum   **d;
     LocSum  **s;
     LocTally *t;
 
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
         for (uint pos = 0; pos < it->second.size(); pos++) {
             loc = it->second[pos];
             t   = psum->locus_tally(loc->id);
@@ -946,7 +946,7 @@ write_structure(map<int, CSLocus *> &catalog,
             //
             fh << mpopi.samples()[j].name << "\t" << pop.name;
 
-            for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+            for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
                 for (uint pos = 0; pos < it->second.size(); pos++) {
                     loc = it->second[pos];
 
@@ -1003,7 +1003,7 @@ write_structure(map<int, CSLocus *> &catalog,
             //
             fh << mpopi.samples()[j].name << "\t" << pop.name;
 
-            for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+            for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
                 for (uint pos = 0; pos < it->second.size(); pos++) {
                     loc = it->second[pos];
 
@@ -1087,7 +1087,7 @@ write_structure_ordered(map<int, CSLocus *> &catalog,
     fh << "# Stacks v" << VERSION << "; " << " Structure v2.3; " << date << "\n";
 
     map<string, vector<NucTally *> > genome_sites;
-    map<string, vector<CSLocus *> >::iterator it;
+    map<string, vector<CSLocus *> >::const_iterator it;
     CSLocus  *loc;
     Datum   **d;
     LocSum  **s;
@@ -1097,7 +1097,7 @@ write_structure_ordered(map<int, CSLocus *> &catalog,
     //
     OLocTally<NucTally> *ord = new OLocTally<NucTally>(psum, log_fh);
 
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
         vector<NucTally *> &sites = genome_sites[it->first];
         ord->order(sites, it->second);
 
@@ -1124,7 +1124,7 @@ write_structure_ordered(map<int, CSLocus *> &catalog,
             //
             fh << mpopi.samples()[j].name << "\t" << pop.name;
 
-            for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+            for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
                 vector<NucTally *> &sites = genome_sites[it->first];
 
                 for (uint pos = 0; pos < sites.size(); pos++) {
@@ -1173,7 +1173,7 @@ write_structure_ordered(map<int, CSLocus *> &catalog,
             //
             fh << mpopi.samples()[j].name << "\t" << pop.name;
 
-            for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+            for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
                 vector<NucTally *> &sites = genome_sites[it->first];
 
                 for (uint pos = 0; pos < sites.size(); pos++) {
@@ -1249,12 +1249,12 @@ write_hzar(map<int, CSLocus *> &catalog,
     fh << "# Stacks v" << VERSION << "; " << " HZAR v0.2-5; " << date << "\n"
        << "Population" << "," << "Distance";
 
-    map<string, vector<CSLocus *> >::iterator it;
+    map<string, vector<CSLocus *> >::const_iterator it;
     CSLocus  *loc;
     LocSum  **s;
     LocTally *t;
 
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
         for (uint pos = 0; pos < it->second.size(); pos++) {
             loc = it->second[pos];
             s   = psum->locus(loc->id);
@@ -1277,7 +1277,7 @@ write_hzar(map<int, CSLocus *> &catalog,
 
         fh << pop.name << ",";
 
-        for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+        for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
             for (uint pos = 0; pos < it->second.size(); pos++) {
                 loc = it->second[pos];
 
@@ -1368,7 +1368,7 @@ write_treemix(map<int, CSLocus *> &catalog,
     //
     fh << "# Stacks v" << VERSION << "; " << " TreeMix v1.1; " << date << "\n";
 
-    map<string, vector<CSLocus *> >::iterator it;
+    map<string, vector<CSLocus *> >::const_iterator it;
     CSLocus  *loc;
     LocSum  **s;
     LocTally *t;
@@ -1385,7 +1385,7 @@ write_treemix(map<int, CSLocus *> &catalog,
     double p_freq, p_cnt, q_cnt, allele_cnt;
     long int line = 1;
 
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
         for (uint pos = 0; pos < it->second.size(); pos++) {
             loc = it->second[pos];
 
@@ -1452,13 +1452,13 @@ write_fastphase(map<int, CSLocus *> &catalog,
     //
     cerr << "Writing population data to fastPHASE files...";
 
-    map<string, vector<CSLocus *> >::iterator it;
+    map<string, vector<CSLocus *> >::const_iterator it;
     CSLocus  *loc;
     Datum   **d;
     LocSum  **s;
     LocTally *t;
 
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
 
         string file = out_path + out_prefix + "." + it->first + ".fastphase.inp";
 
@@ -1494,7 +1494,7 @@ write_fastphase(map<int, CSLocus *> &catalog,
         //
         // We need to determine an ordering that can take into account overlapping RAD sites.
         //
-        vector<GenPos> ordered_loci;
+        vector<GenPos> ordered_snps;
         for (uint pos = 0; pos < it->second.size(); pos++) {
             loc = it->second[pos];
             t   = psum->locus_tally(loc->id);
@@ -1502,19 +1502,19 @@ write_fastphase(map<int, CSLocus *> &catalog,
             for (uint i = 0; i < loc->snps.size(); i++) {
                 col = loc->snps[i]->col;
                 if (t->nucs[col].allele_cnt == 2)
-                    ordered_loci.push_back(GenPos(loc->id, i, loc->sort_bp(col)));
+                    ordered_snps.push_back(GenPos(loc->id, i, loc->sort_bp(col)));
             }
         }
-        sort(ordered_loci.begin(), ordered_loci.end());
+        sort(ordered_snps.begin(), ordered_snps.end());
 
         //
         // Output the position of each site according to its basepair.
         //
         fh << "P";
-        for (uint pos = 0; pos < ordered_loci.size(); pos++) {
-            loc = catalog[ordered_loci[pos].id];
-            col = loc->snps[ordered_loci[pos].snp_index]->col;
-            fh << " " << ordered_loci[pos].bp +1;
+        for (uint pos = 0; pos < ordered_snps.size(); pos++) {
+            loc = catalog[ordered_snps[pos].id];
+            col = loc->snps[ordered_snps[pos].snp_index]->col;
+            fh << " " << ordered_snps[pos].bp +1;
         }
         fh << "\n";
 
@@ -1543,9 +1543,9 @@ write_fastphase(map<int, CSLocus *> &catalog,
                 fh << mpopi.samples()[j].name << "\n";
 
                 gtypes.str("");
-                for (uint pos = 0; pos < ordered_loci.size(); pos++) {
-                    loc = catalog[ordered_loci[pos].id];
-                    col = loc->snps[ordered_loci[pos].snp_index]->col;
+                for (uint pos = 0; pos < ordered_snps.size(); pos++) {
+                    loc = catalog[ordered_snps[pos].id];
+                    col = loc->snps[ordered_snps[pos].snp_index]->col;
 
                     s = psum->locus(loc->id);
                     d = pmap->locus(loc->id);
@@ -1579,7 +1579,7 @@ write_fastphase(map<int, CSLocus *> &catalog,
                         //
                         // Tally up the nucleotide calls.
                         //
-                        tally_observed_haplotypes(d[j]->obshap, ordered_loci[pos].snp_index, p_allele, q_allele);
+                        tally_observed_haplotypes(d[j]->obshap, ordered_snps[pos].snp_index, p_allele, q_allele);
 
                         if (p_allele == 0 && q_allele == 0)
                             gtypes << "? ";
@@ -1596,9 +1596,9 @@ write_fastphase(map<int, CSLocus *> &catalog,
                 // Output all the loci for this sample again, now for the q allele
                 //
                 gtypes.str("");
-                for (uint pos = 0; pos < ordered_loci.size(); pos++) {
-                    loc = catalog[ordered_loci[pos].id];
-                    col = loc->snps[ordered_loci[pos].snp_index]->col;
+                for (uint pos = 0; pos < ordered_snps.size(); pos++) {
+                    loc = catalog[ordered_snps[pos].id];
+                    col = loc->snps[ordered_snps[pos].snp_index]->col;
 
 
                     s = psum->locus(loc->id);
@@ -1619,7 +1619,7 @@ write_fastphase(map<int, CSLocus *> &catalog,
                         gtypes << "? ";
 
                     } else {
-                        tally_observed_haplotypes(d[j]->obshap, ordered_loci[pos].snp_index, p_allele, q_allele);
+                        tally_observed_haplotypes(d[j]->obshap, ordered_snps[pos].snp_index, p_allele, q_allele);
 
                         if (p_allele == 0 && q_allele == 0)
                             gtypes << "? ";
@@ -1656,13 +1656,13 @@ write_phase(map<int, CSLocus *> &catalog,
     //
     cerr << "Writing population data to PHASE files...";
 
-    map<string, vector<CSLocus *> >::iterator it;
+    map<string, vector<CSLocus *> >::const_iterator it;
     CSLocus  *loc;
     Datum   **d;
     LocSum  **s;
     LocTally *t;
 
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
 
         string file = out_path + out_prefix + "." + it->first + ".phase.inp";
 
@@ -1946,7 +1946,7 @@ write_plink(map<int, CSLocus *> &catalog,
     timeinfo = localtime(&rawtime);
     strftime(date, 32, "%B %d, %Y", timeinfo);
 
-    map<string, vector<CSLocus *> >::iterator it;
+    map<string, vector<CSLocus *> >::const_iterator it;
     CSLocus  *loc;
     Datum   **d;
     LocSum  **s;
@@ -1971,7 +1971,7 @@ write_plink(map<int, CSLocus *> &catalog,
     //
     fh << "# Stacks v" << VERSION << "; " << " PLINK v1.07; " << date << "\n";
 
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
         chr = it->first;
 
         for (uint pos = 0; pos < it->second.size(); pos++) {
@@ -2021,7 +2021,7 @@ write_plink(map<int, CSLocus *> &catalog,
                << "0\t"  // Sex
                << "0";   // Phenotype
 
-            for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+            for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
                 for (uint pos = 0; pos < it->second.size(); pos++) {
                     loc = it->second[pos];
 
@@ -2108,7 +2108,7 @@ write_beagle(map<int, CSLocus *> &catalog,
     timeinfo = localtime(&rawtime);
     strftime(date, 32, "%B %d, %Y", timeinfo);
 
-    map<string, vector<CSLocus *> >::iterator it;
+    map<string, vector<CSLocus *> >::const_iterator it;
     CSLocus  *loc;
     Datum   **d;
     LocSum  **s;
@@ -2118,12 +2118,12 @@ write_beagle(map<int, CSLocus *> &catalog,
     stringstream pop_name;
     string       file;
 
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
 
         //
         // We need to determine an ordering that can take into account overlapping RAD sites.
         //
-        vector<GenPos> ordered_loci;
+        vector<GenPos> ordered_snps;
         for (uint pos = 0; pos < it->second.size(); pos++) {
             loc = it->second[pos];
             t   = psum->locus_tally(loc->id);
@@ -2131,10 +2131,10 @@ write_beagle(map<int, CSLocus *> &catalog,
             for (uint i = 0; i < loc->snps.size(); i++) {
                 col = loc->snps[i]->col;
                 if (t->nucs[col].allele_cnt == 2)
-                    ordered_loci.push_back(GenPos(loc->id, i, loc->sort_bp(col)));
+                    ordered_snps.push_back(GenPos(loc->id, i, loc->sort_bp(col)));
             }
         }
-        sort(ordered_loci.begin(), ordered_loci.end());
+        sort(ordered_snps.begin(), ordered_snps.end());
 
         //
         // Now output the genotypes in a separate file for each population.
@@ -2187,13 +2187,13 @@ write_beagle(map<int, CSLocus *> &catalog,
             //
             // For each marker, output the genotypes for each sample in two successive columns.
             //
-            for (uint pos = 0; pos < ordered_loci.size(); pos++) {
-                loc = catalog[ordered_loci[pos].id];
+            for (uint pos = 0; pos < ordered_snps.size(); pos++) {
+                loc = catalog[ordered_snps[pos].id];
 
                 s   = psum->locus(loc->id);
                 d   = pmap->locus(loc->id);
                 t   = psum->locus_tally(loc->id);
-                col = loc->snps[ordered_loci[pos].snp_index]->col;
+                col = loc->snps[ordered_snps[pos].snp_index]->col;
 
                 //
                 // If this site is fixed in all populations or has too many alleles don't output it.
@@ -2243,7 +2243,7 @@ write_beagle(map<int, CSLocus *> &catalog,
                         //
                         // Tally up the nucleotide calls.
                         //
-                        tally_observed_haplotypes(d[j]->obshap, ordered_loci[pos].snp_index, p_allele, q_allele);
+                        tally_observed_haplotypes(d[j]->obshap, ordered_snps[pos].snp_index, p_allele, q_allele);
 
                         if (p_allele == 0 && q_allele == 0)
                             fh << "\t" << "?";
@@ -2311,14 +2311,14 @@ write_beagle_phased(map<int, CSLocus *> &catalog,
     timeinfo = localtime(&rawtime);
     strftime(date, 32, "%B %d, %Y", timeinfo);
 
-    map<string, vector<CSLocus *> >::iterator it;
+    map<string, vector<CSLocus *> >::const_iterator it;
     CSLocus  *loc;
     Datum   **d;
 
     stringstream pop_name;
     string       file;
 
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
 
         //
         // We need to determine an ordering for all legitimate loci/SNPs.
@@ -2515,7 +2515,7 @@ write_phylip(map<int, CSLocus *> &catalog,
     log_fh << "# Stacks v" << VERSION << "; " << " Phylip sequential; " << date << "\n"
            << "# Seq Pos\tLocus ID\tColumn\tPopulation\n";
 
-    map<string, vector<CSLocus *> >::iterator it;
+    map<string, vector<CSLocus *> >::const_iterator it;
     CSLocus  *loc;
     LocSum  **s;
     LocTally *t;
@@ -2529,7 +2529,7 @@ write_phylip(map<int, CSLocus *> &catalog,
     map<int, string> interspecific_nucs;
 
     int index = 0;
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
         for (uint pos = 0; pos < it->second.size(); pos++) {
             loc = it->second[pos];
 
@@ -2757,7 +2757,7 @@ write_fullseq_phylip(map<int, CSLocus *> &catalog,
     if (loci_ordered) log_fh << "\tChr\tBasepair";
     log_fh << "\n";
 
-    map<string, vector<CSLocus *> >::iterator it;
+    map<string, vector<CSLocus *> >::const_iterator it;
     CSLocus  *loc;
     LocSum  **s;
     LocTally *t;
@@ -2771,7 +2771,7 @@ write_fullseq_phylip(map<int, CSLocus *> &catalog,
     //
     // Determine the length of sequence we will output.
     //
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
         for (uint pos = 0; pos < it->second.size(); pos++) {
             loc = it->second[pos];
 
@@ -2810,7 +2810,7 @@ write_fullseq_phylip(map<int, CSLocus *> &catalog,
     int   index = 1;
     int   cnt   = 1;
 
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
         for (uint pos = 0; pos < it->second.size(); pos++) {
             loc = it->second[pos];
 
