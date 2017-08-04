@@ -1146,7 +1146,7 @@ verify_gapped_match(map<int, Locus *> &catalog, QLocus *query,
         // }
     }
 
-    if (verified == 0) {
+    if (verified > 0) {
         ver_hits += verified;
     } else {
         no_haps++;
