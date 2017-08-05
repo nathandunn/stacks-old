@@ -129,9 +129,8 @@ bool Graph::topo_sort() {
 
     vector<uchar> visitdata; // 0/1s; whether each spath is a parent in the recursion
     visitdata.reserve(simple_paths_.size());
-
-    // Note: no need to reset the SPath::visitdata's to NULL as this is
-    // the first algo to run.
+    for (const SPath& p : simple_paths_)
+        p.visitdata = NULL;
 
     for (SPath& p : simple_paths_) {
         if(!topo_sort(&p, visitdata)) {
@@ -152,7 +151,7 @@ bool Graph::topo_sort(SPath* p, vector<uchar>& visitdata) {
             // Joining a known path from a different root.
             return true;
     } else {
-        visitdata.push_back(true);
+        visitdata.push_back(true); // n.b. Enough memory was reserved.
         p->visitdata = (void*)&visitdata.back();
         for (size_t nt2=0; nt2<4; ++nt2) {
             SPath* s = p->succ(nt2);
@@ -258,6 +257,35 @@ void Graph::dump_gfa(const string& path) const {
             const SPath* succ = p.succ(nt2);
             if (succ != NULL)
                 ofs << "L\t" << index_of(p.first()) << "\t+\t" << index_of(succ->first()) << "\t+\tM" << (km_len_-1) << "\n";
+        }
+    }
+}
+
+void Graph::compute_components() {
+    for (SPath& p : simple_paths_)
+        p.visitdata = NULL;
+
+    for (SPath& p : simple_paths_)
+        propagate_component_id(&p, &p);
+
+    for (SPath& p : simple_paths_) {
+        const void* comp_id = p.visitdata;
+        components_[comp_id].insert(&p);
+        sp_to_component_[&p] = comp_id;
+    }
+}
+
+void Graph::propagate_component_id(const SPath* p, void* id) {
+    if (p->visitdata == NULL) {
+        p->visitdata = id;
+        const SPath* neighbor;
+        for (size_t nt2=0; nt2<4; ++nt2) {
+            neighbor = p->pred(nt2);
+            if (neighbor != NULL)
+                propagate_component_id(neighbor, id);
+            neighbor = p->succ(nt2);
+            if (neighbor != NULL)
+                propagate_component_id(neighbor, id);
         }
     }
 }

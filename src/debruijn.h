@@ -179,13 +179,20 @@ class Graph {
     unordered_map<Kmer, KmMapValue> map_;
     vector<Node> nodes_;
     vector<SPath> simple_paths_;
+
     vector<SPath*> sorted_spaths_; // The simple paths, sorted topologically, with the terminal (no successors) ones first.
+    map<const void*,set<SPath*>> components_; // The simple paths, by component;
+                                              // one simple path address serves as an ID for each component.
+    map<const SPath*,const void*> sp_to_component_;
 
 public:
     Graph(size_t km_length) : km_len_(km_length) {}
     void rebuild(const vector<const DNASeq4*>& reads, size_t min_kmer_count);
 
     size_t empty() const {return simple_paths_.empty();}
+
+    // Find all connected components. This uses an undirected depth first search.
+    void compute_components();
 
     // Finds the best path in the graph.
     // Return false if the graph is not a DAG.
@@ -194,8 +201,9 @@ public:
     void dump_gfa(const string& path) const;
 
 private:
-    // Resets the object.
-    void clear() {nodes_.resize(0); map_.clear(); simple_paths_.resize(0); sorted_spaths_.resize(0);}
+    // Clears all members (except km_len_).
+    void clear();
+
     size_t index_of(const Node* n) const {return n - nodes_.data();}
 
     // Sort topologically. Returns false if the graph is not a DAG.
@@ -203,6 +211,9 @@ private:
     // (and we use uchars instead of bools because vector<bool> is specialized).
     bool topo_sort();
     bool topo_sort(SPath* p, vector<uchar>& visitdata);
+
+    // c.f. find_components()
+    void propagate_component_id(const SPath* p, void* id);
 };
 
 //
@@ -210,6 +221,16 @@ private:
 // Inline definitions
 // ==========
 //
+
+inline
+void Graph::clear() {
+    nodes_.resize(0);
+    map_.clear();
+    simple_paths_.resize(0);
+    sorted_spaths_.resize(0);
+    components_.clear();
+    sp_to_component_.clear();
+}
 
 inline
 Kmer::Kmer(size_t km_len, DNASeq4::iterator& first, DNASeq4::iterator past) : a_() {
