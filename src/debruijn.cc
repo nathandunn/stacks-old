@@ -110,7 +110,7 @@ void Graph::rebuild(const vector<const DNASeq4*>& reads, size_t min_kmer_count) 
         if (n.n_succ() > 1) {
             for (size_t nt2=0; nt2<4; ++nt2) {
                 Node* s = n.succ(nt2);
-                if (s != NULL) {
+                if (s != NULL && s->n_pred() == 1) {
                     simple_paths_.push_back(SPath(s));
                 }
             }
