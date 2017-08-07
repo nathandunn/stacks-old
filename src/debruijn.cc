@@ -235,7 +235,7 @@ bool Graph::find_best_path(vector<const SPath*>& best_path) {
     return true;
 }
 
-void Graph::dump_gfa(const string& path) const {
+void Graph::dump_gfa(const string& path, bool individual_nodes) const {
     ofstream ofs (path);
     if (!ofs) {
         cerr << "Error: Failed to open '" << path << "' for writing.\n";
@@ -245,18 +245,35 @@ void Graph::dump_gfa(const string& path) const {
     // Write the header.
     ofs << "H\tVN:Z:1.0\n";
 
-    // Write the simple paths.
-    for (const SPath& p : simple_paths_)
-        // n.b. In principle the length of the contigs should be (n_nodes+km_len-1).
-        // However for visualization purposes we use n_nodes (for now at least).
-        ofs << "S\t" << index_of(p.first()) << "\t*\tLN:i:" << p.n_nodes() << "\tKC:i:" << p.km_cumcount() << "\n";
+    if (!individual_nodes) {
+        // Write the simple paths.
+        for (const SPath& p : simple_paths_)
+            // n.b. In principle the length of the contigs should be (n_nodes+km_len-1).
+            // However for visualization purposes we use n_nodes (for now at least).
+            ofs << "S\t" << index_of(p.first()) << "\t*\tLN:i:" << p.n_nodes() << "\tKC:i:" << p.km_cumcount() << "\n";
 
-    // Write the edges.
-    for (const SPath& p : simple_paths_) {
-        for (size_t nt2=0; nt2<4; ++nt2) {
-            const SPath* succ = p.succ(nt2);
-            if (succ != NULL)
-                ofs << "L\t" << index_of(p.first()) << "\t+\t" << index_of(succ->first()) << "\t+\tM" << (km_len_-1) << "\n";
+        // Write the edges.
+        for (const SPath& p : simple_paths_) {
+            for (size_t nt2=0; nt2<4; ++nt2) {
+                const SPath* succ = p.succ(nt2);
+                if (succ != NULL)
+                    ofs << "L\t" << index_of(p.first()) << "\t+\t" << index_of(succ->first()) << "\t+\tM" << (km_len_-1) << "\n";
+            }
+        }
+    } else {
+        // Write the simple paths.
+        for (const Node& n : nodes_)
+            // n.b. In principle the length of the contigs should be (n_nodes+km_len-1).
+            // However for visualization purposes we use n_nodes (for now at least).
+            ofs << "S\t" << index_of(&n) << "\t*\tLN:i:1\tKC:i:" << n.count() << "\tseq:" << n.km().str(km_len_) << "\n";
+
+        // Write the edges.
+        for (const Node& n : nodes_) {
+            for (size_t nt2=0; nt2<4; ++nt2) {
+                const Node* succ = n.succ(nt2);
+                if (succ != NULL)
+                    ofs << "L\t" << index_of(&n) << "\t+\t" << index_of(succ) << "\t+\tM" << (km_len_-1) << "\n";
+            }
         }
     }
 }
