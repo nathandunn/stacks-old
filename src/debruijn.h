@@ -198,7 +198,7 @@ public:
     // Return false if the graph is not a DAG.
     bool find_best_path(vector<const SPath*>& best_path);
 
-    void dump_gfa(const string& path) const;
+    void dump_gfa(const string& path, bool individual_nodes=false) const;
 
 private:
     // Clears all members (except km_len_).

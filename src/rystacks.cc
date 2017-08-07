@@ -292,8 +292,10 @@ void LocusProcessor::operator() (CLocReadSet&& loc) {
                     break;
                 }
 
-                if (dbg_write_gfa)
-                    graph.dump_gfa(in_dir + to_string(loc.id()) + ".gfa");
+                if (dbg_write_gfa) {
+                    graph.dump_gfa(in_dir + to_string(loc.id()) + ".spaths.gfa");
+                    graph.dump_gfa(in_dir + to_string(loc.id()) + ".nodes.gfa", true);
+                }
 
                 vector<const SPath*> best_path;
                 if (!graph.find_best_path(best_path)) {
