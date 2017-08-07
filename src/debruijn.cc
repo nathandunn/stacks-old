@@ -306,3 +306,32 @@ void Graph::propagate_component_id(const SPath* p, void* id) {
         }
     }
 }
+
+vector<const void*> Graph::components() const {
+    assert(!components_.empty());
+    vector<const void*> comps;
+    for (auto c : components_)
+        comps.push_back(c.first);
+    return comps;
+}
+
+size_t Graph::component_n_nodes(const void* c) const {
+    assert(!components_.empty());
+    size_t n = 0;
+    for (const SPath* p : components_.at(c))
+        n += p->n_nodes();
+    return n;
+}
+
+size_t Graph::component_n_spaths(const void* c) const {
+    assert(!components_.empty());
+    return components_.at(c).size();
+}
+
+size_t Graph::component_km_count(const void* c) const {
+    assert(!components_.empty());
+    size_t km_count = 0;
+    for (const SPath* p : components_.at(c))
+        km_count += p->km_cumcount();
+    return km_count;
+}
