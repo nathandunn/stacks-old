@@ -190,9 +190,16 @@ public:
     void rebuild(const vector<const DNASeq4*>& reads, size_t min_kmer_count);
 
     size_t empty() const {return simple_paths_.empty();}
+    size_t n_nodes() const {return nodes_.size();}
+    size_t km_count() const {size_t cnt=0; for(auto& n: nodes_) cnt+=n.count(); return cnt;}
 
     // Find all connected components. This uses an undirected depth first search.
     void compute_components();
+    vector<const void*> components() const;
+    size_t component_n_nodes(const void* c) const;
+    size_t component_n_spaths(const void* c) const;
+    size_t component_km_count(const void* c) const;
+    //void components_of(vector<pair<const void*,size_t>>& comps, const DNASeq4& seq); //TODO
 
     // Finds the best path in the graph.
     // Return false if the graph is not a DAG.
