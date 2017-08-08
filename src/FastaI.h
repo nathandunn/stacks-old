@@ -27,8 +27,13 @@ class Fasta: public Input {
     string buf;
 
  public:
-    Fasta(const char *path) : Input(path) { };
-    Fasta(string path) : Input(path.c_str()) { };
+    Fasta(const char *path) : Input(path) {
+        if (fh.peek() != '>') {
+            cerr << "Error: '" << path << "': not in fasta format (expected '>').\n";
+            throw exception();
+        }
+    };
+    Fasta(string path) : Fasta(path.c_str()) { };
     ~Fasta() {};
     Seq *next_seq();
     int  next_seq(Seq &);
