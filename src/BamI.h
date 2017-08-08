@@ -140,11 +140,12 @@ public:
 
 class Bam: public Input {
     htsFile   *bam_fh;
+    bool eof_;
     BamHeader hdr;
     BamRecord rec;
 
 public:
-    Bam(const char *path) : Input(), bam_fh(NULL), hdr(), rec() {
+    Bam(const char *path) : Input(), bam_fh(NULL), eof_(false), hdr(), rec() {
         this->path   = string(path);
         bam_fh = hts_open(path, "r");
         if (bam_fh == NULL) {
@@ -158,10 +159,13 @@ public:
     const BamRecord& r() const {return rec;}
     const BamHeader& h() const {return hdr;}
 
-    bool next_record() {return sam_read1(bam_fh, hdr.h(), rec.r()) >= 0;}
+    bool next_record()
+        {if(sam_read1(bam_fh, hdr.h(), rec.r()) >= 0) {return true;} else {eof_=true; return false;}}
 
     Seq *next_seq();
     int  next_seq(Seq&);
+
+    bool eof() const {return eof_;}
 };
 
 //
