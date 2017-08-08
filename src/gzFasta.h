@@ -41,17 +41,14 @@ class GzFasta: public Input {
         #if ZLIB_VERNUM >= 0x1240
         gzbuffer(this->gz_fh, libz_buffer_size);
         #endif
-    };
-    GzFasta(string path) : Input() {
-        this->gz_fh = gzopen(path.c_str(), "rb");
-        if (!this->gz_fh) {
-            cerr << "Failed to open gzipped file '" << path << "': " << strerror(errno) << ".\n";
+        char first = gzgetc(gz_fh);
+        if (first != '>') {
+            cerr << "Error: '" << path << "': not in fasta format (expected '>').\n";
             exit(EXIT_FAILURE);
         }
-        #if ZLIB_VERNUM >= 0x1240
-        gzbuffer(this->gz_fh, libz_buffer_size);
-        #endif
+        gzrewind(gz_fh);
     };
+    GzFasta(string path) : GzFasta(path.c_str()) {}
     ~GzFasta() {
         gzclose(this->gz_fh);
     };
