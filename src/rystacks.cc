@@ -43,7 +43,7 @@ class LocusProcessor {
 public:
     void operator() (CLocReadSet&& loc);
 
-    size_t n_calls;
+    size_t n_nonnull_calls;
     map<pair<size_t,size_t>,size_t> n_badly_phased_samples; // { {n_bad_samples, n_tot_samples} : count }
 
     size_t n_loci_w_pe_reads;
@@ -51,7 +51,7 @@ public:
     size_t n_loci_pe_graph_not_dag;
 
     size_t n_loci_phasing_issues() const;
-    size_t n_loci_no_pe_reads() const {return n_calls - n_loci_w_pe_reads;}
+    size_t n_loci_no_pe_reads() const {return n_nonnull_calls - n_loci_w_pe_reads;}
     size_t n_loci_usable_pe_reads() const {return n_loci_w_pe_reads - n_loci_almost_no_pe_reads - n_loci_pe_graph_not_dag;}
 
 private:
@@ -197,7 +197,7 @@ try {
     // Report statistics on the analysis.
     //
     {
-        size_t tot = loc_proc.n_calls;
+        size_t tot = loc_proc.n_nonnull_calls;
         size_t ph = loc_proc.n_loci_phasing_issues();
         auto pct = [tot](size_t n) {return as_percentage((double) n / tot) ;};
         cout << "\n"
@@ -261,8 +261,9 @@ size_t LocusProcessor::n_loci_phasing_issues() const {
 }
 
 void LocusProcessor::operator() (CLocReadSet&& loc) {
-    assert(!loc.reads().empty());
-    ++n_calls;
+    if (loc.reads().empty())
+        return;
+    ++n_nonnull_calls;
 
     //
     // Process the paired-end reads.

@@ -13,6 +13,8 @@ class BamCLocReader {
     map<string, size_t> rg_to_sample_;
     vector<const char*> loci_aln_positions_;
 
+    int32_t loc_i_; // Index of the next locus (chromosome). Incremented by read_one_locus().
+
 public:
     BamCLocReader(const string& bam_path);
     ~BamCLocReader() {if (bam_f_) delete bam_f_;}
@@ -47,7 +49,8 @@ inline
 BamCLocReader::BamCLocReader(const string& bam_path)
         : bam_f_(NULL),
           mpopi_(),
-          rg_to_sample_()
+          rg_to_sample_(),
+          loc_i_(-1)
         {
 
     bam_f_ = new Bam(bam_path.c_str());
@@ -178,49 +181,58 @@ inline
 bool BamCLocReader::read_one_locus(CLocReadSet& readset) {
     assert(&readset.mpopi() == &mpopi_); // Otherwise sample indexes may be misleading.
 
-    readset.clear();
-    if (bam_f_ == NULL)
-        // EOF was hit at the end of the previous locus.
+    ++loc_i_;
+    if (size_t(loc_i_) == n_loci()) {
+        assert(bam_f_->eof());
         return false;
-
-    const BamRecord& rec = bam_f_->r(); //the current record
-
-    // Parse the locus ID.
-    int32_t curr_chrom = rec.chrom();
-    static int32_t last_chrom = -1;
-    if (curr_chrom < last_chrom) {
-        cerr << "Error: BAM file isn't properly sorted.\n";
-        throw exception();
     }
-    last_chrom = curr_chrom;
-    readset.id(atoi(bam_f_->h().chrom_str(curr_chrom)));
+
+    readset.clear();
+    readset.id(atoi(bam_f_->h().chrom_str(loc_i_)));
     if (!loci_aln_positions_.empty()) {
-        const char* p = loci_aln_positions_.at(curr_chrom);
+        const char* p = loci_aln_positions_.at(loc_i_);
         const char* q = p;
         while (*q && *q != '\n' && *q != '\t')
             ++q;
         readset.pos(PhyLoc(string(p, q)));
     }
 
-    // Read all the reads of the locus, and one more.
-    do {
-        if (rec.is_read2())
-            readset.add_pe(SRead(Read(rec.seq(), rec.qname()+"/2"), rg_to_sample_.at(rec.read_group())));
-        else if (rec.is_read1())
-            readset.add(SRead(Read(rec.seq(), rec.qname()+"/1"), rg_to_sample_.at(rec.read_group())));
-        else
-            // If tsv2bam wasn't given paired-end reads, no flag was set and the
-            // read names were left unchanged, so we also don't touch them.
-            readset.add(SRead(Read(rec.seq(), rec.qname()), rg_to_sample_.at(rec.read_group())));
-
-        if(!bam_f_->next_record()) {
-            // EOF
-            delete bam_f_;
-            bam_f_ = NULL;
-            break;
+    if (!bam_f_->eof()) {
+        // Read all the reads of the locus, and one more.
+        if (bam_f_->r().chrom() < loc_i_) {
+            cerr << "Error: BAM file isn't properly sorted.\n";
+            throw exception();
         }
-    } while (rec.chrom() == curr_chrom);
+        while (bam_f_->r().chrom() == loc_i_) {
+            const BamRecord& rec = bam_f_->r();
+            const char* rg = rec.read_group();
+            if (rg == NULL) {
+                cerr << "Error: Corrupted BAM file: missing read group.\n";
+                throw exception();
+            }
+            if (rec.is_read2())
+                readset.add_pe(SRead(Read(rec.seq(), rec.qname()+"/2"), rg_to_sample_.at(rg)));
+            else if (rec.is_read1())
+                readset.add(SRead(Read(rec.seq(), rec.qname()+"/1"), rg_to_sample_.at(rg)));
+            else
+                // If tsv2bam wasn't given paired-end reads, no flag was set and the
+                // read names were left unchanged, so we also don't touch them.
+                readset.add(SRead(Read(rec.seq(), rec.qname()), rg_to_sample_.at(rg)));
 
+            if (!bam_f_->next_record())
+                break;
+        }
+    }
+
+    if (readset.reads().empty()) {
+        // A catalog locus might not have reads, e.g. if some samples were
+        // omitted in the `samtools merge`, but this would be weird.
+        static bool warn = false;
+        if (warn) {
+            warn = false;
+            cerr << "Warning: Some catalog loci do not have any reads in the BAM file.\n";
+        }
+    }
     return true;
 }
 
