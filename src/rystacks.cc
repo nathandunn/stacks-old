@@ -39,22 +39,27 @@ public:
     void clear();
 };
 
-class LocusProcessor {
-public:
-    void operator() (CLocReadSet&& loc);
-
-    size_t n_nonnull_calls;
-    map<pair<size_t,size_t>,size_t> n_badly_phased_samples; // { {n_bad_samples, n_tot_samples} : count }
-
+struct ProcessingStats {
+    size_t n_nonempty_loci;
     size_t n_loci_w_pe_reads;
     size_t n_loci_almost_no_pe_reads;
     size_t n_loci_pe_graph_not_dag;
 
     size_t n_loci_phasing_issues() const;
-    size_t n_loci_no_pe_reads() const {return n_nonnull_calls - n_loci_w_pe_reads;}
+    size_t n_loci_no_pe_reads() const {return n_nonempty_loci - n_loci_w_pe_reads;}
     size_t n_loci_usable_pe_reads() const {return n_loci_w_pe_reads - n_loci_almost_no_pe_reads - n_loci_pe_graph_not_dag;}
 
+    map<pair<size_t,size_t>,size_t> n_badly_phased_samples; // { {n_bad_samples, n_tot_samples} : count }
+};
+
+class LocusProcessor {
+public:
+    LocusProcessor() : stats_() {}
+    void process(CLocReadSet&& loc);
+    const ProcessingStats& stats() const {return stats_;}
+
 private:
+    ProcessingStats stats_;
     vector<map<size_t,PhasedHet>> phase_hets (
             const vector<SiteCall>& calls,
             const CLocAlnSet& aln_loc,
@@ -179,14 +184,14 @@ try {
     //
     // Process every locus
     //
-    LocusProcessor loc_proc {};
+    LocusProcessor loc_proc;
     CLocReadSet loc (bam_fh.mpopi());
     if (locus_wl.empty()) {
         // No whitelist.
         cout << "Processing all loci...\n" << flush;
         ProgressMeter progress (cout, bam_fh.n_loci());
         while (bam_fh.read_one_locus(loc)) {
-            loc_proc(move(loc));
+            loc_proc.process(move(loc));
             ++progress;
         }
         progress.done();
@@ -195,7 +200,7 @@ try {
         cout << "Processing whitelisted loci...\n" << flush;
         while (bam_fh.read_one_locus(loc) && !locus_wl.empty()) {
             if (locus_wl.count(loc.id())) {
-                loc_proc(move(loc));
+                loc_proc.process(move(loc));
                 locus_wl.erase(loc.id());
             }
         }
@@ -205,21 +210,22 @@ try {
     // Report statistics on the analysis.
     //
     {
-        size_t tot = loc_proc.n_nonnull_calls;
-        size_t ph = loc_proc.n_loci_phasing_issues();
+        size_t tot = loc_proc.stats().n_nonempty_loci;
+        size_t ph = loc_proc.stats().n_loci_phasing_issues();
         auto pct = [tot](size_t n) {return as_percentage((double) n / tot) ;};
         cout << "\n"
              << "Processed " << tot << " loci:\n"
              << "  (All loci are always conserved)\n"
              << "  " << ph << " loci had phasing issues (" << pct(ph) << ")\n"
              ;
-        if (loc_proc.n_loci_w_pe_reads > 0) {
-            size_t no_pe = loc_proc.n_loci_no_pe_reads() + loc_proc.n_loci_almost_no_pe_reads;
-            size_t pe_dag = loc_proc.n_loci_pe_graph_not_dag;
-            size_t pe_good = loc_proc.n_loci_usable_pe_reads();
+        if (loc_proc.stats().n_loci_w_pe_reads > 0) {
+            size_t no_pe = loc_proc.stats().n_loci_no_pe_reads() + loc_proc.stats().n_loci_almost_no_pe_reads;
+            size_t pe_dag = loc_proc.stats().n_loci_pe_graph_not_dag;
+            size_t pe_good = loc_proc.stats().n_loci_usable_pe_reads();
             assert(!ignore_pe_reads);
             cout << "  " << no_pe << " loci had no or almost no paired-end reads (" << pct(no_pe) << ")\n"
-                 << "  " << pe_dag << " loci had paired-end reads that couldn't be assembled into a contig (" << pct(pe_dag) << ")\n"
+                 << "  " << pe_dag
+                 << " loci had paired-end reads that couldn't be assembled into a contig (" << pct(pe_dag) << ")\n"
                  << "  " << pe_good << " loci had usable paired-end reads (" << pct(pe_good) << ")\n"
                  ;
         }
@@ -227,7 +233,7 @@ try {
 
         logger->l << "BEGIN badly_phased\n"
                   << "n_tot_samples\tn_bad_samples\tn_loci\n";
-        for (auto& elem : loc_proc.n_badly_phased_samples)
+        for (auto& elem : loc_proc.stats().n_badly_phased_samples)
             logger->l << elem.first.second << '\t' << elem.first.first << '\t' << elem.second << '\n';
         logger->l << "END badly_phased\n\n";
     }
@@ -261,17 +267,17 @@ void SnpAlleleCooccurrenceCounter::clear() {
             cooccurences_[i*n_snps_+j] = array<array<size_t,4>,4>();
 }
 
-size_t LocusProcessor::n_loci_phasing_issues() const {
+size_t ProcessingStats::n_loci_phasing_issues() const {
     size_t n = 0;
     for (auto& elem : n_badly_phased_samples)
         n += elem.second;
     return n;
 }
 
-void LocusProcessor::operator() (CLocReadSet&& loc) {
+void LocusProcessor::process(CLocReadSet&& loc) {
     if (loc.reads().empty())
         return;
-    ++n_nonnull_calls;
+    ++stats_.n_nonempty_loci;
 
     //
     // Process the paired-end reads.
@@ -284,7 +290,7 @@ void LocusProcessor::operator() (CLocReadSet&& loc) {
             do { // (Avoiding nested ifs.)
                 if (loc.pe_reads().empty())
                     break;
-                ++n_loci_w_pe_reads;
+                ++stats_.n_loci_w_pe_reads;
 
                 //
                 // Assemble the reads.
@@ -297,7 +303,7 @@ void LocusProcessor::operator() (CLocReadSet&& loc) {
                 Graph graph (km_length);
                 graph.rebuild(seqs_to_assemble, min_km_count);
                 if (graph.empty()) {
-                    ++n_loci_almost_no_pe_reads;
+                    ++stats_.n_loci_almost_no_pe_reads;
                     break;
                 }
 
@@ -309,7 +315,7 @@ void LocusProcessor::operator() (CLocReadSet&& loc) {
                 vector<const SPath*> best_path;
                 if (!graph.find_best_path(best_path)) {
                     // Not a DAG.
-                    ++n_loci_pe_graph_not_dag;
+                    ++stats_.n_loci_pe_graph_not_dag;
                     break;
                 }
 
@@ -457,7 +463,7 @@ void LocusProcessor::operator() (CLocReadSet&& loc) {
         set<size_t> inconsistent_samples;
         phase_data = phase_hets(calls, aln_loc, inconsistent_samples);
         if (!inconsistent_samples.empty())
-            ++n_badly_phased_samples[ {inconsistent_samples.size(), aln_loc.n_samples()} ];
+            ++stats_.n_badly_phased_samples[ {inconsistent_samples.size(), aln_loc.n_samples()} ];
 
         rm_supernumerary_phase_sets(phase_data);
     }
