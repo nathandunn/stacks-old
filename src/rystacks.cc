@@ -50,6 +50,8 @@ struct ProcessingStats {
     size_t n_loci_usable_pe_reads() const {return n_loci_w_pe_reads - n_loci_almost_no_pe_reads - n_loci_pe_graph_not_dag;}
 
     map<pair<size_t,size_t>,size_t> n_badly_phased_samples; // { {n_bad_samples, n_tot_samples} : count }
+
+    ProcessingStats& operator+= (const ProcessingStats& other);
 };
 
 class LocusProcessor {
@@ -184,45 +186,92 @@ try {
     //
     // Process every locus
     //
-    LocusProcessor loc_proc;
-    CLocReadSet loc (bam_fh.mpopi());
+    ProcessingStats stats {};
     if (locus_wl.empty()) {
         // No whitelist.
         cout << "Processing all loci...\n" << flush;
         ProgressMeter progress (cout, bam_fh.n_loci());
-        while (bam_fh.read_one_locus(loc)) {
-            loc_proc.process(move(loc));
-            ++progress;
-        }
+        bool omp_return = 0;
+        #pragma omp parallel
+        { try {
+            LocusProcessor loc_proc;
+            CLocReadSet loc (bam_fh.mpopi());
+            #pragma omp for schedule(dynamic)
+            for (size_t i=0; i<bam_fh.n_loci(); ++i) {
+                #pragma omp critical
+                {
+                    ++progress;
+                    bam_fh.read_one_locus(loc);
+                }
+                loc_proc.process(move(loc));
+            }
+
+            #pragma omp critical
+            stats += loc_proc.stats();
+
+        } catch (exception& e) {
+            omp_return = stacks_handle_exceptions(e);
+        }}
+        if (omp_return != 0)
+             return omp_return;
         progress.done();
 
     } else {
+        // Whitelist.
         cout << "Processing whitelisted loci...\n" << flush;
-        while (bam_fh.read_one_locus(loc) && !locus_wl.empty()) {
-            if (locus_wl.count(loc.id())) {
+        size_t n_loci = locus_wl.size();
+        ProgressMeter progress (cout, n_loci);
+        bool omp_return = 0;
+        #pragma omp parallel
+        { try {
+            LocusProcessor loc_proc;
+            CLocReadSet loc (bam_fh.mpopi());
+            #pragma omp for schedule(dynamic)
+            for (size_t i=0; i<n_loci; ++i) {
+                #pragma omp critical
+                {
+                    ++progress;
+                    do {
+                        if (!bam_fh.read_one_locus(loc)) {
+                            cerr << "Error: Some whitelisted loci weren't found in the BAM file.\n";
+                            throw exception();
+                        }
+                    } while (!locus_wl.count(loc.id()));
+                    locus_wl.erase(loc.id());
+                }
                 loc_proc.process(move(loc));
-                locus_wl.erase(loc.id());
             }
-        }
+
+            #pragma omp critical
+            stats += loc_proc.stats();
+
+        } catch (exception& e) {
+            omp_return = stacks_handle_exceptions(e);
+        }}
+        if (omp_return != 0)
+             return omp_return;
+        progress.done();
+        assert(locus_wl.empty());
     }
+
 
     //
     // Report statistics on the analysis.
     //
     {
-        size_t tot = loc_proc.stats().n_nonempty_loci;
-        size_t ph = loc_proc.stats().n_loci_phasing_issues();
+        size_t tot = stats.n_nonempty_loci;
+        size_t ph = stats.n_loci_phasing_issues();
         auto pct = [tot](size_t n) {return as_percentage((double) n / tot) ;};
         cout << "\n"
              << "Processed " << tot << " loci:\n"
              << "  (All loci are always conserved)\n"
              << "  " << ph << " loci had phasing issues (" << pct(ph) << ")\n"
              ;
-        if (loc_proc.stats().n_loci_w_pe_reads > 0) {
-            size_t no_pe = loc_proc.stats().n_loci_no_pe_reads() + loc_proc.stats().n_loci_almost_no_pe_reads;
-            size_t pe_dag = loc_proc.stats().n_loci_pe_graph_not_dag;
-            size_t pe_good = loc_proc.stats().n_loci_usable_pe_reads();
+        if (stats.n_loci_w_pe_reads > 0) {
             assert(!ignore_pe_reads);
+            size_t no_pe = stats.n_loci_no_pe_reads() + stats.n_loci_almost_no_pe_reads;
+            size_t pe_dag = stats.n_loci_pe_graph_not_dag;
+            size_t pe_good = stats.n_loci_usable_pe_reads();
             cout << "  " << no_pe << " loci had no or almost no paired-end reads (" << pct(no_pe) << ")\n"
                  << "  " << pe_dag
                  << " loci had paired-end reads that couldn't be assembled into a contig (" << pct(pe_dag) << ")\n"
@@ -233,7 +282,7 @@ try {
 
         logger->l << "BEGIN badly_phased\n"
                   << "n_tot_samples\tn_bad_samples\tn_loci\n";
-        for (auto& elem : loc_proc.stats().n_badly_phased_samples)
+        for (auto& elem : stats.n_badly_phased_samples)
             logger->l << elem.first.second << '\t' << elem.first.first << '\t' << elem.second << '\n';
         logger->l << "END badly_phased\n\n";
     }
@@ -272,6 +321,18 @@ size_t ProcessingStats::n_loci_phasing_issues() const {
     for (auto& elem : n_badly_phased_samples)
         n += elem.second;
     return n;
+}
+
+ProcessingStats& ProcessingStats::operator+= (const ProcessingStats& other) {
+    n_nonempty_loci += other.n_nonempty_loci;
+    n_loci_w_pe_reads += other.n_loci_w_pe_reads;
+    n_loci_almost_no_pe_reads += other.n_loci_almost_no_pe_reads;
+    n_loci_pe_graph_not_dag += other.n_loci_pe_graph_not_dag;
+
+    for (auto count : other.n_badly_phased_samples)
+        n_badly_phased_samples[count.first] += count.second;
+
+    return *this;
 }
 
 void LocusProcessor::process(CLocReadSet&& loc) {
@@ -431,6 +492,7 @@ void LocusProcessor::process(CLocReadSet&& loc) {
     pe_aln_loc.clear();
 
     if (dbg_write_alns)
+        #pragma omp critical
         o_aln_f << "BEGIN " << aln_loc.id() << "\n"
                 << aln_loc
                 << "\nEND " << aln_loc.id() << "\n";
@@ -468,6 +530,7 @@ void LocusProcessor::process(CLocReadSet&& loc) {
         rm_supernumerary_phase_sets(phase_data);
     }
 
+    #pragma omp critical
     write_one_locus(aln_loc, depths, calls, phase_data);
 }
 
@@ -486,12 +549,13 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
     if (snp_cols.empty())
         return phased_samples;
 
+    stringstream o_hapgraph_ss;
     if (dbg_write_hapgraphs) {
-        o_hapgraphs_f << "subgraph cluster_loc" << aln_loc.id() << " {\n"
+        o_hapgraph_ss << "subgraph cluster_loc" << aln_loc.id() << " {\n"
                       << "\tlabel=\"locus " << aln_loc.id() << "\";\n"
                       << "\t# snp columns: ";
-        join(snp_cols, ',', o_hapgraphs_f);
-        o_hapgraphs_f << "\n";
+        join(snp_cols, ',', o_hapgraph_ss);
+        o_hapgraph_ss << "\n";
     }
 
     SnpAlleleCooccurrenceCounter cooccurences (snp_cols.size());
@@ -568,7 +632,7 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
                 if (aln_loc.reads()[read_i].name.back() == 'm')
                     ++n_merged_reads;
             const string& sample_name = aln_loc.mpopi().samples()[sample].name;
-            o_hapgraphs_f << "\tsubgraph cluster_sample" << sample << " {\n"
+            o_hapgraph_ss << "\tsubgraph cluster_sample" << sample << " {\n"
                           << "\t\tlabel=\""
                           << "i" << sample << " '" << sample_name << "'\\n"
                           << "nreads=" << n_reads << ",merged=" << n_merged_reads
@@ -578,15 +642,15 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
             vector<size_t> het_cols;
             for (size_t snp_i : het_snps)
                 het_cols.push_back(snp_cols[snp_i]);
-            join(het_cols, ',', o_hapgraphs_f);
-            o_hapgraphs_f << "\n";
+            join(het_cols, ',', o_hapgraph_ss);
+            o_hapgraph_ss << "\n";
 
             // Write the node labels.
             for (size_t i=0; i<het_snps.size(); ++i) {
                 array<Nt2,2> alleles = sample_het_calls[i]->nts();
                 size_t col = snp_cols[het_snps[i]];
                 for (Nt2 allele : alleles)
-                    o_hapgraphs_f << "\t\t" << nodeid(col, allele)
+                    o_hapgraph_ss << "\t\t" << nodeid(col, allele)
                                   << " [label=<"
                                   << "<sup><font point-size=\"10\">" << col+1 << "</font></sup>" << allele
                                   << ">];\n";
@@ -604,18 +668,18 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
                             size_t n = cooccurences.at(snp_i, nti, snp_j, ntj);
                             if (n == 0)
                                 continue;
-                            o_hapgraphs_f << "\t\t" << nodeid(snp_cols[snp_i],nti)
+                            o_hapgraph_ss << "\t\t" << nodeid(snp_cols[snp_i],nti)
                                           << " -- " << nodeid(snp_cols[snp_j],ntj) << " [";
                             if (n==1)
-                                o_hapgraphs_f << "style=dotted";
+                                o_hapgraph_ss << "style=dotted";
                             else
-                                o_hapgraphs_f << "label=\"" << n << "\",penwidth=" << n;
-                            o_hapgraphs_f << "];\n";
+                                o_hapgraph_ss << "label=\"" << n << "\",penwidth=" << n;
+                            o_hapgraph_ss << "];\n";
                         }
                     }
                 }
             }
-            o_hapgraphs_f << "\t}\n";
+            o_hapgraph_ss << "\t}\n";
         }
 
         // Call haplotypes.
@@ -775,8 +839,11 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
             assert(!phased_samples[sample].empty());
         }
     }
-    if (dbg_write_hapgraphs)
-        o_hapgraphs_f << "}\n";
+    if (dbg_write_hapgraphs) {
+        o_hapgraph_ss << "}\n";
+        #pragma omp critical
+        o_hapgraphs_f << o_hapgraph_ss.str();
+    }
 
     return phased_samples;
 }
