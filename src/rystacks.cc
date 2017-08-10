@@ -80,6 +80,7 @@ Cigar dbg_extract_cigar(const string& read_id);
 // Argument globals.
 //
 bool quiet = false;
+int num_threads = 1;
 string in_dir;
 int batch_id = -1;
 set<int> locus_wl;
@@ -124,6 +125,13 @@ try {
     logger.reset(new LogAlterator(lg_path, quiet, argc, argv));
     report_options(cout);
     cout << "\n" << flush;
+
+    //
+    // Initialize OPENMP.
+    //
+    #ifdef _OPENMP
+    omp_set_num_threads(num_threads);
+    #endif
 
     //
     // Open the BAM file and parse the header.
@@ -1081,6 +1089,7 @@ const string help_string = string() +
         "\n"
         "  --ignore-pe-reads: ignore paired-end reads even if present in the input\n"
         "  -W,--whitelist: path to a whitelist of locus IDs\n"
+        "  -t,--threads: number of threads to use (default: 1)\n"
         "\n"
         "Model options:\n"
         "  --model: model to use to call variants and genotypes; one of\n"
@@ -1121,6 +1130,7 @@ try {
         {"in-dir",       required_argument, NULL,  'P'},
         {"batch-id",     required_argument, NULL,  'b'},
         {"whitelist",    required_argument, NULL,  'W'},
+        {"threads",      required_argument, NULL,  't'},
         {"ignore-pe-reads", no_argument,    NULL,  1012},
         {"model",        required_argument, NULL,  1006},
         {"gt-alpha",     required_argument, NULL,  1005},
@@ -1144,7 +1154,7 @@ try {
     int long_options_i;
     while (true) {
 
-        c = getopt_long(argc, argv, "hqP:b:W:", long_options, &long_options_i);
+        c = getopt_long(argc, argv, "hqP:b:W:t:", long_options, &long_options_i);
 
         if (c == -1)
             break;
@@ -1178,6 +1188,13 @@ try {
             break;
         case 'W':
             wl_path = optarg;
+            break;
+        case 't':
+            num_threads = is_integer(optarg);
+            if (num_threads < 0) {
+                cerr << "Error: Illegal -t option value '" << optarg << "'.\n";
+                bad_args();
+            }
             break;
         case 1012: //ignore-pe-reads
             ignore_pe_reads = true;
@@ -1252,10 +1269,7 @@ try {
 
     if (!wl_path.empty()) {
         ifstream wl_fh (wl_path);
-        if (!wl_fh) {
-            cerr << "Error: Failed to open '" << wl_path << "' for reading.\n";
-            throw exception();
-        }
+        check_open(wl_fh, wl_path);
         int id;
         while (wl_fh >> id)
             locus_wl.insert(id);
