@@ -57,7 +57,7 @@ my $sample_id    = 1;
 my $desc         = ""; # Database description of this dataset
 my $date         = ""; # Date relevent to this data, formatted for SQL: 2009-05-31
 my $gzip         = false;
-my $v2           = false;
+my $v1           = false;
 my $paired       = false;
 
 my @parents;
@@ -238,7 +238,7 @@ sub execute_stacks {
         check_return_value($?, $log_fh);
     }
 
-    if ($v2) {
+    if (!$v1) {
         #
         # Sort the reads according by catalog locus / run tsv2bam.
         #
@@ -326,7 +326,7 @@ sub execute_stacks {
         printf(STDERR "Generating genotypes...\n");
         print $log_fh "\ngenotypes\n==========\n";
 
-        $cmd = $exe_path . "genotypes" . ($v2 ? " --v2" : "") . " -b $batch_id -P $out_path -r 1 -c -s " . join(" ", @_genotypes) . " 2>&1";
+        $cmd = $exe_path . "genotypes" . ($v1 ? " --v1" : "") . " -b $batch_id -P $out_path -r 1 -c -s " . join(" ", @_genotypes) . " 2>&1";
         print STDERR  "$cmd\n";
         print $log_fh "$cmd\n";
 
@@ -343,7 +343,7 @@ sub execute_stacks {
         printf(STDERR "Calculating population-level summary statistics\n");
         print $log_fh "\npopulations\n==========\n";
 
-        $cmd = $exe_path . "populations" . ($v2 ? " --v2" : "") . " -b $batch_id -P $out_path -s " . join(" ", @_populations) . " 2>&1";
+        $cmd = $exe_path . "populations" . ($v1 ? " --v1" : "") . " -b $batch_id -P $out_path -s " . join(" ", @_populations) . " 2>&1";
         print STDERR  "  $cmd\n";
         print $log_fh "$cmd\n";
 
@@ -897,7 +897,7 @@ sub parse_command_line {
 	elsif ($_ =~ /^-B$/) { $db        = shift @ARGV; }
 	elsif ($_ =~ /^-m$/) { $min_cov   = shift @ARGV; }
 	elsif ($_ =~ /^-P$/) { $min_rcov  = shift @ARGV; }
-	elsif ($_ =~ /^--v2$/) { $v2  = true; }
+	elsif ($_ =~ /^--v1$/) { $v1  = true; }
 	elsif ($_ =~ /^--paired-ends$/) { $paired  = true; }
         elsif ($_ =~ /^--samples$/) {
             $sample_path = shift @ARGV;
@@ -1032,8 +1032,8 @@ sub parse_command_line {
 	usage();
     }
 
-    if ($paired && !$v2) {
-        print STDERR "Error: Option --paired requires --v2.\n";
+    if ($v1 && $paired) {
+        print STDERR "Error: Option --paired and --v1 are incompatible.\n";
         usage();
     }
 
@@ -1070,7 +1070,6 @@ denovo_map.pl -p path -r path -o path -A type (assembly options) -b batch_id (da
     r: path to a file containing the reads of one progeny, in a mapping cross.
 
   General options:
-    --v2: Use the v2 pipeline.
     o: path to an output directory.
     b: a numeric database ID for this run (e.g. 1).
     A: for a mapping cross, specify the type; one of 'CP', 'F2', 'BC1', 'DH', or 'GEN'.
