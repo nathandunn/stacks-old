@@ -20,6 +20,13 @@ const size_t cigar_c2i[128] = {
     o,o,o,o, o,o,o,o, o,o,o,o, o,o,o,o,
 };
 
+void check_open(const htsFile* bam_f, const string& path) {
+    if (bam_f == NULL) {
+        cerr << "Error: Failed to open BAM file '" << path << "'.\n";
+        throw exception();
+    }
+}
+
 void write_bam_header(
         htsFile* bam_f,
         const string& header

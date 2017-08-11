@@ -50,6 +50,8 @@ extern const size_t cigar_c2i[128];
 int bam_find_start_bp(int, strand_type, const vector<pair<char, uint> > &);
 int bam_edit_gaps(vector<pair<char, uint> > &, char *);
 
+void check_open(const htsFile* bam_f, const string& path);
+
 // Write a SAM-style text header to a BAM file.
 void write_bam_header(htsFile* bam_f, const string& header_text);
 
