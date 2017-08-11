@@ -3,7 +3,10 @@
 #include <iostream>
 #include <fstream>
 
+extern "C" {
 #include <getopt.h>
+#include <unistd.h>
+}
 
 #include "constants.h"
 #include "sql_utilities.h"
@@ -15,17 +18,25 @@
 #include "FastaI.h"
 #include "BamI.h"
 #include "DNASeq4.h"
+#include "catalog_utils.cc"
 
 void parse_command_line(int argc, char* argv[]);
 void report_options(ostream& os);
 void run();
+void run(const vector<int>& cloc_ids, const string& header_sq_lines, size_t sample_i);
 
 //
 // Argument globals.
 //
 bool quiet = false;
-string prefix_path;
-string pe_reads_path;
+string in_dir;
+int batch_id = -1;
+vector<string> samples;
+string popmap_path;
+vector<string> pe_reads_paths;
+FileT pe_reads_format;
+int num_threads = 1;
+
 bool dbg_reversed_pe_reads = false;
 
 //
@@ -43,22 +54,77 @@ int main(int argc, char* argv[]) {
     parse_command_line(argc, argv);
 
     // Open the log
-    string lg_path = prefix_path + "." + prog_name + ".log";
+    string lg_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".log";
     logger = new LogAlterator(lg_path, quiet, argc, argv);
     report_options(cout);
     cout << "\n";
+
+    if (!pe_reads_paths.empty())
+        cout << "Paired-end reads files found, e.g. '" << pe_reads_paths.at(0) << "'.\n";
+
+    // Initialize OPENMP.
+    #ifdef _OPENMP
+    omp_set_num_threads(num_threads);
+    #endif
 
     // Run the program.
     run();
 
     // Cleanup.
-    cout << prog_name << " is done.\n";
+    cout << "\n" << prog_name << " is done.\n";
     delete logger;
     return 0;
     IF_NDEBUG_CATCH_ALL_EXCEPTIONS
 }
 
 void run() {
+
+    //
+    // Read the catalog.
+    //
+    cout << "Loading the catalog..." << endl;
+    map<int, Locus*> catalog;
+    string catalog_prefix = in_dir + "batch_" + to_string(batch_id) + ".catalog";
+    bool dummy;
+    int rv = load_loci(catalog_prefix, catalog, 0, false, dummy);
+    if (rv != 1) {
+        cerr << "Error: Unable to load catalog '" << catalog_prefix << "'.\n";
+        throw exception();
+    }
+
+    //
+    // Create the BAM target list.
+    //
+    stringstream header_sq_lines;
+    vector<int> cloc_ids;
+    cloc_ids.reserve(catalog.size());
+    for (auto& cloc : catalog) {
+        // Add the @SQ line. Length is mandatory; all loci declare to be 10000bp.
+        header_sq_lines << "@SQ\tSN:" << cloc.first << "\tLN:10000";
+        if (!cloc.second->loc.empty()) {
+            const PhyLoc& pos = cloc.second->loc;
+            header_sq_lines << "\tpos:" << pos.chr()
+                        << ':' << (pos.bp+1)
+                        << ':' << (pos.strand == strand_plus ? '+' : '-');
+        }
+        header_sq_lines << "\n";
+        cloc_ids.push_back(cloc.first);
+        delete cloc.second;
+        cloc.second = NULL;
+    }
+    catalog.clear();
+
+    //
+    // Process the samples.
+    //
+    for (size_t i=0; i<samples.size(); ++i)
+        run(cloc_ids, header_sq_lines.str(), i);
+}
+
+void run(const vector<int>& cloc_ids, const string& header_sq_lines, size_t sample_i) {
+    cout << "\nSample '" << samples.at(sample_i) << "'\n----------\n";
+
+    string prefix_path = in_dir + samples.at(sample_i);
 
     //
     // Read the sample's tsv files.
@@ -72,6 +138,12 @@ void run() {
         if (matches.empty()) {
             cerr << "Error: Unable to load matches from '"
                  << prefix_path + ".matches.tsv(.gz)'.\n";
+            throw exception();
+        } else if (matches[0]->batch_id != batch_id) {
+            cerr << "Error: The catalog batch ID is " << batch_id
+                 << " but matches file '" << prefix_path
+                 << ".matches.tsv.gz' corresponds to batch ID "
+                 << matches[0]->batch_id << ".\n";
             throw exception();
         }
         sample_id = matches[0]->sample_id;
@@ -121,12 +193,10 @@ void run() {
     //
     struct Loc {
         int cloc_id;
-        Locus* sloc;
+        Locus* sloc; // 'Sample' locus (includes the fw reads in Locus::comp and Locus::reads)
         map<DNASeq4, vector<string>>* pe_reads;
-
         bool operator< (const Loc& other) const {return cloc_id < other.cloc_id;}
     };
-
     vector<Loc> sorted_loci;
     {
         for (auto& sloc : sloci)
@@ -137,7 +207,8 @@ void run() {
     //
     // Load the paired-end reads, if any.
     //
-    if(!pe_reads_path.empty()) {
+    if(!pe_reads_paths.empty()) {
+        string pe_reads_path = pe_reads_paths.at(sample_i);
         cerr << "Loading paired-end reads...\n";
 
         // Initialize the paired-end read structures.
@@ -146,17 +217,13 @@ void run() {
 
         // Open the paired-end reads file.
         Input* pe_reads_f = NULL;
-        switch (guess_file_type(pe_reads_path)) {
+        switch (pe_reads_format) {
         case FileT::gzfastq: pe_reads_f = new GzFastq(pe_reads_path.c_str()); break;
         case FileT::gzfasta: pe_reads_f = new GzFasta(pe_reads_path.c_str()); break;
         case FileT::fastq: pe_reads_f = new Fastq(pe_reads_path.c_str()); break;
         case FileT::fasta: pe_reads_f = new Fasta(pe_reads_path.c_str()); break;
         case FileT::bam: pe_reads_f = new Bam(pe_reads_path.c_str()); break;
-        default:
-            cerr << "Error: '" << pe_reads_path << "' has unexpected format '"
-                 << to_string(guess_file_type(pe_reads_path)) << "'.\n";
-            throw exception();
-            break;
+        default: DOES_NOT_HAPPEN; break;
         }
 
         // Get the read-name-to-locus map.
@@ -203,74 +270,35 @@ void run() {
     //
     // Open the BAM file.
     //
-    htsFile* bam_f = NULL;
-    {
-        string matches_bam_path = prefix_path + ".matches.bam";
-        cerr << "Outputing to '" << matches_bam_path << "'\n";
-        bam_f = hts_open(matches_bam_path.c_str(), "wb");
-    }
+    string matches_bam_path = prefix_path + ".matches.bam";
+    cerr << "Outputing to '" << matches_bam_path << "'\n";
+    htsFile* bam_f = hts_open(matches_bam_path.c_str(), "wb");
+    check_open(bam_f, matches_bam_path);
 
     //
     // Write the BAM header.
     //
-    vector<int> targets; // Catalog loci.
-    {
-        cerr << "Writing the header...\n";
-        string sample_name = prefix_path.substr(prefix_path.find_last_of('/')+1);
-        stringstream header_text;
-        header_text << "@HD\tVN:1.5\tSO:coordinate\n"
-                    << "@RG\tID:" << sample_id << "\tSM:" << sample_name << "\tid:" << sample_id << "\n";
-
-        // For samtools-merge to be happy, we must provide the complete list of
-        // catalog loci. So we actually have to load the catalog.
-        {
-            int batch_id = matches[0]->batch_id;
-            string dir_path = prefix_path.substr(0, prefix_path.find_last_of('/')+1);
-            if (dir_path.empty())
-                dir_path = "./";
-            string catalog_prefix = dir_path + "batch_" + to_string(batch_id) + ".catalog";
-
-            map<int, Locus*> catalog;
-            bool tmp;
-            int rv = load_loci(catalog_prefix, catalog, 0, false, tmp);
-            if (rv != 1) {
-                cerr << "Error: Unable to load catalog '" << catalog_prefix << "'.\n";
-                throw exception();
-            }
-
-            targets.reserve(catalog.size());
-            for (auto& cloc : catalog) {
-                // Add the @SQ line. Length is mandatory; all loci declare to be 10000bp.
-                header_text << "@SQ\tSN:" << cloc.first << "\tLN:10000";
-                if (!cloc.second->loc.empty()) {
-                    const PhyLoc& pos = cloc.second->loc;
-                    header_text << "\tpos:" << pos.chr()
-                                << ':' << (pos.bp+1)
-                                << ':' << (pos.strand == strand_plus ? '+' : '-');
-                }
-                header_text << "\n";
-                targets.push_back(cloc.first);
-                delete cloc.second;
-            }
-        }
-
-        // Write it.
-        write_bam_header(bam_f, header_text.str());
-    }
+    cerr << "Writing the header...\n";
+    string header;
+    header += "@HD\tVN:1.5\tSO:coordinate\n";
+    header += "@RG\tID:" + to_string(sample_id) + "\tSM:" + samples.at(sample_i) + "\tid:" + to_string(sample_id) + '\n';
+    header += header_sq_lines;
+    write_bam_header(bam_f, header);
 
     //
     // Write the BAM records.
     //
     {
         cerr << "Writing the records...\n";
+        const vector<int>& targets = cloc_ids;
         size_t target_i = 0;
         BamRecord rec;
         for (auto& loc : sorted_loci) {
             while (targets[target_i] != loc.cloc_id)
                 ++target_i;
 
-            if(!pe_reads_path.empty()) {
-                // Write the assembled reads.
+            if(!pe_reads_paths.empty()) {
+                // Write the forward reads.
                 for (size_t j=0; j<loc.sloc->comp.size();++j) {
                     string name (loc.sloc->comp[j]);
                     strip_read_number(name);
@@ -306,8 +334,8 @@ void run() {
                 }
 
             } else {
-                // Write the assembled reads.
-                // But in this case we do not expect the read names to have a
+                // Write the (possibly pooled) reads.
+                // In this case we do not expect the read names to have a
                 // specific suffix, and we do not set the FREAD1 flag.
                 for (size_t j=0; j<loc.sloc->comp.size();++j) {
                     const char* name = loc.sloc->comp[j];
@@ -335,7 +363,7 @@ void run() {
         delete m;
     for (auto& sloc : sloci)
         delete sloc.second;
-    if(!pe_reads_path.empty())
+    if(!pe_reads_paths.empty())
         for (Loc& loc : sorted_loci)
             delete loc.pe_reads;
     hts_close(bam_f);
@@ -345,15 +373,20 @@ void parse_command_line(int argc, char* argv[]) {
 
     const string help_string = string() +
             prog_name + " " + VERSION  + "\n" +
-            prog_name + " -s sample_prefix [-f paired_reads]\n"
+            prog_name + " -P stacks_dir -M popmap [-b batch_id] [-R paired_reads_dir]\n" +
+            prog_name + " -P stacks_dir -s sample [-s sample ...] [-b batch_id] [-R paired_reads_dir]\n" +
             "\n"
-            "  -s,--prefix: prefix path for the sample. (Required.)\n"
-            "  -f,--pe-reads: path to the file containing the sample's paired-end read sequences, if any.\n"
+            "  -P,--in-dir: input directory.\n"
+            "  -M,--popmap: population map.\n"
+            "  -s,--sample: name of one sample.\n"
+            "  -R,--pe-reads-dir: directory where to find the paired-end reads files (in fastq/fasta/bam (gz) format).\n"
+            "  -b: catalog batch ID (default: guess).\n"
+            "  -t: number of threads to use (default: 1).\n"
             "\n"
 #ifdef DEBUG
             "Debug options:\n"
-            "  --reversed-pe-reads: for simulated paired-end reads written on the same\n"
-            "                       strand as the forward ones\n"
+            "  --dbg-reversed-pe-reads: for simulated paired-end reads written on the same\n"
+            "                           strand as the forward ones\n"
             "\n"
 #endif
             ;
@@ -367,17 +400,23 @@ void parse_command_line(int argc, char* argv[]) {
         {"help",         no_argument,       NULL, 'h'},
         {"quiet",        no_argument,       NULL, 'q'},
         {"version",      no_argument,       NULL,  1000},
-        {"prefix",       required_argument, NULL, 's'},
-        {"pe-reads",     required_argument, NULL, 'f'},
-        {"reversed-pe-reads", no_argument,  NULL, 2000},
+        {"in-dir",       required_argument, NULL, 'P'},
+        {"popmap",       required_argument, NULL, 'M'},
+        {"sample",       required_argument, NULL, 's'},
+        {"pe-reads-dir", required_argument, NULL, 'R'},
+        {"batch-id",     required_argument, NULL, 'b'},
+        {"threads",      required_argument, NULL, 't'},
+        {"dbg-reversed-pe-reads", no_argument, NULL, 2000},
         {0, 0, 0, 0}
     };
+
+    string pe_reads_dir;
 
     int c;
     int long_options_i;
     while (true) {
 
-        c = getopt_long(argc, argv, "hqs:f:", long_options, &long_options_i);
+        c = getopt_long(argc, argv, "hqt:P:b:M:s:R:", long_options, &long_options_i);
 
         // Detect the end of the options.
         if (c == -1)
@@ -395,11 +434,35 @@ void parse_command_line(int argc, char* argv[]) {
             cout << prog_name << " " << VERSION << "\n";
             exit(0);
             break;
-        case 's':
-            prefix_path = optarg;
+        case 'P':
+            in_dir = optarg;
+            if (in_dir.back() != '/')
+                in_dir += '/';
             break;
-        case 'f':
-            pe_reads_path = optarg;
+        case 'M':
+            popmap_path = optarg;
+            break;
+        case 's':
+            samples.push_back(optarg);
+            break;
+        case 'R':
+            pe_reads_dir = optarg;
+            if (pe_reads_dir.back() != '/')
+                pe_reads_dir += '/';
+            break;
+        case 'b':
+            batch_id = is_integer(optarg);
+            if (batch_id < 0) {
+                cerr << "Error: Illegal -b option value '" << optarg << "'.\n";
+                bad_args();
+            }
+            break;
+        case 't':
+            num_threads = is_integer(optarg);
+            if (num_threads < 0) {
+                cerr << "Error: Illegal -t option value '" << optarg << "'.\n";
+                bad_args();
+            }
             break;
         case 2000: // reversed-pe-reads
             dbg_reversed_pe_reads = true;
@@ -418,21 +481,78 @@ void parse_command_line(int argc, char* argv[]) {
         bad_args();
     }
 
-    if (prefix_path.empty()) {
-        cerr << "Error: A sample prefix path is required (-s).\n";
+    // -P
+    if (in_dir.empty()) {
+        cerr << "Error: An input directory is required (-P).\n";
         bad_args();
     }
 
-    const set<FileT> accepted_formats {FileT::gzfastq, FileT::fastq, FileT::gzfasta, FileT::fasta, FileT::bam};
-    if (!pe_reads_path.empty() && !accepted_formats.count(guess_file_type(pe_reads_path))) {
-        cerr << "Error: Failed to recognize the format of '" << pe_reads_path << "'.\n";
+    // -M & -s
+    if (popmap_path.empty() && samples.empty()) {
+        cerr << "Error: One of -M or -s should be provided.\n";
         bad_args();
+    } else if (!popmap_path.empty() && !samples.empty()) {
+        cerr << "Error: only one of -M or -s should be provided.\n";
+        bad_args();
+    }
+
+    // -b
+    if (batch_id < 0) {
+        vector<int> cat_ids = find_catalogs(in_dir);
+        if (cat_ids.empty()) {
+            cerr << "Error: Unable to find a catalog in '" << in_dir << "'.\n";
+            bad_args();
+        } else if (cat_ids.size() == 1) {
+            batch_id = cat_ids[0];
+        }  else {
+            cerr << "Error: Input directory contains several catalogs, please specify -b.\n";
+            bad_args();
+        }
+    }
+
+    //
+    // Process arguments.
+    //
+    if (!popmap_path.empty()) {
+           MetaPopInfo mpopi;
+           mpopi.init_popmap(popmap_path);
+           for (const Sample& s : mpopi.samples())
+               samples.push_back(s.name);
+    }
+
+    if (!pe_reads_dir.empty()) {
+        // Find the first paired-end read file.
+        string ext;
+        for (const string& e : {".fq.gz", ".fastq.gz", ".fq", ".fastq", ".fa.gz", ".fasta.gz", ".fa", ".fasta", ".bam"}) {
+            if (access((pe_reads_dir + samples.at(0) + ".2" + e).c_str(), F_OK) == 0) {
+                // File exists.
+                ext = e;
+                break;
+            }
+        }
+        if (ext.empty()) {
+            cerr << "Error: Unable to find the first paired-end reads file at '" << pe_reads_dir+samples.at(0) << ".2.*'\n";
+            throw exception();
+        }
+        // Record the paired-end reads paths.
+        for (const string& sample : samples)
+            pe_reads_paths.push_back(pe_reads_dir + sample + ".2" + ext);
+        pe_reads_format = guess_file_type(pe_reads_paths.at(0));
+        if (pe_reads_format == FileT::unknown)
+            DOES_NOT_HAPPEN;
     }
 }
 
 void report_options(ostream& os) {
     os << "Configuration for this run:\n";
-    os << "  Sample prefix: '" << prefix_path << "'\n";
-    if (!pe_reads_path.empty())
-        os << "  Paired-end reads path: '" << pe_reads_path << "'\n";
+    os << "  Stacks directory: '" << in_dir << "'\n"
+       << "  Batch ID: " << batch_id << "\n";
+    if (!popmap_path.empty())
+        os << "  Population map: '" << popmap_path << "'\n";
+    os << "  Num. samples: " << samples.size() << "\n";
+    if (!pe_reads_paths.empty())
+        os << "  Paired-end reads directory: '"
+           << pe_reads_paths[0].substr(0, pe_reads_paths[0].find_last_of('/')) << "/'\n";
+    if (num_threads > 1)
+        os << "  Multithreaded.\n";
 }

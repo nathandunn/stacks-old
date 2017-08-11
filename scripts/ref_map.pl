@@ -231,32 +231,32 @@ sub execute_stacks {
     if ($v2) {
         #
         # Sort the reads according by catalog locus / run tsv2bam.
-        # TODO: Update after parallelizing tsv2bam.
         #
         print STDERR "Sorting reads by RAD locus...\n";
         print $log_fh "\ntsv2bam\n==========\n";
 
-        $i = 1;
-        foreach $sample (@parents, @progeny, @samples) {
-            print $log_fh "\nSample $i of $num_files '$sample->{'file'}'\n----------\n";
-            $i++;
-
-            $cmd = $exe_path . "tsv2bam -s $out_path/$sample->{'file'}";
-            foreach (@_tsv2bam) {
-                $cmd .= " " . $_;
+        $cmd = $exe_path . "tsv2bam -P $out_path";
+        if ($popmap_path) {
+            $cmd .= " -M $popmap_path";
+        } else {
+            foreach $sample (@parents, @progeny, @samples) {
+                $cmd .= " -s $sample->{'file'}";
             }
-            $cmd .= " 2>&1";
-            print STDERR  "  $cmd\n";
-            print $log_fh "$cmd\n\n";
-        	if (!$dry_run) {
-                open($pipe_fh, "$cmd |");
-                while (<$pipe_fh>) {
-                    print $log_fh $_;
-                }
-                close($pipe_fh);
-                check_return_value($?, $log_fh);
-        	}
         }
+        foreach (@_tsv2bam) {
+            $cmd .= " " . $_;
+        }
+        $cmd .= " 2>&1";
+        print STDERR  "  $cmd\n";
+        print $log_fh "$cmd\n\n";
+    	if (!$dry_run) {
+            open($pipe_fh, "$cmd |");
+            while (<$pipe_fh>) {
+                print $log_fh $_;
+            }
+            close($pipe_fh);
+            check_return_value($?, $log_fh);
+    	}
         
         #
         # Merge the matches.bam files / run samtools merge.
