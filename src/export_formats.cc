@@ -92,20 +92,56 @@ write_sql(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
 }
 
 int
-write_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
+write_fasta_loci(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
+{
+    string file = out_path + out_prefix + ".loci.fa";
+    cerr << "Writing consensus sequences to FASTA file '" << file << "'\n";
+    ofstream fh(file);
+    if (fh.fail()) {
+        cerr << "Error opening file '" << file << "' for writing.\n";
+        exit(1);
+    }
+
+    for (auto& chr: pmap->ordered_loci) {
+        for (uint pos = 0; pos < chr.second.size(); pos++) {
+            CSLocus* loc = chr.second[pos];
+
+            fh << ">CLocus_" << loc->id;
+            if (strcmp(loc->loc.chr, "un") != 0)
+                fh << " [" << loc->loc.chr << ", " << loc->sort_bp() + 1 << ", " << (loc->loc.strand == strand_plus ? "+" : "-");
+            fh << '\n' << loc->con << '\n';
+
+#ifdef DEBUG
+            bool no_samples = true;
+            Datum** d = pmap->locus(loc->id);
+            for (int j = 0; j < pmap->sample_cnt(); j++)
+                if (d[j] != NULL)
+                    no_samples = false;
+            assert(!no_samples);
+#endif
+        }
+    }
+
+    fh.close();
+
+    return 0;
+}
+
+int
+write_fasta_samples_raw(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
 {
     //
     // Write a FASTA file containing each allele from each locus from
     // each sample in the population.
     //
-    string file = out_path + out_prefix + ".fa";
+    string file = out_path + out_prefix + ".samples-raw.fa";
 
-    cerr << "Writing population alleles to FASTA file '" << file << "'\n";
+    cerr << "Writing sample alleles (raw) to FASTA file '" << file << "'\n";
 
     ofstream fh(file.c_str(), ofstream::out);
 
     if (fh.fail()) {
-        cerr << "Error opening FASTA file '" << file << "'\n";
+        cerr << "Error opening file '" << file << "' for writing\n";
         exit(1);
     }
 
@@ -154,20 +190,20 @@ write_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
 }
 
 int
-write_strict_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
+write_fasta_samples(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
 {
     //
     // Write a FASTA file containing each allele from each locus from
     // each sample in the population.
     //
-    string file = out_path + out_prefix + ".strict.fa";
+    string file = out_path + out_prefix + ".samples.fa";
 
-    cerr << "Writing strict population alleles to FASTA file '" << file << "'\n";
+    cerr << "Writing sample alleles to FASTA file '" << file << "'\n";
 
     ofstream fh(file.c_str(), ofstream::out);
 
     if (fh.fail()) {
-        cerr << "Error opening strict FASTA file '" << file << "'\n";
+        cerr << "Error opening file '" << file << "' for writing.\n";
         exit(1);
     }
 

@@ -72,8 +72,9 @@ bool      expand_id         = false;
 bool      sql_out           = false;
 bool      vcf_out           = false;
 bool      vcf_haplo_out     = false;
-bool      fasta_out         = false;
-bool      fasta_strict_out  = false;
+bool      fasta_loci_out    = false;
+bool      fasta_samples_out = false;
+bool      fasta_samples_raw_out = false;
 bool      genepop_out       = false;
 bool      genomic_out       = false;
 bool      structure_out     = false;
@@ -642,11 +643,14 @@ int main (int argc, char* argv[]) {
     //
     // Output data in requested formats
     //
-    if (fasta_out)
-        write_fasta(catalog, pmap);
+    if (fasta_loci_out)
+        write_fasta_loci(catalog, pmap);
 
-    if (fasta_strict_out)
-        write_strict_fasta(catalog, pmap);
+    if (fasta_samples_out)
+        write_fasta_samples(catalog, pmap);
+
+    if (fasta_samples_raw_out)
+        write_fasta_samples_raw(catalog, pmap);
 
     if (genepop_out && ordered_export)
         write_genepop_ordered(catalog, pmap, psum, log_fh);
@@ -5182,8 +5186,9 @@ int parse_command_line(int argc, char* argv[]) {
             {"sql",            no_argument,       NULL, 's'},
             {"vcf",            no_argument,       NULL, 1004},
             {"vcf_haplotypes", no_argument,       NULL, 'n'},
-            {"fasta",          no_argument,       NULL, 'F'},
-            {"fasta_strict",   no_argument,       NULL, 'J'},
+            {"fasta_loci",     no_argument,       NULL, 1006},
+            {"fasta_samples",  no_argument,       NULL, 'J'}, {"fasta_strict", no_argument, NULL, 'J'},
+            {"fasta_samples_raw", no_argument,    NULL, 'F'}, {"fasta", no_argument, NULL, 'F'},
             {"structure",      no_argument,       NULL, 'S'},
             {"fastphase",      no_argument,       NULL, 'A'},
             {"phase",          no_argument,       NULL, 'C'},
@@ -5379,11 +5384,14 @@ int parse_command_line(int argc, char* argv[]) {
         case 'n':
             vcf_haplo_out = true;
             break;
+        case 1006:
+            fasta_loci_out = true;
+            break;
         case 'F':
-            fasta_out = true;
+            fasta_samples_raw_out = true;
             break;
         case 'J':
-            fasta_strict_out = true;
+            fasta_samples_out = true;
             break;
         case 'G':
             genepop_out = true;
@@ -5637,8 +5645,9 @@ void help() {
               << "File output options:\n"
               << "  --ordered_export: if data is reference aligned, exports will be ordered; only a single representative of each overlapping site.\n"
               << "  --genomic: output each nucleotide position (fixed or polymorphic) in all population members to a file (requires --renz).\n"
-              << "  --fasta: output full sequence for each unique haplotype, from each sample locus in FASTA format, regardless of plausibility.\n"
-              << "  --fasta_strict: output full sequence for each haplotype, from each sample locus in FASTA format, only for biologically plausible loci.\n"
+              << "  --fasta_samples: output the sequences of the two haplotypes of each (diploid) sample, for each locus, in FASTA format.\n"
+              << "  --fasta_samples_raw: output all haplotypes observed in each sample, for each locus, in FASTA format.\n"
+              << "  --fasta_loci: output consensus sequences of all loci, in FASTA format.\n"
               << "  --vcf: output SNPs in Variant Call Format (VCF).\n"
               << "  --vcf_haplotypes: output haplotypes in Variant Call Format (VCF).\n"
               << "  --genepop: output results in GenePop format.\n"
