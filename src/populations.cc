@@ -38,7 +38,7 @@
 using namespace std;
 
 // Global variables to hold command-line options.
-InputMode input_mode  = InputMode::stacks;
+InputMode input_mode  = InputMode::stacks2;
 int       num_threads =  1;
 int       batch_id    = -1;
 string    in_path;
@@ -132,8 +132,12 @@ int main (int argc, char* argv[]) {
     //
     parse_command_line(argc, argv);
 
-    cerr << "populations parameters selected:\n"
-         << "  Fst kernel smoothing: " << (kernel_smoothed == true ? "on" : "off") << "\n"
+    cerr << "populations parameters selected:\n";
+    if (input_mode == InputMode::vcf)
+        cerr << "  Input mode: VCF\n";
+    else if (input_mode == InputMode::stacks)
+        cerr << "  Input mode: v1\n";
+    cerr << "  Fst kernel smoothing: " << (kernel_smoothed == true ? "on" : "off") << "\n"
          << "  Bootstrap resampling: ";
     if (bootstrap)
         cerr << "on, " << (bootstrap_type == bs_exact ? "exact; " : "approximate; ") << bootstrap_reps << " reptitions\n";
@@ -5252,7 +5256,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"threads",        required_argument, NULL, 't'},
             {"batch_id",       required_argument, NULL, 'b'},
             {"in_path",        required_argument, NULL, 'P'},
-            {"v2",             no_argument,       NULL, 1006},
+            {"v1",             no_argument,       NULL, 1006},
             {"out_path",       required_argument, NULL, 'O'},
             {"in_vcf",         required_argument, NULL, 'V'},
             {"progeny",        required_argument, NULL, 'r'},
@@ -5308,8 +5312,8 @@ int parse_command_line(int argc, char* argv[]) {
             if (!in_path.empty() && in_path.back() != '/')
                 in_path += "/";
             break;
-        case 1006: //v2
-            input_mode = InputMode::stacks2;
+        case 1006: //v1
+            input_mode = InputMode::stacks;
             break;
         case 'O':
             out_path = optarg;
@@ -5568,17 +5572,15 @@ int parse_command_line(int argc, char* argv[]) {
     //
     // Check argument constrains.
     //
+    if (input_mode == InputMode::stacks && in_path.empty()) {
+        cerr << "Error: Option --v1 requires -P to be given.\n";
+        help();
+    }
 
-    if (not in_path.empty() && not in_vcf_path.empty()) {
+    if (!in_path.empty() && !in_vcf_path.empty()) {
         cerr << "Error: Please specify either '-P/--in_path' or '-V/--in_vcf', not both.\n";
         help();
-    } else if (not in_vcf_path.empty()) {
-        if (input_mode == InputMode::stacks2) {
-            cerr << "Error: '-V/--in_vcf' conflicts with '--v2'.\n";
-            help();
-        }
-        input_mode = InputMode::vcf;
-    } else if (in_path.empty()) {
+    } else if (in_path.empty() && in_vcf_path.empty()) {
         cerr << "Error: One of '-P/--in_path' or '-V/--in_vcf' is required.\n";
         help();
     }
