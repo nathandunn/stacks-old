@@ -141,6 +141,8 @@ int run() {
     //
     for (const string& o : outputs)
         cout << o;
+
+    return 0;
 }
 
 void run(const vector<int>& cloc_ids, const string& header_sq_lines, size_t sample_i, ostream& os) {
