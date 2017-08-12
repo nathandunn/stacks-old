@@ -37,7 +37,7 @@ const uint num_snps_fields    = 10;
 const uint num_alleles_fields =  6;
 const uint num_matches_fields =  9;
 
-void load_catalog_matches(string sample,  vector<CatMatch *> &matches);
+void load_catalog_matches(string sample,  vector<CatMatch *> &matches, bool verbose=true);
 int load_model_results(string sample,  map<int, ModRes *> &modres);
 int load_snp_calls(string sample,  map<int, SNPRes *> &snpres);
 
@@ -49,7 +49,7 @@ vector<pair<int, int> > retrieve_bijective_loci(const vector<pair<int,int>>& slo
 
 template <class LocusT>
 int
-load_loci(const string& sample,  map<int, LocusT *> &loci, int store_reads, bool load_all_model_calls, bool &compressed)
+load_loci(const string& sample,  map<int, LocusT *> &loci, int store_reads, bool load_all_model_calls, bool &compressed, bool verbose=true)
 {
     using namespace std;
 
@@ -133,7 +133,8 @@ load_loci(const string& sample,  map<int, LocusT *> &loci, int store_reads, bool
         return 0;
     }
 
-    cerr << "  Parsing " << f.c_str() << "\n";
+    if (verbose)
+        cerr << "  Parsing " << f.c_str() << "\n";
 
     uint id;
 
@@ -289,7 +290,8 @@ load_loci(const string& sample,  map<int, LocusT *> &loci, int store_reads, bool
         gzip       = true;
         compressed = true;
     }
-    cerr << "  Parsing " << f.c_str() << "\n";
+    if (verbose)
+        cerr << "  Parsing " << f.c_str() << "\n";
 
     while (fh_status) {
         fh_status = (gzip == true) ? read_gzip_line(gz_fh, &line, &size) : read_line(fh, &line, &size);
@@ -382,7 +384,8 @@ load_loci(const string& sample,  map<int, LocusT *> &loci, int store_reads, bool
         gzip       = true;
         compressed = true;
     }
-    cerr << "  Parsing " << f.c_str() << "\n";
+    if (verbose)
+        cerr << "  Parsing " << f.c_str() << "\n";
 
     while (fh_status) {
         fh_status = (gzip == true) ? read_gzip_line(gz_fh, &line, &size) : read_line(fh, &line, &size);

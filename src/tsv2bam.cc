@@ -22,8 +22,8 @@ extern "C" {
 
 void parse_command_line(int argc, char* argv[]);
 void report_options(ostream& os);
-void run();
-void run(const vector<int>& cloc_ids, const string& header_sq_lines, size_t sample_i);
+int  run();
+void run(const vector<int>& cloc_ids, const string& header_sq_lines, size_t sample_i, ostream& os);
 
 //
 // Argument globals.
@@ -43,7 +43,7 @@ bool dbg_reversed_pe_reads = false;
 // Extra globals.
 //
 const string prog_name = "tsv2bam";
-LogAlterator* logger = NULL;
+unique_ptr<LogAlterator> logger = NULL;
 
 // main()
 // ==========
@@ -55,7 +55,7 @@ int main(int argc, char* argv[]) {
 
     // Open the log
     string lg_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".log";
-    logger = new LogAlterator(lg_path, quiet, argc, argv);
+    logger.reset(new LogAlterator(lg_path, quiet, argc, argv));
     report_options(cout);
     cout << "\n";
 
@@ -68,16 +68,17 @@ int main(int argc, char* argv[]) {
     #endif
 
     // Run the program.
-    run();
+    int rv = run();
+    if (rv != 0)
+        return rv;
 
     // Cleanup.
     cout << "\n" << prog_name << " is done.\n";
-    delete logger;
     return 0;
     IF_NDEBUG_CATCH_ALL_EXCEPTIONS
 }
 
-void run() {
+int run() {
 
     //
     // Read the catalog.
@@ -86,7 +87,7 @@ void run() {
     map<int, Locus*> catalog;
     string catalog_prefix = in_dir + "batch_" + to_string(batch_id) + ".catalog";
     bool dummy;
-    int rv = load_loci(catalog_prefix, catalog, 0, false, dummy);
+    int rv = load_loci(catalog_prefix, catalog, 0, false, dummy, false);
     if (rv != 1) {
         cerr << "Error: Unable to load catalog '" << catalog_prefix << "'.\n";
         throw exception();
@@ -117,12 +118,34 @@ void run() {
     //
     // Process the samples.
     //
-    for (size_t i=0; i<samples.size(); ++i)
-        run(cloc_ids, header_sq_lines.str(), i);
+    vector<string> outputs (samples.size());
+    int omp_return = 0;
+    #pragma omp parallel
+    { try {
+        #pragma omp for  schedule(dynamic)
+        for (size_t i=0; i<samples.size(); ++i) {
+            #pragma omp critical
+            cout << "Processing sample '" << samples[i] << "'...\n";
+            stringstream ss;
+            run(cloc_ids, header_sq_lines.str(), i, ss);
+            outputs[i] = ss.str();
+        }
+    } catch (exception&) {
+        omp_return = 1;
+    }}
+    if (omp_return != 0)
+        return omp_return;
+
+    //
+    // Write the saved logs.
+    //
+    for (const string& o : outputs)
+        cout << o;
 }
 
-void run(const vector<int>& cloc_ids, const string& header_sq_lines, size_t sample_i) {
-    cout << "\nSample '" << samples.at(sample_i) << "'\n----------\n";
+void run(const vector<int>& cloc_ids, const string& header_sq_lines, size_t sample_i, ostream& os) {
+    ostream& cout = os;
+    cout << "\nSample '" << samples.at(sample_i) << "':\n";
 
     string prefix_path = in_dir + samples.at(sample_i);
 
@@ -133,8 +156,7 @@ void run(const vector<int>& cloc_ids, const string& header_sq_lines, size_t samp
     vector<CatMatch*> matches;
     int sample_id = -1;
     {
-        cout << "Reading the matches file..." << endl;
-        load_catalog_matches(prefix_path, matches);
+        load_catalog_matches(prefix_path, matches, false);
         if (matches.empty()) {
             cerr << "Error: Unable to load matches from '"
                  << prefix_path + ".matches.tsv(.gz)'.\n";
@@ -148,9 +170,8 @@ void run(const vector<int>& cloc_ids, const string& header_sq_lines, size_t samp
         }
         sample_id = matches[0]->sample_id;
 
-        cout << "Reading the tags file..." << endl;
-        bool tmpbool;
-        int rv = load_loci(prefix_path, sloci, 2, false, tmpbool);
+        bool dummy;
+        int rv = load_loci(prefix_path, sloci, 2, false, dummy, false);
         if(rv != 1) {
             cerr << "Error: Could not find stacks files '" << prefix_path << ".*' (tags, snps and/or alleles).\n";
             throw exception();
@@ -163,7 +184,7 @@ void run(const vector<int>& cloc_ids, const string& header_sq_lines, size_t samp
     unordered_map<int, int> sloc_to_cloc;
     {
         vector<pair<int, int> > bij_loci = retrieve_bijective_loci(matches);
-        cerr << bij_loci.size() << " sample loci ("
+        cout << bij_loci.size() << " sample loci ("
              << as_percentage((double) bij_loci.size() / sloci.size())
              << " of " << sloci.size()
              << ") had a one-to-one relationship with the catalog.\n";
@@ -209,7 +230,6 @@ void run(const vector<int>& cloc_ids, const string& header_sq_lines, size_t samp
     //
     if(!pe_reads_paths.empty()) {
         string pe_reads_path = pe_reads_paths.at(sample_i);
-        cerr << "Loading paired-end reads...\n";
 
         // Initialize the paired-end read structures.
         for (Loc& loc : sorted_loci)
@@ -260,7 +280,7 @@ void run(const vector<int>& cloc_ids, const string& header_sq_lines, size_t samp
             cerr << "Error: Failed to find any matching paired-end reads in '" << pe_reads_path << "'.\n";
             throw exception();
         }
-        cerr << "Found a paired-end read for " << n_used_reads
+        cout << "Found a paired-end read for " << n_used_reads
              << " (" << as_percentage((double) n_used_reads / readname_to_loc.size())
              << ") of the assembled forward reads." << endl;
 
@@ -271,14 +291,12 @@ void run(const vector<int>& cloc_ids, const string& header_sq_lines, size_t samp
     // Open the BAM file.
     //
     string matches_bam_path = prefix_path + ".matches.bam";
-    cerr << "Outputing to '" << matches_bam_path << "'\n";
     htsFile* bam_f = hts_open(matches_bam_path.c_str(), "wb");
     check_open(bam_f, matches_bam_path);
 
     //
     // Write the BAM header.
     //
-    cerr << "Writing the header...\n";
     string header;
     header += "@HD\tVN:1.5\tSO:coordinate\n";
     header += "@RG\tID:" + to_string(sample_id) + "\tSM:" + samples.at(sample_i) + "\tid:" + to_string(sample_id) + '\n';
@@ -289,7 +307,6 @@ void run(const vector<int>& cloc_ids, const string& header_sq_lines, size_t samp
     // Write the BAM records.
     //
     {
-        cerr << "Writing the records...\n";
         const vector<int>& targets = cloc_ids;
         size_t target_i = 0;
         BamRecord rec;

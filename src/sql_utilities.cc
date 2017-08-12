@@ -2,7 +2,7 @@
 
 using namespace std;
 
-void load_catalog_matches(string sample,  vector<CatMatch *> &matches) {
+void load_catalog_matches(string sample,  vector<CatMatch *> &matches, bool verbose) {
     CatMatch      *m;
     string         f;
     vector<string> parts;
@@ -32,7 +32,8 @@ void load_catalog_matches(string sample,  vector<CatMatch *> &matches) {
         #endif
         gzip = true;
     }
-    cerr << "  Parsing " << f.c_str() << "\n";
+    if (verbose)
+        cerr << "  Parsing " << f.c_str() << "\n";
 
     line_num = 1;
     while (fh_status) {
