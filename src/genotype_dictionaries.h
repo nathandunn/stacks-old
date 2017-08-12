@@ -24,8 +24,7 @@
 #include <string>
 #include <map>
 
-using std::string;
-using std::map;
+#include "constants.h"
 
 enum map_types {unk, none, gen, dh, cp, bc1, f2};
 enum out_types {rqtl, joinmap, onemap, genomic};
@@ -41,6 +40,8 @@ void load_mm_f2_dictionary(map<string, string> &types, map<string, map<string, s
 void load_dh_dictionary(map<string, string> &types, map<string, map<string, string> > &dictionary);
 void load_mm_dh_dictionary(map<string, string> &types, map<string, map<string, string> > &dictionary);
 void load_segregation_ratios(map_types type, map<string, map<string, double> > &segregation_ratios);
+
+extern int encoded_gtypes[4][4];
 
 inline
 int

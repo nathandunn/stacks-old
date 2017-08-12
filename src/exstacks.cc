@@ -49,7 +49,8 @@ int main (int argc, char* argv[]) {
     string s = samples.front();
     samples.pop();
 
-    if (!load_loci(s, sample, false, false, false)) {
+    bool tmp;
+    if (!load_loci(s, sample, 0, false, tmp)) {
         cerr << "Failed to load sample " << s.c_str() << "\n";
         return 1;
     }
@@ -68,8 +69,8 @@ int main (int argc, char* argv[]) {
     // First, bin loci according to chromosome and record a list of all chromosomes.
     //
     for (i = sample.begin(); i != sample.end(); i++) {
-        sorted[i->second->loc.chr].push_back(i->second);
-        chrs.insert(i->second->loc.chr);
+        sorted[i->second->loc.chr()].push_back(i->second);
+        chrs.insert(i->second->loc.chr());
     }
 
     //
@@ -106,7 +107,7 @@ int write_simple_output(Locus *tag) {
 
     cout <<
         "  Locus: " <<
-        tag->id    << ", chr: " << tag->loc.chr << " " << tag->loc.bp << "bp; " <<
+        tag->id    << ", chr: " << tag->loc.chr() << " " << tag->loc.bp << "bp; " <<
         tag->con    << "\n";
 
     //
@@ -200,13 +201,13 @@ int parse_command_line(int argc, char* argv[]) {
 }
 
 void version() {
-    std::cerr << "exstacks " << stacks_version << "\n\n";
+    cerr << "exstacks " << stacks_version << "\n\n";
 
     exit(1);
 }
 
 void help() {
-    std::cerr << "exstacks " << stacks_version << "\n"
+    cerr << "exstacks " << stacks_version << "\n"
               << "exstacks -s sample_file [-o path] [-p num_threads] [-h]" << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
               << "  s: TSV file from which to load radtags." << "\n"

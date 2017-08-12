@@ -29,59 +29,153 @@
 #ifdef HAVE_BAM
 
 #include <algorithm>
+#include <string>
+#include <vector>
+#include <utility>
 
+extern "C" {
 #include "sam.h" //htslib
+}
 
 #include "stacks.h"
 #include "input.h"
+#include "DNASeq4.h"
+
+// Trivial hash table giving the binary value (0-9) of a cigar character.
+// htslib doesn't define this (c.f. the use of `bam_hdr_t::cigar_tab` in sam.c).
+// However, it does define the reverse variable in sam.h:
+// `#define BAM_CIGAR_STR "MIDNSHP=XB"`
+extern const size_t cigar_c2i[128];
 
 int bam_find_start_bp(int, strand_type, const vector<pair<char, uint> > &);
 int bam_edit_gaps(vector<pair<char, uint> > &, char *);
 
-class Bam: public Input {
+void check_open(const htsFile* bam_f, const string& path);
+
+// Write a SAM-style text header to a BAM file.
+void write_bam_header(htsFile* bam_f, const string& header_text);
+
+class BamRecord {
+    bam1_t* r_;
+    bam1_core_t& c_; // r_->core
+
+    BamRecord(BamRecord&) = delete;
+    BamRecord& operator= (BamRecord&) = delete;
+
+public:
+    BamRecord() : r_(bam_init1()), c_(r_->core) {r_->data = NULL; r_->m_data = 0;}
+    ~BamRecord() {bam_destroy1(r_);}
+
+    bam1_t*& r() {return r_;}
+
+    string qname() const {return string(bam_get_qname(r_), c_.l_qname-1);}
+    uint16_t flag() const {return c_.flag;}
+    int32_t chrom() const {return c_.tid;}
+    int32_t pos() const {return c_.pos;}
+    uint8_t mapq() const {return c_.qual;}
+    vector<pair<char, uint>> cigar() const;
+    // (rnext)
+    // (pnext)
+    // (tlen)
+    DNASeq4 seq() const {return DNASeq4((uchar*) bam_get_seq(r_), c_.l_qseq);}
+    // (qual)
+    // (aux)
+
+    bool is_unmapped() const {return c_.flag & BAM_FUNMAP;}
+    bool is_rev_compl() const {return c_.flag & BAM_FREVERSE;}
+    bool is_read1() const {return c_.flag & BAM_FREAD1;}
+    bool is_read2() const {return c_.flag & BAM_FREAD2;}
+
+    AlnT aln_type() const;
+    const char* read_group() const;
+
+    void assign(
+            const string& name,
+            uint16_t flg,
+            int32_t chr_index,
+            int32_t aln_pos,
+            const vector<pair<char,uint>>& cig,
+            const DNASeq4& seq,
+            size_t read_group
+            );
+    void write_to(htsFile* bam_f) const;
+
 private:
-    htsFile   *bam_fh;
-    bam_hdr_t *bamh;
-    bam1_t    *aln;
-
-    map<uint, string> chrs;
-
-    int parse_header();
-    void parse_cigar(vector<pair<char, uint> > &);
-
- public:
-    Bam(const char *path) : Input() {
-        this->path   = string(path);
-        this->bam_fh = hts_open(path, "r");
-        this->aln    = bam_init1();
-
-        this->parse_header();
-    };
-    ~Bam() {
-        hts_close(this->bam_fh);
-        bam_hdr_destroy(this->bamh);
-        bam_destroy1(this->aln);
-    };
-    Seq *next_seq();
-    int  next_seq(Seq&);
+    // Moves the pointer to the start of the next AUX field. Doesn't actually read
+    // anything, the point is just to be able to scan until field(s) of interest.
+    // Returns `ptr`.
+    static void skip_one_aux(const uint8_t* ptr);
 };
 
-int
-Bam::parse_header()
-{
-    this->bamh = bam_hdr_init();
-    this->bamh = sam_hdr_read(this->bam_fh);
+class BamHeader {
+    bam_hdr_t* h_;
 
-    for (uint j = 0; j < (uint) this->bamh->n_targets; j++) {
-        //
-        // Record the mapping from integer ID to chromosome name that we will see in BAM records.
-        //
-        this->chrs[j] = string(this->bamh->target_name[j]);
+    BamHeader(BamHeader&) = delete;
+    BamHeader& operator= (BamHeader&) = delete;
+
+public:
+    BamHeader() : h_(NULL) {}
+    ~BamHeader() {if (h_!=NULL) bam_hdr_destroy(h_);}
+    void init() {h_ = bam_hdr_init();}
+    void init(samFile* bam_f) {h_ = sam_hdr_read(bam_f);}
+
+    const bam_hdr_t* h() const {return h_;}
+          bam_hdr_t* h()       {return h_;}
+
+    const char* text() const {return h_->text;}
+
+    size_t n_ref_chroms() const {return h_->n_targets;}
+    const char* chrom_str(int32_t index) const {
+        if (index >= h_->n_targets)
+            throw std::out_of_range("out_of_range in BamHeader::chrom_str");
+        return h_->target_name[index];
+    }
+    size_t chrom_len(int32_t index) const {
+        if (index >= h_->n_targets)
+            throw std::out_of_range("out_of_range in BamHeader::chrom_len");
+        return h_->target_len[index];
     }
 
-    return 0;
-}
+    typedef map<string, map<string, string>> ReadGroups; // map of ( ID: (TAG: VALUE) )
+    ReadGroups read_groups() const;
+};
 
+class Bam: public Input {
+    htsFile   *bam_fh;
+    bool eof_;
+    BamHeader hdr;
+    BamRecord rec;
+
+public:
+    Bam(const char *path) : Input(), bam_fh(NULL), eof_(false), hdr(), rec() {
+        this->path   = string(path);
+        bam_fh = hts_open(path, "r");
+        if (bam_fh == NULL) {
+            cerr << "Error: Failed to open BAM file '" << path << "'.\n";
+            throw exception();
+        }
+        hdr.init(bam_fh);
+    };
+    ~Bam() {hts_close(bam_fh);};
+
+    const BamRecord& r() const {return rec;}
+    const BamHeader& h() const {return hdr;}
+
+    bool next_record()
+        {if(sam_read1(bam_fh, hdr.h(), rec.r()) >= 0) {return true;} else {eof_=true; return false;}}
+
+    Seq *next_seq();
+    int  next_seq(Seq&);
+
+    bool eof() const {return eof_;}
+};
+
+//
+// Inline definitions
+// ----------
+//
+
+inline
 Seq *
 Bam::next_seq()
 {
@@ -93,36 +187,23 @@ Bam::next_seq()
     return s;
 }
 
+inline
 int
 Bam::next_seq(Seq& s)
 {
-
     //
-    // Read a record from the file, skipping unmapped reads,  and place it in a Seq object.
+    // Read a record
     //
-    if (sam_read1(bam_fh, bamh, aln) < 0)
+    if (!next_record())
         return false;
-
-    //
-    // Parse the type of the record.
-    //
-    AlnT aln_type;
-    if (aln->core.flag & BAM_FUNMAP)
-        aln_type = AlnT::null;
-    else if (aln->core.flag & BAM_FSECONDARY)
-        aln_type = AlnT::secondary;
-    else if (aln->core.flag & BAM_FSUPPLEMENTARY)
-        aln_type = AlnT::supplementary;
-    else
-        aln_type = AlnT::primary;
 
     //
     // Fetch the sequence.
     //
     string  seq;
-    seq.reserve(aln->core.l_qseq);
-    for (int i = 0; i < aln->core.l_qseq; i++) {
-        uint8_t j = bam_seqi(bam_get_seq(aln), i);
+    seq.reserve(rec.r()->core.l_qseq);
+    for (int i = 0; i < rec.r()->core.l_qseq; i++) {
+        uint8_t j = bam_seqi(bam_get_seq(rec.r()), i);
         switch(j) {
         case 1:
             seq += 'A';
@@ -140,7 +221,7 @@ Bam::next_seq(Seq& s)
             seq += 'N';
             break;
         default:
-            // assert(false);
+            DOES_NOT_HAPPEN;
             break;
         }
     }
@@ -149,30 +230,26 @@ Bam::next_seq(Seq& s)
     // Fetch the quality score.
     //
     string   qual;
-    uint8_t *q = bam_get_qual(aln);
-    for (int i = 0; i < this->aln->core.l_qseq; i++) {
+    uint8_t *q = bam_get_qual(rec.r());
+    for (int i = 0; i < rec.r()->core.l_qseq; i++) {
         qual += char(int(q[i]) + 33);
     }
 
-    if (aln_type == AlnT::null) {
-        s = Seq(bam_get_qname(aln), seq.c_str(), qual.c_str());
+    if (rec.is_unmapped()) {
+        s = Seq(rec.qname().c_str(), seq.c_str(), qual.c_str());
     } else {
-        // Fetch the chromosome.
-        string chr = chrs[aln->core.tid];
-
         //
         // Check which strand this is aligned to:
         //   SAM reference: FLAG bit 0x10 - sequence is reverse complemented
         //
-        strand_type strand = aln->core.flag & BAM_FREVERSE ? strand_minus : strand_plus;
+        strand_type strand = rec.is_rev_compl() ? strand_minus : strand_plus;
 
         //
         // Parse the alignment CIGAR string.
         // If aligned to the negative strand, sequence has been reverse complemented and
         // CIGAR string should be interpreted in reverse.
         //
-        vector<pair<char, uint> > cigar;
-        parse_cigar(cigar);
+        vector<pair<char, uint>> cigar = rec.cigar();
         if (strand == strand_minus)
             std::reverse(cigar.begin(), cigar.end());
 
@@ -181,8 +258,7 @@ Bam::next_seq(Seq& s)
         // alter the start point of the alignment to reflect the right-side of the read, at the
         // end of the RAD cut site.
         //
-
-        uint bp = bam_find_start_bp(aln->core.pos, strand, cigar);
+        uint bp = bam_find_start_bp(rec.pos(), strand, cigar);
 
         //
         // Calculate the percentage of the sequence that was aligned to the reference.
@@ -193,8 +269,14 @@ Bam::next_seq(Seq& s)
                 clipped += op.second;
         double pct_clipped = (double) clipped / seq.length();
 
-        s = Seq(bam_get_qname(aln), seq.c_str(), qual.c_str(),
-                chr.c_str(), bp, strand, aln_type, pct_clipped, aln->core.qual);
+        string name = rec.qname();
+        if (rec.is_read1())
+            name += "/1";
+        else if (rec.is_read2())
+            name += "/2";
+        s = Seq(name.c_str(), seq.c_str(), qual.c_str(),
+                hdr.chrom_str(rec.chrom()), bp, strand,
+                rec.aln_type(), pct_clipped, rec.mapq());
 
         if (cigar.size() > 0)
             bam_edit_gaps(cigar, s.seq);
@@ -203,54 +285,7 @@ Bam::next_seq(Seq& s)
     return true;
 }
 
-void
-Bam::parse_cigar(vector<pair<char, uint> > &cigar)
-{
-    int  op, len;
-    char c;
-    uint32_t *cgr = bam_get_cigar(this->aln);
-
-    for (int k = 0; k < this->aln->core.n_cigar; k++) {
-        op  = cgr[k] &  BAM_CIGAR_MASK;
-        len = cgr[k] >> BAM_CIGAR_SHIFT;
-
-        switch(op) {
-        case BAM_CMATCH:
-            c = 'M';
-            break;
-        case BAM_CEQUAL:
-            c = '=';
-            break;
-        case BAM_CDIFF:
-            c = 'X';
-            break;
-        case BAM_CINS:
-            c = 'I';
-            break;
-        case BAM_CDEL:
-            c = 'D';
-            break;
-        case BAM_CSOFT_CLIP:
-            c = 'S';
-            break;
-        case BAM_CREF_SKIP:
-            c = 'N';
-            break;
-        case BAM_CHARD_CLIP:
-            c = 'H';
-            break;
-        case BAM_CPAD:
-            c = 'P';
-            break;
-        default:
-            cerr << "Warning: Unknown CIGAR operation (current read name is '" << bam_get_qname(aln) << "').\n";
-            break;
-        }
-
-        cigar.push_back(make_pair(c, len));
-    }
-}
-
+inline
 int
 bam_find_start_bp(int aln_bp, strand_type strand, const vector<pair<char, uint> > &cigar)
 {
@@ -288,6 +323,7 @@ bam_find_start_bp(int aln_bp, strand_type strand, const vector<pair<char, uint> 
     return aln_bp;
 }
 
+inline
 int
 bam_edit_gaps(vector<pair<char, uint> > &cigar, char *seq)
 {
@@ -382,6 +418,137 @@ bam_edit_gaps(vector<pair<char, uint> > &cigar, char *seq)
     delete [] buf;
 
     return 0;
+}
+
+inline
+vector<pair<char, uint>> BamRecord::cigar() const {
+    vector<pair<char, uint>> cig;
+
+    uint32_t* hts_cigar = bam_get_cigar(r_);
+    for (size_t i = 0; i < c_.n_cigar; i++) {
+        char op;
+        switch(hts_cigar[i] &  BAM_CIGAR_MASK) {
+        case BAM_CMATCH:
+            op = 'M';
+            break;
+        case BAM_CEQUAL:
+            op = '=';
+            break;
+        case BAM_CDIFF:
+            op = 'X';
+            break;
+        case BAM_CINS:
+            op = 'I';
+            break;
+        case BAM_CDEL:
+            op = 'D';
+            break;
+        case BAM_CSOFT_CLIP:
+            op = 'S';
+            break;
+        case BAM_CREF_SKIP:
+            op = 'N';
+            break;
+        case BAM_CHARD_CLIP:
+            op = 'H';
+            break;
+        case BAM_CPAD:
+            op = 'P';
+            break;
+        default:
+            cerr << "Warning: Unknown CIGAR operation (current record name is '" << bam_get_qname(r_) << "').\n";
+            break;
+        }
+
+        cig.push_back({op, hts_cigar[i] >> BAM_CIGAR_SHIFT});
+    }
+
+    return cig;
+}
+
+inline
+AlnT BamRecord::aln_type() const {
+    if (c_.flag & BAM_FUNMAP)
+        return AlnT::null;
+    else if (c_.flag & BAM_FSECONDARY)
+        return AlnT::secondary;
+    else if (c_.flag & BAM_FSUPPLEMENTARY)
+        return AlnT::supplementary;
+    else
+        return AlnT::primary;
+}
+
+inline
+const char* BamRecord::read_group() const {
+    uint8_t* ptr = bam_get_aux(r_);
+    while (ptr < bam_get_aux(r_) + bam_get_l_aux(r_) - 3) { // minimum field size is 4
+        if (*(char*)ptr == 'R' && *(char*)(ptr+1) == 'G') {
+            return (char*)ptr+3;
+        } else {
+            skip_one_aux(ptr);
+        }
+    }
+
+    return NULL;
+}
+
+inline
+void BamRecord::skip_one_aux(const uint8_t* ptr) {
+    using namespace std;
+
+    // The library doesn't provide much for handling the AUX fields.
+
+    // Make sure that the tag matches [A-Za-z][A-Za-z0-9].
+    if (!isalpha(*ptr) || !isalnum(*(ptr+1))) {
+        cerr << "Warning: Illegal BAM AUX tag '"
+             << *(char*)ptr << *(char*)(ptr+1) << "' ("
+             << *ptr << "," << *(ptr+1) << ").\n" << flush;
+    }
+    ptr += 2;
+
+    char t = *(char*)ptr; // byte 3 of the field gives the type
+    ptr += 1;
+
+    if (t == 'i'        // int32_t
+            || t == 'I' // uint32_t
+            || t == 'f' // float
+            ) {
+        ptr += 4;
+    } else if (t == 'Z' // string
+            || t == 'H' // hex string
+            ) {
+        ptr += strlen((char*)ptr) + 1;
+    } else if (t == 'A' // character
+            || t == 'c' // int8_t
+            || t == 'C' // uint8_t
+            ) {
+        ptr += 1;
+    } else if (t == 's' // int16_t
+            || t == 'S' // uint16_t
+            ) {
+        ptr += 2;
+    } else if (t == 'B') { // array
+        ptr += 1;
+        char t2 = *(char*)ptr; // byte 4 gives the array contents type
+        ptr += 1;
+        int32_t len = *(int32_t*)ptr; // bytes 5-9 give the array length
+        ptr += 4;
+
+        // Type should be an integer type or float.
+        if (t2 == 'c' || t2 == 'C') {
+            ptr += len;
+        } else if (t2 == 's' || t2 == 'S') {
+            ptr += 2 * len;
+        } else if (t2 == 'i' || t2 == 'I' || t2 == 'f') {
+            ptr += 4 * len;
+        } else {
+            cerr << "Error: Unexpected BAM AUX field array type '" << t2 << "' (#" << *(uchar*)&t2 << ").\n";
+            throw exception();
+        }
+    } else {
+        cerr << "Error: Unexpected BAM AUX field type '" << t << "' (#" << *(uchar*)&t << ").\n";
+        throw exception();
+    }
 }
 
 #else  // If HAVE_BAM is undefined and BAM library is not present.

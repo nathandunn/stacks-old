@@ -24,7 +24,7 @@
 #include "locus.h"
 
 uint
-Locus::sort_bp(uint k)
+Locus::sort_bp(uint k) const
 {
     if (this->loc.strand == strand_plus)
         return this->loc.bp + k;
@@ -33,7 +33,7 @@ Locus::sort_bp(uint k)
 }
 
 int
-Locus::snp_index(uint col)
+Locus::snp_index(uint col) const
 {
     for (uint i = 0; i < this->snps.size(); i++)
         if (this->snps[i]->col == col)
@@ -115,6 +115,148 @@ bp_compare(Locus *a, Locus *b)
     return (a->sort_bp() < b->sort_bp());
 }
 
+int
+adjust_snps_for_gaps(Cigar &cigar, Locus *loc)
+{
+    uint   size = cigar.size();
+    char   op;
+    uint   dist, bp, stop, offset, snp_index;
+
+    bp        = 0;
+    offset    = 0;
+    snp_index = 0;
+
+    for (uint i = 0; i < size; i++)  {
+        op   = cigar[i].first;
+        dist = cigar[i].second;
+
+        switch(op) {
+        case 'D':
+            offset += dist;
+            break;
+        case 'I':
+        case 'M':
+        case 'S':
+            stop = bp + dist;
+            while (bp < stop && snp_index < loc->snps.size()) {
+                if (loc->snps[snp_index]->col == bp) {
+                    loc->snps[snp_index]->col += offset;
+                    snp_index++;
+                }
+                bp++;
+            }
+            break;
+        default:
+            break;
+        }
+    }
+
+    return 0;
+}
+
+int
+adjust_and_add_snps_for_gaps(Cigar &cigar, Locus *loc)
+{
+    uint   size = cigar.size();
+    char   op;
+    uint   dist, bp, new_bp, stop, snp_cnt;
+    SNP   *s;
+
+    bp      = 0;
+    new_bp  = 0;
+    snp_cnt = loc->snps.size();
+
+    vector<SNP *> snps;
+
+    for (uint i = 0; i < size; i++)  {
+        op   = cigar[i].first;
+        dist = cigar[i].second;
+
+        switch(op) {
+        case 'D':
+            stop = new_bp + dist;
+            while (new_bp < stop) {
+                s = new SNP;
+                s->col    = new_bp;
+                s->type   = snp_type_unk;
+                s->rank_1 = 'N';
+                snps.push_back(s);
+                new_bp++;
+            }
+            break;
+        case 'I':
+        case 'M':
+        case 'S':
+            stop = bp + dist > snp_cnt ? snp_cnt : bp + dist;
+            while (bp < stop) {
+                loc->snps[bp]->col = new_bp;
+                snps.push_back(loc->snps[bp]);
+                bp++;
+                new_bp++;
+            }
+            break;
+        default:
+            break;
+        }
+    }
+
+    loc->snps.clear();
+
+    for (uint i = 0; i < snps.size(); i++)
+        loc->snps.push_back(snps[i]);
+
+    return 0;
+}
+
+int
+remove_snps_from_gaps(Cigar &cigar, Locus *loc)
+{
+    uint   size = cigar.size();
+    char   op;
+    uint   dist, bp, new_bp, stop, snp_cnt;
+
+    bp      = 0;
+    new_bp  = 0;
+    snp_cnt = loc->snps.size();
+
+    vector<SNP *> snps;
+
+    for (uint i = 0; i < size; i++)  {
+        op   = cigar[i].first;
+        dist = cigar[i].second;
+
+        switch(op) {
+        case 'D':
+            stop = bp + dist;
+            while (bp < stop) {
+                delete loc->snps[bp];
+                bp++;
+            }
+            break;
+        case 'I':
+        case 'M':
+        case 'S':
+            stop = bp + dist > snp_cnt ? snp_cnt : bp + dist;
+            while (bp < stop) {
+                loc->snps[bp]->col = new_bp;
+                snps.push_back(loc->snps[bp]);
+                bp++;
+                new_bp++;
+            }
+            break;
+        default:
+            break;
+        }
+    }
+
+    loc->snps.clear();
+
+    for (uint i = 0; i < snps.size(); i++)
+        loc->snps.push_back(snps[i]);
+
+    return 0;
+}
+
 QLocus::~QLocus()
 {
     vector<Match *>::iterator it;
@@ -179,4 +321,82 @@ QLocus::clear_matches()
     this->matches.clear();
 
     return 0;
+}
+
+void CLocAlnSet::merge_paired_reads() {
+
+    // Sort reads by name. Paired reads should have the same name but end with
+    // respectively "/1" and "/2".
+    sort(reads_.begin(), reads_.end(),
+         [](const SAlnRead& r1, const SAlnRead& r2){return r1.name < r2.name;}
+         );
+
+    // Merge paired reads.
+    for (auto r1=reads_.begin(); r1!=reads_.end(); ++r1) {
+        auto r2 = r1+1;
+        const string& n1 = r1->name;
+        const string& n2 = r2->name;
+        const size_t l = n1.length();
+        if (n2.length() == l && l >= 2
+                && n1[l-2] == '/' && n1[l-1] == '1'
+                && n2[l-2] == '/' && n2[l-1] == '2'
+                && n1.substr(0, l-2) == n2.substr(0, l-2)
+                ){
+            // r1 and r2 are paired, merge them.
+            assert(r1->sample == r2->sample);
+            *r1 = SAlnRead(AlnRead::merger_of(move(*r1), move(*r2)), r1->sample);
+            assert(cigar_length_ref(r1->cigar) == ref_.length());
+
+            // Mark r2 for removal and skip it.
+            r2->seq.clear();
+            ++r1;
+        }
+    }
+
+    // Remove emptied reads.
+    reads_.erase(std::remove_if(
+            reads_.begin(),
+            reads_.end(),
+            [](const Read& r){return r.seq.empty();}
+            ), reads_.end());
+
+    // Refresh `reads_per_sample_`.
+    reads_per_sample_ = vector<vector<size_t>>(mpopi().samples().size());
+    for (size_t i=0; i<reads_.size(); ++i)
+        reads_per_sample_[reads_[i].sample].push_back(i);
+}
+
+ostream& operator<< (ostream& os, const CLocAlnSet& loc) {
+    os << "ref\t.\t" << loc.ref().str();
+    for (auto& r : loc.reads_)
+        os << "\n" << r.name << "\t" << loc.mpopi().samples()[r.sample].name << "\t" << r.aln();
+    return os;
+}
+
+CLocAlnSet CLocAlnSet::juxtapose(CLocAlnSet&& left, CLocAlnSet&& right) {
+
+    assert(&left.mpopi() == &right.mpopi());
+    assert(left.id() == right.id());
+
+    CLocAlnSet merged (move(left));
+    size_t left_ref_len = merged.ref().length();
+
+    // Extend the reference sequence.
+    merged.ref_.append(right.ref().begin(), right.ref().end());
+
+    // Extend the left reads.
+    for (SAlnRead& r : merged.reads_) {
+        cigar_extend_right(r.cigar, right.ref().length());
+        assert(cigar_length_ref(r.cigar) == merged.ref().length());
+    }
+
+    // Extend & add the right reads.
+    for (SAlnRead& r : right.reads_) {
+        cigar_extend_left(r.cigar, left_ref_len);
+        merged.add(move(r));
+    }
+    right.reads_ = vector<SAlnRead>();
+    right.reads_per_sample_ = vector<vector<size_t>>(right.mpopi().samples().size());
+
+    return merged;
 }

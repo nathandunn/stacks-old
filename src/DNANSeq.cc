@@ -28,43 +28,24 @@
 // $Id: DNANSeq.cc 2133 2011-06-07 04:07:41Z catchen $
 //
 
+#include <iostream>
+
 #include "DNANSeq.h"
 
-DNANSeq::DNANSeq(int size) {
-    int bytes;
+using namespace std;
 
-    this->bits = size * bits_per_nuc;
+DNANSeq::DNANSeq(uint len, const char* str) {
 
-    bytes = BITNSLOTS(this->bits);
-
-    this->s = new unsigned char[bytes];
-    memset(this->s, 0, bytes);
-}
-
-DNANSeq::DNANSeq(int size, unsigned char *seq) {
-    unsigned int bytes;
-
-    this->bits = size * bits_per_nuc;
-
-    bytes = BITNSLOTS(this->bits);
-
-    this->s = new unsigned char[bytes];
-    for (unsigned int i = 0; i < bytes; i++)
-        this->s[i] = seq[i];
-}
-
-DNANSeq::DNANSeq(int size, const char *seq) {
-
-    this->bits = size * bits_per_nuc;
-    int bytes  = BITNSLOTS(this->bits);
+    this->bits = len * bits_per_nuc;
+    uint bytes  = nbytes();
     this->s    = new unsigned char[bytes];
 
     memset(this->s, 0, bytes);
 
-    int bit = 0;
+    uint bit = 0;
 
-    for (int i = 0; i < size; i++) {
-        switch (seq[i]) {
+    for (uint i = 0; i < len; i++) {
+        switch (str[i]) {
         case 'A':
         case 'a':
             // A == 000
@@ -74,14 +55,14 @@ DNANSeq::DNANSeq(int size, const char *seq) {
         case 'c':
             // C == 001
             bit += 2;
-            BITSET(this->s, bit);
+            setbit(s, bit);
             bit++;
             break;
         case 'G':
         case 'g':
             // G == 010
             bit++;
-            BITSET(this->s, bit);
+            setbit(s, bit);
             bit++;
             bit++;
             break;
@@ -89,16 +70,16 @@ DNANSeq::DNANSeq(int size, const char *seq) {
         case 't':
             // T == 011
             bit++;
-            BITSET(this->s, bit);
+            setbit(s, bit);
             bit++;
-            BITSET(this->s, bit);
+            setbit(s, bit);
             bit++;
             break;
         case 'N':
         case 'n':
         case '.':
             // N == 100
-            BITSET(this->s, bit);
+            setbit(s, bit);
             bit += 3;
             break;
         }
@@ -106,29 +87,23 @@ DNANSeq::DNANSeq(int size, const char *seq) {
 }
 
 DNANSeq::DNANSeq(const DNANSeq& other) : bits(other.bits) {
-    const int n_bytes = BITNSLOTS(bits);
-    s = new unsigned char[n_bytes];
-    memcpy(s, other.s, n_bytes);
+    s = new unsigned char[nbytes()];
+    memcpy(s, other.s, nbytes());
 }
 
 DNANSeq& DNANSeq::operator=(const DNANSeq& other) {
     delete[] s;
 
     bits = other.bits;
-    const int n_bytes = BITNSLOTS(bits);
-    s = new unsigned char[n_bytes];
-    memcpy(s, other.s, n_bytes);
+    s = new unsigned char[nbytes()];
+    memcpy(s, other.s, nbytes());
 
     return *this;
 }
 
-DNANSeq::~DNANSeq() {
-    delete [] this->s;
-}
-
-char DNANSeq::operator[](int pos) {
+char DNANSeq::operator[](uint pos) const {
     unsigned char c, base;
-    int bit;
+    uint bit;
 
     if (pos > ((this->bits / bits_per_nuc) - 1)) return '\0';
 
@@ -138,7 +113,7 @@ char DNANSeq::operator[](int pos) {
     base = 'X';
 
     for (int i = bits_per_nuc - 1; i >= 0; i--) {
-        if (BITTEST(this->s, bit))
+        if (testbit(s, bit))
             c |= 1 << i;
         bit++;
     }
@@ -168,42 +143,51 @@ char DNANSeq::operator[](int pos) {
     return base;
 }
 
-int DNANSeq::size() const {
-    return this->bits / bits_per_nuc;
+void DNANSeq::seq(char* buf) const {
+    for (uint i = 0; i < size(); i++)
+        buf[i] = (*this)[i];
+    buf[size()] = '\0';
 }
 
-char *DNANSeq::subseq(char *seq, int start, int end) {
-    int i;
-
-    for (i = start; i <= end; i++)
-        seq[i - start] = this->operator[](i);
-
-    seq[i - start] = '\0';
-
-    return seq;
+string DNANSeq::seq() const {
+    string str;
+    str.reserve(size());
+    for (uint i = 0; i < size(); i++)
+        str.push_back((*this)[i]);
+    return str;
 }
 
-char *DNANSeq::seq(char *seq) {
-    int i;
-    int end = this->bits / bits_per_nuc;
+void DNANSeq::extend(uint n_before, uint n_after) {
+    if (n_before == 0 && n_after == 0)
+        return;
 
-    for (i = 0; i < end; i++)
-        seq[i] = this->operator[](i);
+    uint old_bits = bits;
+    unsigned char* old_s = s;
 
-    seq[i] = '\0';
+    bits += (n_before + n_after) * bits_per_nuc;
+    s = new unsigned char[nbytes()];
+    memset(s, 0, nbytes());
 
-    return seq;
-}
+    uint bit = 0;
 
-char *DNANSeq::seq() {
-    int i;
-    int  size = this->bits / bits_per_nuc;
-    char *seq = new char[size + 1];
+    // Prepend N's
+    for (uint i = 0; i < n_before; ++i) {
+        setbit(s, bit);
+        bit += 3;
+    }
 
-    for (i = 0; i < size; i++)
-        seq[i] = this->operator[](i);
+    // Copy the old sequence.
+    for (uint old_bit=0; old_bit < old_bits; ++old_bit) {
+        if (testbit(old_s, old_bit))
+            setbit(s, bit);
+        ++bit;
+    }
 
-    seq[i] = '\0';
+    // Append N's.
+    for (uint i = 0; i < n_after; ++i) {
+        setbit(s, bit);
+        bit += 3;
+    }
 
-    return seq;
+    delete[] old_s;
 }

@@ -25,34 +25,21 @@
 #include <omp.h>    // OpenMP library
 #endif
 #include <getopt.h> // Process command-line options
-#include <math.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstdlib>
 #include <utility>
-using std::pair;
-using std::make_pair;
 
 #include <string>
-using std::string;
 
 #include <iostream>
 #include <fstream>
 #include <sstream>
-using std::ifstream;
-using std::ofstream;
-using std::stringstream;
-using std::cin;
-using std::cout;
-using std::cerr;
-using std::endl;
 
 #include <vector>
-using std::vector;
 
 #include <map>
-using std::map;
 
 #include <set>
-using std::set;
 
 #include <queue>
 using std::queue;

@@ -30,19 +30,15 @@
 
 #include "MetaPopInfo.h"
 #include "export_formats.h"
+#include "locus_readers.h"
+#include "gzFasta.h"
 
 #include "populations.h"
 
 using namespace std;
 
-typedef MetaPopInfo::Sample Sample;
-typedef MetaPopInfo::Pop Pop;
-typedef MetaPopInfo::Group Group;
-
-extern int encoded_gtypes[4][4];
-
 // Global variables to hold command-line options.
-InputMode input_mode  = InputMode::stacks;
+InputMode input_mode  = InputMode::stacks2;
 int       num_threads =  1;
 int       batch_id    = -1;
 string    in_path;
@@ -137,8 +133,12 @@ int main (int argc, char* argv[]) {
     //
     parse_command_line(argc, argv);
 
-    cerr << "populations parameters selected:\n"
-         << "  Fst kernel smoothing: " << (kernel_smoothed == true ? "on" : "off") << "\n"
+    cerr << "populations parameters selected:\n";
+    if (input_mode == InputMode::vcf)
+        cerr << "  Input mode: VCF\n";
+    else if (input_mode == InputMode::stacks)
+        cerr << "  Input mode: v1\n";
+    cerr << "  Fst kernel smoothing: " << (kernel_smoothed == true ? "on" : "off") << "\n"
          << "  Bootstrap resampling: ";
     if (bootstrap)
         cerr << "on, " << (bootstrap_type == bs_exact ? "exact; " : "approximate; ") << bootstrap_reps << " reptitions\n";
@@ -208,8 +208,9 @@ int main (int argc, char* argv[]) {
 
     // We need some objects in the main scope for each mode.
     vector<vector<CatMatch *> > catalog_matches;
-    VcfHeader                  *vcf_header  = NULL;
-    vector<VcfRecord>          *vcf_records = NULL;
+    unique_ptr<unordered_map<int,vector<VcfRecord>>> cloci_vcf_records;
+    unique_ptr<VcfHeader> vcf_header;
+    unique_ptr<vector<VcfRecord>> vcf_records;
 
     // Read the population map file, if any.
     if (not pmap_path.empty()) {
@@ -259,7 +260,7 @@ int main (int argc, char* argv[]) {
         cerr << "Reading the catalog...\n";
         string catalog_prefix = in_path + "batch_" + to_string(batch_id) + ".catalog";
         bool   compressed     = false;
-        int    res = load_loci(catalog_prefix, catalog, false, false, compressed);
+        int    res = load_loci(catalog_prefix, catalog, 0, false, compressed);
         if (res == 0) {
             cerr << "Unable to load the catalog '" << catalog_prefix << "'\n";
             throw exception();
@@ -302,6 +303,70 @@ int main (int argc, char* argv[]) {
         }
         // [mpopi] is definitive.
 
+    } else if (input_mode == InputMode::stacks2) {
+        //
+        // Stacks v2 mode
+        //
+        cloci_vcf_records.reset(new unordered_map<int,vector<VcfRecord>>());
+
+        // Open the files.
+        string catalog_fa_path = in_path + "batch_" + to_string(batch_id) + ".rystacks.fa.gz";
+        string catalog_vcf_path = in_path + "batch_" + to_string(batch_id) + ".rystacks.vcf.gz";
+        GzFasta fasta_f (catalog_fa_path);
+        VcfCLocReader reader (catalog_vcf_path);
+
+        // Create the population map or check that all samples have data.
+        if (pmap_path.empty()) {
+            cerr << "No population map specified, using all samples...\n";
+            mpopi.init_names(reader.header().samples());
+        } else {
+            size_t n_samples_before = mpopi.samples().size();
+            mpopi.intersect_with(reader.header().samples());
+            size_t n_rm_samples = n_samples_before - mpopi.samples().size();
+            if (n_rm_samples > 0) {
+                cerr << "Warning: No genotype data exists for " << n_rm_samples
+                     << " of the samples listed in the population map.\n";
+                if (mpopi.samples().empty()) {
+                    cerr << "Error: No more samples.\n";
+                    throw exception();
+                }
+            }
+        }
+        reader.set_sample_ids(mpopi);
+
+        // Read the files, create the loci.
+        vector<VcfRecord> records;
+        Seq seq;
+        seq.id   = new char[id_len];
+        seq.seq  = new char[max_len];
+        seq.qual = new char[max_len];
+        while (reader.read_one_locus(records)) {
+            // Get the current locus ID.
+            assert(!records.empty());
+            int cloc_id = is_integer(records[0].chrom());
+            assert(cloc_id >= 0);
+
+            // Find the corresponding fasta record. (Note: c-loci with very low
+            // coverage might be entirely missing from the VCF; in this case
+            // ignore them.)
+            int rv = fasta_f.next_seq(seq);
+            while(rv != 0 && atoi(seq.id) != cloc_id)
+                rv = fasta_f.next_seq(seq);
+            if (rv == 0) {
+                cerr << "Error: files are discordant, maybe trucated: '"
+                     << catalog_fa_path << "' and '" << catalog_vcf_path << "'.\n";
+                throw exception();
+            }
+
+            // Create the CSLocus.
+            catalog.insert({cloc_id, new_cslocus(seq, records, cloc_id)});
+
+            // Save the records (they are needed for the PopMap object).
+            (*cloci_vcf_records)[cloc_id] = move(records);
+        }
+
+        vcf_header.reset(new VcfHeader(reader.header()));
+
     } else if (input_mode == InputMode::vcf) {
 
         //
@@ -310,14 +375,9 @@ int main (int argc, char* argv[]) {
 
         // Open the VCF file
         cerr << "Opening the VCF file...\n";
-        VcfAbstractParser* parser = Vcf::adaptive_open(in_vcf_path);
-        if (parser == NULL) {
-            cerr << "Error: Unable to open VCF file '" << in_vcf_path << "'.\n";
-            throw exception();
-        }
+        VcfParser parser (in_vcf_path);
 
-        parser->read_header();
-        if (parser->header().samples().empty()) {
+        if (parser.header().samples().empty()) {
             cerr << "Error: No samples in VCF file '" << in_vcf_path << "'.\n";
             throw exception();
         }
@@ -325,51 +385,46 @@ int main (int argc, char* argv[]) {
         // Reconsider the MetaPopInfo in light of the VCF header.
         if (pmap_path.empty()) {
             cerr << "No population map specified, creating one from the VCF header...\n";
-            mpopi.init_names(parser->header().samples());
+            mpopi.init_names(parser.header().samples());
         } else {
             // Intersect the samples present in the population map and the VCF.
-            vector<size_t> samples_to_discard;
-            for (size_t i=0; i<mpopi.samples().size(); ++i)
-                if (not parser->header().sample_indexes().count(mpopi.samples()[i].name))
-                    samples_to_discard.push_back(i);
-            if (not samples_to_discard.empty()) {
-                if (samples_to_discard.size() == mpopi.samples().size()) {
-                    cerr << "Error: No common samples between the population map and VCF header.\n";
+            size_t n_samples_before = mpopi.samples().size();
+            mpopi.intersect_with(parser.header().samples());
+            size_t n_rm_samples = n_samples_before - mpopi.samples().size();
+            if (n_rm_samples > 0) {
+                cerr << "Warning: Of the samples listed in the population map, "
+                     << n_rm_samples << " could not be found in the VCF :";
+                if (mpopi.samples().empty()) {
+                    cerr << "Error: No more samples.\n";
                     throw exception();
                 }
-                cerr << "Warning: of the samples listed in the population map, "
-                     << samples_to_discard.size() << " could not be found in the VCF :";
-                for (const size_t& s : samples_to_discard)
-                    cerr << " " << mpopi.samples()[s].name;
-                cerr << "\n";
-                mpopi.delete_samples(samples_to_discard);
             }
-
-            // Create arbitrary sample IDs.
-            for (size_t i = 0; i < mpopi.samples().size(); ++i)
-                mpopi.set_sample_id(i, i+1); //id=i+1
-
-            // [mpopi] is definitive.
         }
+
+        // Create arbitrary sample IDs.
+        for (size_t i = 0; i < mpopi.samples().size(); ++i)
+            mpopi.set_sample_id(i, i+1); //id=i+1
+
+        // [mpopi] is definitive.
 
         // Read the SNP records
         cerr << "Reading the VCF records...\n";
-        vcf_records = new vector<VcfRecord>();
+        vcf_records.reset(new vector<VcfRecord>());
         vector<size_t> skipped_notsnp;
         vector<size_t> skipped_filter;
 
         vcf_records->push_back(VcfRecord());
         VcfRecord* rec = & vcf_records->back();
-        while (parser->next_record(*rec)) {
+        while (parser.next_record(*rec)) {
             // Check for a SNP.
             if (not rec->is_snp()) {
-                skipped_notsnp.push_back(parser->line_number());
+                skipped_notsnp.push_back(parser.line_number());
                 continue;
             }
 
             // Check for a filtered-out SNP
-            if (not rec->filter.empty() && rec->filter[0] != "PASS") {
-                skipped_filter.push_back(parser->line_number());
+            if (strncmp(rec->filters(), ".", 2) != 0 && strncmp(rec->filters(), "PASS", 5) != 0) {
+                skipped_filter.push_back(parser.line_number());
                 continue;
             }
 
@@ -394,8 +449,7 @@ int main (int argc, char* argv[]) {
         }
 
         catalog = create_catalog(*vcf_records);
-        vcf_header = new VcfHeader(parser->header());
-        delete parser;
+        vcf_header.reset(new VcfHeader(parser.header()));
     }
 
     //
@@ -464,13 +518,14 @@ int main (int argc, char* argv[]) {
                 delete *match;
         catalog_matches.clear();
 
+    } else if (input_mode == InputMode::stacks2) {
+        // Using Stacks v2 files.
+        pmap->populate(catalog, *cloci_vcf_records, *vcf_header);
+        cloci_vcf_records.reset();
     } else if (input_mode == InputMode::vcf) {
         // ...or using VCF records.
         pmap->populate(catalog, *vcf_records, *vcf_header);
-        delete vcf_records;
-        delete vcf_header;
-        vcf_records = NULL;
-        vcf_header = NULL;
+        vcf_records.reset();
     }
 
     //
@@ -709,6 +764,10 @@ int main (int argc, char* argv[]) {
     if (genomic_out)
         write_genomic(catalog, pmap);
 
+    for (auto& cloc : catalog)
+        delete cloc.second;
+    delete psum;
+    delete pmap;
     log_fh.close();
 
     cerr << "Populations is done.\n";
@@ -789,7 +848,7 @@ void vcfcomp_simplify_pmap (map<int, CSLocus*>& catalog, PopMap<CSLocus>* pmap) 
         }
     }
     // Same SNP in different loci.
-    for (auto& chr : pmap->ordered_loci) {
+    for (auto& chr : pmap->ordered_loci()) {
         map<size_t,vector<size_t> > seen_bp0; // (bp, [loc_id's])
         for (CSLocus* loc : chr.second)
             if (not loc->snps.empty())
@@ -933,7 +992,7 @@ apply_locus_constraints(map<int, CSLocus *> &catalog,
             if (verbose)
                 log_fh << "removed_locus\t"
                        << loc->id << "\t"
-                       << loc->loc.chr << "\t"
+                       << loc->loc.chr() << "\t"
                        << loc->sort_bp() +1 << "\t"
                        << 0 << "\tfailed_population_limit\n";
         }
@@ -1082,7 +1141,7 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
                     if (verbose) {
                         log_fh << "pruned_polymorphic_site\t"
                                << loc->id << "\t"
-                               << loc->loc.chr << "\t"
+                               << loc->loc.chr() << "\t"
                                << loc->sort_bp(loc->snps[i]->col) +1 << "\t"
                                << loc->snps[i]->col << "\t";
                         if (inc_prune)
@@ -1106,7 +1165,7 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
                 if (verbose)
                     log_fh << "removed_locus\t"
                            << loc->id << "\t"
-                           << loc->loc.chr << "\t"
+                           << loc->loc.chr() << "\t"
                            << loc->sort_bp() +1 << "\t"
                            << 0 << "\tno_snps_remaining\n";
                 blacklist.insert(loc->id);
@@ -1125,7 +1184,7 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
             // If this locus is fixed, don't try to filter it out.
             //
             if (loc->snps.size() == 0) {
-                new_wl.insert(make_pair(loc->id, std::set<int>()));
+                new_wl.insert(make_pair(loc->id, set<int>()));
                 continue;
             }
 
@@ -1197,7 +1256,7 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
                     if (verbose) {
                         log_fh << "pruned_polymorphic_site\t"
                                << loc->id << "\t"
-                               << loc->loc.chr << "\t"
+                               << loc->loc.chr() << "\t"
                                << loc->sort_bp(loc->snps[i]->col) +1 << "\t"
                                << loc->snps[i]->col << "\t";
                         if (inc_prune)
@@ -1221,7 +1280,7 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
                 if (verbose)
                     log_fh << "removed_locus\t"
                            << loc->id << "\t"
-                           << loc->loc.chr << "\t"
+                           << loc->loc.chr() << "\t"
                            << loc->sort_bp() +1 << "\t"
                            << 0 << "\tno_snps_remaining\n";
                 blacklist.insert(loc->id);
@@ -1243,8 +1302,8 @@ order_unordered_loci(map<int, CSLocus *> &catalog)
 
     for (it = catalog.begin(); it != catalog.end(); it++) {
         loc = it->second;
-        if (strlen(loc->loc.chr) > 0)
-            chrs.insert(loc->loc.chr);
+        if (!loc->loc.empty())
+            chrs.insert(loc->loc.chr());
     }
 
     //
@@ -1258,10 +1317,7 @@ order_unordered_loci(map<int, CSLocus *> &catalog)
     uint bp = 1;
     for (it = catalog.begin(); it != catalog.end(); it++) {
         loc = it->second;
-        loc->loc.chr = new char[3];
-        strcpy(loc->loc.chr, "un");
-        loc->loc.bp  = bp;
-
+        loc->loc = PhyLoc("un", bp);
         bp += strlen(loc->con);
     }
 
@@ -1393,7 +1449,7 @@ merge_shared_cutsite_loci(map<int, CSLocus *> &catalog,
     //
     // Iterate over each chromosome.
     //
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    for (it = pmap->ordered_loci_nconst().begin(); it != pmap->ordered_loci_nconst().end(); it++) {
         //
         // Iterate over each ordered locus on this chromosome.
         //
@@ -2118,7 +2174,7 @@ int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
     // Count the number of markers that have enough samples to output.
     //
     map<int, CSLocus *>::iterator cit;
-    CSLocus *loc;
+    const CSLocus *loc;
     int num_loci = 0;
 
     for (cit = catalog.begin(); cit != catalog.end(); cit++) {
@@ -2143,10 +2199,10 @@ int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
     //
     // Output each locus.
     //
-    map<string, vector<CSLocus *> >::iterator it;
+    map<string, vector<CSLocus *> >::const_iterator it;
     int  a, b;
 
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
         for (uint i = 0; i < it->second.size(); i++) {
             loc = it->second[i];
 
@@ -2171,7 +2227,7 @@ int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
 
             uint k = 0;
             for (uint n = start; n < end; n++) {
-                fh << loc->id << "\t" << loc->loc.chr << "\t" << loc->sort_bp(n) +1;
+                fh << loc->id << "\t" << loc->loc.chr() << "\t" << loc->sort_bp(n) +1;
 
                 if (snp_locs.count(n) == 0) {
                     for (int j = 0; j < pmap->sample_cnt(); j++) {
@@ -2215,17 +2271,17 @@ int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
 int
 calculate_haplotype_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum)
 {
-    map<string, vector<CSLocus *> >::iterator it;
-    CSLocus  *loc;
+    map<string, vector<CSLocus *> >::const_iterator it;
+    const CSLocus  *loc;
     Datum   **d;
     LocStat  *l;
 
     //
     // Instantiate the kernel smoothing and bootstrap objects if requested.
     //
-    KSmooth<LocStat>     *ks;
-    OHaplotypes<LocStat> *ord;
-    Bootstrap<LocStat>   *bs;
+    KSmooth<LocStat>     *ks=NULL;
+    OHaplotypes<LocStat> *ord=NULL;
+    Bootstrap<LocStat>   *bs=NULL;
     if (kernel_smoothed && loci_ordered) {
         ks  = new KSmooth<LocStat>(2);
         ord = new OHaplotypes<LocStat>();
@@ -2280,7 +2336,7 @@ calculate_haplotype_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, P
         cerr << "Generating haplotype-level summary statistics for population '" << pop.name << "'\n";
         map<string, vector<LocStat *> > genome_locstats;
 
-        for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+        for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
 
             if (bootstrap_div)
                 bs = new Bootstrap<LocStat>(2);
@@ -2316,7 +2372,7 @@ calculate_haplotype_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, P
                 bs->add_data(locstats);
         }
 
-        for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+        for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
             vector<LocStat *> &locstats = genome_locstats[it->first];
 
             if (bootstrap_div)
@@ -2463,7 +2519,7 @@ nuc_substitution_identity_max(map<string, int> &hap_index, double **hdists)
 int
 calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum)
 {
-    map<string, vector<CSLocus *> >::iterator it;
+    map<string, vector<CSLocus *> >::const_iterator it;
 
     if (bootstrap_phist)
         cerr << "Calculating halotype F statistics across all populations/groups and bootstrap resampling...\n";
@@ -2480,9 +2536,9 @@ calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pm
     //
     // Instantiate the kernel smoothing object and associated ordering object if requested.
     //
-    KSmooth<HapStat>     *ks;
-    OHaplotypes<HapStat> *ord;
-    Bootstrap<HapStat>   *bs;
+    KSmooth<HapStat>     *ks=NULL;
+    OHaplotypes<HapStat> *ord=NULL;
+    Bootstrap<HapStat>   *bs=NULL;
     if (kernel_smoothed && loci_ordered) {
         ks  = new KSmooth<HapStat>(5);
         ord = new OHaplotypes<HapStat>();
@@ -2494,7 +2550,7 @@ calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pm
     map<string, vector<HapStat *> > genome_hapstats;
 
     uint cnt = 0;
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
         string chr = it->first;
 
         cerr << "  Generating haplotype F statistics for " << chr << "...";
@@ -2505,7 +2561,7 @@ calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pm
 
         #pragma omp parallel
         {
-            CSLocus  *loc;
+            const CSLocus  *loc;
             LocSum  **s;
             Datum   **d;
             HapStat  *h;
@@ -2557,7 +2613,7 @@ calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pm
     }
 
     if (bootstrap_phist) {
-        for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++)
+        for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++)
             bs->execute(genome_hapstats[it->first]);
     }
 
@@ -2646,7 +2702,7 @@ calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pm
        << "Smoothed D_est"  << "\t"
        << "Smoothed D_est P-value"  << "\n";
 
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
         string chr = it->first;
 
         vector<HapStat *> &hapstats = genome_hapstats[chr];
@@ -2705,7 +2761,7 @@ calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pm
 int
 calculate_haplotype_divergence_pairwise(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum)
 {
-    map<string, vector<CSLocus *> >::iterator it;
+    map<string, vector<CSLocus *> >::const_iterator it;
 
     if (bootstrap_phist)
         cerr << "Calculating pairwise halotype F statistics and bootstrap resampling...\n";
@@ -2722,9 +2778,9 @@ calculate_haplotype_divergence_pairwise(map<int, CSLocus *> &catalog, PopMap<CSL
     //
     // Instantiate the kernel smoothing object if requested.
     //
-    KSmooth<HapStat>     *ks;
-    OHaplotypes<HapStat> *ord;
-    Bootstrap<HapStat>   *bs;
+    KSmooth<HapStat>     *ks=NULL;
+    OHaplotypes<HapStat> *ord=NULL;
+    Bootstrap<HapStat>   *bs=NULL;
     if (kernel_smoothed && loci_ordered) {
         ks  = new KSmooth<HapStat>(5);
         ord = new OHaplotypes<HapStat>();
@@ -2746,7 +2802,7 @@ calculate_haplotype_divergence_pairwise(map<int, CSLocus *> &catalog, PopMap<CSL
             cerr << "  Processing populations '" << pop_i.name << "' and '" << pop_j.name << "'\n";
 
             uint cnt = 0;
-            for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+            for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
                 string chr = it->first;
 
                 cerr << "    Generating pairwise haplotype F statistics for " << chr << "...";
@@ -2757,7 +2813,7 @@ calculate_haplotype_divergence_pairwise(map<int, CSLocus *> &catalog, PopMap<CSL
 
                 #pragma omp parallel
                 {
-                    CSLocus  *loc;
+                    const CSLocus  *loc;
                     LocSum  **s;
                     Datum   **d;
                     HapStat  *h;
@@ -2809,7 +2865,7 @@ calculate_haplotype_divergence_pairwise(map<int, CSLocus *> &catalog, PopMap<CSL
             }
 
             if (bootstrap_phist) {
-                for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++)
+                for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++)
                     bs->execute(genome_hapstats[it->first]);
             }
 
@@ -2876,7 +2932,7 @@ calculate_haplotype_divergence_pairwise(map<int, CSLocus *> &catalog, PopMap<CSL
                << "Smoothed D_est" << "\t"
                << "Smoothed D_est P-value" << "\n";
 
-            for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+            for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
                 string chr = it->first;
 
                 vector<HapStat *> &hapstats = genome_hapstats[chr];
@@ -3306,7 +3362,6 @@ haplotype_amova(Datum **d, LocSum **s, vector<int> &pop_ids)
     //      << "  Sigma_a: " << sigma_a << "; Sigma_b: "    << sigma_b   << "; Sigma_c: " << sigma_c << "; Sigma_Total: " << sigma_total << "\n"
     //      << "  Phi_st: "  << phi_st  << "; Phi_ct: "     << phi_ct    << "; Phi_sc: "  << phi_sc  << "\n";
 
-
     //
     // Calculate Fst' = Fst / Fst_max
     //
@@ -3637,7 +3692,7 @@ haplotype_d_est(Datum **d, LocSum **s, vector<int> &pop_ids)
     return d_est;
 }
 
-void log_snps_per_loc_distrib(std::ostream& log_fh, map<int, CSLocus*>& catalog)
+void log_snps_per_loc_distrib(ostream& log_fh, map<int, CSLocus*>& catalog)
 {
 
     // N.B. The method below gives the same numbers as by counting the SNPs that satisfy
@@ -3665,8 +3720,8 @@ void log_snps_per_loc_distrib(std::ostream& log_fh, map<int, CSLocus*>& catalog)
 int
 calculate_summary_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum)
 {
-    map<string, vector<CSLocus *> >::iterator it;
-    CSLocus  *loc;
+    map<string, vector<CSLocus *> >::const_iterator it;
+    const CSLocus  *loc;
     LocSum  **s;
     LocTally *t;
     int       len;
@@ -3759,7 +3814,7 @@ calculate_summary_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Pop
         fis_var_all[j]       = 0.0;
     }
 
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
         for (uint pos = 0; pos < it->second.size(); pos++) {
             loc = it->second[pos];
 
@@ -3891,7 +3946,7 @@ calculate_summary_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Pop
        << "Smoothed Fis P-value" << "\t"
        << "Private"      << "\n";
 
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
         for (uint pos = 0; pos < it->second.size(); pos++) {
             loc = it->second[pos];
 
@@ -3914,7 +3969,7 @@ calculate_summary_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Pop
 
                         fh << batch_id << "\t"
                            << loc->id << "\t"
-                           << loc->loc.chr << "\t"
+                           << loc->loc.chr() << "\t"
                            << loc->sort_bp(i) + 1 << "\t"
                            << i << "\t"
                            << mpopi.pops()[j].name << "\t";
@@ -4217,8 +4272,8 @@ write_fst_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLo
     // Instantiate the kernel smoothing object if requested.
     //
     OPopPair<PopPair>  *ord = new OPopPair<PopPair>(psum, log_fh);
-    KSmooth<PopPair>   *ks;
-    Bootstrap<PopPair> *bs;
+    KSmooth<PopPair>   *ks=NULL;
+    Bootstrap<PopPair> *bs=NULL;
     if (kernel_smoothed && loci_ordered) {
         cerr << "Instantiating the kernel smoothing window, using sigma = " << sigma << " with a sliding window size of " << 6 * sigma << "\n";
         ks  = new KSmooth<PopPair>(2);
@@ -4297,11 +4352,11 @@ write_fst_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLo
             if (bootstrap_fst)
                 bs = new Bootstrap<PopPair>(2);
 
-            map<string, vector<CSLocus *> >::iterator it;
+            map<string, vector<CSLocus *> >::const_iterator it;
             map<string, vector<PopPair *> > genome_pairs;
             // int snp_dist[max_snp_dist] = {0};
 
-            for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+            for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
                 string chr = it->first;
 
                 map<uint, uint>    pairs_key;
@@ -4369,7 +4424,7 @@ write_fst_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLo
             // if (bootstrap_fst && bootstrap_type == bs_approx)
             //  bootstrap_fst_approximate_dist(fst_samples, allele_depth_samples, weights, snp_dist, approx_fst_dist);
 
-            for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+            for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
                 string chr = it->first;
                 vector<PopPair *> &pairs = genome_pairs[chr];
 
@@ -4557,7 +4612,7 @@ kernel_smoothed_popstats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Po
     // int snp_dist[max_snp_dist] = {0};
     // int sites_per_snp = 0;
     // int tot_windows = 0;
-    map<string, vector<CSLocus *> >::iterator it;
+    map<string, vector<CSLocus *> >::const_iterator it;
     map<string, vector<SumStat *> > genome_sites;
 
     //
@@ -4565,12 +4620,12 @@ kernel_smoothed_popstats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Po
     //
     KSmooth<SumStat>   *ks  = new KSmooth<SumStat>(2);
     OSumStat<SumStat>  *ord = new OSumStat<SumStat>(psum, log_fh);
-    Bootstrap<SumStat> *bs;
+    Bootstrap<SumStat> *bs = NULL;
 
     if (bootstrap_pifis)
         bs = new Bootstrap<SumStat>(2);
 
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
         vector<SumStat *> &sites = genome_sites[it->first];
 
         ord->order(sites, it->second, pop_id);
@@ -4579,7 +4634,7 @@ kernel_smoothed_popstats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Po
 
     cerr << "    Population '" << mpopi.pops()[pop_id].name << "' contained " << ord->multiple_loci << " nucleotides covered by more than one RAD locus.\n";
 
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
         if (bootstrap_pifis)
             cerr << "    Smoothing and bootstrapping chromosome " << it->first << "\n";
         else
@@ -4611,7 +4666,7 @@ kernel_smoothed_popstats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Po
 //                                          weights, snp_dist, sites_per_snp,
 //                                          approx_fis_dist, approx_pi_dist);
 
-//      for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+//      for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
 
 //          for (uint pos = 0; pos < it->second.size(); pos++) {
 //              loc  = it->second[pos];
@@ -4998,8 +5053,8 @@ write_generic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, bool write_gt
         if (expand_id) {
             if (loc->annotation.length() > 0)
                 id << "\t" << loc->id << "\t" << loc->annotation;
-            else if (strlen(loc->loc.chr) > 0)
-                id << "\t" << loc->id << "\t" << loc->loc.chr << "_" << loc->loc.bp +1;
+            else if (strlen(loc->loc.chr()) > 0)
+                id << "\t" << loc->id << "\t" << loc->loc.chr() << "_" << loc->loc.bp +1;
             else
                 id << "\t" << loc->id << "\t";
         }
@@ -5155,7 +5210,7 @@ int load_marker_column_list(string path, map<int, set<int> > &list) {
                 cerr << "Unable to parse whitelist, '" << path << "' at line " << line_num << "\n";
                 exit(1);
             }
-            list.insert(make_pair(marker, std::set<int>()));
+            list.insert(make_pair(marker, set<int>()));
         }
 
         line_num++;
@@ -5171,8 +5226,7 @@ int load_marker_column_list(string path, map<int, set<int> > &list) {
     return 0;
 }
 
-
-bool hap_compare(pair<string, int> a, pair<string, int> b) {
+bool hap_compare(const pair<string, int>& a, const pair<string, int>& b) {
     return (a.second > b.second);
 }
 
@@ -5207,6 +5261,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"threads",        required_argument, NULL, 't'},
             {"batch_id",       required_argument, NULL, 'b'},
             {"in_path",        required_argument, NULL, 'P'},
+            {"v1",             no_argument,       NULL, 2000},
             {"out_path",       required_argument, NULL, 'O'},
             {"in_vcf",         required_argument, NULL, 'V'},
             {"progeny",        required_argument, NULL, 'r'},
@@ -5261,6 +5316,9 @@ int parse_command_line(int argc, char* argv[]) {
             in_path = optarg;
             if (!in_path.empty() && in_path.back() != '/')
                 in_path += "/";
+            break;
+        case 2000: //v1
+            input_mode = InputMode::stacks;
             break;
         case 'O':
             out_path = optarg;
@@ -5490,7 +5548,7 @@ int parse_command_line(int argc, char* argv[]) {
             static const set<string> known_debug_flags = {"VCFCOMP"};
             stringstream ss (optarg);
             string s;
-            while (std::getline(ss, s, ',')) {
+            while (getline(ss, s, ',')) {
                 if (known_debug_flags.count(s)) {
                     debug_flags.insert(s);
                 } else {
@@ -5522,20 +5580,20 @@ int parse_command_line(int argc, char* argv[]) {
     //
     // Check argument constrains.
     //
-
-    if (not in_path.empty() && not in_vcf_path.empty()) {
-        cerr << "Error: Please specify either '-P' or '--in_vcf', not both.\n";
-        help();
-    } else if (not in_path.empty()) {
-        input_mode = InputMode::stacks;
-    } else if (not in_vcf_path.empty()) {
-        input_mode = InputMode::vcf;
-    } else {
-        cerr << "Error: One of '--in_path' or '--in_vcf' is required.\n";
+    if (input_mode == InputMode::stacks && in_path.empty()) {
+        cerr << "Error: Option --v1 requires -P to be given.\n";
         help();
     }
 
-    if (input_mode == InputMode::stacks) {
+    if (!in_path.empty() && !in_vcf_path.empty()) {
+        cerr << "Error: Please specify either '-P/--in_path' or '-V/--in_vcf', not both.\n";
+        help();
+    } else if (in_path.empty() && in_vcf_path.empty()) {
+        cerr << "Error: One of '-P/--in_path' or '-V/--in_vcf' is required.\n";
+        help();
+    }
+
+    if (input_mode == InputMode::stacks || input_mode == InputMode::stacks2) {
 
         if (pmap_path.empty())
             cerr << "A population map was not specified, all samples will be read from '" << in_path << "' as a single popultaion.\n";

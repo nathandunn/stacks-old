@@ -24,12 +24,13 @@
 #include <iomanip>
 
 #include "constants.h"
+#include "utils.h"
 #include "log_utils.h"
 
 using namespace std;
 
 int
-init_log(ofstream &fh, int argc, char **argv)
+init_log(ostream &fh, int argc, char **argv)
 {
     //
     // Obtain the current date.
@@ -44,18 +45,106 @@ init_log(ofstream &fh, int argc, char **argv)
     //
     // Write the command line that was executed.
     //
+    string exe (argv[0]);
+    fh << exe.substr(exe.find_last_of('/')+1) << " v" << VERSION << ", executed " << date << "\n";
     for (int i = 0; i < argc; i++) {
         fh << argv[i];
         if (i < argc - 1) fh << " ";
     }
-    fh << "\n" << argv[0] << " version " << VERSION << " executed " << date << "\n\n";
+    fh << "\n\n";
 
     return 0;
 }
 
-std::string as_percentage(double d) {
+string as_percentage(double d) {
     stringstream ss;
-    ss << std::fixed << std::setprecision(1);
+    ss << std::fixed << setprecision(1);
     ss << d*100 << "%";
     return ss.str();
+}
+
+string to_string(const FileT& ft) {
+    if (ft == FileT::unknown)
+        return "unknown";
+    if (ft == FileT::sql)
+        return "sql";
+    if (ft == FileT::gzsql)
+        return "gzsql";
+    if (ft == FileT::fasta)
+        return "fasta";
+    if (ft == FileT::gzfasta)
+        return "gzfasta";
+    if (ft == FileT::fastq)
+        return "fastq";
+    if (ft == FileT::gzfastq)
+        return "gzfastq";
+    if (ft == FileT::bowtie)
+        return "bowtie";
+    if (ft == FileT::sam)
+        return "sam";
+    if (ft == FileT::bam)
+        return "bam";
+    if (ft == FileT::tsv)
+        return "tsv";
+    if (ft == FileT::bustard)
+        return "bustard";
+    if (ft == FileT::phase)
+        return "phase";
+    if (ft == FileT::fastphase)
+        return "fastphase";
+    if (ft == FileT::beagle)
+        return "beagle";
+    DOES_NOT_HAPPEN;
+    return "?!";
+}
+
+ProgressMeter& ProgressMeter::operator++() {
+    assert(n_done_ != n_max_);
+    ++n_done_;
+
+    if (n_done_ >= next_) {
+        if (n_done_ >= size_t(n_max_ * 0.5)) {
+            os_ << "50%...\n";
+            next_ = SIZE_MAX;
+        } else if (n_done_ >= size_t(n_max_ * 0.2)) {
+            os_ << "20%...\n";
+            next_ = n_max_ * 0.5;
+        } else if (n_done_ >= size_t(n_max_ * 0.1)) {
+            os_ << "10%...\n";
+            next_ = n_max_ * 0.2;
+        } else if (n_done_ >= size_t(n_max_ * 0.05)) {
+            os_ << "5%...\n";
+            next_ = n_max_ * 0.1;
+        } else if (n_done_ >= size_t(n_max_ * 0.02)) {
+            os_ << "2%...\n";
+            next_ = n_max_ * 0.05;
+        } else {
+            os_ << "1%...\n";
+            next_ = n_max_ * 0.02;
+        }
+        os_ << flush;
+    }
+
+    return *this;
+}
+
+LogAlterator::LogAlterator(const string& log_path, bool quiet, int argc, char** argv)
+        : l(log_path)
+        , o(cout.rdbuf())
+        , e(cerr.rdbuf())
+        , lo_buf(cout.rdbuf(), l.rdbuf())
+        , le_buf(cerr.rdbuf(), l.rdbuf())
+        {
+    check_open(l, log_path);
+    init_log(l, argc, argv);
+
+    if (quiet) {
+        // Use the fstream buffer only, and not at all stdout and stderr.
+        cout.rdbuf(l.rdbuf());
+        cerr.rdbuf(l.rdbuf());
+    } else {
+        cout << "Logging to '" << log_path << "'." << endl;
+        cout.rdbuf(&lo_buf);
+        cerr.rdbuf(&le_buf);
+    }
 }

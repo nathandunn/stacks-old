@@ -28,8 +28,6 @@
 
 #include "rxstacks.h"
 
-typedef MetaPopInfo::Sample Sample;
-
 // Global variables to hold command-line options.
 int    num_threads = 1;
 int    batch_id    = -1;
@@ -50,13 +48,6 @@ bool   verbose           = false;
 //
 modelt model_type         = snp;
 double alpha              = 0.1;
-double bound_low          = 0.0;
-double bound_high         = 1.0;
-double p_freq             = 0.5;
-double barcode_err_freq   = 0.0;
-double heterozygote_limit = -2.71;
-double homozygote_limit   =  2.71;
-const int barcode_size    = 5;
 
 int main (int argc, char* argv[]) {
     IF_NDEBUG_TRY
@@ -110,9 +101,9 @@ int main (int argc, char* argv[]) {
     stringstream catalog_file;
     map<int, CSLocus *> catalog;
     bool compressed = false;
-    int res;
     catalog_file << in_path << "batch_" << batch_id << ".catalog";
-    if ((res = load_loci(catalog_file.str(), catalog, false, false, compressed)) == 0) {
+    int res = load_loci(catalog_file.str(), catalog, 0, false, compressed);
+    if (res  == 0) {
         cerr << "Error: Unable to load the catalog '" << catalog_file.str() << "'\n";
         throw exception();
     }
@@ -198,7 +189,7 @@ int main (int argc, char* argv[]) {
 
         map<int, Locus *> stacks;
         int res;
-        if ((res = load_loci(in_path + sample.name, stacks, true, true, compressed)) == 0) {
+        if ((res = load_loci(in_path + sample.name, stacks, 2, true, compressed)) == 0) {
             cerr << "Unable to load sample file '" << sample.name << "'\n";
             continue;
         }
@@ -411,14 +402,11 @@ int main (int argc, char* argv[]) {
     //
     for (map<int, CSLocus *>::iterator cat_it = catalog.begin(); cat_it != catalog.end(); cat_it++)
         delete cat_it->second;
-    catalog.clear();
 
-    for (uint i = 0; i < catalog_matches.size(); i++) {
+    for (uint i = 0; i < catalog_matches.size(); i++)
         for (uint j = 0; j < catalog_matches[i].size(); j++)
             delete catalog_matches[i][j];
-        catalog_matches[i].clear();
-    }
-    
+
     cerr << "rxstacks is done.\n";
     return 0;
     IF_NDEBUG_CATCH_ALL_EXCEPTIONS
@@ -562,12 +550,10 @@ prune_mst_haplotypes(CSLocus *cloc, Datum *d, Locus *loc, unsigned long &pruned_
     // Create a minimum spanning tree in order to determine the minimum distance
     // between each node in the list.
     //
-    MinSpanTree *mst = new MinSpanTree;
+    mst::MinSpanTree *mst = new mst::MinSpanTree();
 
     map<string, int>::iterator it;
     vector<string> haps;
-    Node *n;
-
     for (it = cloc->hap_cnts.begin(); it != cloc->hap_cnts.end(); it++) {
         mst->add_node(it->first);
         haps.push_back(it->first);
@@ -577,7 +563,7 @@ prune_mst_haplotypes(CSLocus *cloc, Datum *d, Locus *loc, unsigned long &pruned_
     // We are going to connect nodes in the graph when a SNP occurs in one
     // of the positions of the haplotype.
     //
-    Node *n_1, *n_2;
+    mst::Node *n_1, *n_2;
 
     uint snp_pos = 0;
     for (uint i = 0; i < cloc->snps.size(); i++) {
@@ -733,7 +719,6 @@ prune_mst_haplotypes(CSLocus *cloc, Datum *d, Locus *loc, unsigned long &pruned_
     // operate on newly generated, spurious haplotypes.
     //
     generate_matched_haplotypes(cloc, loc, d);
-
     delete mst;
 
     return 0;
@@ -1278,7 +1263,7 @@ write_results(string file, map<int, Locus *> &m)
     //
     // Open the output files for writing.
     //
-    gzFile   gz_tags, gz_snps, gz_alle, gz_mods;
+    gzFile   gz_tags=NULL, gz_snps=NULL, gz_alle=NULL, gz_mods=NULL;
     ofstream tags, snps, alle, mods;
     if (gzip) {
         gz_tags = gzopen(tag_file.c_str(), "wb");
@@ -1372,7 +1357,7 @@ write_results(string file, map<int, Locus *> &m)
         sstr << "0" << "\t"
              << tag_1->sample_id << "\t"
              << tag_1->id << "\t"
-             << tag_1->loc.chr << "\t"
+             << tag_1->loc.chr() << "\t"
              << tag_1->loc.bp << "\t"
              << (tag_1->loc.strand == strand_plus ? "+" : "-") << "\t"
              << "consensus" << "\t"
@@ -1803,13 +1788,13 @@ parse_command_line(int argc, char* argv[])
 }
 
 void version() {
-    std::cerr << "rxstacks " << VERSION << "\n\n";
+    cerr << "rxstacks " << VERSION << "\n\n";
 
     exit(1);
 }
 
 void help() {
-    std::cerr << "rxstacks " << VERSION << "\n"
+    cerr << "rxstacks " << VERSION << "\n"
               << "rxstacks -P path -o path [-t threads] [-b batch_id]" << "\n"
               << "  P: path to the Stacks output files.\n"
               << "  o: output path to write results ('.' to override the current files).\n"

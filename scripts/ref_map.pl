@@ -31,6 +31,7 @@ use strict;
 use POSIX;
 use File::Temp qw/ mktemp /;
 use File::Spec;
+use File::Which;
 use constant stacks_version => "_VERSION_";
 
 use constant true  => 1;
@@ -55,12 +56,13 @@ my $sample_id    = 1;
 my $desc         = ""; # Database description of this dataset
 my $date         = ""; # Date relevent to this data, formatted for SQL: 2009-05-31
 my $gzip         = false;
+my $v1           = false;
 
 my @parents;
 my @progeny;
 my @samples;
 
-my (@_pstacks, @_cstacks, @_sstacks, @_genotypes, @_populations);
+my (@_pstacks, @_cstacks, @_sstacks, @_tsv2bam, @_samtools_merge, @_rystacks, @_genotypes, @_populations);
 
 my $cmd_str = $0 . " " . join(" ", @ARGV);
 
@@ -71,12 +73,10 @@ my $cnf = (-e $ENV{"HOME"} . "/.my.cnf") ? $ENV{"HOME"} . "/.my.cnf" : $mysql_co
 #
 # Check for the existence of the necessary pipeline programs
 #
-die ("Unable to find '" . $exe_path . "pstacks'.\n")          if (!-e $exe_path . "pstacks"          || !-x $exe_path . "pstacks");
-die ("Unable to find '" . $exe_path . "cstacks'.\n")          if (!-e $exe_path . "cstacks"          || !-x $exe_path . "cstacks");
-die ("Unable to find '" . $exe_path . "sstacks'.\n")          if (!-e $exe_path . "sstacks"          || !-x $exe_path . "sstacks");
-die ("Unable to find '" . $exe_path . "genotypes'.\n")        if (!-e $exe_path . "genotypes"        || !-x $exe_path . "genotypes");
-die ("Unable to find '" . $exe_path . "populations'.\n")      if (!-e $exe_path . "populations"      || !-x $exe_path . "populations");
-die ("Unable to find '" . $exe_path . "index_radtags.pl'.\n") if (!-e $exe_path . "index_radtags.pl" || !-x $exe_path . "index_radtags.pl");
+foreach my $prog ("pstacks", "cstacks", "sstacks", "tsv2bam", "rystacks", "genotypes", "populations", "index_radtags.pl") {
+    die "Unable to find '" . $exe_path . $prog . "'.\n" if (!-e $exe_path . $prog || !-x $exe_path . $prog);
+}
+die("Unable to find 'samtools'.\n") if (! which "samtools");
 
 my ($log, $log_fh, $sample);
 
@@ -228,6 +228,84 @@ sub execute_stacks {
         check_return_value($?, $log_fh);
     }
 
+    if (!$v1) {
+        #
+        # Sort the reads according by catalog locus / run tsv2bam.
+        #
+        print STDERR "Sorting reads by RAD locus...\n";
+        print $log_fh "\ntsv2bam\n==========\n";
+
+        $cmd = $exe_path . "tsv2bam -P $out_path";
+        if ($popmap_path) {
+            $cmd .= " -M $popmap_path";
+        } else {
+            foreach $sample (@parents, @progeny, @samples) {
+                $cmd .= " -s $sample->{'file'}";
+            }
+        }
+        foreach (@_tsv2bam) {
+            $cmd .= " " . $_;
+        }
+        $cmd .= " 2>&1";
+        print STDERR  "  $cmd\n";
+        print $log_fh "$cmd\n\n";
+    	if (!$dry_run) {
+            open($pipe_fh, "$cmd |");
+            while (<$pipe_fh>) {
+                print $log_fh $_;
+            }
+            close($pipe_fh);
+            check_return_value($?, $log_fh);
+    	}
+        
+        #
+        # Merge the matches.bam files / run samtools merge.
+        #
+        print $log_fh "\nsamtools merge\n----------\n";
+
+        $cmd = "samtools merge $out_path/batch_$batch_id.catalog.bam";
+        foreach $sample (@parents, @progeny, @samples) {
+            $cmd .= " $out_path/$sample->{'file'}.matches.bam";
+        }
+        foreach (@_samtools_merge) {
+            $cmd .= " " . $_;
+        }
+        $cmd .= " 2>&1";
+        print STDERR  "  $cmd\n";
+        print $log_fh "$cmd\n\n";
+    	if (!$dry_run) {
+            open($pipe_fh, "$cmd |");
+            while (<$pipe_fh>) {
+                print $log_fh $_;
+            }
+            close($pipe_fh);
+            check_return_value($?, $log_fh);
+    	}
+    	
+    	#
+    	# Call genotypes / run rystacks.
+    	# TODO: Update after renaming rystacks.
+    	#
+        print STDERR "Calling variants, genotypes and haplotypes...\n";
+        print $log_fh "\nrystacks\n==========\n";
+
+    	$cmd = $exe_path . "rystacks -P $out_path";
+    	foreach (@_rystacks) {
+    	    $cmd .= " " . $_;
+    	}
+        $cmd .= " 2>&1";
+        print STDERR  "  $cmd\n";
+        print $log_fh "$cmd\n\n";
+    	if (!$dry_run) {
+            open($pipe_fh, "$cmd |");
+            while (<$pipe_fh>) {
+                print $log_fh $_;
+            }
+            close($pipe_fh);
+            check_return_value($?, $log_fh);
+    	}
+    }
+
     if ($data_type eq "map") {
         #
         # Generate a set of observed haplotypes and a set of markers and generic genotypes
@@ -235,8 +313,8 @@ sub execute_stacks {
         printf(STDERR "Generating genotypes...\n");
         print $log_fh "\ngenotypes\n==========\n";
 
-        $cmd = $exe_path . "genotypes -b $batch_id -P $out_path -r 1 -c -s " . join(" ", @_genotypes) . " 2>&1";
-        print STDERR  "  $cmd\n";
+        $cmd = $exe_path . "genotypes" . ($v1 ? " --v1" : "") . " -b $batch_id -P $out_path -r 1 -c -s " . join(" ", @_genotypes) . " 2>&1";
+        print STDERR  "$cmd\n";
         print $log_fh "$cmd\n";
 
         if ($dry_run == 0) {
@@ -252,7 +330,7 @@ sub execute_stacks {
         printf(STDERR "Calculating population-level summary statistics\n");
         print $log_fh "\npopulations\n==========\n";
 
-        $cmd = $exe_path . "populations -b $batch_id -P $out_path -s " . join(" ", @_populations) . " 2>&1";
+        $cmd = $exe_path . "populations" . ($v1 ? " --v1" : "") . " -b $batch_id -P $out_path -s " . join(" ", @_populations) . " 2>&1";
         print STDERR  "  $cmd\n";
         print $log_fh "$cmd\n";
 
@@ -348,7 +426,7 @@ sub initialize_samples {
             }
 
             if ($found == false) {
-                die("Unable to find sample '$sample' in directory '$sample_path' as specified in the population map, '$popmap_path'.\n");
+                die("Error: Failed to open '$sample_path$sample.(bam|sam|etc.)'.\n");
             }
         }
         
@@ -761,7 +839,7 @@ sub parse_command_line {
 
     while (@ARGV) {
 	$_ = shift @ARGV;
-        if    ($_ =~ /^-v$/) { version(); exit(); }
+        if    ($_ =~ /^-v$/) { version(); exit 1; }
 	elsif ($_ =~ /^-h$/) { usage(); }
 	elsif ($_ =~ /^-p$/) { push(@parents, { 'path' => shift @ARGV }); }
 	elsif ($_ =~ /^-r$/) { push(@progeny, { 'path' => shift @ARGV }); }
@@ -777,10 +855,11 @@ sub parse_command_line {
 	elsif ($_ =~ /^-B$/) { $db        = shift @ARGV; }
 	elsif ($_ =~ /^-m$/) { $min_cov   = shift @ARGV; }
 	elsif ($_ =~ /^-P$/) { $min_rcov  = shift @ARGV; }
+	elsif ($_ =~ /^--v1$/) { $v1  = true; }
         elsif ($_ =~ /^--samples$/) {
             $sample_path = shift @ARGV;
             
-        } elsif ($_ =~ /^-O$/) { 
+        } elsif ($_ =~ /^-O$/ || $_ =~ /^--popmap$/) {
 	    $popmap_path = shift @ARGV;
 	    push(@_populations, "-M " . $popmap_path); 
 
@@ -839,6 +918,15 @@ sub parse_command_line {
 
 	    } elsif ($prog eq "genotypes") {
 		push(@_genotypes, $opt); 
+
+            } elsif ($prog eq "tsv2bam") {
+                push(@_tsv2bam, $opt); 
+
+            } elsif ($prog eq "samtools_merge") {
+                push(@_samtools_merge, $opt); 
+
+            } elsif ($prog eq "rystacks") {
+                push(@_rystacks, $opt); 
 
 	    } elsif ($prog eq "populations") {
 		push(@_populations, $opt); 
@@ -899,44 +987,42 @@ sub usage {
     version();
 
     print STDERR <<EOQ; 
-ref_map.pl -p path -r path [-s path] -o path [-m min_cov] [-T num_threads] [-A type] [-O popmap] [-B db -b batch_id -D "desc"] [-S -i num] [-e path] [-d] [-h]
-    b: batch ID representing this dataset (an integer, e.g. 1, 2, 3).
-    o: path to write pipeline output files.
-    O: if analyzing one or more populations, specify a pOpulation map.
-    A: if processing a genetic map, specify the cross type, 'CP', 'F2', 'BC1', 'DH', or 'GEN'.
-    T: specify the number of threads to execute.
-    e: executable path, location of pipeline programs.
-    d: perform a dry run. Do not actually execute any programs, just print what would be executed.
-    h: display this help message.
+ref_map.pl --samples dir --popmap path -o dir -b batch_id (database options) [-X prog:"opts" ...]
+ref_map.pl -s path [-s path ...] -o dir -b batch_id (database options) [-X prog:"opts" ...]
+ref_map.pl -p path -r path -o path -A type -b batch_id (database options) [-X prog:"opts" ...]
 
-  Specify each sample separately:
-    p: path to a Bowtie/SAM/BAM file containing one set of parent sequences from a mapping cross.
-    r: path to a Bowtie/SAM/BAM file containing one set of progeny sequences from a mapping cross.
-    s: path to a Bowtie/SAM/BAM file containing an individual sample from a population.
-  Specify a path to samples and provide a population map:
-    --samples <path>: specify a path to the directory of samples (samples will be read from population map).
+  Input files:
+    --samples: path to the directory containing the samples reads files.
+    --popmap: path to a population map file (format is "<name> TAB <pop>", one sample per line).
+  or
+    s: path to a file containing the reads of one sample.
+  or
+    p: path to a file containing the reads of one parent, in a mapping cross.
+    r: path to a file containing the reads of one progeny, in a mapping cross.
 
-  Stack assembly options:
-    m: specify a minimum number of identical, raw reads required to create a stack (default 3).
-    P: specify a minimum number of identical, raw reads required to create a stack in 'progeny' individuals.
+  General options:
+    o: path to an output directory.
+    b: a numeric database ID for this run (e.g. 1).
+    A: for a mapping cross, specify the type; one of 'CP', 'F2', 'BC1', 'DH', or 'GEN'.
+    X: additional options for specific pipeline components, e.g. -X "populations: -p 3 -r 0.50"
+    T: the number of threads/CPUs to use (default: 1).
+    d: Dry run. Do not actually execute anything, just print the commands that would be executed.
+
+  SNP model options:
+    --alpha: significance level at which to call genotypes (for pstacks; default: 0.05).
+    For the bounded model:
+      --bound_low <num>: lower bound for epsilon, the error rate, between 0 and 1.0 (default 0.0).
+      --bound_high <num>: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1.0).
 
   Database options:
-    B: specify a database to load data into.
+    S: disable database interaction.
+    B: specify an SQL database to load data into.
     D: a description of this batch to be stored in the database.
-    S: disable recording SQL data in the database.
     i: starting sample_id, this is determined automatically if database interaction is enabled.
     --create_db: create the database specified by '-B' and populate the tables.
     --overw_db: delete the database before creating a new copy of it (turns on --create_db).
 
-  SNP Model Options (these options are passed on to pstacks):
-    --bound_low <num>: lower bound for epsilon, the error rate, between 0 and 1.0 (default 0).
-    --bound_high <num>: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1).
-    --alpha <num>: chi square significance level required to call a heterozygote or homozygote, either 0.1, 0.05 (default), 0.01, or 0.001.
-
-  Arbitrary command line options:
-    -X "program:option": pass a command line option to one of the pipeline components, e.g.'-X "sstacks:-x"'.
-
 EOQ
 
-    exit(0);
+    exit 1;
 }

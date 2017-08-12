@@ -123,9 +123,9 @@ int main (int argc, char* argv[]) {
     stringstream catalog_file;
     map<int, CSLocus *> catalog;
     bool compressed = false;
-    int  res;
     catalog_file << cat_path << "batch_" << batch_id << ".catalog";
-    if ((res = load_loci(catalog_file.str(), catalog, false, false, compressed)) == 0) {
+    int res = load_loci(catalog_file.str(), catalog, 0, false, compressed);
+    if (res == 0) {
         cerr << "Error: Unable to load the catalog '" << catalog_file.str() << "'\n";
         throw exception();
     }
@@ -361,7 +361,7 @@ four_gamete_test(string path, map<string, int> &pop_map, PhasedSummary *psum, ma
     fh << "# ID\tStart\tEnd\tLen\tSNP Count\tHaplotype Count\tHaplotype\tPopulations\tHapPopCnt\n";
 
     uint id = 1;
-    uint start, end, cnt, dist;
+    uint start, end=-1, cnt, dist;
     bool bound;
     map<int, int> buckets, snps;
 
@@ -1938,13 +1938,13 @@ int parse_command_line(int argc, char* argv[]) {
 }
 
 void version() {
-    std::cerr << "phasedstacks " << VERSION << "\n\n";
+    cerr << "phasedstacks " << VERSION << "\n\n";
 
     exit(1);
 }
 
 void help() {
-    std::cerr << "phasedstacks " << VERSION << "\n"
+    cerr << "phasedstacks " << VERSION << "\n"
               << "phasedstacks -b id -S path -P path -t file_type [-p threads] [-M popmap] [-v] [-h]" << "\n"
               << "  b: Stacks batch ID.\n"
               << "  P: path to the phased output files.\n"

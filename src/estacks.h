@@ -25,27 +25,17 @@
 #include <omp.h>    // OpenMP library
 #endif
 #include <getopt.h> // Process command-line options
-#include <string.h>
+#include <cstring>
 #include <iostream>
 #include <fstream>
 #include <sstream>
-using std::stringstream;
-using std::cin;
-using std::cout;
-using std::cerr;
-using std::endl;
 
 #include <vector>
-using std::vector;
 #include <map>
-using std::map;
 #include <set>
-using std::set;
 #include <utility>
-using std::pair;
 
 #include <unordered_map>
-using std::unordered_map;
 
 #ifdef HAVE_SPARSEHASH
 #include <sparsehash/sparse_hash_map>
@@ -64,8 +54,6 @@ using google::sparse_hash_map;
 #include "FastaI.h"     // Reading input files in FASTA format
 #include "FastqI.h"     // Reading input files in FASTQ format
 #include "DNANSeq.h"
-
-const int barcode_size = 5;
 
 #ifdef HAVE_SPARSEHASH
 typedef sparse_hash_map<const char *, vector<Seq *>, hash_charptr, eqstr> HashMap;
@@ -90,6 +78,5 @@ int  write_sam(map<int, MergedStack *> &, map<int, PStack *> &);
 //
 int  dump_stacks(map<int, PStack *> &);
 int  dump_merged_stacks(map<int, MergedStack *> &);
-
 
 #endif // __ESTACKS_H__

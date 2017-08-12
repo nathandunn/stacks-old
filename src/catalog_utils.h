@@ -24,9 +24,7 @@
 #include <vector>
 #include <string>
 #include <map>
-using std::map;
 #include <set>
-using std::set;
 
 #include "constants.h"
 #include "stacks.h"
@@ -37,7 +35,7 @@ using std::set;
 
 // find_catalogs()
 // Looks for catalog files in the given directory and returns the associated ID(s).
-std::vector<int> find_catalogs(const std::string& dir_path);
+vector<int> find_catalogs(const string& dir_path);
 
 int check_whitelist_integrity(map<int, CSLocus *> &, map<int, set<int> > &);
 int reduce_catalog(map<int, CSLocus *> &, set<int> &, set<int> &);
@@ -59,7 +57,7 @@ int implement_random_snp_whitelist(map<int, CSLocus *> &, PopSum<CSLocus> *, map
  *       VCF format requires these field), and strand "strand_plus".
  * [snps] Use the ref+alt alleles.
  *     [col] Always set to 0 (first nucleotide in the consensus).
- *     [type] "snp_type_het" if the alt field is not empty, otherwise "snp_type_hom".
+ *     [type] always 'unk', on the premise that it is not used by populations.
  *     [lratio] Always set to 0.
  *     [rank_1] The ref allele.
  *     [rank_2], [rank_3], [rank_4] The alt allele(s).
@@ -88,5 +86,32 @@ int implement_random_snp_whitelist(map<int, CSLocus *> &, PopSum<CSLocus> *, map
  * comp_type, annotation, uncor_marker, hap_cnts, f, trans_gcnt, chisq.
  */
 map<int, CSLocus*> create_catalog(const vector<VcfRecord>& vcf_records);
+
+/*
+ * Creates a CSLocus based on a consensus sequence and a set of VCF records for
+ * the locus. The fasta identifier and all the VCF records should have the same
+ * locus ID.
+ *
+ * We observe the following rules to create the locus (@ when the value is obvious) :
+ * [sample_id] (batch number) Always set to 0.
+ * [id] @
+ * [con] the fasta sequence
+ * [len] @
+ * [loc] for denovo, this should be {"", 0, strand_plus} TODO ref-based.
+ * [snps] polymorphic positions taken from the VCF; i.e. VCF records where
+ *         ALT is "." are ignored.
+ *     [col] @
+ *     [type] always "snp_type_het"
+ *     [lratio] always 0 (this isn't used by populations).
+ *     [rank_1, 2, 3, 4] @
+ * [alleles] We fill the haplotype frequency map by reconstituting each sample's
+ *         pair of haplotypes from the phased SNP genotypes (in the VCF).
+ * [strings] @
+ * [depth] is always 0.
+ * [lnl] is always 0.
+ *
+ * Other members need not be set, c.f. `create_catalog(vector<VcfRecord>&)`.
+ */
+CSLocus* new_cslocus(const Seq& consensus, const vector<VcfRecord>& records, int id);
 
 #endif // __CATALOG_UTILS_H__

@@ -26,34 +26,21 @@
 #endif
 #include <getopt.h> // Process command-line options
 #include <dirent.h> // Open/Read contents of a directory
-#include <math.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
 #include <utility>
-using std::pair;
-using std::make_pair;
 #include <string>
-using std::string;
 #include <iostream>
 #include <fstream>
-using std::ifstream;
-using std::ofstream;
-using std::cin;
-using std::cout;
-using std::cerr;
-using std::endl;
 #include <iomanip> // std::setprecision
 #include <sstream>
-using std::stringstream;
 #include <vector>
-using std::vector;
 #include <queue>
 using std::queue;
 #include <map>
-using std::map;
 #include <set>
-using std::set;
 
 #include "constants.h"
 #include "stacks.h"

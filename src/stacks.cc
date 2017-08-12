@@ -27,6 +27,9 @@
 //
 // $Id$
 //
+#include <cassert>
+#include "constants.h"
+
 #include "stacks.h"
 
 Rem::Rem() {
@@ -41,7 +44,7 @@ Rem::Rem(int id, uint seq_id, DNANSeq *seq) {
 
     this->map.push_back(seq_id);
 
-    this->seq = new DNANSeq(seq->size(), seq->s);
+    this->seq = new DNANSeq(*seq);
 }
 
 int Rem::add_id(uint id) {
@@ -54,7 +57,7 @@ int Rem::add_seq(const DNANSeq *seq) {
     if (this->seq != NULL)
         delete this->seq;
 
-    this->seq = new DNANSeq(seq->size(), seq->s);
+    this->seq = new DNANSeq(*seq);
 
     return 0;
 }
@@ -80,8 +83,7 @@ int PStack::add_seq(const char *seq) {
     if (this->seq != NULL)
         delete this->seq;
 
-    this->len = strlen(seq);
-    this->seq = new DNANSeq(this->len, seq);
+    this->seq = new DNANSeq(strlen(seq), seq);
 
     return 0;
 }
@@ -90,9 +92,35 @@ int PStack::add_seq(const DNANSeq *seq) {
     if (this->seq != NULL)
         delete this->seq;
 
-    this->seq = new DNANSeq(seq->size(), seq->s);
+    this->seq = new DNANSeq(*seq);
 
     return 0;
+}
+
+void PStack::extend(const PhyLoc& phyloc, int length) {
+    if (this->seq == NULL)
+        return;
+
+    assert(strcmp(phyloc.chr(), loc.chr()) == 0
+           && phyloc.strand == loc.strand);
+
+    if (loc.strand == strand_plus) {
+        assert(loc.bp >= phyloc.bp
+               && loc.bp + seq->size() <= phyloc.bp + length);
+        seq->extend(
+                loc.bp - phyloc.bp,
+                phyloc.bp + length - loc.bp - seq->size());
+    } else {
+        const int this_last = int(loc.bp) - int(seq->size()) + 1;
+        const int target_last = int(phyloc.bp) - int(length) + 1;
+        assert(loc.bp <= phyloc.bp
+               && this_last >= target_last);
+        seq->extend(
+                phyloc.bp - loc.bp,
+                this_last - target_last);
+    }
+
+    loc = phyloc;
 }
 
 int Stack::add_id(uint id) {
@@ -114,7 +142,26 @@ int Stack::add_seq(const DNANSeq *seq) {
     if (this->seq != NULL)
         delete this->seq;
 
-    this->seq = new DNANSeq(seq->size(), seq->s);
+    this->seq = new DNANSeq(*seq);
 
     return 0;
+}
+
+ostream& operator<<(ostream& os, const GtLiks& liks) {
+    bool first = true;
+    for (auto nt2=Nt2::all.begin(); nt2!=Nt2::all.end(); ++nt2) {
+        for (auto nt1=Nt2::all.begin(); ; ++nt1) {
+            if (first)
+                first = false;
+            else
+                os << ", ";
+            if (liks.has_lik(*nt1, *nt2))
+                cout << *nt1 << *nt2 << ":" << liks.at(*nt2, *nt1);
+            else
+                cout << char(std::tolower(char(*nt1))) << char(std::tolower(char(*nt2)));
+            if (nt1==nt2)
+                break;
+        }
+    }
+    return os;
 }

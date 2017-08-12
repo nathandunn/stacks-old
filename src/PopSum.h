@@ -21,21 +21,15 @@
 #ifndef __POPSUM_H__
 #define __POPSUM_H__
 
-#include <string.h>
+#include <cstring>
 #include <string>
-using std::string;
 #include <vector>
-using std::vector;
 #include <map>
-using std::map;
 #include <set>
-using std::set;
 #include <algorithm>
 #include <utility>
-using std::pair;
-using std::make_pair;
 #include <cstdint>
-#include <math.h>
+#include <cmath>
 
 #include "stacks.h"
 #include "locus.h"
@@ -338,7 +332,7 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
                << "#\n"
                << "# Level\tAction\tLocus ID\tChr\tBP\tColumn\tPopID\n#\n";
 
-    const MetaPopInfo::Pop& pop = metapopinfo.pops().at(pop_index);
+    const Pop& pop = metapopinfo.pops().at(pop_index);
 
     for (int i = 0; i < loci_cnt(); i++) {
         locus_id = rev_locus_index(i);
@@ -384,7 +378,7 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
                     log_fh << "within_population\t"
                            << "incompatible_locus\t"
                            << loc->id << "\t"
-                           << loc->loc.chr << "\t"
+                           << loc->loc.chr() << "\t"
                            << loc->sort_bp(loc->snps[k]->col) +1 << "\t"
                            << loc->snps[k]->col << "\t"
                            << pop.name << "\n";

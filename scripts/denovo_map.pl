@@ -31,6 +31,7 @@ use strict;
 use POSIX;
 use File::Temp qw/ mktemp /;
 use File::Spec;
+use File::Which;
 use constant stacks_version => "_VERSION_";
 
 use constant true  => 1;
@@ -56,12 +57,14 @@ my $sample_id    = 1;
 my $desc         = ""; # Database description of this dataset
 my $date         = ""; # Date relevent to this data, formatted for SQL: 2009-05-31
 my $gzip         = false;
+my $v1           = false;
+my $paired       = false;
 
 my @parents;
 my @progeny;
 my @samples;
 
-my (@_ustacks, @_cstacks, @_sstacks, @_genotypes, @_populations);
+my (@_ustacks, @_cstacks, @_sstacks, @_tsv2bam, @_samtools_merge, @_rystacks, @_genotypes, @_populations);
 
 my $cmd_str = $0 . " " . join(" ", @ARGV);
 
@@ -72,12 +75,10 @@ my $cnf = (-e $ENV{"HOME"} . "/.my.cnf") ? $ENV{"HOME"} . "/.my.cnf" : $mysql_co
 #
 # Check for the existence of the necessary pipeline programs
 #
-die ("Unable to find '" . $exe_path . "ustacks'.\n")          if (!-e $exe_path . "ustacks"          || !-x $exe_path . "ustacks");
-die ("Unable to find '" . $exe_path . "cstacks'.\n")          if (!-e $exe_path . "cstacks"          || !-x $exe_path . "cstacks");
-die ("Unable to find '" . $exe_path . "sstacks'.\n")          if (!-e $exe_path . "sstacks"          || !-x $exe_path . "sstacks");
-die ("Unable to find '" . $exe_path . "genotypes'.\n")        if (!-e $exe_path . "genotypes"        || !-x $exe_path . "genotypes");
-die ("Unable to find '" . $exe_path . "populations'.\n")      if (!-e $exe_path . "populations"      || !-x $exe_path . "populations");
-die ("Unable to find '" . $exe_path . "index_radtags.pl'.\n") if (!-e $exe_path . "index_radtags.pl" || !-x $exe_path . "index_radtags.pl");
+foreach my $prog ("ustacks", "cstacks", "sstacks", "tsv2bam", "rystacks", "genotypes", "populations", "index_radtags.pl") {
+    die "Unable to find '" . $exe_path . $prog . "'.\n" if (!-e $exe_path . $prog || !-x $exe_path . $prog);
+}
+die("Unable to find 'samtools'.\n") if (! which "samtools");
 
 my ($log, $log_fh, $sample);
 
@@ -122,10 +123,10 @@ sub execute_stacks {
     my ($log_fh, $sample_id, $parents, $progeny, $samples, $sample_ids) = @_;
     
     my (@results, @depths_of_cov);
-    my ($pop_cnt, $sample, $num_files, $i, $cmd, $pipe_fh, $path, $cat_file);
+    my ($pop_cnt, $sample, $num_files, $i, $cmd, $pipe_fh, $cat_file);
 
-    my $minc  = $min_cov  > 0 ? "-m $min_cov"  : "";
-    my $minrc = $min_rcov > 0 ? "-m $min_rcov" : $minc;
+    my $minc  = $min_cov  > 0 ? " -m $min_cov"  : "";
+    my $minrc = $min_rcov > 0 ? " -m $min_rcov" : $minc;
 
     $i         = 1;
     $num_files = scalar(@{$parents}) + scalar(@{$progeny}) + scalar(@{$samples});
@@ -143,15 +144,22 @@ sub execute_stacks {
             $sample_id = $sample_ids->{$sample->{'file'}};
         }
 
-        $path = $sample->{'path'} . $sample->{'file'} . "." . $sample->{'suffix'};
-        
+        $cmd = $exe_path . "ustacks -t $sample->{'fmt'} -f $sample->{'path'} -o $out_path -i $sample_id";
         if ($sample->{'type'} eq "sample") {
-            $cmd = $exe_path . "ustacks -t $sample->{'fmt'} -f $path -o $out_path -i $sample_id $minc "  . join(" ", @_ustacks) . " 2>&1";
+            $cmd .= $minc;
         } elsif ($sample->{'type'} eq "parent") {
-            $cmd = $exe_path . "ustacks -t $sample->{'fmt'} -f $path -o $out_path -i $sample_id $minc "  . join(" ", @_ustacks) . " 2>&1";
+            $cmd .= $minc;
         } elsif ($sample->{'type'} eq "progeny") {
-            $cmd = $exe_path . "ustacks -t $sample->{'fmt'} -f $path -o $out_path -i $sample_id $minrc " . join(" ", @_ustacks) . " 2>&1";
+            $cmd = $minrc;
         }
+        if ($sample->{'path'} !~ /$sample->{'file'}.$sample->{'suffix'}$/) {
+            # Guessing the sample name from the input path won't work.
+            $cmd .= " --name " . $sample->{'file'};
+        }
+        foreach (@_ustacks) {
+            $cmd .= " " . $_;
+        }
+        $cmd .= " 2>&1";
         print STDERR  "  $cmd\n";
         print $log_fh "$cmd\n";
 
@@ -168,14 +176,8 @@ sub execute_stacks {
             #
             # Pull the depth of coverage from ustacks.
             #
-            my $depth;
-            if ($gapped_alns) {
-                my @lines = grep(/^After gapped alignments, coverage depth Mean/, @results);
-                ($depth)  = ($lines[0] =~ /^After gapped alignments, coverage depth Mean: (\d+\.?\d*); Std Dev: .+; Max: .+$/);
-            } else {
-                my @lines = grep(/^After remainders merged, coverage depth Mean/, @results);
-                ($depth)  = ($lines[0] =~ /^After remainders merged, coverage depth Mean: (\d+\.?\d*); Std Dev: .+; Max: .+$/);
-            }
+            my $depthline = (grep(/^Final coverage/, @results))[0];
+            my ($depth) = ($depthline =~ /mean=([^;]+)/);
             push(@depths_of_cov, [$sample->{'file'}, $depth]);
         }
 
@@ -236,6 +238,87 @@ sub execute_stacks {
         check_return_value($?, $log_fh);
     }
 
+    if (!$v1) {
+        #
+        # Sort the reads according by catalog locus / run tsv2bam.
+        #
+        print STDERR "Sorting reads by RAD locus...\n";
+        print $log_fh "\ntsv2bam\n==========\n";
+
+        $cmd = $exe_path . "tsv2bam -P $out_path";
+        if ($popmap_path) {
+            $cmd .= " -M $popmap_path";
+        } else {
+            foreach $sample (@parents, @progeny, @samples) {
+                $cmd .= " -s $sample->{'file'}";
+            }
+        }
+        if ($paired) {
+            $cmd .= " -R $sample_path";
+        }
+        foreach (@_tsv2bam) {
+            $cmd .= " " . $_;
+        }
+        $cmd .= " 2>&1";
+        print STDERR  "  $cmd\n";
+        print $log_fh "$cmd\n\n";
+    	if (!$dry_run) {
+            open($pipe_fh, "$cmd |");
+            while (<$pipe_fh>) {
+                print $log_fh $_;
+            }
+            close($pipe_fh);
+            check_return_value($?, $log_fh);
+    	}
+        
+        #
+        # Merge the matches.bam files / run samtools merge.
+        #    
+        print $log_fh "\nsamtools merge\n----------\n";
+
+        $cmd = "samtools merge $out_path/batch_$batch_id.catalog.bam";
+        foreach $sample (@parents, @progeny, @samples) {
+            $cmd .= " $out_path/$sample->{'file'}.matches.bam";
+        }
+        foreach (@_samtools_merge) {
+            $cmd .= " " . $_;
+        }
+        $cmd .= " 2>&1";
+        print STDERR  "  $cmd\n";
+        print $log_fh "$cmd\n\n";
+    	if (!$dry_run) {
+            open($pipe_fh, "$cmd |");
+            while (<$pipe_fh>) {
+                print $log_fh $_;
+            }
+            close($pipe_fh);
+            check_return_value($?, $log_fh);
+    	}
+    	
+    	#
+    	# Call genotypes / run rystacks.
+    	# TODO: Update after renaming rystacks.
+    	#
+        print STDERR "Calling variants, genotypes and haplotypes...\n";
+        print $log_fh "\nrystacks\n==========\n";
+
+    	$cmd = $exe_path . "rystacks -P $out_path";
+    	foreach (@_rystacks) {
+    	    $cmd .= " " . $_;
+    	}
+        $cmd .= " 2>&1";
+        print STDERR  "  $cmd\n";
+        print $log_fh "$cmd\n\n";
+    	if (!$dry_run) {
+            open($pipe_fh, "$cmd |");
+            while (<$pipe_fh>) {
+                print $log_fh $_;
+            }
+            close($pipe_fh);
+            check_return_value($?, $log_fh);
+    	}
+    }
+    
     if ($data_type eq "map") {
         #
         # Generate a set of observed haplotypes and a set of markers and generic genotypes
@@ -243,8 +326,8 @@ sub execute_stacks {
         printf(STDERR "Generating genotypes...\n");
         print $log_fh "\ngenotypes\n==========\n";
 
-        $cmd = $exe_path . "genotypes -b $batch_id -P $out_path -r 1 -c -s " . join(" ", @_genotypes) . " 2>&1";
-        print STDERR  "  $cmd\n";
+        $cmd = $exe_path . "genotypes" . ($v1 ? " --v1" : "") . " -b $batch_id -P $out_path -r 1 -c -s " . join(" ", @_genotypes) . " 2>&1";
+        print STDERR  "$cmd\n";
         print $log_fh "$cmd\n";
 
         if ($dry_run == 0) {
@@ -260,7 +343,7 @@ sub execute_stacks {
         printf(STDERR "Calculating population-level summary statistics\n");
         print $log_fh "\npopulations\n==========\n";
 
-        $cmd = $exe_path . "populations -b $batch_id -P $out_path -s " . join(" ", @_populations) . " 2>&1";
+        $cmd = $exe_path . "populations" . ($v1 ? " --v1" : "") . " -b $batch_id -P $out_path -s " . join(" ", @_populations) . " 2>&1";
         print STDERR  "  $cmd\n";
         print $log_fh "$cmd\n";
 
@@ -325,8 +408,6 @@ sub parse_population_map {
 sub initialize_samples {
     my ($parents, $progeny, $samples, $sample_list, $pop_ids, $grp_ids) = @_;
 
-    my ($local_gzip, $file, $prefix, $suffix, $path, $found, $i);
-
     if (scalar(@{$sample_list}) > 0 && scalar(@{$samples}) == 0) {
         my @suffixes = ("fq",    "fastq", "fq.gz",   "fastq.gz", "fa",    "fasta", "fa.gz",   "fasta.gz");
         my @fmts     = ("fastq", "fastq", "gzfastq", "gzfastq",  "fasta", "fasta", "gzfasta", "gzfasta");
@@ -334,29 +415,50 @@ sub initialize_samples {
         #
         # If a population map was specified and no samples were provided on the command line.
         #
+        my ($i, $extension, $extension_pe);
+        my $first = true;
         foreach $sample (@{$sample_list}) {
-            $found = false;
-            
-            for ($i = 0; $i < scalar(@suffixes); $i++) {
-                $path = $sample_path . $sample . "." . $suffixes[$i];
-                if (-e $path) {
-
-                    if ($i == 2 || $i == 3 || $i == 6 || $i == 7) {
-                        $gzip = true;
+            if ($first) {
+                $first = false;
+                my $found = false;
+                for ($i = 0; $i < scalar(@suffixes); $i++) {
+                    if (!$paired && -e $sample_path . $sample . "." . $suffixes[$i]) {
+                        $found = true;
+                        $extension = "." . $suffixes[$i];
+                        last;
+                    } elsif (-e $sample_path . $sample . ".1." . $suffixes[$i]) {
+                        $found = true;
+                        $extension = ".1." . $suffixes[$i];
+                        $extension_pe = ".2." . $suffixes[$i];
+                        last;
                     }
-
-                    push(@{$samples}, {'path'   => $sample_path,
-                                       'file'   => $sample,
-                                       'suffix' => $suffixes[$i],
-                                       'type'   => "sample",
-                                       'fmt'    => $fmts[$i]});
-                    $found = true;
-                    last;
+                }
+                if (!$found) {
+                    print STDERR "Error: Failed to find the first reads file '$sample_path$sample(.1).(fq|fastq|fa|fasta)(.gz)'.\n";
+                    exit 1;
+                }
+                if ($i == 2 || $i == 3 || $i == 6 || $i == 7) {
+                    $gzip = true;
                 }
             }
-
-            if ($found == false) {
-                die("Unable to find sample '$sample' in directory '$sample_path' as specified in the population map, '$popmap_path'.\n");
+            
+            my $path = $sample_path . $sample . $extension;
+            if (! -e $path) {
+                print STDERR "Error: Failed to open '$path'.\n";
+                exit 1;
+            }
+            push(@{$samples}, {'path'   => $path,
+                               'file'   => $sample,
+                               'suffix' => $suffixes[$i],
+                               'type'   => "sample",
+                               'fmt'    => $fmts[$i]});
+            if ($paired) {
+                my $path_pe = $sample_path . $sample . $extension_pe;
+                if (! -e $path_pe) {
+                    print STDERR "Error: Failed to open '$path'.\n";
+                    exit 1;
+                }
+                $samples[-1]->{'path_pe'} = $path_pe;
             }
         }
 
@@ -364,6 +466,7 @@ sub initialize_samples {
         #
         # Process any samples that were specified on the command line.
         #
+        my ($prefix, $suffix, $dir, $file, $local_gzip);
         foreach $sample (@{$parents}, @{$progeny}, @{$samples}) {
             $local_gzip = false;
 
@@ -379,13 +482,11 @@ sub initialize_samples {
             $sample->{'suffix'} .= ".gz" if ($local_gzip == true);
 
             if ($prefix =~ /^.*\/.+$/) {
-                ($path, $file) = ($prefix =~ /^(.*\/)(.+)$/);
+                ($dir, $file) = ($prefix =~ /^(.*\/)(.+)$/);
             } else {
+                $dir = "";
                 $file = $prefix;
-                $path = "";
             }
-
-            $sample->{'path'} = $path;
             $sample->{'file'} = $file;
             
             if ($local_gzip == true) {
@@ -406,10 +507,8 @@ sub initialize_samples {
                 }
             }
 
-            $path = $sample->{'path'} . $sample->{'file'} . "." . $sample->{'suffix'};
-
-            if (!-e $path) {
-                die("Unable to locate sample file '$path'\n");
+            if ($sample->{'path'} != $dir . $sample->{'file'} . "." . $sample->{'suffix'}) {
+                die("This should never happen.");
             }
         }
 
@@ -782,7 +881,7 @@ sub parse_command_line {
 
     while (@ARGV) {
 	$_ = shift @ARGV;
-        if    ($_ =~ /^-v$/) { version(); exit(); }
+        if    ($_ =~ /^-v$/) { version(); exit 1; }
 	elsif ($_ =~ /^-h$/) { usage(); }
 	elsif ($_ =~ /^-p$/) { push(@parents, { 'path' => shift @ARGV }); }
 	elsif ($_ =~ /^-r$/) { push(@progeny, { 'path' => shift @ARGV }); }
@@ -798,10 +897,12 @@ sub parse_command_line {
 	elsif ($_ =~ /^-B$/) { $db        = shift @ARGV; }
 	elsif ($_ =~ /^-m$/) { $min_cov   = shift @ARGV; }
 	elsif ($_ =~ /^-P$/) { $min_rcov  = shift @ARGV; }
+	elsif ($_ =~ /^--v1$/) { $v1  = true; }
+	elsif ($_ =~ /^--paired-ends$/) { $paired  = true; }
         elsif ($_ =~ /^--samples$/) {
             $sample_path = shift @ARGV;
             
-        } elsif ($_ =~ /^-O$/) { 
+        } elsif ($_ =~ /^-O$/ || $_ =~ /^--popmap$/) { 
 	    $popmap_path = shift @ARGV;
 	    push(@_populations, "-M " . $popmap_path); 
 
@@ -879,6 +980,15 @@ sub parse_command_line {
 	    } elsif ($prog eq "sstacks") {
 		push(@_sstacks, $opt); 
 
+	    } elsif ($prog eq "tsv2bam") {
+		push(@_tsv2bam, $opt); 
+
+	    } elsif ($prog eq "samtools_merge") {
+		push(@_samtools_merge, $opt); 
+
+	    } elsif ($prog eq "rystacks") {
+		push(@_rystacks, $opt); 
+
 	    } elsif ($prog eq "genotypes") {
 		push(@_genotypes, $opt); 
 
@@ -922,6 +1032,11 @@ sub parse_command_line {
 	usage();
     }
 
+    if ($v1 && $paired) {
+        print STDERR "Error: Option --paired and --v1 are incompatible.\n";
+        usage();
+    }
+
     if (length($sample_path) > 0) {
         $sample_path .= "/" if (substr($sample_path, -1) ne "/");
     }
@@ -941,52 +1056,50 @@ sub usage {
     version();
 
     print STDERR <<EOQ; 
-denovo_map.pl -p path -r path [-s path] -o path [-t] [-m min_cov] [-M mismatches] [-n mismatches] [-T num_threads] [-A type] [-O popmap] [-B db -b batch_id -D "desc"] [-S -i num] [-e path] [-d] [-h]
-    b: batch ID representing this dataset (an integer, e.g. 1, 2, 3).
-    o: path to write pipeline output files.
-    O: if analyzing one or more populations, specify a pOpulation map.
-    A: if processing a genetic map, specify the cross type, 'CP', 'F2', 'BC1', 'DH', or 'GEN'.
-    T: specify the number of threads to execute.
-    e: executable path, location of pipeline programs.
-    d: perform a dry run. Do not actually execute any programs, just print what would be executed.
-    h: display this help message.
+denovo_map.pl --samples dir --popmap path -o dir (assembly options) -b batch_id (database options) [-X prog:"opts" ...]
+denovo_map.pl -s path [-s path ...] -o dir (assembly options) -b batch_id (database options) [-X prog:"opts" ...]
+denovo_map.pl -p path -r path -o path -A type (assembly options) -b batch_id (database options) [-X prog:"opts" ...]
 
-  Specify each sample separately:
-      p: path to a FASTQ/FASTA file containing one set of parent sequences from a mapping cross.
-      r: path to a FASTQ/FASTA file containing one set of progeny sequences from a mapping cross.
-      s: path to a FASTQ/FASTA file containing an individual sample from a population.
-  Specify a path to samples and provide a population map:
-      --samples <path>: specify a path to the directory of samples (samples will be read from population map).
+  Input files:
+    --samples: path to the directory containing the samples reads files.
+    --popmap: path to a population map file (format is "<name> TAB <pop>", one sample per line).
+  or
+    s: path to a file containing the reads of one sample.
+  or
+    p: path to a file containing the reads of one parent, in a mapping cross.
+    r: path to a file containing the reads of one progeny, in a mapping cross.
+
+  General options:
+    o: path to an output directory.
+    b: a numeric database ID for this run (e.g. 1).
+    A: for a mapping cross, specify the type; one of 'CP', 'F2', 'BC1', 'DH', or 'GEN'.
+    X: additional options for specific pipeline components, e.g. -X "populations: -p 3 -r 0.50".
+    T: the number of threads/CPUs to use (default: 1).
+    d: Dry run. Do not actually execute anything, just print the commands that would be executed.
 
   Stack assembly options:
-    m: specify a minimum number of identical, raw reads required to create a stack.
-    M: specify the number of mismatches allowed between loci when processing a single individual (default 2).
-    n: specify the number of mismatches allowed between loci when building the catalog (default 1).
-    --gapped: perform gapped assemblies in ustacks, cstacks, and sstacks (default: off).
+    M: number of mismatches allowed between stacks within individuals (for ustacks).
+    n: number of mismatches allowed between stacks between individuals (for cstacks).
+    --gapped: perform gapped comparisons (for ustacks, cstacks, sstacks; default: off).
 
-    Advanced (rarely used) options:
-      P: specify a minimum number of identical, raw reads required to create a stack in 'progeny' individuals.
-      N: specify the number of mismatches allowed when aligning secondary reads to primary stacks (default M+2).
-      t: remove, or break up, highly repetitive RAD-Tags in the ustacks program.
-      H: disable calling haplotypes from secondary reads.
+  SNP model options:
+    --alpha: significance level at which to call genotypes (for ustacks; default: 0.05).
+    For the bounded model:
+      --bound_low <num>: lower bound for epsilon, the error rate, between 0 and 1.0 (default 0.0).
+      --bound_high <num>: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1.0).
+
+  Paired-end options:
+    --paired-ends: after assembling RAD loci, assemble mini-contigs with paired-end reads.
 
   Database options:
-    B: specify a database to load data into.
+    S: disable database interaction.
+    B: specify an SQL database to load data into.
     D: a description of this batch to be stored in the database.
-    S: disable recording SQL data in the database.
     i: starting sample_id, this is determined automatically if database interaction is enabled.
     --create_db: create the database specified by '-B' and populate the tables.
     --overw_db: delete the database before creating a new copy of it (turns on --create_db).
 
-  SNP Model Options (these options are passed on to ustacks):
-    --bound_low <num>: lower bound for epsilon, the error rate, between 0 and 1.0 (default 0).
-    --bound_high <num>: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1).
-    --alpha <num>: chi square significance level required to call a heterozygote or homozygote, either 0.1, 0.05 (default), 0.01, or 0.001.
-
-  Arbitrary command line options:
-    -X "program:option": pass a command line option to one of the pipeline components, e.g.'-X "ustacks:--max_locus_stacks 4"'.
-
 EOQ
 
-    exit(0);
+    exit 1;
 }

@@ -29,570 +29,238 @@
 //
 #include "models.h"
 
-snp_type
-call_multinomial_snp(MergedStack *tag, int col, map<char, int> &n, bool record_snps)
-{
-    vector<pair<char, int> > nuc;
-    map<char, int>::iterator i;
+using namespace std;
 
-    int total = 0;
-    for (i = n.begin(); i != n.end(); i++) {
-        if (i->first != 'N') {
-            total += i->second;
-            nuc.push_back(make_pair(i->first, i->second));
+vector<pair<char, int>> sort_acgt(const map<char, int>&);
+void record_snp(SNP& snp, snp_type type, uint col, double l_ratio, const vector<pair<char, int>>& nuc);
+void record_dummy_snp(SNP& snp, uint col);
+
+int    barcode_size     = 5;
+double barcode_err_freq = 0.0;
+
+double heterozygote_limit = -qchisq(0.05,1);
+double homozygote_limit   = qchisq(0.05,1);
+double bound_low          = 0.0;
+double bound_high         = 1.0;
+double p_freq             = 0.5;
+
+const map<string,modelt> model_strings = {
+    {"snp", ::snp},
+    {"bounded", ::bounded},
+    {"fixed", ::fixed},
+    {"marukihigh", ::marukihigh},
+    {"marukilow", ::marukilow},
+};
+
+double qchisq(double alpha, size_t df) {
+    //
+    // Quantiles (1-alpha) of the Chi2 distribution, as given by
+    //$ alphas="1e-1,5e-2,1e-2,5e-3,1e-3,5e-4,1e-4,5e-5,1e-5,5e-6,1e-6"
+    //$ df=1
+    //$ R -e "for(a in c($alphas)) {q=qchisq(1-a, $df); cat(paste('{',a,',',q,'}, ',sep=''));}"
+    //
+    // The value for a=0.05,df=1 is 3.84 for backward compatiblity (instead of
+    // 3.84145882069412).
+    //
+    static const vector<map<double,double>> table = {
+        { //df=1
+            {0.1,2.70554345409542}, {0.05,3.84}, {0.01,6.63489660102121},
+            {0.005,7.87943857662241}, {0.001,10.8275661706627}, {0.0005,12.1156651463974},
+            {0.0001,15.1367052266236}, {0.00005,16.4481102100082}, {0.00001,19.5114209646663},
+            {0.000005,20.8372870225104}, {0.000001,23.9281269768795}
+        },{ //df=2
+            {0.1,4.60517018598809}, {0.05,5.99146454710798}, {0.01,9.21034037197618},
+            {0.005,10.5966347330961}, {0.001,13.8155105579643}, {0.0005,15.2018049190844},
+            {0.0001,18.4206807439526}, {0.00005,19.8069751050725}, {0.00001,23.0258509299496},
+            {0.000005,24.4121452910472}, {0.000001,27.631021115871}
         }
+    };
+
+    assert(df > 0 && df <= table.size());
+    try {
+        return table[df-1].at(alpha);
+    } catch (std::out_of_range&) {
+        cerr << "Error: Unsupported alpha value '" << alpha << "'; pick one of 0.05, 0.01, 0.005, 0.001...\n";
+        throw std::invalid_argument("qchisq");
     }
-
-    sort(nuc.begin(), nuc.end(), compare_pair);
-
-    //
-    // If this column was simply uncalled Ns, return.
-    //
-    if (nuc[0].second == 0) {
-        if (record_snps) {
-            SNP *snp = new SNP;
-            snp->type   = snp_type_unk;
-            snp->col    = col;
-            snp->lratio = 0;
-            snp->rank_1 = 'N';
-            snp->rank_2 = '-';
-
-            tag->snps.push_back(snp);
-        }
-        return snp_type_unk;
-    }
-
-    //
-    // Method of Paul Hohenlohe <hohenlohe@uidaho.edu>, personal communication.
-    //
-    // For a diploid individual, there are ten possible genotypes
-    // (four homozygous and six heterozygous genotypes).  We calculate
-    // the likelihood of each possible genotype by using a multinomial
-    // sampling distribution, which gives the probability of observing
-    // a set of read counts (n1,n2,n3,n4) given a particular genotype.
-    //
-    double nuc_1   = nuc[0].second;
-    double nuc_2   = nuc[1].second;
-    double nuc_3   = nuc[2].second;
-    double nuc_4   = nuc[3].second;
-    double l_ratio = 0;
-
-    l_ratio = (nuc_1 * log(nuc_1 / total));
-
-    if (total - nuc_1 > 0)
-        l_ratio += ((total - nuc_1) * log((total - nuc_1) / (3 * total)));
-
-    if (nuc_1 + nuc_2 > 0)
-        l_ratio -= ((nuc_1 + nuc_2) * log((nuc_1 + nuc_2) / (2 * total)));
-
-    if (nuc_3 + nuc_4 > 0)
-        l_ratio -= ((nuc_3 + nuc_4) * log((nuc_3 + nuc_4) / (2 * total)));
-
-    l_ratio *= 2;
-
-    snp_type res;
-
-    if (l_ratio <= heterozygote_limit) {
-        //
-        // This locus is a heterozygote.
-        //
-        if (record_snps) {
-            SNP *snp = new SNP;
-            snp->type   = snp_type_het;
-            snp->col    = col;
-            snp->lratio = l_ratio;
-            snp->rank_1 = nuc[0].first;
-            snp->rank_2 = nuc[1].first;
-
-            tag->snps.push_back(snp);
-        }
-        res = snp_type_het;
-
-    } else if (l_ratio >= homozygote_limit) {
-        //
-        // This locus is a homozygote.
-        //
-        if (record_snps) {
-            SNP *snp = new SNP;
-            snp->type   = snp_type_hom;
-            snp->col    = col;
-            snp->lratio = l_ratio;
-            snp->rank_1 = nuc[0].first;
-            snp->rank_2 = '-';
-
-            tag->snps.push_back(snp);
-        }
-        res = snp_type_hom;
-
-    } else {
-        //
-        // Unknown whether this is a heterozygote or homozygote.
-        //
-        if (record_snps) {
-            SNP *snp = new SNP;
-            snp->type   = snp_type_unk;
-            snp->col    = col;
-            snp->lratio = l_ratio;
-            snp->rank_1 = nuc[0].first;
-            snp->rank_2 = nuc[1].second > 0 ? nuc[1].first : '-';
-
-            tag->snps.push_back(snp);
-        }
-
-        res = snp_type_unk;
-    }
-
-    return res;
 }
 
-snp_type
-call_multinomial_snp(Locus *tag, int col, map<char, int> &n)
-{
-    vector<pair<char, int> > nuc;
-    map<char, int>::iterator i;
-
-    int total = 0;
-    for (i = n.begin(); i != n.end(); i++) {
-        if (i->first != 'N') {
-            total += i->second;
-            nuc.push_back(make_pair(i->first, i->second));
-        }
+modelt parse_model_type(const string& arg) {
+    try {
+        return model_strings.at(arg);
+    } catch (std::out_of_range&) {
+        cerr << "Error: Unknown model '" << arg << "'.\n";
+        throw std::invalid_argument("set_model_type");
     }
-
-    sort(nuc.begin(), nuc.end(), compare_pair);
-
-    //
-    // If this column was simply uncalled Ns, return.
-    //
-    if (nuc[0].second == 0) {
-        tag->snps[col]->type   = snp_type_unk;
-        tag->snps[col]->col    = col;
-        tag->snps[col]->lratio = 0;
-        tag->snps[col]->rank_1 = 'N';
-        tag->snps[col]->rank_2 = '-';
-
-        return snp_type_unk;
-    }
-
-    //
-    // Method of Paul Hohenlohe <hohenlohe@uidaho.edu>, personal communication.
-    //
-    // For a diploid individual, there are ten possible genotypes
-    // (four homozygous and six heterozygous genotypes).  We calculate
-    // the likelihood of each possible genotype by using a multinomial
-    // sampling distribution, which gives the probability of observing
-    // a set of read counts (n1,n2,n3,n4) given a particular genotype.
-    //
-    double nuc_1   = nuc[0].second;
-    double nuc_2   = nuc[1].second;
-    double nuc_3   = nuc[2].second;
-    double nuc_4   = nuc[3].second;
-    double l_ratio = 0;
-
-    l_ratio = (nuc_1 * log(nuc_1 / total));
-
-    if (total - nuc_1 > 0)
-        l_ratio += ((total - nuc_1) * log((total - nuc_1) / (3 * total)));
-
-    if (nuc_1 + nuc_2 > 0)
-        l_ratio -= ((nuc_1 + nuc_2) * log((nuc_1 + nuc_2) / (2 * total)));
-
-    if (nuc_3 + nuc_4 > 0)
-        l_ratio -= ((nuc_3 + nuc_4) * log((nuc_3 + nuc_4) / (2 * total)));
-
-    l_ratio *= 2;
-
-    snp_type res;
-
-    if (l_ratio <= heterozygote_limit) {
-        //
-        // This locus is a heterozygote.
-        //
-        tag->snps[col]->type   = snp_type_het;
-        tag->snps[col]->col    = col;
-        tag->snps[col]->lratio = l_ratio;
-        tag->snps[col]->rank_1 = nuc[0].first;
-        tag->snps[col]->rank_2 = nuc[1].first;
-
-        res = snp_type_het;
-
-    } else if (l_ratio >= homozygote_limit) {
-        //
-        // This locus is a homozygote.
-        //
-        tag->snps[col]->type   = snp_type_hom;
-        tag->snps[col]->col    = col;
-        tag->snps[col]->lratio = l_ratio;
-        tag->snps[col]->rank_1 = nuc[0].first;
-        tag->snps[col]->rank_2 = '-';
-
-        res = snp_type_hom;
-
-    } else {
-        //
-        // Unknown whether this is a heterozygote or homozygote.
-        //
-        tag->snps[col]->type   = snp_type_unk;
-        tag->snps[col]->col    = col;
-        tag->snps[col]->lratio = l_ratio;
-        tag->snps[col]->rank_1 = nuc[0].first;
-        tag->snps[col]->rank_2 = nuc[1].second > 0 ? nuc[1].first : '-';
-
-        res = snp_type_unk;
-    }
-
-    return res;
 }
 
-snp_type
-call_bounded_multinomial_snp(MergedStack *tag, int col, map<char, int> &n, bool record_snps)
-{
-    vector<pair<char, int> > nuc;
-    map<char, int>::iterator i;
-
-    double total = 0.0;
-    for (i = n.begin(); i != n.end(); i++) {
-        if (i->first != 'N') {
-            total += i->second;
-            nuc.push_back(make_pair(i->first, i->second));
-        }
-    }
-
-    sort(nuc.begin(), nuc.end(), compare_pair);
-
-    //
-    // If this column was simply uncalled Ns, return.
-    //
-    if (nuc[0].second == 0) {
-        if (record_snps) {
-            SNP *snp = new SNP;
-            snp->type   = snp_type_unk;
-            snp->col    = col;
-            snp->lratio = 0;
-            snp->rank_1 = 'N';
-            snp->rank_2 = '-';
-
-            tag->snps.push_back(snp);
-        }
-        return snp_type_unk;
-    }
-
-    double nuc_1   = nuc[0].second;
-    double nuc_2   = nuc[1].second;
-    double nuc_3   = nuc[2].second;
-    double nuc_4   = nuc[3].second;
-
-    //
-    // Method of Paul Hohenlohe <hohenlohe@uidaho.edu>, personal communication.
-    //
-
-    //
-    // Calculate the site specific error rate for homozygous and heterozygous genotypes.
-    //
-    double epsilon_hom  = (4.0 / 3.0) * ((total - nuc_1) / total);
-    double epsilon_het  = 2.0 * ((nuc_3 + nuc_4) / total);
-
-    // cerr << "Epsilon_hom: " << epsilon_hom << "; epsilon_het: " << epsilon_het << "\n";
-
-    //
-    // Check if the error rate is above or below the specified bound.
-    //
-    if (epsilon_hom < bound_low)
-        epsilon_hom = bound_low;
-    else if (epsilon_hom > bound_high)
-        epsilon_hom = bound_high;
-
-    if (epsilon_het < bound_low)
-        epsilon_het = bound_low;
-    else if (epsilon_het > bound_high)
-        epsilon_het = bound_high;
-
-    //
-    // Calculate the log likelihood for the homozygous and heterozygous genotypes.
-    //
-    double ln_L_hom = nuc_1 * log(1 - ((3.0/4.0) * epsilon_hom));
-    ln_L_hom += epsilon_hom > 0 ? ((nuc_2 + nuc_3 + nuc_4) * log(epsilon_hom / 4.0)) : 0;
-
-    double ln_L_het = (nuc_1 + nuc_2) * log(0.5 - (epsilon_het / 4.0));
-    ln_L_het += epsilon_het > 0 ? ((nuc_3 + nuc_4) * log(epsilon_het / 4.0)) : 0;
-
-    //
-    // Calculate the likelihood ratio.
-    //
-    double l_ratio  = 2 * (ln_L_hom - ln_L_het);
-
-    // cerr << "  Nuc_1: " << nuc_1 << " Nuc_2: " << nuc_2 << " Nuc_3: " << nuc_3 << " Nuc_4: " << nuc_4
-    //   << " epsilon homozygote: " << epsilon_hom
-    //   << " epsilon heterozygote: " << epsilon_het
-    //   << " Log likelihood hom: " << ln_L_hom
-    //   << " Log likelihood het: " << ln_L_het
-    //   << " Likelihood ratio: " << l_ratio << "\n";
-
-    snp_type res;
-
-    if (l_ratio <= heterozygote_limit) {
-        //
-        // This locus is a heterozygote.
-        //
-        if (record_snps) {
-            SNP *snp = new SNP;
-            snp->type   = snp_type_het;
-            snp->col    = col;
-            snp->lratio = l_ratio;
-            snp->rank_1 = nuc[0].first;
-            snp->rank_2 = nuc[1].first;
-
-            tag->snps.push_back(snp);
-        }
-        res = snp_type_het;
-
-    } else if (l_ratio >= homozygote_limit) {
-        //
-        // This locus is a homozygote.
-        //
-        if (record_snps) {
-            SNP *snp = new SNP;
-            snp->type   = snp_type_hom;
-            snp->col    = col;
-            snp->lratio = l_ratio;
-            snp->rank_1 = nuc[0].first;
-            snp->rank_2 = '-';
-
-            tag->snps.push_back(snp);
-        }
-        res = snp_type_hom;
-
-    } else {
-        //
-        // Unknown whether this is a heterozygote or homozygote.
-        //
-        if (record_snps) {
-            SNP *snp = new SNP;
-            snp->type   = snp_type_unk;
-            snp->col    = col;
-            snp->lratio = l_ratio;
-            snp->rank_1 = nuc[0].first;
-            snp->rank_2 = nuc[1].first;
-
-            tag->snps.push_back(snp);
-        }
-        res = snp_type_unk;
-    }
-
-    return res;
+void set_model_thresholds(double alpha) {
+    double x = qchisq(alpha, 1);
+    homozygote_limit = x;
+    heterozygote_limit = -x;
 }
 
-snp_type
-call_bounded_multinomial_snp(Locus *tag, int col, map<char, int> &n)
-{
-    vector<pair<char, int> > nuc;
-    map<char, int>::iterator i;
-
-    double total = 0.0;
-    for (i = n.begin(); i != n.end(); i++) {
-        if (i->first != 'N') {
-            total += i->second;
-            nuc.push_back(make_pair(i->first, i->second));
-        }
-    }
-
-    sort(nuc.begin(), nuc.end(), compare_pair);
-
-    //
-    // If this column was simply uncalled Ns, return.
-    //
-    if (nuc[0].second == 0) {
-        tag->snps[col]->type   = snp_type_unk;
-        tag->snps[col]->col    = col;
-        tag->snps[col]->lratio = 0;
-        tag->snps[col]->rank_1 = 'N';
-        tag->snps[col]->rank_2 = '-';
-
-        return snp_type_unk;
-    }
-
-    double nuc_1   = nuc[0].second;
-    double nuc_2   = nuc[1].second;
-    double nuc_3   = nuc[2].second;
-    double nuc_4   = nuc[3].second;
-
-    //
-    // Method of Paul Hohenlohe <hohenlohe@uidaho.edu>, personal communication.
-    //
-
-    //
-    // Calculate the site specific error rate for homozygous and heterozygous genotypes.
-    //
-    double epsilon_hom  = (4.0 / 3.0) * ((total - nuc_1) / total);
-    double epsilon_het  = 2.0 * ((nuc_3 + nuc_4) / total);
-
-    // cerr << "Epsilon_hom: " << epsilon_hom << "; epsilon_het: " << epsilon_het << "\n";
-
-    //
-    // Check if the error rate is above or below the specified bound.
-    //
-    if (epsilon_hom < bound_low)
-        epsilon_hom = bound_low;
-    else if (epsilon_hom > bound_high)
-        epsilon_hom = bound_high;
-
-    if (epsilon_het < bound_low)
-        epsilon_het = bound_low;
-    else if (epsilon_het > bound_high)
-        epsilon_het = bound_high;
-
-    //
-    // Calculate the log likelihood for the homozygous and heterozygous genotypes.
-    //
-    double ln_L_hom = nuc_1 * log(1 - ((3.0/4.0) * epsilon_hom));
-    ln_L_hom += epsilon_hom > 0 ? ((nuc_2 + nuc_3 + nuc_4) * log(epsilon_hom / 4.0)) : 0;
-
-    double ln_L_het = (nuc_1 + nuc_2) * log(0.5 - (epsilon_het / 4.0));
-    ln_L_het += epsilon_het > 0 ? ((nuc_3 + nuc_4) * log(epsilon_het / 4.0)) : 0;
-
-    //
-    // Calculate the likelihood ratio.
-    //
-    double l_ratio  = 2 * (ln_L_hom - ln_L_het);
-
-    // cerr << "  Nuc_1: " << nuc_1 << " Nuc_2: " << nuc_2 << " Nuc_3: " << nuc_3 << " Nuc_4: " << nuc_4
-    //   << " epsilon homozygote: " << epsilon_hom
-    //   << " epsilon heterozygote: " << epsilon_het
-    //   << " Log likelihood hom: " << ln_L_hom
-    //   << " Log likelihood het: " << ln_L_het
-    //   << " Likelihood ratio: " << l_ratio << "\n";
-
-    snp_type res;
-
-    if (l_ratio <= heterozygote_limit) {
-        //
-        // This locus is a heterozygote.
-        //
-        tag->snps[col]->type   = snp_type_het;
-        tag->snps[col]->col    = col;
-        tag->snps[col]->lratio = l_ratio;
-        tag->snps[col]->rank_1 = nuc[0].first;
-        tag->snps[col]->rank_2 = nuc[1].first;
-
-        res = snp_type_het;
-
-    } else if (l_ratio >= homozygote_limit) {
-        //
-        // This locus is a homozygote.
-        //
-        tag->snps[col]->type   = snp_type_hom;
-        tag->snps[col]->col    = col;
-        tag->snps[col]->lratio = l_ratio;
-        tag->snps[col]->rank_1 = nuc[0].first;
-        tag->snps[col]->rank_2 = '-';
-
-        res = snp_type_hom;
-
-    } else {
-        //
-        // Unknown whether this is a heterozygote or homozygote.
-        //
-        tag->snps[col]->type   = snp_type_unk;
-        tag->snps[col]->col    = col;
-        tag->snps[col]->lratio = l_ratio;
-        tag->snps[col]->rank_1 = nuc[0].first;
-        tag->snps[col]->rank_2 = nuc[1].first;
-
-        res = snp_type_unk;
-    }
-
-    return res;
+string to_string(modelt model_type) {
+    for (auto& m : model_strings)
+        if (model_type == m.second)
+            return m.first;
+    DOES_NOT_HAPPEN;
+    return string();
 }
 
-int
-call_multinomial_fixed (MergedStack *tag, int col, map<char, int> &n)
-{
+vector<pair<char, int>> sort_acgt(const map<char, int>& counts) {
+    vector<pair<char, int>> nuc;
+    for (map<char, int>::const_iterator i=counts.begin(); i!=counts.end(); i++)
+        if (i->first != 'N')
+            nuc.push_back(make_pair(i->first, i->second));
+    sort(nuc.begin(), nuc.end(), compare_pair);
+    return nuc;
+}
+
+void record_snp(SNP& snp, snp_type type, uint col, double l_ratio, const vector<pair<char, int>>& nuc) {
+
+    snp.type   = type;
+    snp.col    = col;
+    snp.lratio = l_ratio;
+    snp.rank_1 = nuc[0].first;
+
+    switch (type) {
+    case snp_type_het:
+        snp.rank_2 = nuc[1].first;
+        break;
+    case snp_type_hom:
+        snp.rank_2 = '-';
+        break;
+    default:
+        // snp_type_unk, with at least one observation (otherwise record_dummy_snp
+        // would have been called)
+        // A rank_2 nucleotide is set only if at least two nucleotides were observed.
+        snp.rank_2 = nuc[1].second > 0 ? nuc[1].first : '-';
+        break;
+    }
+
+    snp.rank_3 = 0;
+    snp.rank_4 = 0;
+}
+
+void record_dummy_snp(SNP& snp, uint col) {
+    snp.type   = snp_type_unk;
+    snp.col    = col;
+    snp.lratio = 0.0;
+    snp.rank_1 = 'N';
+    snp.rank_2 = '-';
+    snp.rank_3 = 0;
+    snp.rank_4 = 0;
+}
+
+void call_multinomial_snp(MergedStack *tag, int col, map<char, int> &n, bool record_snps) {
+    vector<pair<char, int> > nuc = sort_acgt(n);
+    if (nuc[0].second == 0) {
+        if (record_snps) {
+            tag->snps.push_back(new SNP());
+            record_dummy_snp(*tag->snps.back(), col);
+        }
+        return;
+    }
+
+    double l_ratio = lr_multinomial_model(nuc[0].second, nuc[1].second, nuc[2].second, nuc[3].second);
+    snp_type type = call_snp(l_ratio);
+    if (record_snps) {
+        tag->snps.push_back(new SNP());
+        record_snp(*tag->snps.back(), type, col, l_ratio, nuc);
+    }
+}
+
+void call_bounded_multinomial_snp(MergedStack *tag, int col, map<char, int> &n, bool record_snps) {
+    vector<pair<char, int> > nuc = sort_acgt(n);
+    if (nuc[0].second == 0) {
+        if (record_snps) {
+            tag->snps.push_back(new SNP());
+            record_dummy_snp(*tag->snps.back(), col);
+        }
+        return;
+    }
+
+    double l_ratio = lr_bounded_multinomial_model(nuc[0].second, nuc[1].second, nuc[2].second, nuc[3].second);
+    snp_type type = call_snp(l_ratio);
+    if (record_snps) {
+        tag->snps.push_back(new SNP());
+        record_snp(*tag->snps.back(), type, col, l_ratio, nuc);
+    }
+}
+
+void call_multinomial_snp(Locus *tag, int col, map<char, int> &n) {
+    vector<pair<char, int> > nuc = sort_acgt(n);
+    if (nuc[0].second == 0) {
+        record_dummy_snp(*tag->snps[col], col);
+        return;
+    }
+
+    double l_ratio = lr_multinomial_model(nuc[0].second, nuc[1].second, nuc[2].second, nuc[3].second);
+    snp_type type = call_snp(l_ratio);
+    record_snp(*tag->snps[col], type, col, l_ratio, nuc);
+}
+
+void call_bounded_multinomial_snp(Locus *tag, int col, map<char, int> &n) {
+    vector<pair<char, int> > nuc = sort_acgt(n);
+    if (nuc[0].second == 0) {
+        record_dummy_snp(*tag->snps[col], col);
+        return;
+    }
+
+    double l_ratio = lr_bounded_multinomial_model(nuc[0].second, nuc[1].second, nuc[2].second, nuc[3].second);
+    snp_type type = call_snp(l_ratio);
+    record_snp(*tag->snps[col], type, col, l_ratio, nuc);
+}
+
+void call_multinomial_fixed (MergedStack *tag, int col, map<char, int> &n) {
     const double nucleotide_fixed_limit = 1.92;
 
-    vector<pair<char, int> > nuc;
-    map<char, int>::iterator i;
-
-    int total = 0;
-    for (i = n.begin(); i != n.end(); i++) {
-        if (i->first != 'N') {
-            total += i->second;
-            nuc.push_back(make_pair(i->first, i->second));
-        }
-    }
-
-    sort(nuc.begin(), nuc.end(), compare_pair);
-
+    vector<pair<char, int> > nuc = sort_acgt(n);
     if (nuc[0].second == 0) {
-        SNP *snp = new SNP;
-        snp->type   = snp_type_unk;
-        snp->col    = col;
-        snp->lratio = 0;
-        snp->rank_1 = 'N';
-        snp->rank_2 = '-';
-
-        tag->snps.push_back(snp);
-        return snp_type_unk;
+        tag->snps.push_back(new SNP());
+        record_dummy_snp(*tag->snps.back(), col);
+        return;
     }
 
-    //
-    // Method of Paul Hohenlohe <hohenlo@uoregon.edu>, personal communication.
-    //
-    // Each population sample contains DNA from 6 individuals, so a
-    // sample of 12 alleles from the population. We want to assign a
-    // nucleotide (A,C,G,T) to each position where the population is
-    // fixed or nearly so, and N to each position that is either
-    // polymorphic within the population or has insufficient coverage
-    // depth to make a call. We can do this with a likelihood ratio
-    // test of the read counts, testing whether the allele frequency
-    // of the dominant allele is significantly larger than some
-    // threshold p) , stepping through each nucleotide position across
-    // RAD tags.
-    //
-    double nuc_1   = nuc[0].second;
-    double nuc_2   = nuc[1].second;
-    double n_ratio = 0.0;
-    double l_ratio = 0.0;
-    double epsilon = -1 * (log(1 - barcode_err_freq) / barcode_size);
-
-    n_ratio = nuc_1 / (nuc_1 + nuc_2);
-
-    l_ratio  =
-        nuc_1 * log( ((4 * nuc_1 * (1 - epsilon)) + ((nuc_1 + nuc_2) * epsilon)) /
-                     ((4 * p_freq * (nuc_1 + nuc_2) * (1 - epsilon)) + ((nuc_1 + nuc_2) * epsilon)) );
-
-    l_ratio +=
-        nuc_2 * log( ((4 * nuc_2 * (1 - epsilon)) + ((nuc_1 + nuc_2) * epsilon)) /
-                     ((4 * (1 - p_freq) * (nuc_1 + nuc_2) * (1 - epsilon)) + ((nuc_1 + nuc_2) * epsilon)) );
-
-    //cerr << "Nuc_1: " << nuc_1 << " Nuc_2: " << nuc_2 << " Likelihood ratio: " << l_ratio << "\n";
-
-    if (n_ratio < p_freq || l_ratio < nucleotide_fixed_limit) {
+    double l_ratio;
+    double nuc_1 = nuc[0].second;
+    double nuc_2 = nuc[1].second;
+    {
         //
-        // This position is likely a SNP, record it's homozygosity as 'unknown'.
+        // Method of Paul Hohenlohe <hohenlo@uoregon.edu>, personal communication.
         //
-        SNP *snp = new SNP;
-        snp->type   = snp_type_unk;
-        snp->col    = col;
-        snp->lratio = l_ratio;
-        snp->rank_1 = nuc[0].first;
-        snp->rank_2 = nuc[1].first;
+        // Each population sample contains DNA from 6 individuals, so a
+        // sample of 12 alleles from the population. We want to assign a
+        // nucleotide (A,C,G,T) to each position where the population is
+        // fixed or nearly so, and N to each position that is either
+        // polymorphic within the population or has insufficient coverage
+        // depth to make a call. We can do this with a likelihood ratio
+        // test of the read counts, testing whether the allele frequency
+        // of the dominant allele is significantly larger than some
+        // threshold p) , stepping through each nucleotide position across
+        // RAD tags.
+        //
 
-        tag->snps.push_back(snp);
-    } else {
-        //
-        // Otherwise, this position is homozygous.
-        //
-        SNP *snp = new SNP;
-        snp->type   = snp_type_hom;
-        snp->col    = col;
-        snp->lratio = l_ratio;
-        snp->rank_1 = nuc[0].first;
-        snp->rank_2 = nuc[1].first;
+        double epsilon = -1 * (log(1 - barcode_err_freq) / barcode_size);
 
-        tag->snps.push_back(snp);
+        l_ratio  =
+            nuc_1 * log( ((4 * nuc_1 * (1 - epsilon)) + ((nuc_1 + nuc_2) * epsilon)) /
+                         ((4 * p_freq * (nuc_1 + nuc_2) * (1 - epsilon)) + ((nuc_1 + nuc_2) * epsilon)) );
+
+        l_ratio +=
+            nuc_2 * log( ((4 * nuc_2 * (1 - epsilon)) + ((nuc_1 + nuc_2) * epsilon)) /
+                         ((4 * (1 - p_freq) * (nuc_1 + nuc_2) * (1 - epsilon)) + ((nuc_1 + nuc_2) * epsilon)) );
+
+        //cerr << "Nuc_1: " << nuc_1 << " Nuc_2: " << nuc_2 << " Likelihood ratio: " << l_ratio << "\n";
     }
 
-    return 0;
+    double n_ratio = nuc_1 / (nuc_1 + nuc_2);
+
+    snp_type type = n_ratio < p_freq || l_ratio < nucleotide_fixed_limit ? snp_type_unk : snp_type_hom;
+
+    tag->snps.push_back(new SNP());
+    record_snp(*tag->snps.back(), type, col, l_ratio, nuc);
 }
 
 //
@@ -669,4 +337,623 @@ homozygous_likelihood(int col, map<char, int> &nuc)
         ((n - n_1) * term_3);
 
     return lnl;
+}
+
+Nt2 SiteCall::most_frequent_allele() const {
+    assert(!alleles().empty());
+    auto a = alleles().begin();
+    auto best = a;
+    for(; a!=alleles().end(); ++a)
+        if (a->second > best->second)
+            best = a;
+    return best->first;
+}
+
+map<Nt2,double> SiteCall::tally_allele_freqs(const vector<SampleCall>& spldata) {
+    //
+    // Iterate over the SampleCall's & record the existing alleles and their
+    // frequencies.
+    //
+
+    map<Nt2,double> allele_freqs;
+
+    Counts<Nt2> counts;
+    for (const SampleCall& sd : spldata) {
+        switch (sd.call()) {
+        case snp_type_hom :
+            counts.increment(sd.nt0());
+            counts.increment(sd.nt0());
+            break;
+        case snp_type_het :
+            counts.increment(sd.nt0());
+            counts.increment(sd.nt1());
+            break;
+        default:
+            // snp_type_unk
+            break;
+        }
+    }
+
+    array<pair<size_t,Nt2>,4> sorted_alleles = counts.sorted();
+    size_t tot = counts.sum();
+    for (auto& a : sorted_alleles) {
+        if (a.first == 0)
+            break;
+        allele_freqs.insert({a.second, double(a.first)/tot});
+    }
+
+    return allele_freqs;
+}
+
+ostream& operator<<(ostream& os, const SampleCall& c) {
+    ostream copy (os.rdbuf());
+    copy << std::setprecision(4);
+    // Genotype.
+    switch(c.call()) {
+    case snp_type_hom: os << c.nt0() << "/" << c.nt0(); break;
+    case snp_type_het: os << std::min(c.nt0(), c.nt1()) << "/" << std::max(c.nt0(), c.nt1()); break;
+    case snp_type_unk: os << "u"; break;
+    }
+    // Likelihoods.
+    os << "\t{" << c.lnls() << "}";
+    return os;
+}
+
+void SiteCall::print(ostream& os, const SiteCounts& depths) {
+    // Total depths.
+    os << "tot depths {" << depths.tot << "}\n";
+    // Alleles.
+    os << "alleles";
+    for (auto& a : alleles())
+        os << " " << a.first << "(" << a.second << ")";
+    os << "\n";
+    // Samples.
+    os << "samples";
+    for (size_t s=0; s<depths.samples.size(); ++s) {
+        // Index.
+        os << "\n" << s;
+        auto& dp = depths.samples[s];
+        if (dp.sum() == 0) {
+            os << "\t.";
+        } else {
+            // Depths.
+            os << "\t{" << dp << "}";
+            if (alleles().size() >= 2)
+                os << "\t" << sample_calls()[s];
+        }
+    }
+}
+
+SiteCall MultinomialModel::call(const SiteCounts& depths) const {
+
+    size_t n_samples = depths.mpopi->samples().size();
+
+    //
+    // Make genotype calls.
+    //
+    vector<SampleCall> sample_calls (n_samples);
+    array<pair<size_t,Nt2>,4> sorted;
+    for (size_t sample=0; sample<n_samples; ++sample) {
+        const Counts<Nt2>& sdepths = depths.samples[sample];
+        size_t dp = sdepths.sum();
+        if (dp == 0)
+            continue;
+
+        sorted = sdepths.sorted();
+        SampleCall& c = sample_calls[sample];
+        double lnl_hom = lnl_multinomial_model_hom(dp, sorted[0].first);
+        double lnl_het = lnl_multinomial_model_het(dp, sorted[0].first+sorted[1].first);
+        c.lnls().set(sorted[0].second, sorted[0].second, lnl_hom);
+        c.lnls().set(sorted[0].second, sorted[1].second, lnl_het);
+
+        snp_type gt_call = call_snp(lnl_hom, lnl_het);
+        c.set_call(gt_call, sorted[0].second, sorted[1].second);
+    }
+
+    //
+    // Record the existing alleles and their frequencies.
+    //
+    map<Nt2,double> allele_freqs = SiteCall::tally_allele_freqs(sample_calls);
+
+    //
+    // Compute the missing genotype likelihoods, if any.
+    //
+    if (allele_freqs.size() < 2) {
+        sample_calls = vector<SampleCall>();
+    } else {
+        for (size_t sample=0; sample<n_samples; ++sample) {
+            const Counts<Nt2>& sdepths = depths.samples[sample];
+            size_t dp = sdepths.sum();
+            if (dp == 0)
+                continue;
+
+            SampleCall& c = sample_calls[sample];
+            for (auto nt1_it=allele_freqs.begin(); nt1_it!=allele_freqs.end(); ++nt1_it) {
+                Nt2 nt1 (nt1_it->first);
+                // Homozygote.
+                if (!c.lnls().has_lik(nt1, nt1)) {
+                    double lnl = lnl_multinomial_model_hom(dp, sdepths[nt1]);
+                    c.lnls().set(nt1, nt1, lnl);
+                }
+                // Heterozygote(s).
+                auto nt2_it = nt1_it;
+                ++nt2_it;
+                for (; nt2_it!=allele_freqs.end(); ++nt2_it) {
+                    Nt2 nt2 (nt2_it->first);
+                    if (!c.lnls().has_lik(nt1, nt2)) {
+                        double lnl = lnl_multinomial_model_het(dp, sdepths[nt1]+sdepths[nt2]);
+                        c.lnls().set(nt1, nt2, lnl);
+                    }
+                }
+            }
+        }
+    }
+
+    return SiteCall(move(allele_freqs), move(sample_calls));
+}
+
+double MarukiHighModel::calc_hom_lnl(double n, double n1) const {
+    // This returns the same value as the Hohenlohe ('snp/binomial') model except
+    // when the error rate estimate is bounded at 1.0 (i.e. `n1 < 0.25*n` c.f.
+    // Hohenlohe equations).
+    if (n1 == n)
+        return 0.0;
+    else if (n1 == 0.0)
+        return n * log(1.0/3.0);
+    else
+        return n1 * log(n1/n) + (n-n1) * log( (n-n1)/(3.0*n) );
+}
+
+double MarukiHighModel::calc_het_lnl(double n, double n1n2) const {
+    // This returns the same value as the Hohenlohe ('snp/binomial') model except
+    // when the error rate estimate is bounded at 1.0 (i.e. `n1n2 < 0.5*n` c.f.
+    // Hohenlohe equations).
+    if (n1n2 == n)
+        return n * log(0.5);
+    else if (n1n2 < (1.0/3.0) * n)
+        return n1n2 * log(1.0/6.0) + (n-n1n2) * log(1.0/3.0);
+    else
+        return n1n2 * log( n1n2/(2.0*n) ) + (n-n1n2) * log((n-n1n2)/(2.0*n) );
+}
+
+SiteCall MarukiHighModel::call(const SiteCounts& depths) const {
+
+    /*
+     * For this model the procedure is:
+     * I. Obtain the most commonly seen nucleotide M.
+     * II. Look for alternative alleles, if any:
+     *     For each sample:
+     *         If there is a genotype significantly better than MM:
+     *             (This genotype can be Mm, mm or mn.)
+     *             The site is polymorphic.
+     *             Record m as an alternative allele.
+     *             If the genotype is mn AND is significantly better than mm:
+     *                 Record n as an allele.
+     * III. Given the known alleles, compute the likelihoods for all possible
+     *      genotypes (n.b. most of the non-trivial ones have already been
+     *      computed), and call genotypes.
+     */
+
+    const size_t n_samples = depths.mpopi->samples().size();
+
+    if (depths.tot.sum() == 0)
+        return SiteCall(map<Nt2,double>(), vector<SampleCall>());
+
+    //
+    // I.
+    // Count the observed nucleotides of the site for all samples; set
+    // `SampleCall::depths_`.
+    // Then find the most common nucleotide across the population.
+    //
+    Nt2 nt_ref = depths.tot.sorted()[0].second;
+
+    //
+    // II.
+    // Look for alternative alleles; start filling SampleCall::lnls_.
+    //
+    set<Nt2> alleles;
+    vector<SampleCall> sample_calls (n_samples);
+    alleles.insert(nt_ref);
+    array<pair<size_t,Nt2>,4> sorted;
+    for (size_t sample=0; sample<n_samples; ++sample) {
+        const Counts<Nt2>& sdepths = depths.samples[sample];
+        size_t dp = sdepths.sum();
+        if (dp == 0)
+            continue;
+
+        // Find the best genotype for the sample -- this is either the homzygote
+        // for the rank0 nucleotide or the heterozygote for the rank0 and rank1
+        // nucleotides.
+        sorted = sdepths.sorted();
+        Nt2 nt0 = sorted[0].second;
+        Nt2 nt1 = sorted[1].second;
+        size_t dp0 = sorted[0].first;
+        size_t dp1 = sorted[1].first;
+
+        if (dp1 == 0 && nt0 == nt_ref)
+            // We can wait until we know whether the site is fixed.
+            continue;
+
+        SampleCall& c = sample_calls[sample];
+        double lnl_hom = calc_hom_lnl(dp, dp0);
+        double lnl_het = calc_het_lnl(dp, dp0+dp1);
+        c.lnls().set(nt0, nt0, lnl_hom);
+        c.lnls().set(nt0, nt1, lnl_het);
+
+        // Make sure the sample would have a significant genotype call provided
+        // the site was polymorphic (otherwise a genotype can be significant in
+        // comparison with the ref homozygote but not in comparison with the
+        // second best genotype). This is a slight modification to Maruki &
+        // Lynch's method to avoid low-coverage weirdnesses. Note that the
+        // polymorphism discovery alpha could be set lower than the genotype call
+        // alpha (e.g. to account for multiple testing).
+        if (lnl_hom > lnl_het) {
+            if(!lrtest(lnl_hom, lnl_het, gt_threshold_))
+                continue;
+        } else {
+            if(!lrtest(lnl_het, lnl_hom, gt_threshold_))
+                continue;
+        }
+
+        // Compare this likelihood to that of the ref,ref homozygote.
+        if (nt0 == nt_ref) {
+            if (lrtest(lnl_het, lnl_hom, var_threshold_))
+                // Record the alternative allele.
+                alleles.insert(nt1);
+        } else {
+            double lnl_ref = calc_hom_lnl(dp, sdepths[nt_ref]);
+            c.lnls().set(nt_ref, nt_ref, lnl_ref);
+            double lnl_best = std::max(lnl_hom, lnl_het);
+            if (lrtest(lnl_best, lnl_ref, var_threshold_)) {
+                // Record one alternative allele.
+                alleles.insert(nt0);
+                if (nt1!=nt_ref && lrtest(lnl_het, lnl_hom, var_threshold_))
+                    // Record a second alternative allele (the SNP is at least ternary).
+                    alleles.insert(nt1);
+            }
+        }
+    }
+
+    //
+    // III.
+    // Compute the likelihoods for all possible genotypes & call genotypes.
+    //
+    if (alleles.size() == 1) {
+        sample_calls = vector<SampleCall>();
+    } else {
+        for (size_t sample=0; sample<n_samples; ++sample) {
+            const Counts<Nt2>& sdepths = depths.samples[sample];
+            size_t dp = sdepths.sum();
+            if (dp == 0)
+                continue;
+
+            SampleCall& c = sample_calls[sample];
+            for (auto nt1=alleles.begin(); nt1!=alleles.end(); ++nt1) {
+                // Homozygote.
+                if (!c.lnls().has_lik(*nt1, *nt1))
+                    c.lnls().set(*nt1, *nt1, calc_hom_lnl(dp, sdepths[*nt1]));
+                // Heterozygote(s).
+                auto nt2 = nt1;
+                ++nt2;
+                for (; nt2!=alleles.end(); ++nt2)
+                    if (!c.lnls().has_lik(*nt1, *nt2))
+                        c.lnls().set(*nt1, *nt2, calc_het_lnl(dp, sdepths[*nt1]+sdepths[*nt2]));
+            }
+
+            // Call the genotype -- skiping ignored alleles.
+            sorted = sdepths.sorted();
+            auto nt0 = sorted.begin();
+            while(!alleles.count(nt0->second)) {
+                ++nt0;
+                assert(nt0 != sorted.end());
+            }
+            auto nt1 = nt0;
+            ++nt1;
+            while(!alleles.count(nt1->second)) {
+                ++nt1;
+                assert(nt1 != sorted.end());
+            }
+            double lnl_hom = c.lnls().at(nt0->second, nt0->second);
+            double lnl_het = c.lnls().at(nt0->second, nt1->second);
+            snp_type call;
+            if (lnl_hom > lnl_het)
+                call = lrtest(lnl_hom, lnl_het, gt_threshold_) ? snp_type_hom : snp_type_unk;
+            else
+                call = lrtest(lnl_het, lnl_hom, gt_threshold_) ? snp_type_het : snp_type_unk;
+
+            c.set_call(call, nt0->second, nt1->second);
+        }
+    }
+
+    //
+    // Finally, compute allele frequencies.
+    //
+    map<Nt2,double> allele_freqs;
+    if (alleles.size() == 1) {
+        allele_freqs.insert({*alleles.begin(), 1.0});
+    } else {
+        allele_freqs = SiteCall::tally_allele_freqs(sample_calls);
+        assert(allele_freqs.size() == alleles.size()
+               || (allele_freqs.size() == alleles.size()-1 && !allele_freqs.count(nt_ref)));
+        // Note: There are limit cases (esp. low coverage) where nt_ref does
+        // not appear in any of the significant genotypes.
+    }
+
+    return SiteCall(move(allele_freqs), move(sample_calls));
+}
+
+double MarukiLowModel::calc_fixed_lnl(double n_tot, double n_M_tot) const {
+    assert(n_tot > 0.0);
+    assert(n_M_tot > 0.0);
+    if (n_M_tot == n_tot)
+        return 0.0;
+    else
+        return n_M_tot * log(n_M_tot/n_tot) + (n_tot-n_M_tot) * log((n_tot-n_M_tot)/n_tot);
+}
+
+double MarukiLowModel::calc_dimorph_lnl(double freq_MM, double freq_Mm, double freq_mm, const vector<LikData>& liks) const {
+    double lnl = 0.0;
+    // Sum over samples.
+    for (const LikData& s_liks : liks)
+        if (s_liks.has_data)
+            // If !has_data, the sum is 1 and its log 0.
+            lnl += calc_ln_weighted_sum(freq_MM, freq_Mm, freq_mm, s_liks);
+    assert(lnl <= 0.0);
+    return lnl;
+}
+
+double MarukiLowModel::calc_ln_weighted_sum(double freq_MM, double freq_Mm, double freq_mm, const LikData& s_liks) const {
+    double weighted_sum = freq_MM * s_liks.l_MM + freq_Mm * s_liks.l_Mm + freq_mm * s_liks.l_mm;
+    if (weighted_sum >= std::numeric_limits<double>::min()) {
+        return log(weighted_sum);
+    } else {
+        // `weigted_sum` is subnormal or zero.
+        ++n_underflows_;
+        return calc_ln_weighted_sum_safe(freq_MM, freq_Mm, freq_mm, s_liks);
+    }
+}
+
+double MarukiLowModel::calc_ln_weighted_sum_safe(double freq_MM, double freq_Mm, double freq_mm, const LikData& s_liks) const {
+    array<pair<double,double>,3> s = {{
+        {s_liks.lnl_MM, freq_MM},
+        {s_liks.lnl_Mm, freq_Mm},
+        {s_liks.lnl_mm, freq_mm}
+    }};
+    std::sort(s.begin(), s.end()); // `s` is sorted by increasing lnl.
+    if (s[2].second > 0.0)
+        return s[2].first + log(s[2].second
+                                + s[1].second * exp(s[1].first-s[2].first)
+                                + s[0].second * exp(s[0].first-s[2].first)
+                                );
+    else if (s[1].second > 0.0)
+        return s[1].first + log(s[1].second + s[0].second * exp(s[0].first-s[1].first));
+    else
+        return s[0].first + log(s[0].second);
+}
+
+SiteCall MarukiLowModel::call(const SiteCounts& depths) const {
+
+    /*
+     * For this model the procedure is:
+     * I. Compute the maximum likelihood for the fixed-site hypothesis (straightforward).
+     * II. Compute the maximum likelihood for the dimorphic-site hypothesis and
+     *     estimate the genotype frequencies:
+     *     1. Compute the error rate estimate.
+     *     2. Compute the base likelihoods for all samples, all genotypes.
+     *     3. Compute the starting major allele frequency (`p`) value.
+     *     4. Compute the likelihoods for the site for all possible disequilibrium
+     *         coefficients (`d_a`); keep the best one.
+     *     5. Optimize the genotype frequencies by finding a local maximum.
+     * III. Test whether the site is polymorphic.
+     * IV. Compute the likelihoods for all samples, all genotypes using Bayes'
+     *      theorem, and call genotypes.
+     */
+
+    const size_t n_samples = depths.mpopi->samples().size();
+
+    size_t dp_tot = depths.tot.sum();
+    if (dp_tot == 0)
+        return SiteCall(map<Nt2,double>(), vector<SampleCall>());
+
+    //
+    // I. Likelihood for the fixed-site hypothesis.
+    //
+
+    array<pair<size_t,Nt2>,4> sorted = depths.tot.sorted();
+    Nt2 nt_M = sorted[0].second;
+    Nt2 nt_m = sorted[1].second;
+    size_t n_M_tot = sorted[0].first;
+    size_t n_m_tot = sorted[1].first;
+
+    double lnl_fixed = calc_fixed_lnl(dp_tot, n_M_tot);
+
+    if (!lrtest(0.0, lnl_fixed, var_threshold_))
+        // Fixed: `lnl_fixed` is high enough than even when `lnl_dimorphic` is
+        // at its maximum value of 0, dimorphism isn't significant. This happens
+        // when there are either very few non-major-allele reads or very few reads
+        // overall.
+        return SiteCall({{nt_M, 1.0}}, vector<SampleCall>());
+
+    //
+    // II. Compute and optimize the likelihood for the dimorphic-site hypothesis
+    //
+
+    // 1. Error rate.
+    // Note: @Nick, Apr 2017: Maruki's description uses a simple estimator where
+    // the number of invisible errors (from M to m and inversely) is estimated
+    // as being half the number of observable errors. But this when few
+    // observable errors this is an underestimate as ideally we would like to
+    // integrate; in particular the error rate is estimated to zero when
+    // there aren't any observable errors and this leads to meaningless null
+    // likelihoods. Doing the integration isn't practical but we can reduce
+    // the problem by adding 1 to the numerator and denominator.
+    double e = 3.0 / 2.0 * (dp_tot - n_M_tot - n_m_tot + 1) / double(dp_tot + 1);
+    assert(e > 0.0 && e < 1.0);
+
+    // 2. Base likelihoods.
+    vector<LikData> liks;
+    {
+        liks.reserve(n_samples);
+        double ln_err_hom = log(e/3.0);
+        double ln_hit_hom = log(1-e);
+        double ln_err_het = log(e/3.0);
+        double ln_hit_het = log(0.5-e/3.0);
+        for (size_t sample=0; sample<n_samples; ++sample) {
+            const Counts<Nt2>& sdepths = depths.samples[sample];
+            size_t dp = sdepths.sum();
+            if (dp == 0) {
+                liks.push_back(LikData());
+                continue;
+            }
+
+            double lnl_MM = sdepths[nt_M] * ln_hit_hom + (dp-sdepths[nt_M]) * ln_err_hom;
+            double lnl_mm = sdepths[nt_m] * ln_hit_hom + (dp-sdepths[nt_m]) * ln_err_hom;
+            double lnl_Mm = (sdepths[nt_M]+sdepths[nt_m]) * ln_hit_het + (dp-(sdepths[nt_M]+sdepths[nt_m])) * ln_err_het;;
+            liks.push_back(LikData(lnl_MM, lnl_Mm, lnl_mm));
+        }
+    }
+
+    // 3. Initial major allele frequency.
+    double p = (2*n_M_tot + 2*n_m_tot > dp_tot) ?
+            0.5 * double(3*n_M_tot + n_m_tot - dp_tot) / (2*n_M_tot + 2*n_m_tot - dp_tot)
+            : 0.5; // if `n_M_tot == n_m_tot == dp_tot / 4`.
+
+    // 4. Initial disequilibrium coefficient.
+    auto flush_freq = [](double& f) {
+        if (f < 1e-12)
+            f = 0.0;
+        else if (f > 1.0-1e-12)
+            f = 1.0;
+    };
+    double d_a_best = 0.0;
+    double lnl_dimorph = std::numeric_limits<double>::lowest();
+    {
+        double d_a_min = max(-p*p, -(1-p)*(1-p));
+        double d_a_max = p*(1-p);
+        for (double d_a = d_a_min; d_a < d_a_max + 1e-12; d_a += 1.0/n_samples) {
+            double f_MM = p*p + d_a;
+            double f_Mm = 2 * (p*(1-p) - d_a);
+            double f_mm = (1-p) * (1-p) + d_a;
+            flush_freq(f_MM);
+            flush_freq(f_Mm);
+            flush_freq(f_mm);
+            double lnl = calc_dimorph_lnl(f_MM, f_Mm, f_mm, liks);
+            if (lnl > lnl_dimorph) {
+                d_a_best = d_a;
+                lnl_dimorph = lnl;
+            }
+        }
+    }
+    assert(lnl_dimorph > std::numeric_limits<double>::lowest());
+
+    // 5. Find a local maximum.
+    double freq_MM = p*p + d_a_best;
+    double freq_Mm = 2 * (p*(1-p) - d_a_best);
+    double freq_mm = (1-p) * (1-p) + d_a_best;
+    flush_freq(freq_MM);
+    flush_freq(freq_Mm);
+    flush_freq(freq_mm);
+    {
+        double lnl_prev;
+        do {
+            lnl_prev = lnl_dimorph;
+            double x = 1.0/n_samples;
+            array<array<double,3>,6> neighbors = {{
+                {freq_MM+x, freq_Mm-x, freq_mm},
+                {freq_MM-x, freq_Mm+x, freq_mm},
+                {freq_MM+x, freq_Mm,   freq_mm-x},
+                {freq_MM-x, freq_Mm,   freq_mm+x},
+                {freq_MM,   freq_Mm+x, freq_mm-x},
+                {freq_MM,   freq_Mm-x, freq_mm+x}
+            }};
+            for(auto& n : neighbors) {
+                double f_MM = n[0];
+                double f_Mm = n[1];
+                double f_mm = n[2];
+                if (f_MM < 0.0-1e-12 || f_MM > 1.0+1e-12
+                 || f_Mm < 0.0-1e-12 || f_Mm > 1.0+1e-12
+                 || f_mm < 0.0-1e-12 || f_mm > 1.0+1e-12)
+                    // Out of bounds.
+                    continue;
+                flush_freq(f_MM);
+                flush_freq(f_Mm);
+                flush_freq(f_mm);
+
+                double lnl = calc_dimorph_lnl(f_MM, f_Mm, f_mm, liks);
+                if (lnl > lnl_dimorph) {
+                    // Update the frequencies.
+                    freq_MM = f_MM;
+                    freq_Mm = f_Mm;
+                    freq_mm = f_mm;
+                    lnl_dimorph = lnl;
+                }
+            }
+        } while (lnl_dimorph > lnl_prev);
+    }
+    assert(almost_equal(freq_MM+freq_Mm+freq_mm, 1.0));
+
+    //
+    // III. Test whether the site is polymorphic.
+    //
+
+    if (!lrtest(lnl_dimorph, lnl_fixed, var_threshold_))
+        return SiteCall({{nt_M, 1.0}}, vector<SampleCall>());
+
+    map<Nt2,double> allele_freqs = {
+        {nt_M, freq_MM+0.5*freq_Mm},
+        {nt_m, freq_mm+0.5*freq_Mm},
+    };
+    for (auto& a : allele_freqs)
+        flush_freq(a.second);
+
+    //
+    // IV. Corrected likelihoods & genotypes.
+    //
+
+    vector<SampleCall> sample_calls (n_samples);
+    {
+        sample_calls.reserve(n_samples);
+        double log_f_MM = log(freq_MM);
+        double log_f_Mm = log(freq_Mm);
+        double log_f_mm = log(freq_mm);
+        size_t gt_MM = GtLiks::gt_index(nt_M, nt_M);
+        size_t gt_Mm = GtLiks::gt_index(nt_M, nt_m);
+        size_t gt_mm = GtLiks::gt_index(nt_m, nt_m);
+        for (size_t sample=0; sample<n_samples; ++sample) {
+            const LikData& s_liks = liks[sample];
+            SampleCall& s_call = sample_calls[sample];
+
+            double w_sum = calc_ln_weighted_sum(freq_MM, freq_Mm, freq_mm, s_liks);
+
+            double lnl_MM = s_liks.lnl_MM + log_f_MM - w_sum;
+            double lnl_Mm = s_liks.lnl_Mm + log_f_Mm - w_sum;
+            double lnl_mm = s_liks.lnl_mm + log_f_mm - w_sum;
+            assert(lnl_MM < 0.0+1e-12);
+            assert(lnl_Mm < 0.0+1e-12);
+            assert(lnl_mm < 0.0+1e-12);
+            if (lnl_MM > 0.0)
+                lnl_MM = 0.0;
+            if (lnl_Mm > 0.0)
+                lnl_Mm = 0.0;
+            if (lnl_mm > 0.0)
+                lnl_mm = 0.0;
+            s_call.lnls().set(gt_MM, lnl_MM);
+            s_call.lnls().set(gt_Mm, lnl_Mm);
+            s_call.lnls().set(gt_mm, lnl_mm);
+
+            array<pair<double,pair<Nt2,Nt2>>,3> lnls {{
+                {lnl_MM, {nt_M,nt_M}},
+                {lnl_Mm, {nt_M,nt_m}},
+                {lnl_mm, {nt_m,nt_m}}
+            }};
+            sort(lnls.rbegin(), lnls.rend());
+
+            if (lrtest(lnls[0].first, lnls[1].first, gt_threshold_)) {
+                pair<Nt2,Nt2>& nts = lnls[0].second;
+                s_call.set_call(nts.first == nts.second ? snp_type_hom : snp_type_het, nts.first, nts.second);
+            }
+        }
+    }
+
+    return SiteCall(move(allele_freqs), move(sample_calls));
 }
