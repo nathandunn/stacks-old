@@ -21,7 +21,7 @@
 #ifndef __SMOOTHING_H__
 #define __SMOOTHING_H__
 
-#include <math.h>
+#include <cmath>
 #include "smoothing_utils.h"
 
 template<class StatT=PopStat>

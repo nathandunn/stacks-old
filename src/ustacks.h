@@ -28,38 +28,25 @@
 #endif
 
 #include <getopt.h> // Process command-line options
-#include <math.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
 #include <algorithm>
 #include <utility>
-using std::pair;
-using std::make_pair;
 
 #include <string>
-using std::string;
 
 #include <iostream>
 #include <fstream>
 #include <sstream>
-using std::ofstream;
-using std::stringstream;
-using std::cin;
-using std::cout;
-using std::cerr;
-using std::endl;
 #include <iomanip> // std::setprecision
 
 #include <vector>
-using std::vector;
 #include <map>
-using std::map;
 #include <unordered_map>
-using std::unordered_map;
 #include <queue>
 using std::queue;
 #include <set>
-using std::set;
 #include <unistd.h>
 
 #ifdef HAVE_SPARSEHASH
@@ -95,8 +82,6 @@ class HVal {
     }
 };
 
-const int barcode_size   = 5;
-
 #ifdef HAVE_SPARSEHASH
 typedef sparse_hash_map<DNANSeq, HVal> DNASeqHashMap;
 #else
@@ -106,12 +91,12 @@ typedef unordered_map<DNANSeq, HVal> DNASeqHashMap;
 void help( void );
 void version( void );
 int  parse_command_line(int, char**);
-int  load_radtags(string, DNASeqHashMap &);
+void load_radtags(string, DNASeqHashMap &, size_t &);
 int  load_seq_ids(vector<char *> &);
-int  reduce_radtags(DNASeqHashMap &, map<int, Stack *> &, map<int, Rem *> &);
+void reduce_radtags(DNASeqHashMap &, map<int, Stack *> &, map<int, Rem *> &, size_t &, size_t &);
 int  free_radtags_hash(DNASeqHashMap &, vector<DNANSeq *> &);
 int  populate_merged_tags(map<int, Stack *> &, map<int, MergedStack *> &);
-int  merge_stacks(map<int, Stack *> &, map<int, Rem *> &, map<int, MergedStack *> &, set<int> &, int);
+void merge_stacks(map<int, MergedStack *> &, size_t &);
 int  call_consensus(map<int, MergedStack *> &, map<int, Stack *> &, map<int, Rem *> &, bool);
 int  call_alleles(MergedStack *, vector<DNANSeq *> &, vector<read_type> &);
 int  merge_remainders(map<int, MergedStack *> &, map<int, Rem *> &);
@@ -121,7 +106,7 @@ int  write_results(map<int, MergedStack *> &, map<int, Stack *> &, map<int, Rem 
 // Match MergedStacks using a k-mer hashing algorithm
 //
 int  calc_kmer_distance(map<int, MergedStack *> &, int);
-int  search_for_gaps(map<int, MergedStack *> &, double);
+int  search_for_gaps(map<int, MergedStack *> &);
 int  merge_gapped_alns(map<int, Stack *> &, map<int, Rem *> &, map<int, MergedStack *> &);
 int  edit_gapped_seqs(map<int, Stack *> &, map<int, Rem *> &, MergedStack *, vector<pair<char, uint> > &);
 int  edit_gaps(vector<pair<char, uint> > &, char *);
@@ -130,15 +115,14 @@ bool rank_alignments(Aln, Aln);
 //
 // Calculate depth of coverage statistics for stacks
 //
-void calc_coverage_distribution(map<int, Stack *> &, map<int, Rem *> &, map<int, MergedStack *> &, double &, double &, double &);
-int count_raw_reads(map<int, Stack *> &, map<int, Rem *> &, map<int, MergedStack *> &);
+void calc_coverage_distribution(map<int, MergedStack *> &, double &, double &, double &, double &);
 
 //
 // Dealing with lumberjack (huge) stacks
 //
-int  calc_triggers(double, double, double, int &, int &);
-int  remove_repetitive_stacks(map<int, Stack *> &, map<int, MergedStack *> &);
-int  deleverage(map<int, Stack *> &, map<int, Rem *> &, map<int, MergedStack *> &, set<int> &, int, vector<MergedStack *> &);
+void calc_triggers(double, double, double);
+size_t remove_repetitive_stacks(map<int, MergedStack *> &);
+int  deleverage(map<int, MergedStack *> &, set<int> &, int, vector<MergedStack *> &);
 
 //
 // Debugging
@@ -154,10 +138,5 @@ MergedStack *merge_tags(MergedStack *, MergedStack *, int);
 MergedStack *merge_tags(map<int, MergedStack *> &, set<int> &, int);
 MergedStack *merge_tags(map<int, MergedStack *> &, int *, int, int);
 long double factorial(int);
-
-//
-// Deprecated
-//
-int  calc_distance(map<int, MergedStack *> &, int);
 
 #endif // __USTACKS_H__

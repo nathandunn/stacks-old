@@ -30,10 +30,12 @@
 
 #include <cstdlib>
 #include <cstddef>
+#include <cstdint>
 #include <cstring>
 #include <cmath>
 #include <cassert>
 #include <vector>
+#include <array>
 #include <string>
 #include <set>
 #include <map>
@@ -65,15 +67,19 @@
 #define IF_NDEBUG_CATCH_ALL_EXCEPTIONS \
     } catch (const std::exception& e) { \
         std::cerr << "Aborted."; \
-        if (e.what() != std::exception().what()) \
+        if (typeid(e) != typeid(std::exception)) \
             std::cerr << " (" << e.what() << ")"; \
         std::cerr << "\n"; \
         return 13; \
     }
+#endif //DEBUG
 
-#endif
+#define DOES_NOT_HAPPEN \
+    do{cerr << "At " << __FILE__ << ":" << __LINE__ << " This should never happen.\n"; throw exception();} while(false) \
+    // n.b. do{..}while(false) requests a trailing ';' ({..} doesn't).
 
 using std::vector;
+using std::array;
 using std::string;
 using std::set;
 using std::map;
@@ -93,6 +99,8 @@ using std::stringstream;
 using std::pair;
 using std::make_pair;
 using std::stoi;
+using std::to_string;
+using std::size_t;
 using std::getline;
 using std::exception;
 using std::move;
@@ -129,9 +137,11 @@ enum class FileT {unknown,
     fasta,   gzfasta,
     fastq,   gzfastq,
     bowtie,  sam, bam, tsv,
-    bustard, phase, fastphase, beagle};
+    bustard, phase, fastphase, beagle,
+    vcf, gzvcf
+};
 
-std::string remove_suffix(FileT, const string&);
+string remove_suffix(FileT, const string&);
 
 FileT guess_file_type(const string&);
 

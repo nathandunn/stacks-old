@@ -24,6 +24,43 @@
 
 #include "aln_utils.h"
 
+// shell:
+// echo "
+// print(', '.join([ ('true' if chr(i) in set('0123456789=DHIMNPSX') else 'false') for i in range(256) ]))
+// " | python3 | fold -s
+const bool is_cigar_char[256] = {
+    false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, true, true, true, true, true, true, true, true,
+    true, true, false, false, false, true, false, false, false, false, false,
+    false, true, false, false, false, true, true, false, false, false, true, true,
+    false, true, false, false, true, false, false, false, false, true, false,
+    false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false,
+    false
+};
+
+ostream& operator<< (ostream& os, const Cigar& cig) {
+    for (auto op : cig)
+        os << op.second << (op.first == '\0' ? '?' : op.first);
+    return os;
+}
+
 string
 invert_cigar(string cigar)
 {
@@ -38,7 +75,7 @@ invert_cigar(string cigar)
 }
 
 int
-parse_cigar(const char *cigar_str, vector<pair<char, uint> > &cigar, bool check_correctness)
+parse_cigar(const char *cigar_str, Cigar &cigar, bool check_correctness)
 {
     cigar.clear();
     const char* p      = cigar_str;
@@ -53,7 +90,7 @@ parse_cigar(const char *cigar_str, vector<pair<char, uint> > &cigar, bool check_
             if (q == p || c == '\0') {
                 // No number or no qualifier, respectively.
                 cerr << "Error: Malformed CIGAR string '" << cigar_str << "'.\n";
-                throw std::exception();
+                throw exception();
             }
             switch (c) {
             case 'M':
@@ -81,7 +118,7 @@ parse_cigar(const char *cigar_str, vector<pair<char, uint> > &cigar, bool check_
 }
 
 string
-apply_cigar_to_seq(const char *seq, vector<pair<char, uint> > &cigar)
+apply_cigar_to_seq(const char *seq, Cigar &cigar)
 {
     uint   size = cigar.size();
     char   op;
@@ -135,7 +172,7 @@ apply_cigar_to_seq(const char *seq, vector<pair<char, uint> > &cigar)
 }
 
 string
-apply_cigar_to_model_seq(const char *seq, vector<pair<char, uint> > &cigar)
+apply_cigar_to_model_seq(const char *seq, Cigar &cigar)
 {
     uint   size = cigar.size();
     char   op;
@@ -189,7 +226,7 @@ apply_cigar_to_model_seq(const char *seq, vector<pair<char, uint> > &cigar)
 }
 
 int
-apply_cigar_to_seq(char *seq, uint seq_len, const char *old_seq, vector<pair<char, uint> > &cigar)
+apply_cigar_to_seq(char *seq, uint seq_len, const char *old_seq, Cigar &cigar)
 {
     uint   size = cigar.size();
     char   op;
@@ -241,7 +278,7 @@ apply_cigar_to_seq(char *seq, uint seq_len, const char *old_seq, vector<pair<cha
 }
 
 int
-apply_cigar_to_model_seq(char *seq, uint seq_len, const char *model, vector<pair<char, uint> > &cigar)
+apply_cigar_to_model_seq(char *seq, uint seq_len, const char *model, Cigar &cigar)
 {
     uint   size = cigar.size();
     char   op;
@@ -293,7 +330,7 @@ apply_cigar_to_model_seq(char *seq, uint seq_len, const char *model, vector<pair
 }
 
 string
-remove_cigar_from_seq(const char *seq, vector<pair<char, uint> > &cigar)
+remove_cigar_from_seq(const char *seq, Cigar &cigar)
 {
     uint   size = cigar.size();
     char   op;
@@ -339,144 +376,73 @@ remove_cigar_from_seq(const char *seq, vector<pair<char, uint> > &cigar)
     return edited_seq;
 }
 
-int
-adjust_snps_for_gaps(vector<pair<char, uint> > &cigar, Locus *loc)
-{
-    uint   size = cigar.size();
-    char   op;
-    uint   dist, bp, stop, offset, snp_index;
-
-    bp        = 0;
-    offset    = 0;
-    snp_index = 0;
-
-    for (uint i = 0; i < size; i++)  {
-        op   = cigar[i].first;
-        dist = cigar[i].second;
-
-        switch(op) {
-        case 'D':
-            offset += dist;
+std::tuple<uint,uint,uint> cigar_lengths(const Cigar& cigar) {
+    uint padded_len = 0;
+    uint ref_len = 0;
+    uint seq_len = 0;
+    for (auto& op : cigar) {
+        padded_len += op.second;
+        switch (op.first) {
+        case 'M':
+        case '=':
+        case 'X':
+            // Consume both ref & seq.
+            ref_len += op.second;
+            seq_len += op.second;
             break;
         case 'I':
-        case 'M':
+            // Consume seq.
+            seq_len += op.second;
+            break;
+        case 'D':
         case 'S':
-            stop = bp + dist;
-            while (bp < stop && snp_index < loc->snps.size()) {
-                if (loc->snps[snp_index]->col == bp) {
-                    loc->snps[snp_index]->col += offset;
-                    snp_index++;
-                }
-                bp++;
-            }
+        case 'N':
+        case 'H':
+        case 'P':
+            // Consume ref.
+            ref_len += op.second;
             break;
         default:
+            DOES_NOT_HAPPEN;
             break;
         }
     }
 
-    return 0;
+    return std::make_tuple(padded_len, ref_len, seq_len);
 }
 
-int
-adjust_and_add_snps_for_gaps(vector<pair<char, uint> > &cigar, Locus *loc)
-{
-    uint   size = cigar.size();
-    char   op;
-    uint   dist, bp, new_bp, stop, snp_cnt;
-    SNP   *s;
+void simplify_cigar_to_MDI(Cigar& cig) {
+    if (cig.empty())
+        return;
 
-    bp      = 0;
-    new_bp  = 0;
-    snp_cnt = loc->snps.size();
-
-    vector<SNP *> snps;
-
-    for (uint i = 0; i < size; i++)  {
-        op   = cigar[i].first;
-        dist = cigar[i].second;
-
-        switch(op) {
-        case 'D':
-            stop = new_bp + dist;
-            while (new_bp < stop) {
-                s = new SNP;
-                s->col    = new_bp;
-                s->type   = snp_type_unk;
-                s->rank_1 = 'N';
-                snps.push_back(s);
-                new_bp++;
-            }
-            break;
-        case 'I':
-        case 'M':
-        case 'S':
-            stop = bp + dist > snp_cnt ? snp_cnt : bp + dist;
-            while (bp < stop) {
-                loc->snps[bp]->col = new_bp;
-                snps.push_back(loc->snps[bp]);
-                bp++;
-                new_bp++;
-            }
-            break;
-        default:
-            break;
+    // Replace operations with the relevant equivalent in "MDI".
+    for (auto& op : cig) {
+        switch (op.first) {
+        case '=':
+        case 'X': op.first = 'M'; break;
+        case 'S': op.first = 'I'; break;
+        case 'N':
+        case 'H': op.first = 'D'; break;
+        default: break;
+        case 'P': op.first = '\0'; break;
         }
     }
 
-    loc->snps.clear();
-
-    for (uint i = 0; i < snps.size(); i++)
-        loc->snps.push_back(snps[i]);
-
-    return 0;
-}
-
-int
-remove_snps_from_gaps(vector<pair<char, uint> > &cigar, Locus *loc)
-{
-    uint   size = cigar.size();
-    char   op;
-    uint   dist, bp, new_bp, stop, snp_cnt;
-
-    bp      = 0;
-    new_bp  = 0;
-    snp_cnt = loc->snps.size();
-
-    vector<SNP *> snps;
-
-    for (uint i = 0; i < size; i++)  {
-        op   = cigar[i].first;
-        dist = cigar[i].second;
-
-        switch(op) {
-        case 'D':
-            stop = bp + dist;
-            while (bp < stop) {
-                delete loc->snps[bp];
-                bp++;
-            }
-            break;
-        case 'I':
-        case 'M':
-        case 'S':
-            stop = bp + dist > snp_cnt ? snp_cnt : bp + dist;
-            while (bp < stop) {
-                loc->snps[bp]->col = new_bp;
-                snps.push_back(loc->snps[bp]);
-                bp++;
-                new_bp++;
-            }
-            break;
-        default:
-            break;
+    // Collapse identical successive operations.
+    auto prev = cig.rbegin();
+    auto op = ++cig.rbegin(); // n.b. `cig` isn't empty.
+    while(op != cig.rend()) {
+        if (op->first == prev->first) {
+            op->second += prev->second;
+            prev->first = '\0';
         }
+        ++prev;
+        ++op;
     }
 
-    loc->snps.clear();
-
-    for (uint i = 0; i < snps.size(); i++)
-        loc->snps.push_back(snps[i]);
-
-    return 0;
+    // Remove '\0' operations.
+    cig.erase(std::remove_if(
+            cig.begin(), cig.end(),
+            [](const pair<char,uint>& op){return op.first == '\0';}
+            ), cig.end());
 }

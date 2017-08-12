@@ -24,8 +24,12 @@
 
 #include <regex>
 
+#include "constants.h"
+#include "log_utils.h"
 #include "catalog_utils.h"
 #include "MetaPopInfo.h"
+#include "gzFastq.h"
+#include "BamI.h"
 
 #include "sstacks.h"
 
@@ -44,6 +48,7 @@ bool    impute_haplotypes       = true;
 bool    require_uniq_haplotypes = false;
 bool    gapped_alignments       = false;
 searcht search_type             = sequence;
+bool    write_all_matches       = false;
 
 double  min_match_len   = 0.80;
 double  max_gaps        = 2.0;
@@ -73,7 +78,7 @@ int main (int argc, char* argv[]) {
         cerr << "Searching for matches by genomic location...\n";
 
     catalog_path += ".catalog";
-    res = load_loci(catalog_path, catalog, false, false, compressed);
+    res = load_loci(catalog_path, catalog, 0, false, compressed);
 
     if (res == 0) {
         cerr << "Error: Unable to parse catalog, '" << catalog_path << "'\n";
@@ -101,7 +106,7 @@ int main (int argc, char* argv[]) {
 
         cerr << "\nProcessing sample '" << sample_path << "' [" << i << " of " << sample_cnt << "]\n";
 
-        res = load_loci(sample_path, sample, false, false, compressed);
+        res = load_loci(sample_path, sample, 2, false, compressed);
 
         if (res == 0) {
             cerr << "Error: Unable to parse '" << sample_path << "'\n";
@@ -180,7 +185,7 @@ find_matches_by_genomic_loc(map<int, Locus *> &sample_1, map<int, QLocus *> &sam
     map<string, set<int> > locations;
     for (j = sample_1.begin(); j != sample_1.end(); j++) {
         snprintf(id, id_len - 1, "%s|%d|%c",
-                 j->second->loc.chr,
+                 j->second->loc.chr(),
                  j->second->loc.bp,
                  j->second->loc.strand == strand_plus ? '+' : '-');
         locations[id].insert(j->second->id);
@@ -211,7 +216,7 @@ find_matches_by_genomic_loc(map<int, Locus *> &sample_1, map<int, QLocus *> &sam
 
             i = sample_2.find(keys[k]);
             snprintf(id, id_len - 1, "%s|%d|%c",
-                     i->second->loc.chr,
+                     i->second->loc.chr(),
                      i->second->loc.bp,
                      i->second->loc.strand == strand_plus ? '+' : '-');
 
@@ -244,7 +249,7 @@ find_matches_by_genomic_loc(map<int, Locus *> &sample_1, map<int, QLocus *> &sam
         }
     }
 
-    cerr << keys.size() << " stacks matched against the catalog containing " << sample_1.size() << " loci.\n"
+    cerr << keys.size() << " sample loci matched against the catalog containing " << sample_1.size() << " loci.\n"
          << "  " << matches << " matching loci, " << nomatch << " contained no verified haplotypes.\n"
          << "  " << nosnps  << " loci contained SNPs unaccounted for in the catalog and were excluded.\n"
          << "  " << tot_hap << " total haplotypes examined from matching loci, " << ver_hap << " verified.\n";
@@ -650,7 +655,11 @@ find_matches_by_sequence(map<int, Locus *> &sample_1, map<int, QLocus *> &sample
                 uint verified = verify_sequence_match(sample_1, query, loci_hit, haplo_hits,
                                                       min_tag_len, mmatch, nosnps);
                 ver_hap += verified;
-                if (verified == 0) no_haps++;
+                if (verified == 0) {
+                    no_haps++;
+                    if (!loci_hit.empty())
+                        assert(write_all_matches ^ query->matches.empty());
+                }
             }
         }
     }
@@ -665,7 +674,7 @@ find_matches_by_sequence(map<int, Locus *> &sample_1, map<int, QLocus *> &sample
         delete [] sample_1_map_keys[i];
     sample_1_map_keys.clear();
 
-    cerr << keys.size() << " stacks compared against the catalog containing " << sample_1.size() << " loci.\n"
+    cerr << keys.size() << " sample loci compared against the catalog containing " << sample_1.size() << " loci.\n"
          << "  " << matches << " matching loci, " << no_haps << " contained no verified haplotypes.\n"
          << "  " << mmatch  << " loci matched more than one catalog locus and were excluded.\n"
          << "  " << nosnps  << " loci contained SNPs unaccounted for in the catalog and were excluded.\n"
@@ -682,6 +691,9 @@ int verify_sequence_match(map<int, Locus *> &sample_1, QLocus *query,
     //
     if (loci_hit.size() > 1) {
         mmatch++;
+        if (write_all_matches)
+            for (int cloc_id : loci_hit)
+                query->add_match(cloc_id, "multi");
         return 0;
     }
 
@@ -710,6 +722,8 @@ int verify_sequence_match(map<int, Locus *> &sample_1, QLocus *query,
         //
         if (found == false) {
             nosnps++;
+            if (write_all_matches)
+                query->add_match(cat->id, "extra_snp");
             return 0;
         }
     }
@@ -747,6 +761,12 @@ int verify_sequence_match(map<int, Locus *> &sample_1, QLocus *query,
                 }
             }
         }
+
+    if (verified == 0) {
+        if (write_all_matches)
+            query->add_match(cat->id, "none_verified");
+        return 0;
+    }
 
     return verified;
 }
@@ -967,8 +987,11 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
 
             if (verify_gapped_match(catalog, query, loci_hit, query_hits, mmatches, nosnps, no_haps, bad_aln, ver_hap))
                 matches++;
-            else
+            else {
                 nomatches++;
+                if (!loci_hit.empty())
+                    assert(write_all_matches ^ query->matches.empty());
+            }
         }
 
         //
@@ -989,7 +1012,6 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
          << "    " << no_haps   << " loci had no verified haplotypes.\n"
          << "    " << bad_aln   << " loci had inconsistent alignments to a catalog locus and were excluded.\n";
 
-
     return 0;
 }
 
@@ -1004,6 +1026,9 @@ verify_gapped_match(map<int, Locus *> &catalog, QLocus *query,
         return false;
     } else if (loci_hit.size() > 1) {
         mmatch++;
+        if (write_all_matches)
+            for (int cloc_id : loci_hit)
+                query->add_match(cloc_id, "multi");
         return false;
     }
 
@@ -1028,6 +1053,8 @@ verify_gapped_match(map<int, Locus *> &catalog, QLocus *query,
     }
     if (cigars.size() > 1) {
         bad_aln++;
+        if (write_all_matches)
+                query->add_match(cat->id, "ambig_aln");
         return false;
     }
 
@@ -1062,6 +1089,8 @@ verify_gapped_match(map<int, Locus *> &catalog, QLocus *query,
         //
         if (found == false) {
             nosnps++;
+            if (write_all_matches)
+                query->add_match(cat->id, "extra_snp");
             return false;
         }
     }
@@ -1117,11 +1146,12 @@ verify_gapped_match(map<int, Locus *> &catalog, QLocus *query,
         // }
     }
 
-
     if (verified > 0) {
         ver_hits += verified;
     } else {
         no_haps++;
+        if (write_all_matches)
+            query->add_match(cat->id, "none_verified");
         return false;
     }
 
@@ -1217,7 +1247,7 @@ write_matches(string sample_path, map<int, QLocus *> &sample)
     //
     // Open the output files for writing.
     //
-    gzFile   gz_matches;
+    gzFile   gz_matches=NULL;
     ofstream matches;
     if (in_file_type == FileT::gzsql) {
         gz_matches = gzopen(out_file.c_str(), "wb");
@@ -1314,6 +1344,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"outpath",     required_argument, NULL, 'o'},
             {"in_dir",      required_argument, NULL, 'P'},
             {"popmap",      required_argument, NULL, 'M'},
+            {"write-all-matches", no_argument, NULL, 2001},
             {0, 0, 0, 0}
         };
 
@@ -1367,6 +1398,9 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 'v':
             version();
+            break;
+        case 2001: //write-all-matches
+            write_all_matches = true;
             break;
         case '?':
             // getopt_long already printed an error message.
@@ -1423,7 +1457,7 @@ int parse_command_line(int argc, char* argv[]) {
         if (!popmap_path.empty()) {
             MetaPopInfo popmap;
             popmap.init_popmap(popmap_path);
-            for (const MetaPopInfo::Sample& s : popmap.samples())
+            for (const Sample& s : popmap.samples())
                 samples.push(in_dir + s.name);
         }
 
@@ -1462,13 +1496,13 @@ int parse_command_line(int argc, char* argv[]) {
 }
 
 void version() {
-    std::cerr << "sstacks " << VERSION << "\n\n";
+    cerr << "sstacks " << VERSION << "\n\n";
 
     exit(1);
 }
 
 void help() {
-    std::cerr << "sstacks " << VERSION << "\n"
+    cerr << "sstacks " << VERSION << "\n"
               << "sstacks [--aligned] -P dir [-b batch_id] -M popmap [-p n_threads]" << "\n"
               << "sstacks [--aligned] -c catalog_path -s sample_path [-s sample_path ...] -o path [-p n_threads]" << "\n"
               << "  b: database/batch ID of the catalog to consider (default: guess)." << "\n"
@@ -1482,7 +1516,17 @@ void help() {
               << "  x: don't verify haplotype of matching locus." << "\n"
               << "\n"
               << "Gapped assembly options:\n"
-              << "  --gapped: preform gapped alignments between stacks.\n";
+              << "  --gapped: preform gapped alignments between stacks.\n"
+              << "\n"
+              << "Sheared paired-ends options:\n"
+              << "  --pe_reads: path to the sample's paired-end read sequences (if any)." << "\n"
+              ;
+
+#ifdef DEBUG
+    cerr << "\n"
+            "Debug options:\n"
+            "  --write-all-matches: Write blacklisted matches. (Compatibility with the web interface?)\n";
+#endif
 
     exit(1);
 }

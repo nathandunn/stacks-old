@@ -30,8 +30,6 @@
 
 #include "genotypes.h"
 
-extern int encoded_gtypes[4][4];
-
 // Global variables to hold command-line options.
 int       num_threads =  1;
 int       batch_id    = -1;
@@ -105,9 +103,9 @@ int main (int argc, char* argv[]) {
     stringstream catalog_file;
     map<int, CSLocus *> catalog;
     bool compressed = false;
-    int res;
     catalog_file << in_path << "batch_" << batch_id << ".catalog";
-    if ((res = load_loci(catalog_file.str(), catalog, false, false, compressed)) == 0) {
+    int res = load_loci(catalog_file.str(), catalog, 0, false, compressed);
+    if (res == 0) {
         cerr << "Error: Unable to load the catalog '" << catalog_file.str() << "'\n";
         throw exception();
     }
@@ -127,7 +125,7 @@ int main (int argc, char* argv[]) {
         catalog_matches.push_back(vector<CatMatch*>());
         vector<CatMatch *>& m = catalog_matches.back();
 
-        const MetaPopInfo::Sample& sample = mpopi.samples()[i];
+        const Sample& sample = mpopi.samples()[i];
         load_catalog_matches(in_path + sample.name, m);
 
         if (m.size() == 0) {
@@ -937,7 +935,7 @@ automated_corrections(map<int, string> &samples, set<int> &parent_ids, map<int, 
         map<int, Locus *> stacks;
         bool compressed = false;
         int  res;
-        if ((res = load_loci(in_path + file, stacks, true, false, compressed)) == 0) {
+        if ((res = load_loci(in_path + file, stacks, 2, false, compressed)) == 0) {
             cerr << "Unable to load sample file '" << file << "'\n";
             return 0;
         }
@@ -2020,7 +2018,7 @@ int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
     // Count the number of markers that have enough samples to output.
     //
     map<int, CSLocus *>::iterator cit;
-    CSLocus *loc;
+    const CSLocus *loc;
     int num_loci = 0;
 
     for (cit = catalog.begin(); cit != catalog.end(); cit++) {
@@ -2039,14 +2037,14 @@ int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
     //
     // Output each locus.
     //
-    map<string, vector<CSLocus *> >::iterator it;
+    map<string, vector<CSLocus *> >::const_iterator it;
     int  a, b;
 
     uint  rcnt = renz_cnt[enz];
     uint  rlen = renz_len[enz];
     char *p;
 
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
         for (uint i = 0; i < it->second.size(); i++) {
             loc = it->second[i];
 
@@ -2077,7 +2075,7 @@ int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
 
             uint k = 0;
             for (uint n = start; n < end; n++) {
-                fh << loc->id << "\t" << loc->loc.chr << "\t" << loc->loc.bp + n;
+                fh << loc->id << "\t" << loc->loc.chr() << "\t" << loc->loc.bp + n;
 
                 if (snp_locs.count(n) == 0) {
                     for (int j = 0; j < pmap->sample_cnt(); j++) {
@@ -2191,8 +2189,8 @@ int write_generic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<int, 
         if (expand_id) {
             if (loc->annotation.length() > 0)
                 id << "\t" << loc->id << "\t" << loc->annotation;
-            else if (strlen(loc->loc.chr) > 0)
-                id << "\t" << loc->id << "\t" << loc->loc.chr << "_" << loc->loc.bp;
+            else if (strlen(loc->loc.chr()) > 0)
+                id << "\t" << loc->id << "\t" << loc->loc.chr() << "_" << loc->loc.bp;
             else
                 id << "\t" << loc->id << "\t";
         }
@@ -2295,8 +2293,8 @@ write_joinmap(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<string, s
 
             if (loc->annotation.length() > 0)
                 id << loc->id << "\t" << loc->annotation;
-            else if (strlen(loc->loc.chr) > 0)
-                id << loc->id << "\t" << loc->loc.chr << "_" << loc->loc.bp;
+            else if (strlen(loc->loc.chr()) > 0)
+                id << loc->id << "\t" << loc->loc.chr() << "_" << loc->loc.bp;
             else
                 id << loc->id << "\t";
 
@@ -2553,7 +2551,7 @@ write_rqtl(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<string, stri
         fh << ",";
 
         string chr;
-        chr = strlen(loc->loc.chr) > 0 ? loc->loc.chr : "1";
+        chr = strlen(loc->loc.chr()) > 0 ? loc->loc.chr() : "1";
 
         fh << chr;
     }
@@ -2887,13 +2885,13 @@ int parse_command_line(int argc, char* argv[]) {
 }
 
 void version() {
-    std::cerr << "genotypes " << VERSION << "\n\n";
+    cerr << "genotypes " << VERSION << "\n\n";
 
     exit(1);
 }
 
 void help() {
-    std::cerr << "genotypes " << VERSION << "\n"
+    cerr << "genotypes " << VERSION << "\n"
               << "genotypes -b batch_id -P path [-r min] [-m min] [-t map_type -o type] [-B blacklist] [-W whitelist] [-c] [-s] [-e renz] [-v] [-h]" << "\n"
               << "  b: Batch ID to examine when exporting from the catalog.\n"
               << "  r: minimum number of progeny required to print a marker.\n"

@@ -21,9 +21,8 @@
 #ifndef __SMOOTHING_UTILS_H__
 #define __SMOOTHING_UTILS_H__
 
-#include <math.h>
+#include <cmath>
 #include <vector>
-using std::vector;
 
 extern double sigma;
 

@@ -24,6 +24,7 @@
 // PCR amplification.
 //
 
+#include "utils.h"
 #include "clone_filter.h"
 
 //
@@ -49,7 +50,6 @@ int      oligo_len_2   = 0;
 //
 // These variables are required for other linked objects, but we won't use them in clone_filter.
 //
-int    barcode_size;
 uint   truncate_seq;
 bool   ill_barcode;
 bool   recover;
@@ -291,8 +291,8 @@ write_clonereduced_sequence(string prefix_1, string prefix_2,
                             CloneHash &clone_map, map<int, int> &clone_dist,
                             map<string, long> &counters)
 {
-    ofstream  out_fh_1,   out_fh_2, discard_fh_1, discard_fh_2;
-    gzFile    out_gzfh_1, out_gzfh_2, discard_gzfh_1, discard_gzfh_2;
+    ofstream  out_fh_1,        out_fh_2,        discard_fh_1,        discard_fh_2;
+    gzFile    out_gzfh_1=NULL, out_gzfh_2=NULL, discard_gzfh_1=NULL, discard_gzfh_2=NULL;
 
     int return_val = 1;
 
@@ -498,7 +498,7 @@ int
 process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counters, OligoHash &oligo_map)
 {
     Input    *fh_1, *fh_2;
-    Read     *r_1,  *r_2;
+    RawRead     *r_1,  *r_2;
     ofstream  out_fh_1,   out_fh_2, discard_fh_1, discard_fh_2;
     gzFile    out_gzfh_1, out_gzfh_2, discard_gzfh_1, discard_gzfh_2;
 
@@ -636,7 +636,7 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
     //
     // Determine how much sequence we need to trim to remove the oligo seqeunce before printing.
     //
-    int offset_1, offset_2;
+    int offset_1=-1, offset_2=-1;
     switch (barcode_type) {
     case inline_null:
     case inline_index:
@@ -660,7 +660,6 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
         break;
     }
 
-
     //
     // Read in the first record, initializing the Seq object s. Then
     // initialize the Read object r, then loop, using the same objects.
@@ -673,8 +672,8 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
         exit(1);
     }
 
-    r_1 = new Read(strlen(s_1->seq), 1, min_bc_size_1, win_size);
-    r_2 = new Read(strlen(s_2->seq), 2, min_bc_size_2, win_size);
+    r_1 = new RawRead(strlen(s_1->seq), 1, min_bc_size_1, win_size);
+    r_2 = new RawRead(strlen(s_2->seq), 2, min_bc_size_2, win_size);
 
     long i        = 1;
     int  result_1 = 1;
@@ -839,8 +838,8 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
 int
 process_reads(string prefix_1, map<string, long> &counters, OligoHash &oligo_map)
 {
-    Input   *fh_1;
-    Read    *r_1;
+    Input   *fh_1=NULL;
+    RawRead    *r_1;
     ofstream out_fh_1, discard_fh_1;
     gzFile   out_gzfh_1, discard_gzfh_1;
 
@@ -958,7 +957,7 @@ process_reads(string prefix_1, map<string, long> &counters, OligoHash &oligo_map
         exit(1);
     }
 
-    r_1 = new Read(strlen(s_1->seq), 1, min_bc_size_1, win_size);
+    r_1 = new RawRead(strlen(s_1->seq), 1, min_bc_size_1, win_size);
 
     long   i        = 1;
     int    result_1 = 1;
@@ -1266,13 +1265,13 @@ int parse_command_line(int argc, char* argv[]) {
 }
 
 void version() {
-    std::cerr << "clone_filter " << VERSION << "\n\n";
+    cerr << "clone_filter " << VERSION << "\n\n";
 
     exit(1);
 }
 
 void help() {
-    std::cerr << "clone_filter " << VERSION << "\n"
+    cerr << "clone_filter " << VERSION << "\n"
               << "clone_filter [-f in_file | -p in_dir [-P] [-I] | -1 pair_1 -2 pair_2] -o out_dir [-i type] [-y type] [-D] [-h]\n"
               << "  f: path to the input file if processing single-end sequences.\n"
               << "  p: path to a directory of files.\n"

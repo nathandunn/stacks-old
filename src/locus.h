@@ -21,20 +21,18 @@
 #ifndef __LOCUS_H__
 #define __LOCUS_H__
 
-#include <string.h>
+#include <cstring>
 #include <string>
-using std::string;
 #include <vector>
-using std::vector;
 #include <map>
-using std::map;
 #include <algorithm>
 #include <utility>
-using std::pair;
-using std::make_pair;
 
 #include "constants.h"
 #include "stacks.h"
+#include "MetaPopInfo.h"
+#include "Alignment.h"
+#include "aln_utils.h"
 
 typedef struct match {
     uint        cat_id;
@@ -43,6 +41,12 @@ typedef struct match {
     string      cigar;
     uint        dist;
 } Match;
+
+class Locus;
+bool bp_compare(Locus *, Locus *);
+int  adjust_snps_for_gaps(Cigar&, Locus*);
+int  adjust_and_add_snps_for_gaps(Cigar&, Locus*);
+int  remove_snps_from_gaps(Cigar&, Locus*);
 
 class Locus {
  public:
@@ -92,8 +96,8 @@ class Locus {
         for (uint i = 0; i < reads.size(); i++)
             delete [] reads[i];
     }
-    uint sort_bp(uint k = 0);
-    int snp_index(uint);
+    uint sort_bp(uint k = 0) const;
+    int snp_index(uint) const;
     int add_consensus(const char *);
     int add_model(const char *);
     virtual int populate_alleles();
@@ -163,6 +167,172 @@ public:
     double chisq;             // Chi squared p-value testing the null hypothesis of no segregation distortion.
 };
 
-bool bp_compare(Locus *, Locus *);
+// SRead: a Read belonging to a Sample.
+struct SRead : Read {
+    size_t sample; // index in MetaPopInfo::samples_
+    SRead(Read&& r, size_t spl) : Read(move(r)), sample(spl) {}
+};
+
+struct SAlnRead : AlnRead {
+    size_t sample; // index in MetaPopInfo::samples_
+    SAlnRead(AlnRead&& r, size_t spl) : AlnRead(move(r)), sample(spl) {}
+    SAlnRead(Read&& r, Cigar&& c, size_t spl) : AlnRead(move(r), move(c)), sample(spl) {}
+};
+
+class CLocReadSet {
+    const MetaPopInfo& mpopi_;
+    int id_; // Catalog locus ID
+    PhyLoc aln_pos_;
+    vector<SRead> reads_; // Forward reads. Order is arbitrary.
+    vector<SRead> pe_reads_; // Paired-end reads. Order and size are arbitrary.
+
+public:
+    CLocReadSet(const MetaPopInfo& mpopi) : mpopi_(mpopi), id_(-1), aln_pos_(), reads_(), pe_reads_() {}
+
+    const MetaPopInfo& mpopi() const {return mpopi_;}
+    int id() const {return id_;}
+    const PhyLoc& pos() const {return aln_pos_;}
+    const vector<SRead>& reads() const {return reads_;}
+          vector<SRead>& reads()       {return reads_;}
+    const vector<SRead>& pe_reads() const {return pe_reads_;}
+          vector<SRead>& pe_reads()       {return pe_reads_;}
+
+    void clear() {id_= -1; reads_.clear(); pe_reads_.clear();}
+    void id(int id) {id_ = id;}
+    void pos(const PhyLoc& p) {aln_pos_ = p;}
+    void add(SRead&& r) {reads_.push_back(move(r));}
+    void add_pe(SRead&& r) {pe_reads_.push_back(move(r));}
+};
+
+class CLocAlnSet {
+    const MetaPopInfo* mpopi_;
+    int id_; // Catalog locus ID
+    PhyLoc aln_pos_;
+    DNASeq4 ref_;
+    vector<SAlnRead> reads_;
+    vector<vector<size_t>> reads_per_sample_; // `at(sample)` is a vector of indexes in `reads_`.
+
+public:
+    CLocAlnSet(const MetaPopInfo& mpopi)
+        : mpopi_(&mpopi), id_(-1), aln_pos_(), ref_(), reads_(), reads_per_sample_(mpopi_->samples().size())
+        {}
+    CLocAlnSet(CLocAlnSet&&) = default;
+    CLocAlnSet& operator= (CLocAlnSet&&) = default;
+
+    const MetaPopInfo& mpopi() const {return *mpopi_;}
+    int id() const {return id_;}
+    const PhyLoc& pos() const {return aln_pos_;}
+    const DNASeq4& ref() const {return ref_;}
+    const vector<SAlnRead>& reads() const {return reads_;}
+          vector<SAlnRead>& reads()       {return reads_;}
+    const vector<size_t>& sample_reads(size_t sample) const {return reads_per_sample_.at(sample);}
+
+    void clear()
+        {id_= -1; ref_ = DNASeq4(); reads_.clear(); reads_per_sample_ = vector<vector<size_t>>(mpopi().samples().size());}
+    void id(int i) {id_ = i;}
+    void pos(const PhyLoc& p) {aln_pos_ = p;}
+    void ref(DNASeq4&& s) {ref_ = move(s);}
+    void add(SAlnRead&& r);
+    void merge_paired_reads();
+
+    size_t n_samples() const {size_t n=0; for(auto& reads : reads_per_sample_) if (!reads.empty()) ++n; return n;}
+
+    friend ostream& operator<< (ostream& os, const CLocAlnSet& loc);
+
+    static CLocAlnSet juxtapose(CLocAlnSet&& left, CLocAlnSet&& right);
+
+    //
+    // Class to iterate over sites.
+    //
+    class site_iterator {
+
+        const CLocAlnSet& loc_aln_;
+        DNASeq4::iterator ref_it_;
+        DNASeq4::iterator ref_past_;
+        vector<Alignment::iterator> its_;
+
+    public:
+        // Iteration methods.
+        site_iterator(const CLocAlnSet& loc_aln)
+                : loc_aln_(loc_aln),
+                ref_it_(loc_aln.ref().begin()),
+                ref_past_(loc_aln.ref().end()),
+                its_()
+                {
+            its_.reserve(loc_aln.reads().size());
+            for (const SAlnRead& r: loc_aln.reads())
+                its_.push_back(Alignment::iterator(r.aln()));
+        }
+        operator bool () const {return ref_it_ != ref_past_;}
+        site_iterator& operator++ ();
+
+        // Site interface.
+        Nt4 ref_nt() const {return *ref_it_;} // Get the contig nt4.
+        void counts(Counts<Nt4>& counts) const; // Get the nt counts across all samples.
+        void counts(Counts<Nt4>& counts, size_t sample) const; // Get the nt counts for a given sample.
+        SiteCounts counts() const;
+
+        const MetaPopInfo& mpopi() const {return loc_aln_.mpopi();}
+    };
+};
+
+//
+// ==================
+// Inline definitions
+// ==================
+//
+
+inline
+void CLocAlnSet::add(SAlnRead&& r) {
+    assert(std::get<1>(cigar_lengths(r.cigar)) == ref_.length());
+    reads_per_sample_.at(r.sample).push_back(reads_.size());
+    reads_.push_back(move(r));
+}
+
+inline
+CLocAlnSet::site_iterator& CLocAlnSet::site_iterator::operator++ () {
+    ++ref_it_;
+    for (auto& it: its_)
+        ++it;
+
+    #ifdef DEBUG
+    if (! (ref_it_ != ref_past_)) {
+        // Make sure we've reached the end of the alignment for every read.
+        for (auto& it: its_)
+            assert(!bool(it));
+    }
+    #endif
+
+    return *this;
+}
+
+inline
+void CLocAlnSet::site_iterator::counts(Counts<Nt4>& counts) const {
+    counts.clear();
+    for (auto& read: its_)
+        counts.increment(*read);
+}
+
+inline
+void CLocAlnSet::site_iterator::counts(Counts<Nt4>& counts, size_t sample) const {
+    counts.clear();
+    for (size_t read_i : loc_aln_.sample_reads(sample))
+        counts.increment(*its_[read_i]);
+}
+
+inline
+SiteCounts CLocAlnSet::site_iterator::counts() const {
+    SiteCounts cnts;
+    cnts.mpopi = &mpopi();
+
+    cnts.samples.reserve(mpopi().samples().size());
+    Counts<Nt4> tmp;
+    for (size_t sample=0; sample<mpopi().samples().size(); ++sample) {
+        counts(tmp, sample); //this->counts()
+        cnts.samples.push_back(Counts<Nt2>(tmp));
+        cnts.tot += cnts.samples.back();
+    }
+    return cnts;
+}
 
 #endif // __LOCUS_H__

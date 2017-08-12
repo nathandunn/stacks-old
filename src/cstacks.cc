@@ -115,7 +115,7 @@ int main (int argc, char* argv[]) {
 
         cerr << "\nProcessing sample " << s.second << " [" << i << " of " << sample_cnt << "]\n";
 
-        if (!load_loci(s.second, sample, false, false, compressed)) {
+        if (!load_loci(s.second, sample, 0, false, compressed)) {
             cerr << "Failed to load sample " << i << "\n";
             continue;
         }
@@ -198,7 +198,7 @@ int update_catalog_index(map<int, CLocus *> &catalog, map<string, int> &cat_inde
 
     for (j = catalog.begin(); j != catalog.end(); j++) {
         snprintf(id, id_len - 1, "%s|%d|%c",
-                 j->second->loc.chr,
+                 j->second->loc.chr(),
                  j->second->loc.bp,
                  j->second->loc.strand == strand_plus ? '+' : '-');
 
@@ -276,7 +276,7 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
     CLocus *ctag;
     QLocus *qtag;
     string  cseq, qseq, cigar_str;
-    int     cseq_len, match_index;
+    int     cseq_len, match_index=-1;
     vector<pair<char, uint> > cigar;
 
     GappedAln *aln = new GappedAln();
@@ -484,7 +484,7 @@ int add_unique_tag(pair<int, string> &sample_file, map<int, CLocus *> &catalog, 
     //
     // Add the physical genome location of this locus.
     //
-    c->loc.set(qloc->loc.chr, qloc->loc.bp, qloc->loc.strand);
+    c->loc.set(qloc->loc.chr(), qloc->loc.bp, qloc->loc.strand);
 
     catalog[c->id] = c;
 
@@ -966,7 +966,7 @@ int find_matches_by_genomic_loc(map<string, int> &cat_index, map<int, QLocus *> 
             i = sample.find(keys[k]);
 
             snprintf(id, id_len - 1, "%s|%d|%c",
-                     i->second->loc.chr,
+                     i->second->loc.chr(),
                      i->second->loc.bp,
                      i->second->loc.strand == strand_plus ? '+' : '-');
 
@@ -1570,7 +1570,7 @@ write_simple_output(CLocus *tag, ofstream &cat_file, ofstream &snp_file, ofstrea
         "0"          << "\t" <<
         batch_id     << "\t" <<
         tag->id      << "\t" <<
-        tag->loc.chr << "\t" <<
+        tag->loc.chr() << "\t" <<
         tag->loc.bp  << "\t" <<
         (tag->loc.strand == strand_plus ? "+" : "-") << "\t" <<
         "consensus"  << "\t" <<
@@ -1647,7 +1647,7 @@ write_gzip_output(CLocus *tag, gzFile &cat_file, gzFile &snp_file, gzFile &all_f
         "0"          << "\t" <<
         batch_id     << "\t" <<
         tag->id      << "\t" <<
-        tag->loc.chr << "\t" <<
+        tag->loc.chr() << "\t" <<
         tag->loc.bp  << "\t" <<
         (tag->loc.strand == strand_plus ? "+" : "-") << "\t" <<
         "consensus"  << "\t" <<
@@ -1720,7 +1720,7 @@ initialize_new_catalog(pair<int, string> &sample, map<int, CLocus *> &catalog)
     //
     // Parse the input files.
     //
-    if (!load_loci(sample.second, tmp_catalog, false, false, compressed))
+    if (!load_loci(sample.second, tmp_catalog, 0, false, compressed))
         return 0;
 
     in_file_type = compressed == true ? FileT::gzsql : FileT::sql;
@@ -1756,7 +1756,7 @@ initialize_existing_catalog(string catalog_path, map<int, CLocus *> &catalog)
     // Parse the input files.
     //
     catalog_path += ".catalog";
-    if (!load_loci(catalog_path, catalog, false, false, compressed))
+    if (!load_loci(catalog_path, catalog, 0, false, compressed))
         return 0;
 
     in_file_type = compressed == true ? FileT::gzsql : FileT::sql;
@@ -1922,7 +1922,7 @@ int parse_command_line(int argc, char* argv[]) {
         // Set `samples`.
         MetaPopInfo popmap;
         popmap.init_popmap(popmap_path);
-        for (const MetaPopInfo::Sample& s : popmap.samples())
+        for (const Sample& s : popmap.samples())
             samples.push({0, in_dir + s.name});
 
         // Set `out_path`.
@@ -1951,13 +1951,13 @@ int parse_command_line(int argc, char* argv[]) {
 }
 
 void version() {
-    std::cerr << "cstacks " << VERSION << "\n";
+    cerr << "cstacks " << VERSION << "\n";
 
     exit(1);
 }
 
 void help() {
-    std::cerr << "cstacks " << VERSION << "\n"
+    cerr << "cstacks " << VERSION << "\n"
               << "cstacks -P in_dir -M popmap [-n num_mismatches] [--gapped] [-p num_threads] [-b batch_id]" << "\n"
               << "cstacks --aligned -P in_dir -M popmap [-p num_threads] [-b batch_id]" << "\n"
               << "cstacks -s sample1_path [-s sample2_path ...] -o path [-n num_mismatches] [--gapped] [-p num_threads] [-b batch_id]" << "\n"

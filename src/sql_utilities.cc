@@ -2,7 +2,7 @@
 
 using namespace std;
 
-int load_catalog_matches(string sample,  vector<CatMatch *> &matches) {
+void load_catalog_matches(string sample,  vector<CatMatch *> &matches, bool verbose) {
     CatMatch      *m;
     string         f;
     vector<string> parts;
@@ -25,14 +25,15 @@ int load_catalog_matches(string sample,  vector<CatMatch *> &matches) {
         f = sample + ".matches.tsv.gz";
         gz_fh = gzopen(f.c_str(), "rb");
         if (!gz_fh)
-            return 0;
+            return;
 
         #if ZLIB_VERNUM >= 0x1240
         gzbuffer(gz_fh, libz_buffer_size);
         #endif
         gzip = true;
     }
-    cerr << "  Parsing " << f.c_str() << "\n";
+    if (verbose)
+        cerr << "  Parsing " << f.c_str() << "\n";
 
     line_num = 1;
     while (fh_status) {
@@ -50,8 +51,18 @@ int load_catalog_matches(string sample,  vector<CatMatch *> &matches) {
 
         if (cnt != num_matches_fields && cnt != num_matches_fields - 1) {
             cerr << "Error parsing " << f.c_str() << " at line: " << line_num << ". (" << parts.size() << " fields).\n";
-            return 0;
+            throw exception();
         }
+
+
+        char c = parts[5].at(0);
+        if (parts[5] != "consensus" && c != 'A' && c != 'C' && c != 'G' && c != 'T')
+            // This sample locus was blacklisted, because:
+            // "multi": it matches multiple c-loci
+            // "extra_snp": it has a SNP unknown to the catalog
+            // "ambig_aln": its alignment to the catalog is inconsistent
+            // "none_verified": all its haplotypes are unknown to the catalog
+            continue;
 
         m = new CatMatch;
         m->batch_id  = atoi(parts[1].c_str());
@@ -75,10 +86,9 @@ int load_catalog_matches(string sample,  vector<CatMatch *> &matches) {
         gzclose(gz_fh);
     else
         fh.close();
-
     free(line);
 
-    return 0;
+    return;
 }
 
 int load_model_results(string sample,  map<int, ModRes *> &modres) {
@@ -298,4 +308,32 @@ int load_snp_calls(string sample,  map<int, SNPRes *> &snpres) {
     free(line);
 
     return 1;
+}
+
+vector<pair<int,int> > retrieve_bijective_loci(const vector<CatMatch*>& matches) {
+    vector<pair<int,int> > sloc_cloc_id_pairs;
+    for (const CatMatch* m : matches)
+        sloc_cloc_id_pairs.push_back({m->tag_id, m->cat_id});
+    return retrieve_bijective_loci(sloc_cloc_id_pairs);
+}
+
+vector<pair<int,int> > retrieve_bijective_loci(const vector<pair<int,int>>& sloc_cloc_id_pairs) {
+    vector<pair<int,int> > bij_sloci;
+
+    unordered_map<int, set<int> > cloc_id_to_sloc_ids;
+    unordered_map<int, set<int> > sloc_id_to_cloc_ids;
+    for (auto p : sloc_cloc_id_pairs) {
+        cloc_id_to_sloc_ids[p.second].insert(p.first);
+        sloc_id_to_cloc_ids[p.first].insert(p.second);
+    }
+
+    bij_sloci.reserve(sloc_id_to_cloc_ids.size());
+    for (const auto& sloc : sloc_id_to_cloc_ids)
+        if (sloc.second.size() == 1
+                && cloc_id_to_sloc_ids.at(*sloc.second.begin()).size() == 1
+                )
+            // Bijective, keep it.
+            bij_sloci.push_back({sloc.first, *sloc.second.begin()});
+
+    return bij_sloci;
 }

@@ -25,6 +25,9 @@
 // jcatchen@uoregon.edu
 // University of Oregon
 //
+
+#include <regex>
+
 #include "utils.h"
 
 using namespace std;
@@ -299,4 +302,121 @@ bool compare_pair_haplotype(pair<string, double> a, pair<string, double> b) {
 
 bool compare_pair_haplotype_rev(pair<string, double> a, pair<string, double> b) {
     return (a.second < b.second);
+}
+
+bool compare_str_len(string a, string b) {
+    return (a.length() < b.length());
+}
+
+VersatileLineReader::VersatileLineReader(const string& path)
+: path_(path), line_number_(0), is_gzipped_(false),
+  ifs_(), ifsbuffer_(),
+  gzfile_(NULL), gzbuffer_(NULL), gzbuffer_size_(0), gzline_len_(0)
+{
+    std::smatch m;
+    std::regex_search(path, m, std::regex("\\.[Gg][Zz]$"));
+    is_gzipped_ = !m.empty();
+
+    if (!is_gzipped_) {
+        ifs_.open(path_);
+        check_open(ifs_, path_);
+    } else {
+        gzfile_ = gzopen(path_.c_str(), "rb");
+        check_open(gzfile_, path_);
+        gzbuffer_size_ = gzbuffer_init_size;
+        gzbuffer_ = new char[gzbuffer_size_];
+    }
+}
+
+VersatileLineReader::~VersatileLineReader() {
+    if (is_gzipped_) {
+        gzclose(gzfile_);
+        delete[] gzbuffer_;
+    }
+}
+
+bool VersatileLineReader::getline(const char*& line, size_t& len) {
+    auto truncated = [this]() {
+        cerr << "Error: While reading '" << path_ << "' (file may be truncated).\n";
+        throw exception();
+    };
+
+    if (!is_gzipped_) {
+        if (!std::getline(ifs_, ifsbuffer_))
+            return false;
+        if (ifs_.eof())
+            // Doesn't end with an '\n'.
+            truncated();
+        if (ifsbuffer_.back() == '\r')
+            // Remove the '\r'.
+            ifsbuffer_.pop_back();
+
+        line = ifsbuffer_.c_str();
+        len = ifsbuffer_.length();
+
+    } else {
+        if (!gzgets(gzfile_, gzbuffer_, gzbuffer_size_))
+            return false;
+
+        // Check the contents of the buffer.
+        gzline_len_ = strlen(gzbuffer_);
+        while (gzbuffer_[gzline_len_ - 1] != '\n') {
+            if (gzline_len_ < gzbuffer_size_ - 1) {
+                // The buffer was long enough but file didn't end with a newline.
+                truncated();
+            } else {
+                // The buffer wasn't long enough.
+                assert(gzline_len_ == gzbuffer_size_ - 1);
+
+                // Get a new, wider buffer & copy what we've already read.
+                char* old_buffer = gzbuffer_;
+                gzbuffer_size_ *= 2;
+                gzbuffer_ = new char[gzbuffer_size_];
+                memcpy(gzbuffer_, old_buffer, gzline_len_ + 1);
+                delete[] old_buffer;
+
+                // Continue reading the line.
+                char* start = gzbuffer_ + gzline_len_;
+                assert(*start == '\0');
+                if (!gzgets(gzfile_, start, gzbuffer_size_ - gzline_len_))
+                    // EOF; this means that the last character read by the previous
+                    // call was the last of the file. And it wasn't a newline.
+                    truncated();
+                gzline_len_ += strlen(start);
+            }
+        }
+        // Remove the '\n'.
+        gzbuffer_[gzline_len_ - 1] = '\0';
+        --gzline_len_;
+        if (gzbuffer_[gzline_len_ - 1] == '\r') {
+            // Remove the '\r'.
+            gzbuffer_[gzline_len_ - 1] = '\0';
+            --gzline_len_;
+        }
+
+        line = gzbuffer_;
+        len = gzline_len_;
+    }
+
+    ++line_number_;
+    return true;
+}
+
+VersatileWriter::VersatileWriter(const string& path)
+: path_(path),
+  is_gzipped_(false),
+  ofs_(),
+  gzfile_()
+{
+    std::smatch m;
+    std::regex_search(path, m, std::regex("\\.[Gg][Zz]$"));
+    is_gzipped_ = !m.empty();
+
+    if (!is_gzipped_) {
+        ofs_.open(path_);
+        check_open(ofs_, path_);
+    } else {
+        gzfile_ = gzopen(path_.c_str(), "wb");
+        check_open(gzfile_, path_);
+    }
 }

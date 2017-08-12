@@ -39,12 +39,6 @@ int    num_threads   = 1;
 // For use with the multinomial model to call fixed nucleotides.
 //
 modelt model_type         = snp;
-double bound_low          = 0.0;
-double bound_high         = 1.0;
-double p_freq             = 0.5;
-double barcode_err_freq   = 0.0;
-double heterozygote_limit = -3.84;
-double homozygote_limit   =  3.84;
 
 int main (int argc, char* argv[]) {
     IF_NDEBUG_TRY
@@ -258,10 +252,10 @@ int write_sql(map<int, MergedStack *> &m, map<int, PStack *> &u) {
     string pil_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".pileup.tsv";
 
     // Open the output files for writing.
-    std::ofstream tags(tag_file.c_str());
-    std::ofstream snps(snp_file.c_str());
-    std::ofstream alle(all_file.c_str());
-    std::ofstream pile(pil_file.c_str());
+    ofstream tags(tag_file.c_str());
+    ofstream snps(snp_file.c_str());
+    ofstream alle(all_file.c_str());
+    ofstream pile(pil_file.c_str());
     int tag_id, comp_id;
 
     tag_id = 0;
@@ -282,7 +276,7 @@ int write_sql(map<int, MergedStack *> &m, map<int, PStack *> &u) {
             tags << "0" << "\t"
                  << sql_id << "\t"
                  << tag_id << "\t"
-                 << tag_1->loc.chr << "\t"
+                 << tag_1->loc.chr() << "\t"
                  << tag_1->loc.bp + (*s)->col << "\t"
                  << "consensus\t" << "\t\t"
                  << tag_1->con[(*s)->col] << "\t"
@@ -327,7 +321,6 @@ int write_sql(map<int, MergedStack *> &m, map<int, PStack *> &u) {
                 allele[(*u[*k]->seq)[(*s)->col]] += u[*k]->count;
             }
 
-
             char pct[id_len];
             map<char, int>::iterator a;
             for (a = allele.begin(); a != allele.end(); a++) {
@@ -351,7 +344,7 @@ int write_sql(map<int, MergedStack *> &m, map<int, PStack *> &u) {
         pile << "0" << "\t"
              << sql_id << "\t"
              << tag_1->id << "\t"
-             << tag_1->loc.chr << "\t"
+             << tag_1->loc.chr() << "\t"
              << tag_1->loc.bp << "\t"
              << "consensus\t" << "\t\t"
              << tag_1->con << "\n";
@@ -391,7 +384,7 @@ int populate_merged_tags(map<int, PStack *> &unique, map<int, MergedStack *> &me
     // Create a map of each unique Stack that has been aligned to the same genomic location.
     //
     for (i = unique.begin(); i != unique.end(); i++) {
-        snprintf(id, id_len - 1, "%s_%d", i->second->loc.chr, i->second->loc.bp);
+        snprintf(id, id_len - 1, "%s_%d", i->second->loc.chr(), i->second->loc.bp);
         locations[id].insert(i->second->id);
     }
 
@@ -406,9 +399,7 @@ int populate_merged_tags(map<int, PStack *> &unique, map<int, MergedStack *> &me
         //
         s = k->second.begin();
         m->add_consensus(unique[*s]->seq);
-        strncpy(m->loc.chr, unique[*s]->loc.chr, id_len - 1);
-        m->loc.chr[id_len] = '\0';
-        m->loc.bp = unique[*s]->loc.bp;
+        m->loc.set(unique[*s]->loc.chr(), unique[*s]->loc.bp, strand_plus);
 
         //
         // Record the individual stacks that were aligned together.
@@ -468,7 +459,7 @@ int reduce_radtags(HashMap &radtags, map<int, PStack *> &unique) {
             for (sit = (*it).second.begin(); sit != (*it).second.end(); sit++) {
                 if (strcmp((*sit)->loc_str, lit->first.c_str()) == 0) {
                     u->add_id((*sit)->id);
-                    u->loc.set((*sit)->loc.chr, (*sit)->loc.bp, (*sit)->loc.strand);
+                    u->loc.set((*sit)->loc.chr(), (*sit)->loc.bp, (*sit)->loc.strand);
                 }
             }
 
@@ -674,13 +665,13 @@ int parse_command_line(int argc, char* argv[]) {
 }
 
 void version() {
-    std::cerr << "estacks " << VERSION << "\n\n";
+    cerr << "estacks " << VERSION << "\n\n";
 
     exit(1);
 }
 
 void help() {
-    std::cerr << "estacks " << VERSION << "\n"
+    cerr << "estacks " << VERSION << "\n"
               << "estacks -t file_type -f file_path [-o path] [-i id] [-m min_cov] [-r] [-e errfreq] [-p num_threads] [-h]" << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
               << "  t: input file Type. Supported types: bowtie, sam.\n"

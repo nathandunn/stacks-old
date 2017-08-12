@@ -23,17 +23,9 @@
 
 #include <iostream>
 #include <fstream>
-using std::ifstream;
-using std::ofstream;
-using std::cin;
-using std::cout;
-using std::cerr;
 #include <vector>
-using std::vector;
 #include <map>
-using std::map;
 #include <set>
-using std::set;
 
 #include "MetaPopInfo.h"
 #include "PopSum.h"
@@ -54,17 +46,17 @@ public:
     Ordered()  { }
     virtual ~Ordered() { }
 
-    int init_sites(vector<StatT *> &, map<uint, uint> &, vector<CSLocus *> &);
-    int init_sites(vector<StatT *> &, map<uint, uint> &, vector<CSLocus *> &, int);
-    int init_sites(vector<StatT *> &, map<uint, uint> &, vector<CSLocus *> &, int, int);
-    int init_haplotypes(vector<StatT *> &, map<uint, uint> &, vector<CSLocus *> &);
+    int init_sites(vector<StatT *> &, map<uint, uint> &, const vector<CSLocus *> &);
+    int init_sites(vector<StatT *> &, map<uint, uint> &, const vector<CSLocus *> &, int);
+    int init_sites(vector<StatT *> &, map<uint, uint> &, const vector<CSLocus *> &, int, int);
+    int init_haplotypes(vector<StatT *> &, map<uint, uint> &, const vector<CSLocus *> &);
 };
 
 template<class StatT>
 int
-Ordered<StatT>::init_sites(vector<StatT *> &sites, map<uint, uint> &sites_key, vector<CSLocus *> &sorted_loci)
+Ordered<StatT>::init_sites(vector<StatT *> &sites, map<uint, uint> &sites_key, const vector<CSLocus *> &sorted_loci)
 {
-    CSLocus   *loc;
+    const CSLocus   *loc;
     LocTally  *ltally;
     int        len;
     set<int>   bps;
@@ -101,9 +93,9 @@ Ordered<StatT>::init_sites(vector<StatT *> &sites, map<uint, uint> &sites_key, v
 
 template<class StatT>
 int
-Ordered<StatT>::init_sites(vector<StatT *> &sites, map<uint, uint> &sites_key, vector<CSLocus *> &sorted_loci, int pop_id)
+Ordered<StatT>::init_sites(vector<StatT *> &sites, map<uint, uint> &sites_key, const vector<CSLocus *> &sorted_loci, int pop_id)
 {
-    CSLocus *loc;
+    const CSLocus *loc;
     LocSum  *lsum;
     int      len;
     set<int> bps;
@@ -140,9 +132,9 @@ Ordered<StatT>::init_sites(vector<StatT *> &sites, map<uint, uint> &sites_key, v
 
 template<class StatT>
 int
-Ordered<StatT>::init_sites(vector<StatT *> &sites, map<uint, uint> &sites_key, vector<CSLocus *> &sorted_loci, int pop_id_1, int pop_id_2)
+Ordered<StatT>::init_sites(vector<StatT *> &sites, map<uint, uint> &sites_key, const vector<CSLocus *> &sorted_loci, int pop_id_1, int pop_id_2)
 {
-    CSLocus *loc;
+    const CSLocus *loc;
     LocSum  *lsum_1, *lsum_2;
     int      len;
     set<int> bps;
@@ -181,9 +173,9 @@ Ordered<StatT>::init_sites(vector<StatT *> &sites, map<uint, uint> &sites_key, v
 
 template<class StatT>
 int
-Ordered<StatT>::init_haplotypes(vector<StatT *> &sites, map<uint, uint> &sites_key, vector<CSLocus *> &sorted_loci)
+Ordered<StatT>::init_haplotypes(vector<StatT *> &sites, map<uint, uint> &sites_key, const vector<CSLocus *> &sorted_loci)
 {
-    CSLocus *loc;
+    const CSLocus *loc;
     int      bp;
     set<int> bps;
 
@@ -214,12 +206,12 @@ class OHaplotypes: public Ordered<StatT> {
 public:
     OHaplotypes(): Ordered<StatT>() { }
 
-    int order(vector<StatT *> &, map<uint, uint> &, vector<CSLocus *> &);
+    int order(vector<StatT *> &, map<uint, uint> &, const vector<CSLocus *> &);
 };
 
 template<class StatT>
 int
-OHaplotypes<StatT>::order(vector<StatT *> &sites, map<uint, uint> &sites_key, vector<CSLocus *> &sorted_loci)
+OHaplotypes<StatT>::order(vector<StatT *> &sites, map<uint, uint> &sites_key, const vector<CSLocus *> &sorted_loci)
 {
     this->init_haplotypes(sites, sites_key, sorted_loci);
 
@@ -234,14 +226,14 @@ public:
         this->psum   = psum;
     }
 
-    int order(vector<StatT *> &, map<uint, uint> &, vector<CSLocus *> &, int, int);
+    int order(vector<StatT *> &, map<uint, uint> &, const vector<CSLocus *> &, int, int);
 };
 
 template<class StatT>
 int
-OPopPair<StatT>::order(vector<StatT *> &sites, map<uint, uint> &sites_key, vector<CSLocus *> &sorted_loci, int pop_1, int pop_2)
+OPopPair<StatT>::order(vector<StatT *> &sites, map<uint, uint> &sites_key, const vector<CSLocus *> &sorted_loci, int pop_1, int pop_2)
 {
-    CSLocus *loc;
+    const CSLocus *loc;
     StatT   *pair;
     int      len;
 
@@ -266,7 +258,7 @@ OPopPair<StatT>::order(vector<StatT *> &sites, map<uint, uint> &sites_key, vecto
                 *(this->log_fh) << "between_population\t"
                                 << "incompatible_locus\t"
                                 << loc->id << "\t"
-                                << loc->loc.chr << "\t"
+                                << loc->loc.chr() << "\t"
                                 << loc->sort_bp(k) +1 << "\t"
                                 << k << "\t"
                                 << mpopi.pops()[pop_1].name << "\t"
@@ -295,7 +287,7 @@ OPopPair<StatT>::order(vector<StatT *> &sites, map<uint, uint> &sites_key, vecto
                 *(this->log_fh) << "between_population\t"
                                 << "multiple_locus\t"
                                 << loc->id << "\t"
-                                << loc->loc.chr << "\t"
+                                << loc->loc.chr() << "\t"
                                 << pair->bp +1 << "\t"
                                 << k << "\t"
                                 << mpopi.pops()[pop_1].name << "\t"
@@ -319,12 +311,12 @@ public:
         this->psum   = psum;
     }
 
-    int order(vector<StatT *> &, vector<CSLocus *> &, int);
+    int order(vector<StatT *> &, const vector<CSLocus *> &, int);
 };
 
 template<class StatT>
 int
-OSumStat<StatT>::order(vector<StatT *> &sites, vector<CSLocus *> &sorted_loci, int pop_id)
+OSumStat<StatT>::order(vector<StatT *> &sites, const vector<CSLocus *> &sorted_loci, int pop_id)
 {
     this->incompatible_loci = 0;
     this->multiple_loci     = 0;
@@ -333,7 +325,7 @@ OSumStat<StatT>::order(vector<StatT *> &sites, vector<CSLocus *> &sorted_loci, i
 
     this->init_sites(sites, sites_key, sorted_loci, pop_id);
 
-    CSLocus *loc;
+    const CSLocus *loc;
     LocSum  *lsum;
     int      len;
 
@@ -360,7 +352,7 @@ OSumStat<StatT>::order(vector<StatT *> &sites, vector<CSLocus *> &sorted_loci, i
                 *(this->log_fh) << "within_population\t"
                                 << "multiple_locus\t"
                                 << loc->id << "\t"
-                                << loc->loc.chr << "\t"
+                                << loc->loc.chr() << "\t"
                                 << lsum->nucs[k].bp +1 << "\t"
                                 << k << "\t"
                                 << mpopi.pops()[pop_id].name << "\t"
@@ -380,12 +372,12 @@ public:
         this->psum   = psum;
     }
 
-    int order(vector<StatT *> &, vector<CSLocus *> &);
+    int order(vector<StatT *> &, const vector<CSLocus *> &);
 };
 
 template<class StatT>
 int
-OLocTally<StatT>::order(vector<StatT *> &sites, vector<CSLocus *> &sorted_loci)
+OLocTally<StatT>::order(vector<StatT *> &sites, const vector<CSLocus *> &sorted_loci)
 {
     this->incompatible_loci = 0;
     this->multiple_loci     = 0;
@@ -394,7 +386,7 @@ OLocTally<StatT>::order(vector<StatT *> &sites, vector<CSLocus *> &sorted_loci)
 
     this->init_sites(sites, sites_key, sorted_loci);
 
-    CSLocus   *loc;
+    const CSLocus   *loc;
     LocTally  *ltally;
     int        len;
 
@@ -421,7 +413,7 @@ OLocTally<StatT>::order(vector<StatT *> &sites, vector<CSLocus *> &sorted_loci)
                 *(this->log_fh) << "within_population\t"
                                 << "multiple_locus\t"
                                 << loc->id << "\t"
-                                << loc->loc.chr << "\t"
+                                << loc->loc.chr() << "\t"
                                 << ltally->nucs[k].bp +1 << "\t"
                                 << k << "\t"
                                 << "conflicts with locus " << sites[sites_key[ltally->nucs[k].bp]]->loc_id << "\n";

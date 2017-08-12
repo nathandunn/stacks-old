@@ -234,9 +234,9 @@ process_paired_reads(string prefix_1,
                      map<BarcodePair, fhType *> &rem_2_fhs,
                      map<string, long> &counter,
                      map<BarcodePair, map<string, long> > &barcode_log) {
-    Input *fh_1, *fh_2;
-    Read  *r_1, *r_2;
-    ofstream *discard_fh_1, *discard_fh_2;
+    Input *fh_1=NULL, *fh_2=NULL;
+    RawRead  *r_1=NULL, *r_2=NULL;
+    ofstream *discard_fh_1=NULL, *discard_fh_2=NULL;
 
     int return_val = 1;
 
@@ -295,8 +295,8 @@ process_paired_reads(string prefix_1,
         exit(1);
     }
 
-    r_1 = new Read(strlen(s_1->seq), 1, min_bc_size_1, win_size);
-    r_2 = new Read(strlen(s_2->seq), 2, min_bc_size_2, win_size);
+    r_1 = new RawRead(strlen(s_1->seq), 1, min_bc_size_1, win_size);
+    r_2 = new RawRead(strlen(s_2->seq), 2, min_bc_size_2, win_size);
 
     BarcodePair bc;
     //
@@ -424,7 +424,6 @@ process_paired_reads(string prefix_1,
     } while ((s_1 = fh_1->next_seq()) != NULL &&
              (s_2 = fh_2->next_seq()) != NULL);
 
-
     if (discards) {
         delete discard_fh_1;
         delete discard_fh_2;
@@ -443,9 +442,9 @@ process_reads(string prefix,
               map<BarcodePair, fhType *> &pair_1_fhs,
               map<string, long> &counter,
               map<BarcodePair, map<string, long> > &barcode_log) {
-    Input *fh;
-    Read  *r;
-    ofstream *discard_fh;
+    Input *fh=NULL;
+    RawRead  *r;
+    ofstream *discard_fh=NULL;
 
     int return_val = 1;
 
@@ -484,7 +483,7 @@ process_reads(string prefix,
         exit(1);
     }
 
-    r = new Read(strlen(s->seq), 1, min_bc_size_1, win_size);
+    r = new RawRead(strlen(s->seq), 1, min_bc_size_1, win_size);
 
     BarcodePair bc;
     //
@@ -575,7 +574,7 @@ process_reads(string prefix,
 }
 
 inline int
-process_singlet(Read *href,
+process_singlet(RawRead *href,
                 bool paired_end,
                 map<string, long> &bc_log, map<string, long> &counter)
 {
@@ -1118,13 +1117,13 @@ int parse_command_line(int argc, char* argv[]) {
 }
 
 void version() {
-    std::cerr << "process_shortreads " << VERSION << "\n\n";
+    cerr << "process_shortreads " << VERSION << "\n\n";
 
     exit(1);
 }
 
 void help() {
-    std::cerr << "process_shortreads " << VERSION << "\n"
+    cerr << "process_shortreads " << VERSION << "\n"
               << "process_shortreads [-f in_file | -p in_dir [-P] [-I] | -1 pair_1 -2 pair_2] -b barcode_file -o out_dir [-i type] [-y type] [-c] [-q] [-r] [-E encoding] [-t len] [-D] [-w size] [-s lim] [-h]\n"
               << "  f: path to the input file if processing single-end seqeunces.\n"
               << "  i: input file type, either 'bustard' for the Illumina BUSTARD format, 'bam', 'fastq' (default), or 'gzfastq' for gzipped FASTQ.\n"

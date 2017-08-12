@@ -29,6 +29,8 @@
 //
 #include "mst.h"
 
+namespace mst {
+
 Edge *Node::add_edge(Node *n, int dist) {
     Edge *e = new Edge;
     e->child = n;
@@ -249,6 +251,7 @@ string MinSpanTree::vis(bool overlay) {
     // Scale the graph to display on a scale_factor inch canvas. Find the largest edge weight
     // and scale the edge lengths to fit the canvas.
     //
+    scale = 0.0;
     for (i = this->nodes.begin(); i != this->nodes.end(); i++) {
         n = i->second;
         for (j = 0; j < n->edges.size(); j++)
@@ -278,3 +281,5 @@ string MinSpanTree::vis(bool overlay) {
 
     return data.str();
 }
+
+}//namespace

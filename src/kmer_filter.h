@@ -23,35 +23,23 @@
 
 #include "constants.h"
 
-#include <stdlib.h>
+#include <cstdlib>
 #include <getopt.h> // Process command-line options
 #include <dirent.h> // Open/Read contents of a directory
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <string.h>
-#include <math.h>
+#include <cstring>
+#include <cmath>
 #include <algorithm>
 #include <iostream>
 #include <fstream>
 #include <sstream>
-using std::stringstream;
-using std::istream;
-using std::ofstream;
-using std::cin;
-using std::cout;
-using std::cerr;
-using std::endl;
 
 #include <vector>
-using std::vector;
 #include <map>
-using std::map;
 #include <set>
-using std::set;
 #include <utility>
-using std::pair;
 #include <unordered_map>
-using std::unordered_map;
 
 #ifdef HAVE_SPARSEHASH
 #include <sparsehash/sparse_hash_map>

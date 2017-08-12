@@ -27,43 +27,31 @@
 #include <omp.h>    // OpenMP library
 #endif
 #include <getopt.h> // Process command-line options
-#include <time.h>
-#include <math.h>
-#include <stdlib.h>
-#include <string.h>
+#include <ctime>
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
 #include <utility>
-using std::pair;
-using std::make_pair;
 
 #include <string>
-using std::string;
 
 #include <iostream>
 #include <fstream>
-using std::ifstream;
-using std::ofstream;
-using std::cin;
-using std::cout;
-using std::cerr;
-using std::endl;
 
 #include <vector>
-using std::vector;
 #include <map>
-using std::map;
 #include <set>
-using std::set;
 #include <queue>
 using std::queue;
 
 #include <unordered_map>
-using std::unordered_map;
 
 #ifdef HAVE_SPARSEHASH
 #include <sparsehash/sparse_hash_map>
 using google::sparse_hash_map;
 #endif
 
+#include "constants.h"
 #include "kmers.h"
 #include "stacks.h"
 #include "locus.h"

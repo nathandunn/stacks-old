@@ -197,7 +197,7 @@ check_whitelist_integrity(map<int, CSLocus *> &catalog, map<int, set<int> > &whi
             loc = catalog[it->first];
 
             if (it->second.size() == 0) {
-                new_wl.insert(make_pair(it->first, std::set<int>()));
+                new_wl.insert(make_pair(it->first, set<int>()));
                 continue;
             }
 
@@ -368,17 +368,19 @@ map<int, CSLocus*> create_catalog(const vector<VcfRecord>& records) {
     for (size_t i = 0; i < records.size(); ++i) {
         const VcfRecord& rec = records[i];
 
-        CSLocus* loc = catalog.insert(make_pair(i, new CSLocus())).first->second;
+        CSLocus* loc = new CSLocus();
+        catalog.insert(make_pair(i, loc));
         loc->sample_id = 0;
         loc->id = i;
         loc->len = 1;
         loc->con = new char[2];
-        strcpy(loc->con, rec.alleles[0].c_str());
-        loc->loc.set(rec.chrom.c_str(), (uint)rec.pos, strand_plus);
-        for (const string& a : rec.alleles) {
-            if (a=="*")
+        strcpy(loc->con, rec.allele(0));
+        loc->loc.set(rec.chrom(), (uint)rec.pos(), strand_plus);
+        for (size_t i=0; i<rec.n_alleles(); ++i) {
+            const char* a = rec.allele(i);
+            if (strcmp(a,"*")==0)
                 continue;
-            loc->alleles.insert({a, 0});
+            loc->alleles.insert({string(a), 0});
         }
         loc->depth = 0;
         loc->lnl = 0;
@@ -386,21 +388,21 @@ map<int, CSLocus*> create_catalog(const vector<VcfRecord>& records) {
         loc->snps.push_back(new SNP());
         SNP& snp = *loc->snps.back();
         snp.col = 0;
+        snp.type = snp_type_unk;
         vector<char*> snp_alleles = {&snp.rank_1, &snp.rank_2, &snp.rank_3, &snp.rank_4};
         try {
-            size_t s=0;
-            for (const string& a : rec.alleles) {
-                if (a=="*")
+            for (size_t i=0; i<rec.n_alleles(); ++i) {
+                const char* a = rec.allele(i);
+                if (a[0]=='*')
                     continue;
-                *snp_alleles.at(s) = a.at(0);
-                ++s;
+                *snp_alleles.at(i) = a[0];
             }
         } catch (out_of_range& e) {
             cerr << "Warning: Skipping malformed VCF SNP record '"
-                 << rec.chrom << ":" << rec.pos << "'."
+                 << rec.chrom() << ":" << rec.pos() << "'."
                  << " Alleles were:";
-            for (const string& a : rec.alleles)
-                cerr << " '" << a << "';";
+            for (size_t i=0; i<rec.n_alleles(); ++i)
+                cerr << " '" << rec.allele(i) << "';";
             cerr << ".\n";
             delete loc->snps[0];
             delete loc->con;
@@ -408,10 +410,95 @@ map<int, CSLocus*> create_catalog(const vector<VcfRecord>& records) {
             catalog.erase(i);
             continue;
         }
-        snp.type = *snp_alleles[2] == 0 ? snp_type_hom : snp_type_het;
 
         loc->populate_alleles();
     }
 
     return catalog;
+}
+
+CSLocus* new_cslocus(const Seq& consensus, const vector<VcfRecord>& records, int id) {
+    CSLocus* loc = new CSLocus();
+
+    // sample_id
+    loc->sample_id = 0;
+
+    // id
+    loc->id = id;
+
+    // con + len
+    assert(consensus.seq != NULL);
+    loc->add_consensus(consensus.seq);
+
+    // loc
+    // If the analysis is reference-based, there will be a ' pos=...' field on
+    // the fasta ID line.
+    assert(loc->loc.empty());
+    const char* p = consensus.id;
+    while ((p = strchr(p, ' ')) != NULL) {
+        ++p;
+        if (strncmp(p, "pos=", 4) == 0) {
+            p += 4;
+            const char* q = p;
+            while (*q && *q != ' ')
+                ++q;
+            loc->loc = PhyLoc(string(p, q));
+            break;
+        }
+    }
+    if (loc->loc.empty())
+        loc->loc = PhyLoc("", 0, strand_plus); // n.b. Not the same as PhyLoc(); with this `PhyLoc::chr != NULL`.
+
+    // snps
+    vector<const VcfRecord*> snp_records;
+    for (auto& rec : records) {
+        if (rec.n_alleles() > 1) {
+            snp_records.push_back(&rec);
+            assert(rec.is_snp());
+        }
+    }
+    for (const VcfRecord* rec : snp_records) {
+        SNP* snp = new SNP();
+        loc->snps.push_back(snp);
+        snp->type = snp_type_het;
+        snp->col = rec->pos();
+        snp->rank_1 = rec->allele(0)[0]; // N.B. the VCF parser forbids empty alleles.
+        snp->rank_2 = rec->allele(1)[0];
+        if (rec->n_alleles() >= 3) {
+            snp->rank_3 = rec->allele(2)[0];
+            if (rec->n_alleles() == 4)
+                snp->rank_4 = rec->allele(3)[0];
+        }
+        snp->lratio = 0.0;
+    }
+
+    // alleles
+    if (!snp_records.empty()) {
+        pair<string,string> haplotypes;
+        for (size_t sample=0; sample<records.at(0).n_samples(); ++sample) {
+            VcfRecord::util::build_haps(haplotypes, snp_records, sample);
+            bool complete = true;
+            for (size_t i=0; i<snp_records.size(); ++i) {
+                if (haplotypes.first[i] == 'N' || haplotypes.second[i] == 'N') {
+                    complete = false;
+                    break;
+                }
+            }
+            if (complete) {
+                ++loc->alleles[haplotypes.first];
+                ++loc->alleles[haplotypes.second];
+            }
+        }
+    }
+
+    // strings
+    loc->populate_alleles();
+
+    // depth
+    loc->depth = 0;
+
+    // lnl
+    loc->lnl = 0;
+
+    return loc;
 }

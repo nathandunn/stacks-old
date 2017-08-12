@@ -21,8 +21,10 @@
 #ifndef __DNASeq_H__
 #define __DNASeq_H__
 
-#include <string.h>
-#include <limits.h>
+#include <cstring>
+#include <climits>
+
+#include "constants.h"
 
 // #ifdef __GNUC__
 // #include <ext/hash_map>
@@ -73,10 +75,6 @@ public:
 #include <iostream>
 #include <fstream>
 #include <sstream>
-using std::stringstream;
-using std::cin;
-using std::cout;
-using std::cerr;
 
 struct hash_dnaseq {
     size_t operator()(DNASeq *__s) const

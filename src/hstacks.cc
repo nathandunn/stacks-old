@@ -74,7 +74,7 @@ int main (int argc, char* argv[]) {
         string sample_id = (*in_file).substr(pos_1 + 1, (pos_2 - pos_1 - 1));
 
         bool compressed = false;
-        load_loci(*in_file, sample, false, false, compressed);
+        load_loci(*in_file, sample, 0, false, compressed);
 
         //
         // Give each locus a unique ID among all samples
@@ -547,7 +547,7 @@ int write_homologous_loci(map<int, HLocus *> &samples) {
             "0"              << "\t" <<
             batch_id         << "\t" <<
             id               << "\t" <<
-            tag_1->loc.chr   << "\t" <<
+            tag_1->loc.chr() << "\t" <<
             tag_1->loc.bp    << "\t" <<
             "consensus"      << "\t" <<
             0                << "\t" <<
@@ -619,7 +619,7 @@ int write_homologous_loci(map<int, HLocus *> &samples) {
                 "0"              << "\t" <<
                 batch_id         << "\t" <<
                 id               << "\t" <<
-                tag_2->loc.chr   << "\t" <<
+                tag_2->loc.chr() << "\t" <<
                 tag_2->loc.bp    << "\t" <<
                 "primary"        << "\t" <<
                 sub_id           << "\t" <<
@@ -906,13 +906,13 @@ int parse_command_line(int argc, char* argv[]) {
 }
 
 void version() {
-    std::cerr << "hstacks " << VERSION << "\n\n";
+    cerr << "hstacks " << VERSION << "\n\n";
 
     exit(1);
 }
 
 void help() {
-    std::cerr << "hstacks " << VERSION << "\n"
+    cerr << "hstacks " << VERSION << "\n"
               << "hstacks -i path [-o path] [-b batch_id] [-n mismatches] [-m min] [-p min_threads] [-N limit] [-h]" << "\n"
               << "  i: path to the set of SQL files from which to load loci." << "\n"
               << "  o: output path to write results." << "\n"

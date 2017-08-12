@@ -26,35 +26,22 @@
 #endif
 #include <getopt.h> // Process command-line options
 #include <dirent.h> // Open/Read contents of a directory
-#include <math.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
 #include <utility>
-using std::pair;
-using std::make_pair;
 #include <string>
-using std::string;
 #include <iostream>
 #include <fstream>
-using std::ifstream;
-using std::ofstream;
-using std::cin;
-using std::cout;
-using std::cerr;
-using std::endl;
 #include <iomanip>
 using std::setw;
 using std::setprecision;
 using std::fixed;
 #include <sstream>
-using std::stringstream;
 #include <vector>
-using std::vector;
 #include <map>
-using std::map;
 #include <set>
-using std::set;
 
 #include "constants.h"
 #include "stacks.h"
@@ -75,7 +62,7 @@ enum corr_type {p_value, bonferroni_win, bonferroni_gen, no_correction};
 enum bs_type   {bs_exact, bs_approx, bs_none};
 enum merget    {merge_sink, merge_src};
 enum phaset    {merge_failure, simple_merge, complex_phase, nomapping_fail, multimapping_fail, multiple_fails};
-enum class InputMode {stacks, vcf};
+enum class InputMode {stacks, stacks2, vcf};
 
 const int max_snp_dist = 500;
 
@@ -124,13 +111,13 @@ double   haplotype_d_est(Datum **, LocSum **, vector<int> &);
 LocStat *haplotype_diversity(int, int, Datum **);
 double   count_haplotypes_at_locus(int, int, Datum**, map<string, double>&);
 
-void log_snps_per_loc_distrib(std::ostream&, map<int, CSLocus*>&);
+void log_snps_per_loc_distrib(ostream&, map<int, CSLocus*>&);
 
 //int  tally_ref_alleles(LocSum **, int, int, char &, char &); //unused; also commented out in the .cc
 //int  load_snp_calls(string,  PopMap<CSLocus> *); //no implementation
 
 //bool compare_pop_map(pair<int, string>, pair<int, string>); //no implementation; the function is in [sql_utilities.h]
-bool hap_compare(pair<string, int>, pair<string, int>);
+bool hap_compare(const pair<string,int>&, const pair<string,int>&);
 
 void vcfcomp_simplify_pmap (map<int, CSLocus*>& catalog, PopMap<CSLocus>* pmap);
 

@@ -21,31 +21,21 @@
 #ifndef __FILE_IO_H__
 #define __FILE_IO_H__
 
-#include <stdlib.h>
+#include <cstdlib>
 #include <getopt.h> // Process command-line options
 #include <dirent.h> // Open/Read contents of a directory
-#include <string.h>
+#include <cstring>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <string>
-using std::string;
 #include <map>
-using std::map;
 #include <vector>
-using std::vector;
 #include <utility>
-using std::pair;
 #include <iostream>
 #include <fstream>
-using std::istream;
-using std::ofstream;
-using std::cin;
-using std::cout;
-using std::cerr;
-using std::endl;
 #include <zlib.h>
-#include <errno.h>
+#include <cerrno>
 
 #include "constants.h"
 #include "clean.h"
