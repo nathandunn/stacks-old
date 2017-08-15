@@ -113,7 +113,6 @@ const string prog_name = "rystacks";
 unique_ptr<LogAlterator> logger;
 gzFile o_gzfasta_f = NULL;
 unique_ptr<VcfWriter> o_vcf_f;
-ofstream o_models_f;
 ofstream o_aln_f;
 ofstream o_hapgraphs_f;
 
