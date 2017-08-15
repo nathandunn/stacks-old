@@ -187,57 +187,27 @@ try {
     // Process every locus
     //
     ProcessingStats stats {};
-    if (locus_wl.empty()) {
-        // No whitelist.
-        cout << "Processing all loci...\n" << flush;
-        ProgressMeter progress (cout, bam_fh.n_loci());
-        int omp_return = 0;
-        #pragma omp parallel
-        {
-            LocusProcessor loc_proc;
-            CLocReadSet loc (bam_fh.mpopi());
-            #pragma omp for schedule(dynamic)
-            for (size_t i=0; i<bam_fh.n_loci(); ++i) {
-                if (omp_return != 0)
-                    continue;
-                try {
+    const bool all_loci = locus_wl.empty();
+    cout << "Processing " << (all_loci ? "all" : "whitelisted") << " loci...\n" << flush;
+    const size_t n_loci = all_loci ? bam_fh.n_loci() : locus_wl.size();
+    ProgressMeter progress (cout, n_loci);
+    int omp_return = 0;
+    #pragma omp parallel
+    {
+        LocusProcessor loc_proc;
+        CLocReadSet loc (bam_fh.mpopi());
+        #pragma omp for schedule(dynamic)
+        for (size_t i=0; i<n_loci; ++i) {
+            if (omp_return != 0)
+                continue;
+            try {
+                if (all_loci) {
                     #pragma omp critical
                     {
                         ++progress;
                         bam_fh.read_one_locus(loc);
                     }
-
-                    loc_proc.process(move(loc));
-
-                } catch (exception& e) {
-                    #pragma omp critical
-                    omp_return = stacks_handle_exceptions(e);
-                }
-            }
-
-            #pragma omp critical
-            stats += loc_proc.stats();
-        }
-        if (omp_return != 0)
-             return omp_return;
-        progress.done();
-
-    } else {
-        // Whitelist.
-        cout << "Processing whitelisted loci...\n" << flush;
-        size_t n_loci = locus_wl.size();
-        ProgressMeter progress (cout, n_loci);
-        int omp_return = 0;
-        #pragma omp parallel
-        {
-            LocusProcessor loc_proc;
-            CLocReadSet loc (bam_fh.mpopi());
-            #pragma omp for schedule(dynamic)
-            for (size_t i=0; i<n_loci; ++i) {
-                try {
-                    if (omp_return != 0)
-                        continue;
-
+                } else {
                     #pragma omp critical
                     {
                         ++progress;
@@ -252,24 +222,23 @@ try {
                     }
                     if (omp_return != 0)
                         continue;
-
-                    loc_proc.process(move(loc));
-
-                } catch (exception& e) {
-                    #pragma omp critical
-                    omp_return = stacks_handle_exceptions(e);
                 }
+
+                loc_proc.process(move(loc));
+
+            } catch (exception& e) {
+                #pragma omp critical
+                omp_return = stacks_handle_exceptions(e);
             }
-
-            #pragma omp critical
-            stats += loc_proc.stats();
         }
-        if (omp_return != 0)
-             return omp_return;
-        progress.done();
-        assert(locus_wl.empty());
-    }
 
+        #pragma omp critical
+        stats += loc_proc.stats();
+    }
+    if (omp_return != 0)
+         return omp_return;
+    progress.done();
+    assert(locus_wl.empty());
 
     //
     // Report statistics on the analysis.
