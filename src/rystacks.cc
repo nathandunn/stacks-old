@@ -191,27 +191,33 @@ try {
         // No whitelist.
         cout << "Processing all loci...\n" << flush;
         ProgressMeter progress (cout, bam_fh.n_loci());
-        bool omp_return = 0;
+        int omp_return = 0;
         #pragma omp parallel
-        { try {
+        {
             LocusProcessor loc_proc;
             CLocReadSet loc (bam_fh.mpopi());
             #pragma omp for schedule(dynamic)
             for (size_t i=0; i<bam_fh.n_loci(); ++i) {
-                #pragma omp critical
-                {
-                    ++progress;
-                    bam_fh.read_one_locus(loc);
+                if (omp_return != 0)
+                    continue;
+                try {
+                    #pragma omp critical
+                    {
+                        ++progress;
+                        bam_fh.read_one_locus(loc);
+                    }
+
+                    loc_proc.process(move(loc));
+
+                } catch (exception& e) {
+                    #pragma omp critical
+                    omp_return = stacks_handle_exceptions(e);
                 }
-                loc_proc.process(move(loc));
             }
 
             #pragma omp critical
             stats += loc_proc.stats();
-
-        } catch (exception& e) {
-            omp_return = stacks_handle_exceptions(e);
-        }}
+        }
         if (omp_return != 0)
              return omp_return;
         progress.done();
@@ -221,33 +227,43 @@ try {
         cout << "Processing whitelisted loci...\n" << flush;
         size_t n_loci = locus_wl.size();
         ProgressMeter progress (cout, n_loci);
-        bool omp_return = 0;
+        int omp_return = 0;
         #pragma omp parallel
-        { try {
+        {
             LocusProcessor loc_proc;
             CLocReadSet loc (bam_fh.mpopi());
             #pragma omp for schedule(dynamic)
             for (size_t i=0; i<n_loci; ++i) {
-                #pragma omp critical
-                {
-                    ++progress;
-                    do {
-                        if (!bam_fh.read_one_locus(loc)) {
-                            cerr << "Error: Some whitelisted loci weren't found in the BAM file.\n";
-                            throw exception();
-                        }
-                    } while (!locus_wl.count(loc.id()));
-                    locus_wl.erase(loc.id());
+                try {
+                    if (omp_return != 0)
+                        continue;
+
+                    #pragma omp critical
+                    {
+                        ++progress;
+                        do {
+                            if (!bam_fh.read_one_locus(loc)) {
+                                cerr << "Error: Some whitelisted loci weren't found in the BAM file.\n";
+                                omp_return = stacks_handle_exceptions(exception());
+                                break;
+                            }
+                        } while (!locus_wl.count(loc.id()));
+                        locus_wl.erase(loc.id());
+                    }
+                    if (omp_return != 0)
+                        continue;
+
+                    loc_proc.process(move(loc));
+
+                } catch (exception& e) {
+                    #pragma omp critical
+                    omp_return = stacks_handle_exceptions(e);
                 }
-                loc_proc.process(move(loc));
             }
 
             #pragma omp critical
             stats += loc_proc.stats();
-
-        } catch (exception& e) {
-            omp_return = stacks_handle_exceptions(e);
-        }}
+        }
         if (omp_return != 0)
              return omp_return;
         progress.done();
@@ -295,7 +311,7 @@ try {
     cout << prog_name << " is done.\n";
     return 0;
 
-} catch (const std::exception& e) {
+} catch (exception& e) {
     return stacks_handle_exceptions(e);
 }
 }

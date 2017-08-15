@@ -121,18 +121,25 @@ int run() {
     vector<string> outputs (samples.size());
     int omp_return = 0;
     #pragma omp parallel
-    { try {
-        #pragma omp for  schedule(dynamic)
+    {
+        #pragma omp for schedule(dynamic)
         for (size_t i=0; i<samples.size(); ++i) {
-            #pragma omp critical
-            cout << "Processing sample '" << samples[i] << "'...\n";
-            stringstream ss;
-            run(cloc_ids, header_sq_lines.str(), i, ss);
-            outputs[i] = ss.str();
+            if (omp_return != 0)
+                continue;
+            try {
+                #pragma omp critical
+                cout << "Processing sample '" << samples[i] << "'...\n";
+
+                stringstream ss;
+                run(cloc_ids, header_sq_lines.str(), i, ss);
+                outputs[i] = ss.str();
+
+            } catch (exception&) {
+                #pragma omp critical
+                omp_return = 1;
+            }
         }
-    } catch (exception&) {
-        omp_return = 1;
-    }}
+    }
     if (omp_return != 0)
         return omp_return;
 
