@@ -67,6 +67,8 @@ class VcfHeader {
     vector<VcfMeta> meta_;
     map<string, size_t> sample_indexes_;
 
+    template<typename OStream> void print(OStream& os) const; // Template because VersatileWriter isn't a proper std::ostream.
+
 public:
     VcfHeader() : samples_(), meta_() {}
 
@@ -81,6 +83,9 @@ public:
     void add_std_meta(const string& version = "VCFv4.2");
 
     static const string std_fields;
+
+    friend ostream& operator<< (ostream& os, const VcfHeader& h) {h.print(os); return os;}
+    friend VersatileWriter& operator<< (VersatileWriter& w, const VcfHeader& h) {h.print(w); return w;}
 };
 
 /*
@@ -106,13 +111,17 @@ class VcfRecord {
     void append_str(const string& s) {append_str(s.c_str(), s.length());}
     void append_str(const char* str, size_t len);
 
+    template<typename OStream> void print(OStream& os) const; // Template because VersatileWriter isn't a proper std::ostream.
+
 public:
     VcfRecord()
     : buffer_(), strings_(), qual_i_(SIZE_MAX), format0_i_(SIZE_MAX), sample0_i_(SIZE_MAX)
     {}
 
     void assign(const char* rec, size_t len, const VcfHeader& header);
-    bool check_record() const; // Not implemented. Check that empty fields are '.', etc.
+
+    friend ostream& operator<< (ostream& os, const VcfRecord& r) {r.print(os); return os;}
+    friend VersatileWriter& operator<< (VersatileWriter& w, const VcfRecord& r) {r.print(w); return w;}
 
     const char* chrom()          const {return buffer_.data();}
          size_t pos()            const {return atoi(i2str(pos_i_())) - 1;} // 0-based.
@@ -206,6 +215,7 @@ public:
 /*
  * VcfWriter
  * ==========
+ * (This has become an empty shell...)
  */
 class VcfWriter {
 private:
@@ -216,19 +226,81 @@ private:
 public:
     VcfWriter(const string& path, VcfHeader&& header)
         : file_(path), header_(header)
-        {write_header();}
+        {file_ << header_;}
 
     const VcfHeader& header() const {return header_;}
-    void write_record(const VcfRecord& r);
+    void write_record(const VcfRecord& r)
+        {assert(r.n_samples()==header_.samples().size()); file_ << r;}
 
-private:
-    void write_header();
+    VersatileWriter& file() {return file_;}
 };
 
 /*
  * Inline methods.
  * ==========
  */
+
+template<typename OStream>
+void VcfHeader::print(OStream& os) const {
+    for(const VcfMeta& m : meta())
+        os << "##" << m.key() << "=" << m.value() << "\n";
+
+    os << VcfHeader::std_fields;
+    if(!samples().empty())
+        os << "\tFORMAT";
+    for(const string& s : samples())
+        os << '\t' << s;
+    os << '\n';
+}
+
+template<typename OStream>
+void VcfRecord::print(OStream& os) const {
+
+    os << chrom()
+       << '\t' << pos() + 1
+       << '\t' << id()
+       << '\t' << allele(0);
+
+    //ALT
+    os << "\t";
+    if (n_alleles() == 1) {
+        os << '.';
+    } else {
+        os << allele(1);
+        for (size_t i=2; i<n_alleles(); ++i)
+            os << ',' << allele(i);
+    }
+
+    //QUAL
+    os << '\t' << qual();
+
+    //FILTER
+    os << '\t' << filters();
+
+    //INFO
+    os << '\t';
+    if (n_infos() == 0) {
+        os << '.';
+    } else {
+        os << info(0);
+        for (size_t i=1; i<n_infos(); ++i)
+            os << ';' << info(i);
+    }
+
+    if (n_samples() > 0) {
+        //FORMAT
+        os << "\t";
+        os << format(0);
+        for (size_t i=1; i<n_formats(); ++i)
+            os << ':' << format(i);
+
+        //SAMPLES
+        for (size_t i=0; i<n_samples(); ++i)
+            os << '\t' << sample(i);
+    }
+
+    os << '\n';
+}
 
 inline
 void VcfRecord::append_str(const char* str, size_t len) {
