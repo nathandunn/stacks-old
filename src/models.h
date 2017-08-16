@@ -183,19 +183,27 @@ class MarukiLowModel : public Model {
     double gt_threshold_;
     double var_alpha_;
     double var_threshold_;
-    mutable size_t n_underflows_; //TODO Removed after large-scale testing.
     double calc_fixed_lnl(double n_tot, double n_M_tot) const;
     double calc_dimorph_lnl(double freq_MM, double freq_Mm, double freq_mm, const vector<LikData>& liks) const;
     double calc_ln_weighted_sum(double freq_MM, double freq_Mm, double freq_mm, const LikData& s_liks) const;
     double calc_ln_weighted_sum_safe(double freq_MM, double freq_Mm, double freq_mm, const LikData& s_liks) const;
 
+    #ifdef DEBUG
+    mutable size_t n_underflows_; //xxx Removed after large-scale testing.
+    #endif
+
 public:
     MarukiLowModel(double gt_alpha, double var_alpha)
         : gt_alpha_(gt_alpha), gt_threshold_(qchisq(gt_alpha_,1)),
-          var_alpha_(var_alpha), var_threshold_(qchisq(var_alpha_,2)), // df=2
-          n_underflows_(0)
+          var_alpha_(var_alpha), var_threshold_(qchisq(var_alpha_,2)) // df=2
+    #ifndef DEBUG
+        {}
+    #else
+          ,n_underflows_(0)
         {}
     ~MarukiLowModel() {cout << "DEBUG: marukilow: " << n_underflows_ << " underflows occurred.\n";}
+    #endif
+
     SiteCall call(const SiteCounts& depths) const;
     void print(ostream& os) const
         {os << to_string(modelt::marukilow) << " (var_alpha: "  << var_alpha_ << ", gt_alpha: " << gt_alpha_ << ")";}
