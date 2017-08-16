@@ -155,6 +155,9 @@ public:
     ~VersatileWriter() {if(is_gzipped_) gzclose(gzfile_);}
 
     const string& path() const {return path_;}
+
+    friend VersatileWriter& operator<< (VersatileWriter& w, char c)
+        {if (w.is_gzipped_) gzputc(w.gzfile_, c); else w.ofs_ << c; return w;}
     friend VersatileWriter& operator<< (VersatileWriter& w, const char* s)
         {if (w.is_gzipped_) gzputs(w.gzfile_, s); else w.ofs_ << s; return w;}
     friend VersatileWriter& operator<< (VersatileWriter& w, const string& s)
