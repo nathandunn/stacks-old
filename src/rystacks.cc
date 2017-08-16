@@ -996,7 +996,7 @@ void LocusProcessor::write_one_locus (
         rec.append_qual();
         rec.append_filters();
 
-        if(rec.n_alleles() == 1) {
+        if(vcf_alleles.size() == 1) {
             // Fixed site.
 
             // Info/DP.
@@ -1128,7 +1128,7 @@ void LocusProcessor::write_one_locus (
                 rec.append_sample(genotype.str());
             }
         }
-        assert(rec.n_samples() == o_vcf_f->header().samples().size());
+        assert(rec.count_samples() == o_vcf_f->header().samples().size());
 
         vcf_records << rec;
     }
