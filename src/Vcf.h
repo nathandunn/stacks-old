@@ -70,7 +70,7 @@ class VcfHeader {
     template<typename OStream> void print(OStream& os) const; // Template because VersatileWriter isn't a proper std::ostream.
 
 public:
-    VcfHeader() : samples_(), meta_() {}
+    VcfHeader() : samples_(), meta_(), sample_indexes_() {}
 
     const vector<VcfMeta>& meta() const {return meta_;}
     const vector<string>& samples() const {return samples_;}
@@ -219,7 +219,6 @@ public:
  */
 class VcfWriter {
 private:
-    const string path_;
     VersatileWriter file_;
     const VcfHeader header_;
 
