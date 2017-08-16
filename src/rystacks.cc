@@ -200,15 +200,18 @@ try {
     // Process every locus
     //
     ProcessingStats stats {};
-    const bool all_loci = locus_wl.empty();
-    cout << "Processing " << (all_loci ? "all" : "whitelisted") << " loci...\n" << flush;
-    const size_t n_loci = all_loci ? bam_fh.n_loci() : locus_wl.size();
+    cout << "Processing " << (locus_wl.empty() ? "all" : "whitelisted") << " loci...\n" << flush;
+    const size_t n_loci = locus_wl.empty() ? bam_fh.n_loci() : locus_wl.size();
     ProgressMeter progress (cout, n_loci);
 
     // For parallelization.
     int omp_return = 0;
     size_t next_to_write = 0;
-    map<size_t,ProcessingOutput> outputs;
+    int next_id_to_write = bam_fh.target2id(next_to_write);
+    if (!locus_wl.empty())
+        // We don't use the `next_to_write` BAM index; instead we get the IDs from the whitelist.
+        next_id_to_write = *locus_wl.begin();
+    map<int,ProcessingOutput> outputs; // map of {loc_id, output}
     #pragma omp parallel
     {
         LocusProcessor loc_proc;
@@ -218,7 +221,7 @@ try {
             if (omp_return != 0)
                 continue;
             try {
-                if (all_loci) {
+                if (locus_wl.empty()) {
                     #pragma omp critical
                     bam_fh.read_one_locus(loc);
                 } else {
@@ -231,32 +234,58 @@ try {
                                 break;
                             }
                         } while (!locus_wl.count(loc.id()));
-                        locus_wl.erase(loc.id());
                     }
                     if (omp_return != 0)
                         continue;
                 }
 
+                int loc_id = loc.id();
                 loc_proc.process(move(loc));
 
                 #pragma omp critical
                 {
-                    if (i == next_to_write) {
+                    if (loc_id == next_id_to_write) {
                         // Write it.
                         loc_proc.out().write(*o_vcf_f, o_gzfasta_f);
                         ++progress;
-                        ++next_to_write;
+                        if (locus_wl.empty()) {
+                            ++next_to_write;
+                            if (next_to_write < bam_fh.n_loci())
+                                next_id_to_write = bam_fh.target2id(next_to_write);
+                            else
+                                // We just wrote the last locus.
+                                assert(outputs.empty()); // (Thus the next outputs.find() will fail.)
+                        } else {
+                            locus_wl.erase(loc_id);
+                            if (!locus_wl.empty())
+                                next_id_to_write = *locus_wl.begin();
+                            else
+                                assert(outputs.empty());
+                        }
                         // Write stored output, if any.
-                        map<size_t,ProcessingOutput>::iterator output;
-                        while ((output = outputs.find(next_to_write)) != outputs.end()) {
+                        map<int,ProcessingOutput>::iterator output;
+                        while ((output = outputs.find(next_id_to_write)) != outputs.end()) {
                             output->second.write(*o_vcf_f, o_gzfasta_f);
                             outputs.erase(output);
                             ++progress;
-                            ++next_to_write;
+                            if (locus_wl.empty()) {
+                                ++next_to_write;
+                                if (next_to_write < bam_fh.n_loci())
+                                    next_id_to_write = bam_fh.target2id(next_to_write);
+                                else
+                                    // We just wrote the last locus.
+                                    assert(outputs.empty());
+                            } else {
+                                locus_wl.erase(loc_id);
+                                if (!locus_wl.empty())
+                                    next_id_to_write = *locus_wl.begin();
+                                else
+                                    assert(outputs.empty());
+                            }
                         }
                     } else {
                         // Store output for later.
-                        outputs.insert( {i, loc_proc.out()} );
+                        outputs.insert( {loc_id, loc_proc.out()} );
                     }
                 }
 

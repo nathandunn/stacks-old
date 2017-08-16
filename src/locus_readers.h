@@ -21,6 +21,7 @@ public:
 
     size_t n_loci() const {return bam_f_->h().n_ref_chroms();}
     const MetaPopInfo& mpopi() const {return mpopi_;}
+    int target2id(size_t target_i) const {return atoi(bam_f_->h().chrom_str(target_i));}
 
     // Reads one locus. Returns false on EOF.
     bool read_one_locus(CLocReadSet& readset);
