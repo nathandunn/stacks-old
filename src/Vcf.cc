@@ -44,8 +44,8 @@ void VcfHeader::add_std_meta(const string& version) {
 void VcfRecord::assign(const char* rec, size_t len, const VcfHeader& header) {
     assert(rec[len-1] != '\n');
 
+    clear();
     buffer_.assign(rec, rec+len+1);
-    strings_.clear();
 
     // Parse the record.
     size_t n_exp_fields = header.samples().empty() ? 8 : 9 + header.samples().size();
@@ -58,8 +58,8 @@ void VcfRecord::assign(const char* rec, size_t len, const VcfHeader& header) {
     };
 
     size_t n_fields = 1;
-    char* p = buffer_.data();
-    char* q;
+    char* q = NULL; // The start of the current field.
+    char* p = buffer_.data(); // The start of the next field.
     auto next_field = [&p, &q, &n_fields, &wrong_n_fields]() {
         q = p;
         p = strchr(p, '\t');
@@ -72,81 +72,60 @@ void VcfRecord::assign(const char* rec, size_t len, const VcfHeader& header) {
 
     // chrom
     next_field();
+    assert(q == buffer_.data());
 
     // pos
     next_field();
-    strings_.push_back(q - buffer_.data());
+    pos_ = q - buffer_.data();
 
     // id
     next_field();
-    strings_.push_back(q - buffer_.data());
 
     // alleles (ref + alt)
     next_field();
-    strings_.push_back(q - buffer_.data());
+    allele0_ = q - buffer_.data();
     next_field();
-    if (*q != '.') { // If ALT is '.', we don't record the pointer to it.
-        strings_.push_back(q - buffer_.data());
-        while((q = strchr(q, ','))) {
-            *q = '\0'; // ALT fields become null-separated.
-            ++q;
-            strings_.push_back(q - buffer_.data());
-        }
-    }
 
     // qual
-    qual_i_ = strings_.size();
     next_field();
-    strings_.push_back(q - buffer_.data());
+    qual_ = q - buffer_.data();
 
     // filters
     next_field();
-    strings_.push_back(q - buffer_.data());
 
+    info0_ = p - buffer_.data();
     if (header.samples().empty()) {
         // info (last field)
-        if (n_fields != n_exp_fields)
-            wrong_n_fields(n_fields);
-        strings_.push_back(q - buffer_.data());
         while((p = strchr(p, ';'))) {
             *p = '\0'; // INFO fields become null-separated.
             ++p;
-            strings_.push_back(p - buffer_.data());
         }
-        format0_i_ = SIZE_MAX;
-        sample0_i_ = SIZE_MAX;
     } else {
         // info
         next_field();
-        strings_.push_back(q - buffer_.data());
         while((q = strchr(q, ';'))) {
             *q = '\0';
             ++q;
-            strings_.push_back(q - buffer_.data());
         }
 
         // format
-        format0_i_ = strings_.size();
         next_field();
-        strings_.push_back(q - buffer_.data());
+        format0_ = q - buffer_.data();
         while((q = strchr(q, ':'))) {
             *q = '\0'; // FORMAT fields become null-separated.
             ++q;
-            strings_.push_back(q - buffer_.data());
         }
 
         // samples (last fields)
-        sample0_i_ = strings_.size();
-        strings_.push_back(p - buffer_.data());
+        sample0_ = p - buffer_.data();
         while((p = strchr(p, '\t'))) {
             *p = '\0';
             ++p;
             ++n_fields;
-            strings_.push_back(p - buffer_.data());
         }
-        if (n_fields != n_exp_fields)
-            wrong_n_fields(n_fields);
     }
+    if (n_fields != n_exp_fields)
+        wrong_n_fields(n_fields);
 }
 
 string VcfRecord::util::fmt_info_af(const vector<double>& alt_freqs) {
@@ -240,10 +219,10 @@ void VcfRecord::util::build_haps(
 
     for (size_t i=0; i<snp_records.size(); ++i) {
         const VcfRecord& rec = *snp_records[i];
-        assert(rec.n_formats() >= 2 && strcmp(rec.format(1), "PS") == 0);
+        assert(rec.count_formats() >= 2 && strcmp(*++rec.begin_formats(), "PS") == 0);
 
         // Parse the genotype.
-        const char* sample = rec.sample(sample_index);
+        const char* sample = rec.find_sample(sample_index);
         pair<int,int> gt = rec.parse_genotype_nochecks(sample);
 
         // Record the (phased) alleles.
@@ -254,7 +233,7 @@ void VcfRecord::util::build_haps(
             continue;
         } else if (gt.first == gt.second) {
             // Sample is homozygote for this SNP.
-            char nt = rec.allele(gt.first)[0];
+            char nt = rec.find_allele(gt.first)[0];
             haplotypes.first[i] = nt;
             haplotypes.second[i] = nt;
         } else {
@@ -273,8 +252,8 @@ void VcfRecord::util::build_haps(
                 else
                     assert(size_t(atol(ps)) == phase_set);
                 #endif
-                haplotypes.first[i] = rec.allele(gt.first)[0];
-                haplotypes.first[i] = rec.allele(gt.second)[i];
+                haplotypes.first[i] = rec.find_allele(gt.first)[0];
+                haplotypes.first[i] = rec.find_allele(gt.second)[i];
             }
         }
     }
