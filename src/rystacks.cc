@@ -54,14 +54,28 @@ struct ProcessingStats {
     ProcessingStats& operator+= (const ProcessingStats& other);
 };
 
+struct ProcessingOutput {
+    string vcf;
+    string fa;
+
+    void write(VcfWriter& vcf_f, gzFile gzfasta_f) const {
+        vcf_f.file() << vcf;
+        gzwrite(gzfasta_f, fa.c_str(), fa.length());
+    }
+};
+
 class LocusProcessor {
 public:
     LocusProcessor() : stats_() {}
     void process(CLocReadSet&& loc);
+
     const ProcessingStats& stats() const {return stats_;}
+    const ProcessingOutput& out() const {return out_;}
 
 private:
     ProcessingStats stats_;
+    ProcessingOutput out_;
+
     vector<map<size_t,PhasedHet>> phase_hets (
             const vector<SiteCall>& calls,
             const CLocAlnSet& aln_loc,
@@ -75,7 +89,7 @@ private:
             const vector<SiteCounts>& depths,
             const vector<SiteCall>& calls,
             const vector<map<size_t,PhasedHet>>& phase_data // {col : phasedhet} maps, for all samples
-    ) const;
+    );
 };
 
 void parse_command_line(int argc, char* argv[]);
@@ -190,7 +204,11 @@ try {
     cout << "Processing " << (all_loci ? "all" : "whitelisted") << " loci...\n" << flush;
     const size_t n_loci = all_loci ? bam_fh.n_loci() : locus_wl.size();
     ProgressMeter progress (cout, n_loci);
+
+    // For parallelization.
     int omp_return = 0;
+    size_t next_to_write = 0;
+    map<size_t,ProcessingOutput> outputs;
     #pragma omp parallel
     {
         LocusProcessor loc_proc;
@@ -202,14 +220,10 @@ try {
             try {
                 if (all_loci) {
                     #pragma omp critical
-                    {
-                        ++progress;
-                        bam_fh.read_one_locus(loc);
-                    }
+                    bam_fh.read_one_locus(loc);
                 } else {
                     #pragma omp critical
                     {
-                        ++progress;
                         do {
                             if (!bam_fh.read_one_locus(loc)) {
                                 cerr << "Error: Some whitelisted loci weren't found in the BAM file.\n";
@@ -224,6 +238,27 @@ try {
                 }
 
                 loc_proc.process(move(loc));
+
+                #pragma omp critical
+                {
+                    if (i == next_to_write) {
+                        // Write it.
+                        loc_proc.out().write(*o_vcf_f, o_gzfasta_f);
+                        ++progress;
+                        ++next_to_write;
+                        // Write stored output, if any.
+                        map<size_t,ProcessingOutput>::iterator output;
+                        while ((output = outputs.find(next_to_write)) != outputs.end()) {
+                            output->second.write(*o_vcf_f, o_gzfasta_f);
+                            outputs.erase(output);
+                            ++progress;
+                            ++next_to_write;
+                        }
+                    } else {
+                        // Store output for later.
+                        outputs.insert( {i, loc_proc.out()} );
+                    }
+                }
 
             } catch (exception& e) {
                 #pragma omp critical
@@ -514,7 +549,6 @@ void LocusProcessor::process(CLocReadSet&& loc) {
         rm_supernumerary_phase_sets(phase_data);
     }
 
-    #pragma omp critical
     write_one_locus(aln_loc, depths, calls, phase_data);
 }
 
@@ -862,8 +896,10 @@ void LocusProcessor::write_one_locus (
         const vector<SiteCounts>& depths,
         const vector<SiteCall>& calls,
         const vector<map<size_t,PhasedHet>>& phase_data
-) const {
-    size_t loc_id = aln_loc.id();
+) {
+    char loc_id[16];
+    sprintf(loc_id, "%d", aln_loc.id());
+
     const DNASeq4& ref = aln_loc.ref();
     const MetaPopInfo& mpopi = aln_loc.mpopi();
 
@@ -873,6 +909,8 @@ void LocusProcessor::write_one_locus (
     assert(depths.size() == ref.length());
     assert(calls.size() == ref.length());
     vector<size_t> sample_sites_w_data (mpopi.samples().size(), 0);
+    stringstream vcf_records;
+    VcfRecord rec;
     for (size_t i=0; i<ref.length(); ++i) {
         const SiteCounts& sitedepths = depths[i];
         const SiteCall& sitecall = calls[i];
@@ -912,9 +950,13 @@ void LocusProcessor::write_one_locus (
             }
         }
 
+        //
         // Create the VCF record.
-        VcfRecord rec;
-        rec.append_chrom(to_string(loc_id));
+        //
+
+        // Chrom & pos.
+        rec.clear();
+        rec.append_chrom(loc_id);
         rec.append_pos(i+1);
         rec.append_id();
 
@@ -1057,10 +1099,11 @@ void LocusProcessor::write_one_locus (
                 rec.append_sample(genotype.str());
             }
         }
+        assert(rec.n_samples() == o_vcf_f->header().samples().size());
 
-        // Write the record.
-        o_vcf_f->write_record(rec);
+        vcf_records << rec;
     }
+    out_.vcf = vcf_records.str();
 
     //
     // Fasta output.
@@ -1077,27 +1120,34 @@ void LocusProcessor::write_one_locus (
         if (sample_n_sites > 0)
             ++n_remaining_samples;
 
-    // Write the fasta record.
-    gzputs(o_gzfasta_f, ">");
-    gzputs(o_gzfasta_f, to_string(loc_id).c_str());
+    // Write the record.
+    out_.fa.clear();
+    out_.fa += '>';
+    out_.fa += loc_id;
     if (!aln_loc.pos().empty()) {
         const PhyLoc& p = aln_loc.pos();
-        gzputs(o_gzfasta_f, " pos=");
-        gzputs(o_gzfasta_f, p.chr());
-        gzputs(o_gzfasta_f, ":");
-        gzputs(o_gzfasta_f, to_string(p.bp+1).c_str());
-        gzputs(o_gzfasta_f, p.strand == strand_plus ? ":+" : ":-");
+        char pos[16];
+        sprintf(pos, "%u", p.bp+1);
+        out_.fa += " pos=";
+        out_.fa += p.chr();
+        out_.fa += ':';
+        out_.fa += pos;
+        out_.fa += ':';
+        out_.fa += (p.strand == strand_plus ? '+' : '-');
     }
-    gzputs(o_gzfasta_f, " NS=");
-    gzputs(o_gzfasta_f, to_string(n_remaining_samples).c_str());
+    char n_spls[32];
+    sprintf(n_spls, "%zu", n_remaining_samples);
+    out_.fa += " NS=";
+    out_.fa += n_spls;
     if (n_remaining_samples != samples_w_reads.size()) {
         assert(n_remaining_samples < samples_w_reads.size());
-        gzputs(o_gzfasta_f, " n_discarded_samples=");
-        gzputs(o_gzfasta_f, to_string(samples_w_reads.size() - n_remaining_samples).c_str());
+        sprintf(n_spls, "%zu", samples_w_reads.size() - n_remaining_samples);
+        out_.fa += " n_discarded_samples=";
+        out_.fa += n_spls;
     }
-    gzputs(o_gzfasta_f, "\n");
-    gzputs(o_gzfasta_f, ref.str().c_str());
-    gzputs(o_gzfasta_f, "\n");
+    out_.fa += '\n';
+    out_.fa += ref.str();
+    out_.fa += '\n';
 }
 
 Cigar dbg_extract_cigar(const string& read_id) {
