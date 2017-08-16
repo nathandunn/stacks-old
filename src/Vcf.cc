@@ -253,7 +253,7 @@ void VcfRecord::util::build_haps(
                     assert(size_t(atol(ps)) == phase_set);
                 #endif
                 haplotypes.first[i] = rec.find_allele(gt.first)[0];
-                haplotypes.first[i] = rec.find_allele(gt.second)[i];
+                haplotypes.second[i] = rec.find_allele(gt.second)[0];
             }
         }
     }
