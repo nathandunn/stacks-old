@@ -295,10 +295,14 @@ double lr_multinomial_model (double nuc_1, double nuc_2, double nuc_3, double nu
 
     double total = nuc_1 + nuc_2 + nuc_3 + nuc_4;
     assert(total > 0.0);
+    assert(nuc_1 >= nuc_2 && nuc_2 >= nuc_3 && nuc_3 >= nuc_4);
 
     double l_ratio = 2.0 * (lnl_multinomial_model_hom(total, nuc_1) - lnl_multinomial_model_het(total, nuc_1+nuc_2));
 
-    assert(nuc_1+nuc_2 == 0 || almost_equal(l_ratio, lr_multinomial_model_legacy(nuc_1,nuc_2,nuc_3,nuc_4)));
+    #ifdef DEBUG
+    double l_ratio_legacy = lr_multinomial_model_legacy(nuc_1,nuc_2,nuc_3,nuc_4);
+    assert( (l_ratio == 0.0 && l_ratio_legacy == 0.0) || almost_equal(l_ratio, l_ratio_legacy));
+    #endif
     return l_ratio;
 }
 
