@@ -181,15 +181,19 @@ struct SAlnRead : AlnRead {
 
 class CLocReadSet {
     const MetaPopInfo& mpopi_;
+    size_t bam_i_; // BAM target index (SIZE_MAX if unavailable).
     int id_; // Catalog locus ID
     PhyLoc aln_pos_;
     vector<SRead> reads_; // Forward reads. Order is arbitrary.
     vector<SRead> pe_reads_; // Paired-end reads. Order and size are arbitrary.
 
 public:
-    CLocReadSet(const MetaPopInfo& mpopi) : mpopi_(mpopi), id_(-1), aln_pos_(), reads_(), pe_reads_() {}
+    CLocReadSet(const MetaPopInfo& mpopi)
+        : mpopi_(mpopi), bam_i_(SIZE_MAX), id_(-1), aln_pos_(), reads_(), pe_reads_()
+        {}
 
     const MetaPopInfo& mpopi() const {return mpopi_;}
+    size_t bam_i() const {return bam_i_;}
     int id() const {return id_;}
     const PhyLoc& pos() const {return aln_pos_;}
     const vector<SRead>& reads() const {return reads_;}
@@ -197,7 +201,8 @@ public:
     const vector<SRead>& pe_reads() const {return pe_reads_;}
           vector<SRead>& pe_reads()       {return pe_reads_;}
 
-    void clear() {id_= -1; reads_.clear(); pe_reads_.clear();}
+    void clear() {bam_i_=SIZE_MAX; id_=-1; reads_.clear(); pe_reads_.clear();}
+    void bam_i(size_t i) {bam_i_ = i;}
     void id(int id) {id_ = id;}
     void pos(const PhyLoc& p) {aln_pos_ = p;}
     void add(SRead&& r) {reads_.push_back(move(r));}

@@ -207,11 +207,10 @@ try {
     // For parallelization.
     int omp_return = 0;
     size_t next_to_write = 0;
-    int next_id_to_write = bam_fh.target2id(next_to_write);
+    map<int,ProcessingOutput> outputs; // map of {loc_index, output}
     if (!locus_wl.empty())
-        // We don't use the `next_to_write` BAM index; instead we get the IDs from the whitelist.
-        next_id_to_write = *locus_wl.begin();
-    map<int,ProcessingOutput> outputs; // map of {loc_id, output}
+        // We don't use the BAM indexes; instead we get the IDs from the whitelist.
+        next_to_write = size_t(*locus_wl.begin());
     #pragma omp parallel
     {
         LocusProcessor loc_proc;
@@ -221,9 +220,11 @@ try {
             if (omp_return != 0)
                 continue;
             try {
+                size_t loc_i;
                 if (locus_wl.empty()) {
                     #pragma omp critical(read)
                     bam_fh.read_one_locus(loc);
+                    loc_i = loc.bam_i();
                 } else {
                     #pragma omp critical(read_wl)
                     {
@@ -237,55 +238,41 @@ try {
                     }
                     if (omp_return != 0)
                         continue;
+                    loc_i = loc.id();
                 }
 
-                int loc_id = loc.id();
                 loc_proc.process(move(loc));
 
                 #pragma omp critical(write)
                 {
-                    if (loc_id == next_id_to_write) {
+                    if (loc_i == next_to_write) {
                         // Write it.
                         loc_proc.out().write(*o_vcf_f, o_gzfasta_f);
                         ++progress;
                         if (locus_wl.empty()) {
                             ++next_to_write;
-                            if (next_to_write < bam_fh.n_loci())
-                                next_id_to_write = bam_fh.target2id(next_to_write);
-                            else
-                                // We just wrote the last locus.
-                                assert(outputs.empty()); // (Thus the next outputs.find() will fail.)
                         } else {
-                            locus_wl.erase(loc_id);
+                            locus_wl.erase(loc_i);
                             if (!locus_wl.empty())
-                                next_id_to_write = *locus_wl.begin();
-                            else
-                                assert(outputs.empty());
+                                next_to_write = *locus_wl.begin();
                         }
                         // Write stored output, if any.
                         map<int,ProcessingOutput>::iterator output;
-                        while ((output = outputs.find(next_id_to_write)) != outputs.end()) {
+                        while ((output = outputs.find(next_to_write)) != outputs.end()) {
                             output->second.write(*o_vcf_f, o_gzfasta_f);
                             outputs.erase(output);
                             ++progress;
                             if (locus_wl.empty()) {
                                 ++next_to_write;
-                                if (next_to_write < bam_fh.n_loci())
-                                    next_id_to_write = bam_fh.target2id(next_to_write);
-                                else
-                                    // We just wrote the last locus.
-                                    assert(outputs.empty());
                             } else {
-                                locus_wl.erase(loc_id);
+                                locus_wl.erase(loc_i);
                                 if (!locus_wl.empty())
-                                    next_id_to_write = *locus_wl.begin();
-                                else
-                                    assert(outputs.empty());
+                                    next_to_write = *locus_wl.begin();
                             }
                         }
                     } else {
                         // Store output for later.
-                        outputs.insert( {loc_id, move(loc_proc.out())} );
+                        outputs.insert( {loc_i, move(loc_proc.out())} );
                     }
                 }
 
@@ -1407,8 +1394,13 @@ try {
         ifstream wl_fh (wl_path);
         check_open(wl_fh, wl_path);
         int id;
-        while (wl_fh >> id)
+        while (wl_fh >> id) {
+            if (id < 0) {
+                cerr << "Error: Whitelist '" << wl_path << " contains invalid ID '" << id << "'.\n";
+                bad_args();
+            }
             locus_wl.insert(id);
+        }
         if (locus_wl.empty()) {
             cerr << "Error: Whitelist '" << wl_path << "' appears empty.\n";
             throw exception();
