@@ -70,7 +70,7 @@ public:
     void process(CLocReadSet&& loc);
 
     const ProcessingStats& stats() const {return stats_;}
-    const ProcessingOutput& out() const {return out_;}
+    ProcessingOutput& out() {return out_;}
 
 private:
     ProcessingStats stats_;
@@ -222,10 +222,10 @@ try {
                 continue;
             try {
                 if (locus_wl.empty()) {
-                    #pragma omp critical
+                    #pragma omp critical(read)
                     bam_fh.read_one_locus(loc);
                 } else {
-                    #pragma omp critical
+                    #pragma omp critical(read_wl)
                     {
                         do {
                             if (!bam_fh.read_one_locus(loc)) {
@@ -242,7 +242,7 @@ try {
                 int loc_id = loc.id();
                 loc_proc.process(move(loc));
 
-                #pragma omp critical
+                #pragma omp critical(write)
                 {
                     if (loc_id == next_id_to_write) {
                         // Write it.
@@ -285,7 +285,7 @@ try {
                         }
                     } else {
                         // Store output for later.
-                        outputs.insert( {loc_id, loc_proc.out()} );
+                        outputs.insert( {loc_id, move(loc_proc.out())} );
                     }
                 }
 
