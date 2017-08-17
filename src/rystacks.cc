@@ -54,27 +54,19 @@ struct ProcessingStats {
     ProcessingStats& operator+= (const ProcessingStats& other);
 };
 
-struct ProcessingOutput {
-    string vcf;
-    string fa;
-
-    void write(VcfWriter& vcf_f, gzFile gzfasta_f) const {
-        vcf_f.file() << vcf;
-        gzwrite(gzfasta_f, fa.c_str(), fa.length());
-    }
-};
-
 class LocusProcessor {
 public:
     LocusProcessor() : stats_() {}
     void process(CLocReadSet&& loc);
 
     const ProcessingStats& stats() const {return stats_;}
-    ProcessingOutput& out() {return out_;}
+    string& vcf_out() {return o_vcf_;}
+    string& fasta_out() {return o_fa_;}
 
 private:
     ProcessingStats stats_;
-    ProcessingOutput out_;
+    string o_vcf_;
+    string o_fa_;
 
     vector<map<size_t,PhasedHet>> phase_hets (
             const vector<SiteCall>& calls,
@@ -206,8 +198,10 @@ try {
 
     // For parallelization.
     int omp_return = 0;
-    std::deque<pair<size_t,ProcessingOutput>> outputs;
-    size_t next_to_write = 0;
+    std::deque<string> fa_outputs;
+    std::deque<string> vcf_outputs;
+    size_t next_fa_to_write = 0; // locus index, in the input BAM file.
+    size_t next_vcf_to_write = 0;
     #pragma omp parallel
     {
         LocusProcessor loc_proc;
@@ -223,18 +217,31 @@ try {
                 size_t loc_i = loc.bam_i();
                 loc_proc.process(move(loc));
 
-                #pragma omp critical(write)
+                #pragma omp critical(write_fa)
                 {
-                    for (size_t i=next_to_write+outputs.size(); i<=loc_i; ++i)
-                        outputs.push_back( {i, ProcessingOutput()} );
-                    outputs.at(loc_i - next_to_write).second = move(loc_proc.out());
-                    assert(outputs.back().first == next_to_write + outputs.size() - 1);
+                    for (size_t i=next_fa_to_write+fa_outputs.size(); i<=loc_i; ++i)
+                        fa_outputs.push_back(string());
+                    fa_outputs[loc_i - next_fa_to_write] = move(loc_proc.fasta_out());
 
-                    while (!outputs.empty() && !outputs.front().second.fa.empty()) {
-                        outputs.front().second.write(*o_vcf_f, o_gzfasta_f);
-                        outputs.pop_front();
+                    while (!fa_outputs.empty() && !fa_outputs.front().empty()) {
+                        const string& fa = fa_outputs.front();
+                        gzwrite(o_gzfasta_f, fa.c_str(), fa.length());
+                        fa_outputs.pop_front();
+                        ++next_fa_to_write;
+                    }
+                }
+
+                #pragma omp critical(write_vcf)
+                {
+                    for (size_t i=next_vcf_to_write+vcf_outputs.size(); i<=loc_i; ++i)
+                        vcf_outputs.push_back(string());
+                    vcf_outputs[loc_i - next_vcf_to_write] = move(loc_proc.vcf_out());
+
+                    while (!vcf_outputs.empty() && !vcf_outputs.front().empty()) {
+                        o_vcf_f->file() << vcf_outputs.front();
+                        vcf_outputs.pop_front();
+                        ++next_vcf_to_write;
                         ++progress;
-                        ++next_to_write;
                     }
                 }
 
@@ -1080,7 +1087,7 @@ void LocusProcessor::write_one_locus (
 
         vcf_records << rec;
     }
-    out_.vcf = vcf_records.str();
+    o_vcf_ = vcf_records.str();
 
     //
     // Fasta output.
@@ -1098,33 +1105,33 @@ void LocusProcessor::write_one_locus (
             ++n_remaining_samples;
 
     // Write the record.
-    out_.fa.clear();
-    out_.fa += '>';
-    out_.fa += loc_id;
+    o_fa_.clear();
+    o_fa_ += '>';
+    o_fa_ += loc_id;
     if (!aln_loc.pos().empty()) {
         const PhyLoc& p = aln_loc.pos();
         char pos[16];
         sprintf(pos, "%u", p.bp+1);
-        out_.fa += " pos=";
-        out_.fa += p.chr();
-        out_.fa += ':';
-        out_.fa += pos;
-        out_.fa += ':';
-        out_.fa += (p.strand == strand_plus ? '+' : '-');
+        o_fa_ += " pos=";
+        o_fa_ += p.chr();
+        o_fa_ += ':';
+        o_fa_ += pos;
+        o_fa_ += ':';
+        o_fa_ += (p.strand == strand_plus ? '+' : '-');
     }
     char n_spls[32];
     sprintf(n_spls, "%zu", n_remaining_samples);
-    out_.fa += " NS=";
-    out_.fa += n_spls;
+    o_fa_ += " NS=";
+    o_fa_ += n_spls;
     if (n_remaining_samples != samples_w_reads.size()) {
         assert(n_remaining_samples < samples_w_reads.size());
         sprintf(n_spls, "%zu", samples_w_reads.size() - n_remaining_samples);
-        out_.fa += " n_discarded_samples=";
-        out_.fa += n_spls;
+        o_fa_ += " n_discarded_samples=";
+        o_fa_ += n_spls;
     }
-    out_.fa += '\n';
-    out_.fa += ref.str();
-    out_.fa += '\n';
+    o_fa_ += '\n';
+    o_fa_ += ref.str();
+    o_fa_ += '\n';
 }
 
 Cigar dbg_extract_cigar(const string& read_id) {
