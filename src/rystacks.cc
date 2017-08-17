@@ -104,7 +104,6 @@ bool quiet = false;
 int num_threads = 1;
 string in_dir;
 int batch_id = -1;
-set<int> locus_wl;
 bool ignore_pe_reads = false;
 
 modelt model_type = marukilow;
@@ -113,6 +112,7 @@ unique_ptr<const Model> model;
 size_t km_length = 31;
 size_t min_km_count = 2;
 
+size_t dbg_max_loci = SIZE_MAX;
 bool dbg_no_haplotypes = false;
 bool dbg_write_gfa = false;
 bool dbg_write_alns = false;
@@ -200,17 +200,14 @@ try {
     // Process every locus
     //
     ProcessingStats stats {};
-    cout << "Processing " << (locus_wl.empty() ? "all" : "whitelisted") << " loci...\n" << flush;
-    const size_t n_loci = locus_wl.empty() ? bam_fh.n_loci() : locus_wl.size();
+    cout << "Processing all loci...\n" << flush;
+    const size_t n_loci = std::min(bam_fh.n_loci(), dbg_max_loci);
     ProgressMeter progress (cout, n_loci);
 
     // For parallelization.
     int omp_return = 0;
+    map<size_t,ProcessingOutput> outputs; // map of {loc_index, output}
     size_t next_to_write = 0;
-    map<int,ProcessingOutput> outputs; // map of {loc_index, output}
-    if (!locus_wl.empty())
-        // We don't use the BAM indexes; instead we get the IDs from the whitelist.
-        next_to_write = size_t(*locus_wl.begin());
     #pragma omp parallel
     {
         LocusProcessor loc_proc;
@@ -220,27 +217,10 @@ try {
             if (omp_return != 0)
                 continue;
             try {
-                size_t loc_i;
-                if (locus_wl.empty()) {
-                    #pragma omp critical(read)
-                    bam_fh.read_one_locus(loc);
-                    loc_i = loc.bam_i();
-                } else {
-                    #pragma omp critical(read_wl)
-                    {
-                        do {
-                            if (!bam_fh.read_one_locus(loc)) {
-                                cerr << "Error: Some whitelisted loci weren't found in the BAM file.\n";
-                                omp_return = stacks_handle_exceptions(exception());
-                                break;
-                            }
-                        } while (!locus_wl.count(loc.id()));
-                    }
-                    if (omp_return != 0)
-                        continue;
-                    loc_i = loc.id();
-                }
+                #pragma omp critical(read)
+                bam_fh.read_one_locus(loc);
 
+                size_t loc_i = loc.bam_i();
                 loc_proc.process(move(loc));
 
                 #pragma omp critical(write)
@@ -249,26 +229,14 @@ try {
                         // Write it.
                         loc_proc.out().write(*o_vcf_f, o_gzfasta_f);
                         ++progress;
-                        if (locus_wl.empty()) {
-                            ++next_to_write;
-                        } else {
-                            locus_wl.erase(loc_i);
-                            if (!locus_wl.empty())
-                                next_to_write = *locus_wl.begin();
-                        }
+                        ++next_to_write;
                         // Write stored output, if any.
-                        map<int,ProcessingOutput>::iterator output;
+                        map<size_t,ProcessingOutput>::iterator output;
                         while ((output = outputs.find(next_to_write)) != outputs.end()) {
                             output->second.write(*o_vcf_f, o_gzfasta_f);
                             outputs.erase(output);
                             ++progress;
-                            if (locus_wl.empty()) {
-                                ++next_to_write;
-                            } else {
-                                locus_wl.erase(loc_i);
-                                if (!locus_wl.empty())
-                                    next_to_write = *locus_wl.begin();
-                            }
+                            ++next_to_write;
                         }
                     } else {
                         // Store output for later.
@@ -288,7 +256,6 @@ try {
     if (omp_return != 0)
          return omp_return;
     progress.done();
-    assert(locus_wl.empty());
 
     //
     // Report statistics on the analysis.
@@ -1211,7 +1178,6 @@ const string help_string = string() +
         "  \"samtools merge ./batch_1.catalog.bam ./*.matches.bam\"\n"
         "\n"
         "  --ignore-pe-reads: ignore paired-end reads even if present in the input\n"
-        "  -W,--whitelist: path to a whitelist of locus IDs\n"
         "  -t,--threads: number of threads to use (default: 1)\n"
         "\n"
         "Model options:\n"
@@ -1226,6 +1192,7 @@ const string help_string = string() +
         "\n"
 #ifdef DEBUG
         "Debug options:\n"
+        "  --dbg-max-loci: process the first N loci\n"
         "  --no-haps: disable phasing\n"
         "  --gfa: output a GFA file for each locus\n"
         "  --alns: output a file showing the contigs & alignments\n"
@@ -1252,7 +1219,6 @@ try {
         {"quiet",        no_argument,       NULL,  'q'},
         {"in-dir",       required_argument, NULL,  'P'},
         {"batch-id",     required_argument, NULL,  'b'},
-        {"whitelist",    required_argument, NULL,  'W'},
         {"threads",      required_argument, NULL,  't'},
         {"ignore-pe-reads", no_argument,    NULL,  1012},
         {"model",        required_argument, NULL,  1006},
@@ -1260,6 +1226,7 @@ try {
         {"var-alpha",    required_argument, NULL,  1008},
         {"kmer-length",  required_argument, NULL,  1001},
         {"min-kmer-cov", required_argument, NULL,  1002},
+        {"dbg-max-loci", required_argument, NULL,  2000},
         {"true-alns",    no_argument,       NULL,  1011},
         {"no-haps",      no_argument,       NULL,  1009},
         {"gfa",          no_argument,       NULL,  1003},
@@ -1271,7 +1238,6 @@ try {
 
     double gt_alpha = 0.05;
     double var_alpha = 0.05;
-    string wl_path;
 
     int c;
     int long_options_i;
@@ -1309,9 +1275,6 @@ try {
         case 1008: //var-alpha
             var_alpha = atof(optarg);
             break;
-        case 'W':
-            wl_path = optarg;
-            break;
         case 't':
             num_threads = is_integer(optarg);
             if (num_threads < 0) {
@@ -1327,6 +1290,9 @@ try {
             break;
         case 1002://min-cov
             min_km_count = atoi(optarg);
+            break;
+        case 2000:
+            dbg_max_loci = is_integer(optarg);
             break;
         case 1011://true-alns
             dbg_true_alns = true;
@@ -1390,23 +1356,6 @@ try {
         }
     }
 
-    if (!wl_path.empty()) {
-        ifstream wl_fh (wl_path);
-        check_open(wl_fh, wl_path);
-        int id;
-        while (wl_fh >> id) {
-            if (id < 0) {
-                cerr << "Error: Whitelist '" << wl_path << " contains invalid ID '" << id << "'.\n";
-                bad_args();
-            }
-            locus_wl.insert(id);
-        }
-        if (locus_wl.empty()) {
-            cerr << "Error: Whitelist '" << wl_path << "' appears empty.\n";
-            throw exception();
-        }
-    }
-
 } catch (std::invalid_argument&) {
     bad_args();
 }
@@ -1418,12 +1367,13 @@ void report_options(ostream& os) {
        << "  Batch ID: " << batch_id << "\n"
        << "  Model: " << *model << "\n";
 
-    if (!locus_wl.empty())
-        os << "  Whitelist of " << locus_wl.size() << " loci.\n";
     if (ignore_pe_reads)
         os << "  Ignoring paired-end reads.\n";
     if (km_length != 31)
         os << "  Kmer length: " << km_length << "\n";
     if (min_km_count != 2)
         os << "  Min coverage: " << min_km_count << "\n";
+
+    if (dbg_max_loci != SIZE_MAX)
+        os << "  DEBUG: Processing max. " << dbg_max_loci << "loci\n";
 }
