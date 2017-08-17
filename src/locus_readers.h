@@ -183,12 +183,13 @@ bool BamCLocReader::read_one_locus(CLocReadSet& readset) {
     assert(&readset.mpopi() == &mpopi_); // Otherwise sample indexes may be misleading.
 
     ++loc_i_;
-    if (size_t(loc_i_) == n_loci()) {
+    if (loc_i_ == int32_t(n_loci())) {
         assert(bam_f_->eof());
         return false;
     }
 
     readset.clear();
+    readset.bam_i(loc_i_);
     readset.id(atoi(bam_f_->h().chrom_str(loc_i_)));
     if (!loci_aln_positions_.empty()) {
         const char* p = loci_aln_positions_.at(loc_i_);
