@@ -206,7 +206,7 @@ try {
 
     // For parallelization.
     int omp_return = 0;
-    map<size_t,ProcessingOutput> outputs; // map of {loc_index, output}
+    std::deque<pair<size_t,ProcessingOutput>> outputs;
     size_t next_to_write = 0;
     #pragma omp parallel
     {
@@ -225,22 +225,16 @@ try {
 
                 #pragma omp critical(write)
                 {
-                    if (loc_i == next_to_write) {
-                        // Write it.
-                        loc_proc.out().write(*o_vcf_f, o_gzfasta_f);
+                    for (size_t i=next_to_write+outputs.size(); i<=loc_i; ++i)
+                        outputs.push_back( {i, ProcessingOutput()} );
+                    outputs.at(loc_i - next_to_write).second = move(loc_proc.out());
+                    assert(outputs.back().first == next_to_write + outputs.size() - 1);
+
+                    while (!outputs.empty() && !outputs.front().second.fa.empty()) {
+                        outputs.front().second.write(*o_vcf_f, o_gzfasta_f);
+                        outputs.pop_front();
                         ++progress;
                         ++next_to_write;
-                        // Write stored output, if any.
-                        map<size_t,ProcessingOutput>::iterator output;
-                        while ((output = outputs.find(next_to_write)) != outputs.end()) {
-                            output->second.write(*o_vcf_f, o_gzfasta_f);
-                            outputs.erase(output);
-                            ++progress;
-                            ++next_to_write;
-                        }
-                    } else {
-                        // Store output for later.
-                        outputs.insert( {loc_i, move(loc_proc.out())} );
                     }
                 }
 
