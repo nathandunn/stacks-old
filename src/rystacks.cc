@@ -122,6 +122,39 @@ unique_ptr<VcfWriter> o_vcf_f;
 ofstream o_aln_f;
 ofstream o_hapgraphs_f;
 
+//TODO{
+double gettm() {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return ts.tv_sec + ts.tv_nsec / 1.0e9;
+}
+struct Clocks {
+    double clocking;
+    double reading;
+    double processing;
+    double writing_fa;
+    double writing_vcf;
+    double sum() const {return clocking+reading+processing+writing_fa+writing_vcf;}
+    Clocks& operator+= (const Clocks& other) {
+        clocking += other.clocking;
+        reading += other.reading;
+        processing += other.processing;
+        writing_fa += other.writing_fa;
+        writing_vcf += other.writing_vcf;
+        return *this;
+    }
+    friend Clocks operator+ (const Clocks& lhs, const Clocks& rhs) {Clocks sum (lhs); sum+=rhs; return sum;}
+    Clocks& operator/= (double d) {
+        clocking /= d;
+        reading /= d;
+        processing /= d;
+        writing_fa /= d;
+        writing_vcf /= d;
+        return *this;
+    }
+};
+//TODO}
+
 int main(int argc, char** argv) {
 try {
 
@@ -202,20 +235,36 @@ try {
     std::deque<string> vcf_outputs;
     size_t next_fa_to_write = 0; // locus index, in the input BAM file.
     size_t next_vcf_to_write = 0;
+    //TODO{
+    double clock_parallel_start = gettm();
+    vector<Clocks> clocks_all (num_threads);
+    size_t n_writes = 0;
+    size_t max_size_before_write = 0;
+    double actually_writing_vcf = 0;
+    //TODO}
     #pragma omp parallel
     {
         LocusProcessor loc_proc;
         CLocReadSet loc (bam_fh.mpopi());
+        Clocks& clocks = clocks_all[omp_get_thread_num()]; //TODO
         #pragma omp for schedule(dynamic)
         for (size_t i=0; i<n_loci; ++i) {
             if (omp_return != 0)
                 continue;
             try {
+                //TODO{
+                double clock_loop_start0 = gettm();
+                double clock_loop_start = gettm();
+                double clocking = clock_loop_start - clock_loop_start0;
+                //TODO}
+
                 #pragma omp critical(read)
                 bam_fh.read_one_locus(loc);
+                double clock_read = gettm();//TODO
 
                 size_t loc_i = loc.bam_i();
                 loc_proc.process(move(loc));
+                double clock_process = gettm();//TODO
 
                 #pragma omp critical(write_fa)
                 {
@@ -230,6 +279,7 @@ try {
                         ++next_fa_to_write;
                     }
                 }
+                double clock_write_fa = gettm();//TODO
 
                 #pragma omp critical(write_vcf)
                 {
@@ -237,13 +287,30 @@ try {
                         vcf_outputs.push_back(string());
                     vcf_outputs[loc_i - next_vcf_to_write] = move(loc_proc.vcf_out());
 
-                    while (!vcf_outputs.empty() && !vcf_outputs.front().empty()) {
-                        o_vcf_f->file() << vcf_outputs.front();
-                        vcf_outputs.pop_front();
-                        ++next_vcf_to_write;
-                        ++progress;
+                    if (!vcf_outputs.front().empty()) {
+                        //TODO{
+                        ++n_writes;
+                        if (vcf_outputs.size() > max_size_before_write)
+                            max_size_before_write = vcf_outputs.size();
+                        double start_writing = gettm();
+                        //TODO}
+                        do {
+                            o_vcf_f->file() << vcf_outputs.front();
+                            vcf_outputs.pop_front();
+                            ++next_vcf_to_write;
+                            ++progress;
+                        } while (!vcf_outputs.empty() && !vcf_outputs.front().empty());
+                        actually_writing_vcf += gettm() - start_writing - clocking; //TODO
                     }
                 }
+                //TODO{
+                double clock_write_vcf = gettm();
+                clocks.clocking     += 6 * clocking;
+                clocks.reading     += clock_read       - clock_loop_start - clocking;
+                clocks.processing  += clock_process    - clock_read - clocking;
+                clocks.writing_fa  += clock_write_fa   - clock_process - clocking;
+                clocks.writing_vcf += clock_write_vcf  - clock_write_fa - clocking;
+                //TODO}
 
             } catch (exception& e) {
                 #pragma omp critical
@@ -257,6 +324,33 @@ try {
     if (omp_return != 0)
          return omp_return;
     progress.done();
+
+    //TODO{
+    {
+        double clock_parallel_end = gettm();
+        Clocks totals = std::accumulate(clocks_all.begin(), clocks_all.end(), Clocks());
+        totals /= num_threads;
+        double total_time = clock_parallel_end - clock_parallel_start;
+        ostream os (cout.rdbuf());
+        os.exceptions(os.exceptions() | ios::badbit);
+        os << std::fixed << std::setprecision(2);
+        os << "\n"
+           << "BEGIN clockings\n"
+           << "Num. threads: " << num_threads << "\n"
+           << "Parallel time: " << total_time << "\n"
+           << "Average thread time spent...\n"
+           << std::setw(8) << totals.reading  << "  reading (" << as_percentage(totals.reading / total_time) << ")\n"
+           << std::setw(8) << totals.processing << "  processing (" << as_percentage(totals.processing / total_time) << ")\n"
+           << std::setw(8) << totals.writing_fa << "  writing_fa (" << as_percentage(totals.writing_fa / total_time) << ")\n"
+           << std::setw(8) << totals.writing_vcf << "  writing_vcf (" << as_percentage(totals.writing_vcf / total_time) << ")\n"
+           << std::setw(8) << totals.clocking  << "  clocking (" << as_percentage(totals.clocking / total_time) << ")\n"
+           << std::setw(8) << totals.sum() << "  total (" << as_percentage(totals.sum() / total_time) << ")\n"
+           << "Time spent actually_writing_vcf: " << actually_writing_vcf << " (" << as_percentage(actually_writing_vcf / total_time) << ")\n"
+           << "VCFwrite block size: mean=" << (double) n_loci / n_writes << "(n=" << n_writes << "); max=" << max_size_before_write << "\n"
+           << "END clockings\n"
+           ;
+    }
+    //TODO}
 
     //
     // Report statistics on the analysis.
