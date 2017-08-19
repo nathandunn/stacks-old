@@ -3,10 +3,8 @@
 #include <iostream>
 #include <fstream>
 
-extern "C" {
 #include <getopt.h>
 #include <unistd.h>
-}
 
 #include "constants.h"
 #include "sql_utilities.h"

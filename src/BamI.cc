@@ -171,9 +171,19 @@ void BamRecord::assign(
     c_.bin = hts_reg2bin(c_.pos, c_.pos + bam_cigar2rlen(c_.n_cigar, cigar), 14, 5);
 }
 
-void BamRecord::write_to(htsFile* bam_f) const {
-    if (bam_write1(bam_f->fp.bgzf, r_) < 0) {
-        cerr << "Error: Writing of BAM record failed.\n";
+Bam::Bam(const char *path) : Input(), bam_fh(NULL), hdr(), rec() {
+    this->path   = string(path);
+    bam_fh = hts_open(path, "r");
+    if (bam_fh == NULL) {
+        cerr << "Error: Failed to open BAM file '" << path << "'.\n";
+        throw exception();
+    } else if (bam_fh->format.format != bam) {
+        cerr << "Error: '" << path << "':";
+        if (bam_fh->format.format == sam)
+            cerr << " this is a SAM file (and BAM was specified).\n";
+        else
+            cerr << " not a BAM file.\n";
         throw exception();
     }
-}
+    hdr.init(bam_fh);
+};
