@@ -9,6 +9,7 @@
 
 class BamCLocReader {
     Bam* bam_f_;
+    bool eof_;
     MetaPopInfo mpopi_;
     map<string, size_t> rg_to_sample_;
     vector<const char*> loci_aln_positions_;
@@ -49,6 +50,7 @@ public:
 inline
 BamCLocReader::BamCLocReader(const string& bam_path)
         : bam_f_(NULL),
+          eof_(false),
           mpopi_(),
           rg_to_sample_(),
           loc_i_(-1)
@@ -184,7 +186,7 @@ bool BamCLocReader::read_one_locus(CLocReadSet& readset) {
 
     ++loc_i_;
     if (loc_i_ == int32_t(n_loci())) {
-        assert(bam_f_->eof());
+        assert(eof_);
         return false;
     }
 
@@ -199,7 +201,7 @@ bool BamCLocReader::read_one_locus(CLocReadSet& readset) {
         readset.pos(PhyLoc(string(p, q)));
     }
 
-    if (!bam_f_->eof()) {
+    if (!eof_) {
         // Read all the reads of the locus, and one more.
         if (bam_f_->r().chrom() < loc_i_) {
             cerr << "Error: BAM file isn't properly sorted.\n";
@@ -221,8 +223,10 @@ bool BamCLocReader::read_one_locus(CLocReadSet& readset) {
                 // read names were left unchanged, so we also don't touch them.
                 readset.add(SRead(Read(rec.seq(), rec.qname()), rg_to_sample_.at(rg)));
 
-            if (!bam_f_->next_record())
+            if (!bam_f_->next_record()) {
+                eof_ = true;
                 break;
+            }
         }
     }
 

@@ -274,7 +274,8 @@ try {
 
                     while (!fa_outputs.empty() && !fa_outputs.front().empty()) {
                         const string& fa = fa_outputs.front();
-                        gzwrite(o_gzfasta_f, fa.c_str(), fa.length());
+                        if (gzwrite(o_gzfasta_f, fa.c_str(), fa.length()) == 0)
+                            throw std::ios::failure("gzwrite");
                         fa_outputs.pop_front();
                         ++next_fa_to_write;
                     }

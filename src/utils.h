@@ -104,11 +104,21 @@ void join(IterableT elements, const SepT& sep, ostream& os) {
 // Routines to check that files are open.
 //
 inline
-void check_open (const std::ifstream& fs, const string& path)
-    {if (!fs.is_open()) {cerr << "Error: Failed to open '" << path << "' for reading.\n"; throw exception();}}
+void check_open (std::ifstream& fs, const string& path) {
+    if (!fs.is_open()) {
+        cerr << "Error: Failed to open '" << path << "' for reading.\n";
+        throw exception();
+    }
+    fs.exceptions(fs.exceptions() | ios::badbit);
+}
 inline
-void check_open (const std::ofstream& fs, const string& path)
-    {if (!fs.is_open()) {cerr << "Error: Failed to open '" << path << "' for writing.\n"; throw exception();}}
+void check_open (std::ofstream& fs, const string& path) {
+    if (!fs.is_open()) {
+        cerr << "Error: Failed to open '" << path << "' for writing.\n";
+        throw exception();
+    }
+    fs.exceptions(fs.exceptions() | ios::badbit);
+}
 inline
 void check_open (const gzFile fs, const string& path)
     {if (fs == NULL) {cerr << "Error: Failed to gz-open file '" << path << "'.\n"; throw exception();}}
@@ -150,18 +160,17 @@ class VersatileWriter {
     ofstream ofs_;
     gzFile gzfile_;
 
+    void gzputs_(const char* s);
+
 public:
     VersatileWriter(const string& path);
     ~VersatileWriter() {if(is_gzipped_) gzclose(gzfile_);}
 
     const string& path() const {return path_;}
 
-    friend VersatileWriter& operator<< (VersatileWriter& w, char c)
-        {if (w.is_gzipped_) gzputc(w.gzfile_, c); else w.ofs_ << c; return w;}
-    friend VersatileWriter& operator<< (VersatileWriter& w, const char* s)
-        {if (w.is_gzipped_) gzputs(w.gzfile_, s); else w.ofs_ << s; return w;}
-    friend VersatileWriter& operator<< (VersatileWriter& w, const string& s)
-        {if (w.is_gzipped_) gzwrite(w.gzfile_, s.c_str(), s.length()); else w.ofs_ << s; return w;}
+    friend VersatileWriter& operator<< (VersatileWriter& w, char c);
+    friend VersatileWriter& operator<< (VersatileWriter& w, const char* s);
+    friend VersatileWriter& operator<< (VersatileWriter& w, const string& s);
     friend VersatileWriter& operator<< (VersatileWriter& w, int i);
     friend VersatileWriter& operator<< (VersatileWriter& w, size_t i);
 };
@@ -213,11 +222,49 @@ void strip_read_number(string& read_name) {
 }
 
 inline
+VersatileWriter& operator<< (VersatileWriter& w, char c) {
+    if (w.is_gzipped_) {
+        if (gzputc(w.gzfile_, c) == -1)
+            throw ios::failure("gzputc");
+    } else {
+        w.ofs_ << c;
+    }
+    return w;
+}
+
+inline
+VersatileWriter& operator<< (VersatileWriter& w, const char* s) {
+    if (w.is_gzipped_)
+        w.gzputs_(s);
+    else
+        w.ofs_ << s;
+    return w;
+}
+
+inline
+void VersatileWriter::gzputs_(const char* s) {
+    if (gzputs(gzfile_, s) == -1)
+        throw ios::failure("gzputs");
+}
+
+
+inline
+VersatileWriter& operator<< (VersatileWriter& w, const string& s) {
+    if (w.is_gzipped_) {
+        if (!s.empty() && gzwrite(w.gzfile_, s.c_str(), s.length()) <= 0)
+            throw ios::failure("gzwrite");
+    } else {
+        w.ofs_ << s;
+    }
+    return w;
+}
+
+inline
 VersatileWriter& operator<< (VersatileWriter& w, int i) {
     if (w.is_gzipped_) {
         char buf[16];
         sprintf(buf, "%d", i);
-        gzputs(w.gzfile_, buf);
+        w.gzputs_(buf);
     } else {
         w.ofs_ << i;
     }
@@ -229,7 +276,7 @@ VersatileWriter& operator<< (VersatileWriter& w, size_t i) {
     if (w.is_gzipped_) {
         char buf[32];
         sprintf(buf, "%zu", i);
-        gzputs(w.gzfile_, buf);
+        w.gzputs_(buf);
     } else {
         w.ofs_ << i;
     }
