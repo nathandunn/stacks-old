@@ -1,3 +1,5 @@
+SET default_storage_engine=MYISAM;
+
 create table chr_index (
        id    	int unsigned not null primary key auto_increment,
        batch_id	int unsigned not null,

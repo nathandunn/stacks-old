@@ -118,8 +118,10 @@ GappedAln::GappedAln(int len_1, int len_2)
     this->_n_size = this->_n;
 
     this->matrix = new double * [this->_m];
-    for (uint i = 0; i < this->_m; i++)
+    for (uint i = 0; i < this->_m; i++) {
         this->matrix[i] = new double [this->_n];
+        memset(this->matrix[i], 0, sizeof(double) * this->_n);
+    }
 
     this->path = new AlignPath * [this->_m];
     for (uint i = 0; i < this->_m; i++)
@@ -163,8 +165,10 @@ GappedAln::init(int size_1, int size_2)
         this->_n_size = new_size;
 
         this->matrix = new double * [this->_m_size];
-        for (uint i = 0; i < this->_m_size; i++)
+        for (uint i = 0; i < this->_m_size; i++) {
             this->matrix[i] = new double [this->_n_size];
+            memset(this->matrix[i], 0, this->_n_size);
+        }
 
         this->path = new AlignPath * [this->_m_size];
         for (uint i = 0; i < this->_m_size; i++)
@@ -389,8 +393,9 @@ GappedAln::align_constrained(const string& query, const string& subj, const vect
     uint    s_max = 0;
 
     //
-    // Fill in the pre-aligned regions of the sequences. Iterate over the list of
-    // alignments in the alns vector and fill in the matrix.
+    // Fill in each pre-aligned region of the sequences starting from the first fragment as ordered by
+    // the query sequence.
+    // Next fill in the following connector sequence span the region between two pre-aligned regions.
     //
     for (uint n = 0; n < alns.size(); n++) {
         q_min = alns[n].query_pos < q_min ? alns[n].query_pos : q_min;

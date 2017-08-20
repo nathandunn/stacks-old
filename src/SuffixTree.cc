@@ -52,9 +52,9 @@ STNode::add_suffix_link(STNode *node)
 size_t
 SuffixTree::align(DNASeq4 query, vector<pair<size_t, size_t> > &alns)
 {
-    int qcnt     = 0;
-    int q_len    = query.length();
-    int q_stop   = q_len - 1;
+    size_t qcnt   = 0;
+    size_t q_len  = query.length();
+    size_t q_stop = q_len - 1;
     int seq_stop = this->seq_.length() - 1;
     int next_pos = 0;
 
@@ -147,9 +147,9 @@ SuffixTree::align(DNASeq4 query, vector<pair<size_t, size_t> > &alns)
 size_t
 SuffixTree::align(const char *query, vector<pair<size_t, size_t> > &alns)
 {
-    int qcnt     = 0;
-    int q_len    = strlen(query);
-    int q_stop   = q_len - 1;
+    size_t qcnt   = 0;
+    size_t q_len  = strlen(query);
+    size_t q_stop = q_len - 1;
     int seq_stop = this->seq_.length() - 1;
     int next_pos = 0;
 

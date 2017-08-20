@@ -71,16 +71,19 @@ public:
 
 class STAln {
 public:
+    size_t id;
     size_t query_pos;
     size_t subj_pos;
     size_t aln_len;
 
     STAln() {
+        this->id        = 0;
         this->query_pos = 0;
         this->subj_pos  = 0;
         this->aln_len   = 0;
     }
-    STAln(size_t q, size_t s, size_t a) {
+    STAln(size_t i, size_t q, size_t s, size_t a) {
+        this->id        = i;
         this->query_pos = q;
         this->subj_pos  = s;
         this->aln_len   = a;
