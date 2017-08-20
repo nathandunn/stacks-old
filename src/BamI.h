@@ -33,9 +33,7 @@
 #include <vector>
 #include <utility>
 
-extern "C" {
 #include "sam.h" //htslib
-}
 
 #include "stacks.h"
 #include "input.h"
@@ -98,7 +96,7 @@ public:
             const DNASeq4& seq,
             size_t read_group
             );
-    void write_to(htsFile* bam_f) const;
+    void write_to(htsFile* bam_f) const {if (bam_write1(bam_f->fp.bgzf, r_) < 0) throw ios::failure("bam_write1");}
 
 private:
     // Moves the pointer to the start of the next AUX field. Doesn't actually read
@@ -117,7 +115,7 @@ public:
     BamHeader() : h_(NULL) {}
     ~BamHeader() {if (h_!=NULL) bam_hdr_destroy(h_);}
     void init() {h_ = bam_hdr_init();}
-    void init(samFile* bam_f) {h_ = sam_hdr_read(bam_f);}
+    void init(htsFile* bam_f) {h_ = bam_hdr_read(bam_f->fp.bgzf);}
 
     const bam_hdr_t* h() const {return h_;}
           bam_hdr_t* h()       {return h_;}
@@ -142,38 +140,39 @@ public:
 
 class Bam: public Input {
     htsFile   *bam_fh;
-    bool eof_;
     BamHeader hdr;
     BamRecord rec;
 
 public:
-    Bam(const char *path) : Input(), bam_fh(NULL), eof_(false), hdr(), rec() {
-        this->path   = string(path);
-        bam_fh = hts_open(path, "r");
-        if (bam_fh == NULL) {
-            cerr << "Error: Failed to open BAM file '" << path << "'.\n";
-            throw exception();
-        }
-        hdr.init(bam_fh);
-    };
+    Bam(const char *path);
     ~Bam() {hts_close(bam_fh);};
 
     const BamRecord& r() const {return rec;}
     const BamHeader& h() const {return hdr;}
 
-    bool next_record()
-        {if(sam_read1(bam_fh, hdr.h(), rec.r()) >= 0) {return true;} else {eof_=true; return false;}}
+    bool next_record();
 
     Seq *next_seq();
     int  next_seq(Seq&);
-
-    bool eof() const {return eof_;}
 };
 
 //
 // Inline definitions
 // ----------
 //
+
+inline
+bool Bam::next_record() {
+    int rv = bam_read1(bam_fh->fp.bgzf, rec.r());
+    if (rv == -1) {
+        // EOF.
+        return false;
+    } else if (rv < -1) {
+        cerr << "Error: while reading BAM file.\n";
+        throw ios::failure("bam_read1");
+    }
+    return true;
+}
 
 inline
 Seq *

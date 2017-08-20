@@ -54,27 +54,19 @@ struct ProcessingStats {
     ProcessingStats& operator+= (const ProcessingStats& other);
 };
 
-struct ProcessingOutput {
-    string vcf;
-    string fa;
-
-    void write(VcfWriter& vcf_f, gzFile gzfasta_f) const {
-        vcf_f.file() << vcf;
-        gzwrite(gzfasta_f, fa.c_str(), fa.length());
-    }
-};
-
 class LocusProcessor {
 public:
     LocusProcessor() : stats_() {}
     void process(CLocReadSet&& loc);
 
     const ProcessingStats& stats() const {return stats_;}
-    const ProcessingOutput& out() const {return out_;}
+    string& vcf_out() {return o_vcf_;}
+    string& fasta_out() {return o_fa_;}
 
 private:
     ProcessingStats stats_;
-    ProcessingOutput out_;
+    string o_vcf_;
+    string o_fa_;
 
     vector<map<size_t,PhasedHet>> phase_hets (
             const vector<SiteCall>& calls,
@@ -104,7 +96,6 @@ bool quiet = false;
 int num_threads = 1;
 string in_dir;
 int batch_id = -1;
-set<int> locus_wl;
 bool ignore_pe_reads = false;
 
 modelt model_type = marukilow;
@@ -113,6 +104,7 @@ unique_ptr<const Model> model;
 size_t km_length = 31;
 size_t min_km_count = 2;
 
+size_t dbg_max_loci = SIZE_MAX;
 bool dbg_no_haplotypes = false;
 bool dbg_write_gfa = false;
 bool dbg_write_alns = false;
@@ -129,6 +121,39 @@ gzFile o_gzfasta_f = NULL;
 unique_ptr<VcfWriter> o_vcf_f;
 ofstream o_aln_f;
 ofstream o_hapgraphs_f;
+
+//TODO{
+double gettm() {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return ts.tv_sec + ts.tv_nsec / 1.0e9;
+}
+struct Clocks {
+    double clocking;
+    double reading;
+    double processing;
+    double writing_fa;
+    double writing_vcf;
+    double sum() const {return clocking+reading+processing+writing_fa+writing_vcf;}
+    Clocks& operator+= (const Clocks& other) {
+        clocking += other.clocking;
+        reading += other.reading;
+        processing += other.processing;
+        writing_fa += other.writing_fa;
+        writing_vcf += other.writing_vcf;
+        return *this;
+    }
+    friend Clocks operator+ (const Clocks& lhs, const Clocks& rhs) {Clocks sum (lhs); sum+=rhs; return sum;}
+    Clocks& operator/= (double d) {
+        clocking /= d;
+        reading /= d;
+        processing /= d;
+        writing_fa /= d;
+        writing_vcf /= d;
+        return *this;
+    }
+};
+//TODO}
 
 int main(int argc, char** argv) {
 try {
@@ -200,94 +225,93 @@ try {
     // Process every locus
     //
     ProcessingStats stats {};
-    cout << "Processing " << (locus_wl.empty() ? "all" : "whitelisted") << " loci...\n" << flush;
-    const size_t n_loci = locus_wl.empty() ? bam_fh.n_loci() : locus_wl.size();
+    cout << "Processing all loci...\n" << flush;
+    const size_t n_loci = std::min(bam_fh.n_loci(), dbg_max_loci);
     ProgressMeter progress (cout, n_loci);
 
     // For parallelization.
     int omp_return = 0;
-    size_t next_to_write = 0;
-    int next_id_to_write = bam_fh.target2id(next_to_write);
-    if (!locus_wl.empty())
-        // We don't use the `next_to_write` BAM index; instead we get the IDs from the whitelist.
-        next_id_to_write = *locus_wl.begin();
-    map<int,ProcessingOutput> outputs; // map of {loc_id, output}
+    std::deque<string> fa_outputs;
+    std::deque<string> vcf_outputs;
+    size_t next_fa_to_write = 0; // locus index, in the input BAM file.
+    size_t next_vcf_to_write = 0;
+    //TODO{
+    double clock_parallel_start = gettm();
+    vector<Clocks> clocks_all (num_threads);
+    size_t n_writes = 0;
+    size_t max_size_before_write = 0;
+    double actually_writing_vcf = 0;
+    //TODO}
     #pragma omp parallel
     {
         LocusProcessor loc_proc;
         CLocReadSet loc (bam_fh.mpopi());
+        Clocks& clocks = clocks_all[omp_get_thread_num()]; //TODO
         #pragma omp for schedule(dynamic)
         for (size_t i=0; i<n_loci; ++i) {
             if (omp_return != 0)
                 continue;
             try {
-                if (locus_wl.empty()) {
-                    #pragma omp critical
-                    bam_fh.read_one_locus(loc);
-                } else {
-                    #pragma omp critical
-                    {
-                        do {
-                            if (!bam_fh.read_one_locus(loc)) {
-                                cerr << "Error: Some whitelisted loci weren't found in the BAM file.\n";
-                                omp_return = stacks_handle_exceptions(exception());
-                                break;
-                            }
-                        } while (!locus_wl.count(loc.id()));
-                    }
-                    if (omp_return != 0)
-                        continue;
-                }
+                //TODO{
+                double clock_loop_start0 = gettm();
+                double clock_loop_start = gettm();
+                double clocking = clock_loop_start - clock_loop_start0;
+                //TODO}
 
-                int loc_id = loc.id();
+                #pragma omp critical(read)
+                bam_fh.read_one_locus(loc);
+                double clock_read = gettm();//TODO
+
+                size_t loc_i = loc.bam_i();
                 loc_proc.process(move(loc));
+                double clock_process = gettm();//TODO
 
-                #pragma omp critical
+                #pragma omp critical(write_fa)
                 {
-                    if (loc_id == next_id_to_write) {
-                        // Write it.
-                        loc_proc.out().write(*o_vcf_f, o_gzfasta_f);
-                        ++progress;
-                        if (locus_wl.empty()) {
-                            ++next_to_write;
-                            if (next_to_write < bam_fh.n_loci())
-                                next_id_to_write = bam_fh.target2id(next_to_write);
-                            else
-                                // We just wrote the last locus.
-                                assert(outputs.empty()); // (Thus the next outputs.find() will fail.)
-                        } else {
-                            locus_wl.erase(loc_id);
-                            if (!locus_wl.empty())
-                                next_id_to_write = *locus_wl.begin();
-                            else
-                                assert(outputs.empty());
-                        }
-                        // Write stored output, if any.
-                        map<int,ProcessingOutput>::iterator output;
-                        while ((output = outputs.find(next_id_to_write)) != outputs.end()) {
-                            output->second.write(*o_vcf_f, o_gzfasta_f);
-                            outputs.erase(output);
-                            ++progress;
-                            if (locus_wl.empty()) {
-                                ++next_to_write;
-                                if (next_to_write < bam_fh.n_loci())
-                                    next_id_to_write = bam_fh.target2id(next_to_write);
-                                else
-                                    // We just wrote the last locus.
-                                    assert(outputs.empty());
-                            } else {
-                                locus_wl.erase(loc_id);
-                                if (!locus_wl.empty())
-                                    next_id_to_write = *locus_wl.begin();
-                                else
-                                    assert(outputs.empty());
-                            }
-                        }
-                    } else {
-                        // Store output for later.
-                        outputs.insert( {loc_id, loc_proc.out()} );
+                    for (size_t i=next_fa_to_write+fa_outputs.size(); i<=loc_i; ++i)
+                        fa_outputs.push_back(string());
+                    fa_outputs[loc_i - next_fa_to_write] = move(loc_proc.fasta_out());
+
+                    while (!fa_outputs.empty() && !fa_outputs.front().empty()) {
+                        const string& fa = fa_outputs.front();
+                        if (gzwrite(o_gzfasta_f, fa.c_str(), fa.length()) == 0)
+                            throw std::ios::failure("gzwrite");
+                        fa_outputs.pop_front();
+                        ++next_fa_to_write;
                     }
                 }
+                double clock_write_fa = gettm();//TODO
+
+                #pragma omp critical(write_vcf)
+                {
+                    for (size_t i=next_vcf_to_write+vcf_outputs.size(); i<=loc_i; ++i)
+                        vcf_outputs.push_back(string());
+                    vcf_outputs[loc_i - next_vcf_to_write] = move(loc_proc.vcf_out());
+
+                    if (!vcf_outputs.front().empty()) {
+                        //TODO{
+                        ++n_writes;
+                        if (vcf_outputs.size() > max_size_before_write)
+                            max_size_before_write = vcf_outputs.size();
+                        double start_writing = gettm();
+                        //TODO}
+                        do {
+                            o_vcf_f->file() << vcf_outputs.front();
+                            vcf_outputs.pop_front();
+                            ++next_vcf_to_write;
+                            ++progress;
+                        } while (!vcf_outputs.empty() && !vcf_outputs.front().empty());
+                        actually_writing_vcf += gettm() - start_writing - clocking; //TODO
+                    }
+                }
+                //TODO{
+                double clock_write_vcf = gettm();
+                clocks.clocking     += 6 * clocking;
+                clocks.reading     += clock_read       - clock_loop_start - clocking;
+                clocks.processing  += clock_process    - clock_read - clocking;
+                clocks.writing_fa  += clock_write_fa   - clock_process - clocking;
+                clocks.writing_vcf += clock_write_vcf  - clock_write_fa - clocking;
+                //TODO}
 
             } catch (exception& e) {
                 #pragma omp critical
@@ -301,7 +325,33 @@ try {
     if (omp_return != 0)
          return omp_return;
     progress.done();
-    assert(locus_wl.empty());
+
+    //TODO{
+    {
+        double clock_parallel_end = gettm();
+        Clocks totals = std::accumulate(clocks_all.begin(), clocks_all.end(), Clocks());
+        totals /= num_threads;
+        double total_time = clock_parallel_end - clock_parallel_start;
+        ostream os (cout.rdbuf());
+        os.exceptions(os.exceptions() | ios::badbit);
+        os << std::fixed << std::setprecision(2);
+        os << "\n"
+           << "BEGIN clockings\n"
+           << "Num. threads: " << num_threads << "\n"
+           << "Parallel time: " << total_time << "\n"
+           << "Average thread time spent...\n"
+           << std::setw(8) << totals.reading  << "  reading (" << as_percentage(totals.reading / total_time) << ")\n"
+           << std::setw(8) << totals.processing << "  processing (" << as_percentage(totals.processing / total_time) << ")\n"
+           << std::setw(8) << totals.writing_fa << "  writing_fa (" << as_percentage(totals.writing_fa / total_time) << ")\n"
+           << std::setw(8) << totals.writing_vcf << "  writing_vcf (" << as_percentage(totals.writing_vcf / total_time) << ")\n"
+           << std::setw(8) << totals.clocking  << "  clocking (" << as_percentage(totals.clocking / total_time) << ")\n"
+           << std::setw(8) << totals.sum() << "  total (" << as_percentage(totals.sum() / total_time) << ")\n"
+           << "Time spent actually_writing_vcf: " << actually_writing_vcf << " (" << as_percentage(actually_writing_vcf / total_time) << ")\n"
+           << "VCFwrite block size: mean=" << (double) n_loci / n_writes << "(n=" << n_writes << "); max=" << max_size_before_write << "\n"
+           << "END clockings\n"
+           ;
+    }
+    //TODO}
 
     //
     // Report statistics on the analysis.
@@ -1132,7 +1182,7 @@ void LocusProcessor::write_one_locus (
 
         vcf_records << rec;
     }
-    out_.vcf = vcf_records.str();
+    o_vcf_ = vcf_records.str();
 
     //
     // Fasta output.
@@ -1150,33 +1200,33 @@ void LocusProcessor::write_one_locus (
             ++n_remaining_samples;
 
     // Write the record.
-    out_.fa.clear();
-    out_.fa += '>';
-    out_.fa += loc_id;
+    o_fa_.clear();
+    o_fa_ += '>';
+    o_fa_ += loc_id;
     if (!aln_loc.pos().empty()) {
         const PhyLoc& p = aln_loc.pos();
         char pos[16];
         sprintf(pos, "%u", p.bp+1);
-        out_.fa += " pos=";
-        out_.fa += p.chr();
-        out_.fa += ':';
-        out_.fa += pos;
-        out_.fa += ':';
-        out_.fa += (p.strand == strand_plus ? '+' : '-');
+        o_fa_ += " pos=";
+        o_fa_ += p.chr();
+        o_fa_ += ':';
+        o_fa_ += pos;
+        o_fa_ += ':';
+        o_fa_ += (p.strand == strand_plus ? '+' : '-');
     }
     char n_spls[32];
     sprintf(n_spls, "%zu", n_remaining_samples);
-    out_.fa += " NS=";
-    out_.fa += n_spls;
+    o_fa_ += " NS=";
+    o_fa_ += n_spls;
     if (n_remaining_samples != samples_w_reads.size()) {
         assert(n_remaining_samples < samples_w_reads.size());
         sprintf(n_spls, "%zu", samples_w_reads.size() - n_remaining_samples);
-        out_.fa += " n_discarded_samples=";
-        out_.fa += n_spls;
+        o_fa_ += " n_discarded_samples=";
+        o_fa_ += n_spls;
     }
-    out_.fa += '\n';
-    out_.fa += ref.str();
-    out_.fa += '\n';
+    o_fa_ += '\n';
+    o_fa_ += ref.str();
+    o_fa_ += '\n';
 }
 
 Cigar dbg_extract_cigar(const string& read_id) {
@@ -1224,7 +1274,6 @@ const string help_string = string() +
         "  \"samtools merge ./batch_1.catalog.bam ./*.matches.bam\"\n"
         "\n"
         "  --ignore-pe-reads: ignore paired-end reads even if present in the input\n"
-        "  -W,--whitelist: path to a whitelist of locus IDs\n"
         "  -t,--threads: number of threads to use (default: 1)\n"
         "\n"
         "Model options:\n"
@@ -1239,6 +1288,7 @@ const string help_string = string() +
         "\n"
 #ifdef DEBUG
         "Debug options:\n"
+        "  --dbg-max-loci: process the first N loci\n"
         "  --no-haps: disable phasing\n"
         "  --gfa: output a GFA file for each locus\n"
         "  --alns: output a file showing the contigs & alignments\n"
@@ -1265,7 +1315,6 @@ try {
         {"quiet",        no_argument,       NULL,  'q'},
         {"in-dir",       required_argument, NULL,  'P'},
         {"batch-id",     required_argument, NULL,  'b'},
-        {"whitelist",    required_argument, NULL,  'W'},
         {"threads",      required_argument, NULL,  't'},
         {"ignore-pe-reads", no_argument,    NULL,  1012},
         {"model",        required_argument, NULL,  1006},
@@ -1273,6 +1322,7 @@ try {
         {"var-alpha",    required_argument, NULL,  1008},
         {"kmer-length",  required_argument, NULL,  1001},
         {"min-kmer-cov", required_argument, NULL,  1002},
+        {"dbg-max-loci", required_argument, NULL,  2000},
         {"true-alns",    no_argument,       NULL,  1011},
         {"no-haps",      no_argument,       NULL,  1009},
         {"gfa",          no_argument,       NULL,  1003},
@@ -1284,7 +1334,6 @@ try {
 
     double gt_alpha = 0.05;
     double var_alpha = 0.05;
-    string wl_path;
 
     int c;
     int long_options_i;
@@ -1322,9 +1371,6 @@ try {
         case 1008: //var-alpha
             var_alpha = atof(optarg);
             break;
-        case 'W':
-            wl_path = optarg;
-            break;
         case 't':
             num_threads = is_integer(optarg);
             if (num_threads < 0) {
@@ -1340,6 +1386,9 @@ try {
             break;
         case 1002://min-cov
             min_km_count = atoi(optarg);
+            break;
+        case 2000:
+            dbg_max_loci = is_integer(optarg);
             break;
         case 1011://true-alns
             dbg_true_alns = true;
@@ -1403,18 +1452,6 @@ try {
         }
     }
 
-    if (!wl_path.empty()) {
-        ifstream wl_fh (wl_path);
-        check_open(wl_fh, wl_path);
-        int id;
-        while (wl_fh >> id)
-            locus_wl.insert(id);
-        if (locus_wl.empty()) {
-            cerr << "Error: Whitelist '" << wl_path << "' appears empty.\n";
-            throw exception();
-        }
-    }
-
 } catch (std::invalid_argument&) {
     bad_args();
 }
@@ -1426,12 +1463,13 @@ void report_options(ostream& os) {
        << "  Batch ID: " << batch_id << "\n"
        << "  Model: " << *model << "\n";
 
-    if (!locus_wl.empty())
-        os << "  Whitelist of " << locus_wl.size() << " loci.\n";
     if (ignore_pe_reads)
         os << "  Ignoring paired-end reads.\n";
     if (km_length != 31)
         os << "  Kmer length: " << km_length << "\n";
     if (min_km_count != 2)
         os << "  Min coverage: " << min_km_count << "\n";
+
+    if (dbg_max_loci != SIZE_MAX)
+        os << "  DEBUG: Processing max. " << dbg_max_loci << "loci\n";
 }
