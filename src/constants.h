@@ -105,6 +105,7 @@ using std::getline;
 using std::exception;
 using std::move;
 using std::unique_ptr;
+using std::ios;
 
 typedef unsigned int uint;
 typedef unsigned char uchar;

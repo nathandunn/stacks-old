@@ -55,7 +55,7 @@ libpop_a_SOURCES = \
 	src/smoothing.h \
 	src/smoothing_utils.h
 
-libcore_a_CXXFLAGS = $(BAM_CFLAGS)
+libcore_a_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
 libpop_a_CXXFLAGS  = $(OPENMP_CFLAGS)
 
 estacks_SOURCES      = libcore.a src/estacks.h src/estacks.cc
