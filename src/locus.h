@@ -210,16 +210,16 @@ public:
 };
 
 class CLocAlnSet {
-    const MetaPopInfo* mpopi_;
     int id_; // Catalog locus ID
     PhyLoc aln_pos_;
     DNASeq4 ref_;
+    const MetaPopInfo* mpopi_;
     vector<SAlnRead> reads_;
     vector<vector<size_t>> reads_per_sample_; // `at(sample)` is a vector of indexes in `reads_`.
 
 public:
-    CLocAlnSet(const MetaPopInfo& mpopi)
-        : mpopi_(&mpopi), id_(-1), aln_pos_(), ref_(), reads_(), reads_per_sample_(mpopi_->samples().size())
+    CLocAlnSet(int id, const PhyLoc& aln_pos, const MetaPopInfo* mpopi)
+        : id_(id), aln_pos_(aln_pos), mpopi_(mpopi), reads_(), reads_per_sample_(mpopi_->samples().size())
         {}
     CLocAlnSet(CLocAlnSet&&) = default;
     CLocAlnSet& operator= (CLocAlnSet&&) = default;
@@ -232,10 +232,7 @@ public:
           vector<SAlnRead>& reads()       {return reads_;}
     const vector<size_t>& sample_reads(size_t sample) const {return reads_per_sample_.at(sample);}
 
-    void clear()
-        {id_= -1; ref_ = DNASeq4(); reads_.clear(); reads_per_sample_ = vector<vector<size_t>>(mpopi().samples().size());}
-    void id(int i) {id_ = i;}
-    void pos(const PhyLoc& p) {aln_pos_ = p;}
+    void clear();
     void ref(DNASeq4&& s) {ref_ = move(s);}
     void add(SAlnRead&& r);
     void merge_paired_reads();

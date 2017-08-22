@@ -323,6 +323,16 @@ QLocus::clear_matches()
     return 0;
 }
 
+void CLocAlnSet::clear() {
+    id_= -1;
+    aln_pos_.clear();
+    ref_ = DNASeq4();
+    mpopi_ = NULL;
+    reads_.clear();
+    reads_per_sample_.clear();
+}
+
+
 void CLocAlnSet::merge_paired_reads() {
 
     // Sort reads by name. Paired reads should have the same name but end with
@@ -375,8 +385,9 @@ ostream& operator<< (ostream& os, const CLocAlnSet& loc) {
 
 CLocAlnSet CLocAlnSet::juxtapose(CLocAlnSet&& left, CLocAlnSet&& right) {
 
-    assert(&left.mpopi() == &right.mpopi());
     assert(left.id() == right.id());
+    assert(left.pos() == right.pos());
+    assert(&left.mpopi() == &right.mpopi());
 
     CLocAlnSet merged (move(left));
     size_t left_ref_len = merged.ref().length();
