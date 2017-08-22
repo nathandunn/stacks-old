@@ -65,7 +65,7 @@ struct ProcessingStats {
 //
 class LocusProcessor {
 public:
-    LocusProcessor() : stats_(), o_vcf_(), o_fa_() {}
+    LocusProcessor() : stats_(), loc_id_(-1), loc_pos_(), mpopi_(NULL), o_vcf_(), o_fa_() {}
 
     // Process a locus.
     void process(CLocReadSet&& loc);
@@ -77,8 +77,13 @@ public:
 
 private:
     ProcessingStats stats_;
+    int loc_id_;
+    PhyLoc loc_pos_;
+    const MetaPopInfo* mpopi_;
     string o_vcf_;
     string o_fa_;
+
+    string assemble_contig(const vector<const DNASeq4*>& seqs);
 
     // For each sample, phase heterozygous SNPs.
     vector<map<size_t,PhasedHet>> phase_hets (
@@ -112,6 +117,13 @@ private:
 // `t00800n:msp_00:a2:r0:cig1=77M1I72M851H:cig2=211H150M639H/1`
 //
 Cigar dbg_extract_cigar(const string& read_id);
+
+//
+// from_true_alignments
+// ----------
+// Creates a CLocAlnSet from a CLocReadSet, using true alignments.
+//
+void from_true_alignments(CLocAlnSet& aln_loc, CLocReadSet&& loc);
 
 //
 // Clocks
