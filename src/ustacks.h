@@ -136,7 +136,6 @@ int count_raw_reads(map<int, Stack *> &, map<int, Rem *> &, map<int, MergedStack
 //
 // Dealing with lumberjack (huge) stacks
 //
-int  calc_triggers(double, double, double, int &, int &);
 int  remove_repetitive_stacks(map<int, Stack *> &, map<int, MergedStack *> &);
 int  deleverage(map<int, Stack *> &, map<int, Rem *> &, map<int, MergedStack *> &, set<int> &, int, vector<MergedStack *> &);
 
