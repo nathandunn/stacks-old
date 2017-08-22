@@ -1,6 +1,7 @@
 #include <getopt.h>
+#include <zlib.h>
 
-#include "zlib.h"
+#include "rystacks.h"
 
 #include "constants.h"
 #include "utils.h"
@@ -13,73 +14,6 @@
 #include "aln_utils.h"
 #include "Alignment.h"
 #include "models.h"
-
-using namespace std;
-
-struct PhasedHet {
-    size_t phase_set; // N.B. The convention in VCF is to use the column of the first phased SNP for this.
-    Nt2 left_allele;
-    Nt2 right_allele;
-};
-
-class SnpAlleleCooccurrenceCounter {
-    size_t n_snps_;
-    vector<array<array<size_t,4>,4>> cooccurences_;
-public:
-    SnpAlleleCooccurrenceCounter(size_t n_snps);
-    size_t& at(size_t snp_i1, Nt2 snp1_allele, size_t snp_i2, Nt2 snp2_allele);
-    void clear();
-};
-
-struct ProcessingStats {
-    size_t n_nonempty_loci;
-    size_t n_loci_w_pe_reads;
-    size_t n_loci_almost_no_pe_reads;
-    size_t n_loci_pe_graph_not_dag;
-
-    size_t n_loci_phasing_issues() const;
-    size_t n_loci_no_pe_reads() const {return n_nonempty_loci - n_loci_w_pe_reads;}
-    size_t n_loci_usable_pe_reads() const {return n_loci_w_pe_reads - n_loci_almost_no_pe_reads - n_loci_pe_graph_not_dag;}
-
-    map<pair<size_t,size_t>,size_t> n_badly_phased_samples; // { {n_bad_samples, n_tot_samples} : count }
-
-    ProcessingStats& operator+= (const ProcessingStats& other);
-};
-
-class LocusProcessor {
-public:
-    LocusProcessor() : stats_() {}
-    void process(CLocReadSet&& loc);
-
-    const ProcessingStats& stats() const {return stats_;}
-    string& vcf_out() {return o_vcf_;}
-    string& fasta_out() {return o_fa_;}
-
-private:
-    ProcessingStats stats_;
-    string o_vcf_;
-    string o_fa_;
-
-    vector<map<size_t,PhasedHet>> phase_hets (
-            const vector<SiteCall>& calls,
-            const CLocAlnSet& aln_loc,
-            set<size_t>& inconsistent_samples
-    ) const;
-    void rm_supernumerary_phase_sets (
-            vector<map<size_t,PhasedHet>>& phase_data
-    ) const;
-    void write_one_locus (
-            const CLocAlnSet& aln_loc,
-            const vector<SiteCounts>& depths,
-            const vector<SiteCall>& calls,
-            const vector<map<size_t,PhasedHet>>& phase_data // {col : phasedhet} maps, for all samples
-    );
-};
-
-void parse_command_line(int argc, char* argv[]);
-void report_options(ostream& os);
-
-Cigar dbg_extract_cigar(const string& read_id);
 
 //
 // Argument globals.
@@ -114,38 +48,10 @@ unique_ptr<VcfWriter> o_vcf_f;
 ofstream o_aln_f;
 ofstream o_hapgraphs_f;
 
-//TODO{
-double gettm() {
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return ts.tv_sec + ts.tv_nsec / 1.0e9;
-}
-struct Clocks {
-    double clocking;
-    double reading;
-    double processing;
-    double writing_fa;
-    double writing_vcf;
-    double sum() const {return clocking+reading+processing+writing_fa+writing_vcf;}
-    Clocks& operator+= (const Clocks& other) {
-        clocking += other.clocking;
-        reading += other.reading;
-        processing += other.processing;
-        writing_fa += other.writing_fa;
-        writing_vcf += other.writing_vcf;
-        return *this;
-    }
-    friend Clocks operator+ (const Clocks& lhs, const Clocks& rhs) {Clocks sum (lhs); sum+=rhs; return sum;}
-    Clocks& operator/= (double d) {
-        clocking /= d;
-        reading /= d;
-        processing /= d;
-        writing_fa /= d;
-        writing_vcf /= d;
-        return *this;
-    }
-};
-//TODO}
+//
+// main
+// ==========
+//
 
 int main(int argc, char** argv) {
 try {
@@ -390,10 +296,11 @@ try {
 }
 }
 
-SnpAlleleCooccurrenceCounter::SnpAlleleCooccurrenceCounter(size_t n_snps)
-    : n_snps_(n_snps),
-      cooccurences_(n_snps_*n_snps_) // n*n matrix, athough we only use the i<j half.
-    {}
+
+//
+// SnpAlleleCooccurrenceCounter
+// ============================
+//
 
 size_t& SnpAlleleCooccurrenceCounter::at(size_t snp_i1, Nt2 snp1_allele, size_t snp_i2, Nt2 snp2_allele) {
     assert(snp_i1 < snp_i2);
@@ -406,12 +313,10 @@ void SnpAlleleCooccurrenceCounter::clear() {
             cooccurences_[i*n_snps_+j] = array<array<size_t,4>,4>();
 }
 
-size_t ProcessingStats::n_loci_phasing_issues() const {
-    size_t n = 0;
-    for (auto& elem : n_badly_phased_samples)
-        n += elem.second;
-    return n;
-}
+//
+// ProcessingStats
+// ===============
+//
 
 ProcessingStats& ProcessingStats::operator+= (const ProcessingStats& other) {
     n_nonempty_loci += other.n_nonempty_loci;
@@ -424,6 +329,11 @@ ProcessingStats& ProcessingStats::operator+= (const ProcessingStats& other) {
 
     return *this;
 }
+
+//
+// LocusProcessor
+// ==============
+//
 
 void LocusProcessor::process(CLocReadSet&& loc) {
     if (loc.reads().empty())
@@ -1133,14 +1043,14 @@ void LocusProcessor::write_one_locus (
                             // No phase data.
                             gt[0] = vcf_allele_indexes.at(scall.nt0());
                             gt[1] = vcf_allele_indexes.at(scall.nt1());
-                            sort(gt.begin(), gt.end()); // (Prevents '1/0'.)
+                            std::sort(gt.begin(), gt.end()); // (Prevents '1/0'.)
                             genotype << gt[0] << '/' << gt[1];
                             genotype << ":.";
                         }
                     } else {
                         gt[0] = vcf_allele_indexes.at(scall.nt0());
                         gt[1] = vcf_allele_indexes.at(scall.nt1());
-                        sort(gt.begin(), gt.end()); // (Prevents '1/0'.)
+                        std::sort(gt.begin(), gt.end()); // (Prevents '1/0'.)
                         genotype << gt[0] << '/' << gt[1];
                     }
                     break;
@@ -1221,6 +1131,11 @@ void LocusProcessor::write_one_locus (
     o_fa_ += '\n';
 }
 
+//
+// Debugging & benchmarking
+// ========================
+//
+
 Cigar dbg_extract_cigar(const string& read_id) {
     static const char keyword1[] = "cig1=";
     static const char keyword2[] = "cig2=";
@@ -1254,6 +1169,29 @@ Cigar dbg_extract_cigar(const string& read_id) {
 
     return cigar;
 }
+
+Clocks& Clocks::operator+= (const Clocks& other) {
+    clocking += other.clocking;
+    reading += other.reading;
+    processing += other.processing;
+    writing_fa += other.writing_fa;
+    writing_vcf += other.writing_vcf;
+    return *this;
+}
+
+Clocks& Clocks::operator/= (double d) {
+    clocking /= d;
+    reading /= d;
+    processing /= d;
+    writing_fa /= d;
+    writing_vcf /= d;
+    return *this;
+}
+
+//
+// Arguments
+// ==========
+//
 
 const string help_string = string() +
         prog_name + " " + VERSION  + "\n" +
