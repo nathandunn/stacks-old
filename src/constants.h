@@ -142,6 +142,8 @@ enum class FileT {unknown,
     vcf, gzvcf
 };
 
+int stacks_handle_exceptions(const exception& e);
+
 string remove_suffix(FileT, const string&);
 
 FileT guess_file_type(const string&);

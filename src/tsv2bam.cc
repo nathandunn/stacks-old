@@ -132,9 +132,9 @@ int run() {
                 run(cloc_ids, header_sq_lines.str(), i, ss);
                 outputs[i] = ss.str();
 
-            } catch (exception&) {
+            } catch (exception& e) {
                 #pragma omp critical
-                omp_return = 1;
+                omp_return = stacks_handle_exceptions(e);
             }
         }
     }

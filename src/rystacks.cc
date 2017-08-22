@@ -16,14 +16,6 @@
 
 using namespace std;
 
-int stacks_handle_exceptions(const exception& e) {
-    std::cerr << "Aborted.";
-    if (typeid(e) != typeid(std::exception))
-        std::cerr << " (" << e.what() << ")";
-    std::cerr << "\n";
-    return 13;
-}
-
 struct PhasedHet {
     size_t phase_set; // N.B. The convention in VCF is to use the column of the first phased SNP for this.
     Nt2 left_allele;
