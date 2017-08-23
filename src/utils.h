@@ -51,9 +51,15 @@ double reduced_log_factorial(double, double);
 
 inline
 bool almost_equal(double x, double y) {
-    if (!std::isnormal(x) || !std::isnormal(y))
-        throw std::domain_error("almost_equal");
-    return std::abs(x-y) <= 1e-12 * std::abs(std::min(x,y));
+    const double precision = 1.0e-9;
+    if (x == 0.0 && y == 0.0)
+        return true;
+    if (!std::isnormal(x) || !std::isnormal(y)) {
+        stringstream ss;
+        ss << "almost_equal: x=" << x << ", y=" << y;
+        throw std::domain_error(ss.str());
+    }
+    return std::abs(x-y) <= precision * std::abs(std::min(x,y));
 }
 
 //
