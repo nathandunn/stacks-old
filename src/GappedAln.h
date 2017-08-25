@@ -339,7 +339,6 @@ GappedAln::align_constrained(const string& query, const string& subj, const vect
     //
     // Does the last pre-aligned region end at the end of the query? If not, fill in the matrix.
     //
-    cerr << "Last: query_pos + aln_len: " << alns.back().query_pos + alns.back().aln_len << "; query len: " << query.length() << "\n";
     if (alns.back().query_pos + alns.back().aln_len != query.length()) {
         q_start = 1 + alns.back().query_pos + alns.back().aln_len;
         q_end   = query.length();
@@ -348,14 +347,12 @@ GappedAln::align_constrained(const string& query, const string& subj, const vect
         s_start = (q < this->_n) ? q : this->_n;
         s_end   = (s_start + (q_len * 2) < (int) this->_n) ? s_start + (q_len * 2) : this->_n;
 
-        cerr << "Filling end region; q_start: " << q_start << ", q_end: " << q_end << "; s_start: " << s_start << ", s_end: " << s_end << "\n";
         this->bound_region(query, q_start, q_end, subj, s_start, s_end);
         this->score(true, query, q_start, q_end, subj, s_start, s_end);
     }
 
     this->dump_alignment(query, subj);
 
-    // cerr << "Tracing alignment from q_min: " << q_min << " to q_max: " << q_max << " and s_min: " << s_min << " to s_max: " << s_max << "\n";
     if (this->trace_local_alignment(query, subj))
         return 1;
 
@@ -462,12 +459,12 @@ GappedAln::score(bool local,
             // If this is a local alignment and the score is zero or negative, mark this node
             // as having no valid paths exiting it.
             //
-            // if (local && scores[0] <= 0) {
-            //     this->path[i][j].diag = false;
-            //     this->path[i][j].up   = false;
-            //     this->path[i][j].left = false;
-            //     continue;
-            // }
+            if (local && scores[0] <= 0) {
+                this->path[i][j].diag = false;
+                this->path[i][j].up   = false;
+                this->path[i][j].left = false;
+                continue;
+            }
             
             if (scores[0] > scores[1]) {
                 //
@@ -728,7 +725,6 @@ GappedAln::trace_local_alignment(const string& query, const string& subj)
     do {
         more_paths = false;
 
-        cerr << "Tracing local alignment; starting from query: " << this->_max_score_m << ", subject: " << this->_max_score_n << "\n";
         //
         // For a local alignment, begin the trace at the matrix cell with the highest score.
         //
@@ -828,7 +824,6 @@ GappedAln::trace_local_alignment(const string& query, const string& subj)
         //
         // If the entire query was not aligned, add the softmasked bases to the cigar.
         //
-        cerr << "Max score m: " << this->_max_score_m << "; query len: " << query.length() << "\n";
         if (this->_max_score_m < query.length() - 1) {
             sprintf(buf, "%dS", (int) query.length() - this->_max_score_m);
             cigar += buf;
