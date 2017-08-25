@@ -1,6 +1,7 @@
 #include <getopt.h>
+#include <zlib.h>
 
-#include "zlib.h"
+#include "rystacks.h"
 
 #include "constants.h"
 #include "utils.h"
@@ -13,81 +14,6 @@
 #include "aln_utils.h"
 #include "Alignment.h"
 #include "models.h"
-
-using namespace std;
-
-int stacks_handle_exceptions(const exception& e) {
-    std::cerr << "Aborted.";
-    if (typeid(e) != typeid(std::exception))
-        std::cerr << " (" << e.what() << ")";
-    std::cerr << "\n";
-    return 13;
-}
-
-struct PhasedHet {
-    size_t phase_set; // N.B. The convention in VCF is to use the column of the first phased SNP for this.
-    Nt2 left_allele;
-    Nt2 right_allele;
-};
-
-class SnpAlleleCooccurrenceCounter {
-    size_t n_snps_;
-    vector<array<array<size_t,4>,4>> cooccurences_;
-public:
-    SnpAlleleCooccurrenceCounter(size_t n_snps);
-    size_t& at(size_t snp_i1, Nt2 snp1_allele, size_t snp_i2, Nt2 snp2_allele);
-    void clear();
-};
-
-struct ProcessingStats {
-    size_t n_nonempty_loci;
-    size_t n_loci_w_pe_reads;
-    size_t n_loci_almost_no_pe_reads;
-    size_t n_loci_pe_graph_not_dag;
-
-    size_t n_loci_phasing_issues() const;
-    size_t n_loci_no_pe_reads() const {return n_nonempty_loci - n_loci_w_pe_reads;}
-    size_t n_loci_usable_pe_reads() const {return n_loci_w_pe_reads - n_loci_almost_no_pe_reads - n_loci_pe_graph_not_dag;}
-
-    map<pair<size_t,size_t>,size_t> n_badly_phased_samples; // { {n_bad_samples, n_tot_samples} : count }
-
-    ProcessingStats& operator+= (const ProcessingStats& other);
-};
-
-class LocusProcessor {
-public:
-    LocusProcessor() : stats_() {}
-    void process(CLocReadSet&& loc);
-
-    const ProcessingStats& stats() const {return stats_;}
-    string& vcf_out() {return o_vcf_;}
-    string& fasta_out() {return o_fa_;}
-
-private:
-    ProcessingStats stats_;
-    string o_vcf_;
-    string o_fa_;
-
-    vector<map<size_t,PhasedHet>> phase_hets (
-            const vector<SiteCall>& calls,
-            const CLocAlnSet& aln_loc,
-            set<size_t>& inconsistent_samples
-    ) const;
-    void rm_supernumerary_phase_sets (
-            vector<map<size_t,PhasedHet>>& phase_data
-    ) const;
-    void write_one_locus (
-            const CLocAlnSet& aln_loc,
-            const vector<SiteCounts>& depths,
-            const vector<SiteCall>& calls,
-            const vector<map<size_t,PhasedHet>>& phase_data // {col : phasedhet} maps, for all samples
-    );
-};
-
-void parse_command_line(int argc, char* argv[]);
-void report_options(ostream& os);
-
-Cigar dbg_extract_cigar(const string& read_id);
 
 //
 // Argument globals.
@@ -122,38 +48,10 @@ unique_ptr<VcfWriter> o_vcf_f;
 ofstream o_aln_f;
 ofstream o_hapgraphs_f;
 
-//TODO{
-double gettm() {
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return ts.tv_sec + ts.tv_nsec / 1.0e9;
-}
-struct Clocks {
-    double clocking;
-    double reading;
-    double processing;
-    double writing_fa;
-    double writing_vcf;
-    double sum() const {return clocking+reading+processing+writing_fa+writing_vcf;}
-    Clocks& operator+= (const Clocks& other) {
-        clocking += other.clocking;
-        reading += other.reading;
-        processing += other.processing;
-        writing_fa += other.writing_fa;
-        writing_vcf += other.writing_vcf;
-        return *this;
-    }
-    friend Clocks operator+ (const Clocks& lhs, const Clocks& rhs) {Clocks sum (lhs); sum+=rhs; return sum;}
-    Clocks& operator/= (double d) {
-        clocking /= d;
-        reading /= d;
-        processing /= d;
-        writing_fa /= d;
-        writing_vcf /= d;
-        return *this;
-    }
-};
-//TODO}
+//
+// main
+// ==========
+//
 
 int main(int argc, char** argv) {
 try {
@@ -398,10 +296,11 @@ try {
 }
 }
 
-SnpAlleleCooccurrenceCounter::SnpAlleleCooccurrenceCounter(size_t n_snps)
-    : n_snps_(n_snps),
-      cooccurences_(n_snps_*n_snps_) // n*n matrix, athough we only use the i<j half.
-    {}
+
+//
+// SnpAlleleCooccurrenceCounter
+// ============================
+//
 
 size_t& SnpAlleleCooccurrenceCounter::at(size_t snp_i1, Nt2 snp1_allele, size_t snp_i2, Nt2 snp2_allele) {
     assert(snp_i1 < snp_i2);
@@ -414,12 +313,10 @@ void SnpAlleleCooccurrenceCounter::clear() {
             cooccurences_[i*n_snps_+j] = array<array<size_t,4>,4>();
 }
 
-size_t ProcessingStats::n_loci_phasing_issues() const {
-    size_t n = 0;
-    for (auto& elem : n_badly_phased_samples)
-        n += elem.second;
-    return n;
-}
+//
+// ProcessingStats
+// ===============
+//
 
 ProcessingStats& ProcessingStats::operator+= (const ProcessingStats& other) {
     n_nonempty_loci += other.n_nonempty_loci;
@@ -433,167 +330,91 @@ ProcessingStats& ProcessingStats::operator+= (const ProcessingStats& other) {
     return *this;
 }
 
+//
+// LocusProcessor
+// ==============
+//
+
 void LocusProcessor::process(CLocReadSet&& loc) {
     if (loc.reads().empty())
         return;
     ++stats_.n_nonempty_loci;
 
-    //
-    // Process the paired-end reads.
-    //
-    CLocAlnSet pe_aln_loc (loc.mpopi());
-    pe_aln_loc.id(loc.id());
-    pe_aln_loc.pos(loc.pos());
-    if (!ignore_pe_reads) {
-        if (!dbg_true_alns) {
-            do { // (Avoiding nested ifs.)
-                if (loc.pe_reads().empty())
-                    break;
-                ++stats_.n_loci_w_pe_reads;
-
-                //
-                // Assemble the reads.
-                //
-                string pe_contig;
-                vector<const DNASeq4*> seqs_to_assemble;
-                for (const Read& r : loc.pe_reads())
-                    seqs_to_assemble.push_back(&r.seq);
-
-                Graph graph (km_length);
-                graph.rebuild(seqs_to_assemble, min_km_count);
-                if (graph.empty()) {
-                    ++stats_.n_loci_almost_no_pe_reads;
-                    break;
-                }
-
-                if (dbg_write_gfa) {
-                    graph.dump_gfa(in_dir + to_string(loc.id()) + ".spaths.gfa");
-                    graph.dump_gfa(in_dir + to_string(loc.id()) + ".nodes.gfa", true);
-                }
-
-                vector<const SPath*> best_path;
-                if (!graph.find_best_path(best_path)) {
-                    // Not a DAG.
-                    ++stats_.n_loci_pe_graph_not_dag;
-                    break;
-                }
-
-                //
-                // Align each read to the contig.
-                //
-                string ctg = SPath::contig_str(best_path.begin(), best_path.end(), km_length);
-                pe_aln_loc.ref(DNASeq4(ctg));
-
-                GappedAln aligner;
-                for (SRead& r : loc.pe_reads()) {
-                    string seq = r.seq.str();
-                    aligner.init(r.seq.length(), ctg.length());
-                    aligner.align(seq, ctg);
-                    Cigar cigar;
-                    parse_cigar(aligner.result().cigar.c_str(), cigar);
-                    if (cigar.size() > 10)
-                        // Read didn't align, discard it. xxx Refine this.
-                        continue;
-                    pe_aln_loc.add(SAlnRead(move((Read&)r), move(cigar), r.sample));
-                }
-            } while (false);
-
-        } else {
-            // Use true alignments. Expect "cig2=STRING" in the read IDs.
-            if (!loc.pe_reads().empty()) {
-                for (SRead& r : loc.pe_reads()) {
-                    Cigar cigar = dbg_extract_cigar(r.name);
-                    simplify_cigar_to_MDI(cigar);
-                    if (pe_aln_loc.ref().empty())
-                        pe_aln_loc.ref(DNASeq4(string(cigar_length_ref(cigar), 'N')));
-                    if (cigar_length_ref(cigar) != pe_aln_loc.ref().length()) {
-                        cerr << "Error: DEBUG: ref-length of cig2 in read '" << r.name
-                             << "' was expected to be " << pe_aln_loc.ref().length()
-                             << ", not " << cigar_length_ref(cigar) << ".\n";
-                        throw exception();
-                    }
-                    pe_aln_loc.add(SAlnRead(move((Read&)r), move(cigar), r.sample));
-                }
-            }
-        }
-    }
+    loc_id_ = loc.id();
+    loc_pos_ = loc.pos();
+    mpopi_ = &loc.mpopi();
 
     //
-    // Build the foward-reads object.
+    // Build the alignment matrix.
     //
-    CLocAlnSet fw_aln_loc (loc.mpopi());
-    fw_aln_loc.id(loc.id());
-    fw_aln_loc.pos(loc.pos());
-    if (!dbg_true_alns) {
-        fw_aln_loc.ref(DNASeq4(loc.reads().at(0).seq));
+    CLocAlnSet aln_loc (loc_id_, loc_pos_, mpopi_);
+    if (dbg_true_alns) {
+        from_true_alignments(aln_loc, move(loc));
+    } else {
+        //
+        // Transfer the already aligned foward-reads. xxx Are they actually aligned to the catalog consensus?
+        //
+        aln_loc.ref(DNASeq4(loc.reads().at(0).seq));
         for (SRead& r : loc.reads()) {
-            if (r.seq.length() != fw_aln_loc.ref().length()) {
+            if (r.seq.length() != aln_loc.ref().length()) {
                 cerr << "DEBUG: Error: Can't handle reads of different legnths.\n"; //xxx
                 throw exception();
             }
-            fw_aln_loc.add(SAlnRead(move((Read&)r), {{'M',r.seq.length()}}, r.sample));
+            aln_loc.add(SAlnRead(move((Read&)r), {{'M',r.seq.length()}}, r.sample));
         }
-    } else {
-        // Use true alignments. Expect "cig1=STRING" in the read IDs.
-        for (SRead& r : loc.reads()) {
-            Cigar cigar = dbg_extract_cigar(r.name);
-            simplify_cigar_to_MDI(cigar);
-            if (fw_aln_loc.ref().empty())
-                fw_aln_loc.ref(DNASeq4(string(cigar_length_ref(cigar), 'N')));
-            if (cigar_length_ref(cigar) != pe_aln_loc.ref().length()) {
-                cerr << "Error: DEBUG: ref-length of cig1 in read '" << r.name
-                     << "' was expected to be " << pe_aln_loc.ref().length()
-                     << ", not " << cigar_length_ref(cigar) << ".\n";
-                throw exception();
-            }
-            fw_aln_loc.add(SAlnRead(move((Read&)r), move(cigar), r.sample));
-        }
-    }
-    loc.clear();
 
-    //
-    // Merge the forward & paired-end contigs.
-    //
-    CLocAlnSet aln_loc (fw_aln_loc.mpopi());
-    aln_loc.id(fw_aln_loc.id());
-    aln_loc.pos(fw_aln_loc.pos());
-    if (!dbg_true_alns) {
-        if (pe_aln_loc.reads().empty()) {
-            aln_loc = move(fw_aln_loc);
-        } else {
-            CLocAlnSet dummy (fw_aln_loc.mpopi());
-            dummy.id(fw_aln_loc.id());
+        //
+        // Process the paired-end reads, if any.
+        //
+        do { // Avoiding nested IFs.
+            if (ignore_pe_reads)
+                break;
+            if (loc.pe_reads().empty())
+                break;
+            ++stats_.n_loci_w_pe_reads;
+
+            // Assemble a contig.
+            vector<const DNASeq4*> seqs_to_assemble;
+            for (const Read& r : loc.pe_reads())
+                seqs_to_assemble.push_back(&r.seq);
+            string ctg = assemble_contig(seqs_to_assemble);
+            if (ctg.empty())
+                break;
+
+            // Align each read to the contig.
+            CLocAlnSet pe_aln_loc (loc_id_, loc_pos_, mpopi_);
+            pe_aln_loc.ref(DNASeq4(ctg));
+            GappedAln aligner;
+            for (SRead& r : loc.pe_reads()) {
+                string seq = r.seq.str();
+                aligner.init(r.seq.length(), ctg.length());
+                aligner.align(seq, ctg);
+                Cigar cigar;
+                parse_cigar(aligner.result().cigar.c_str(), cigar);
+                if (cigar.size() > 10)
+                    // Read didn't align, discard it. xxx Refine this.
+                    continue;
+                pe_aln_loc.add(SAlnRead(move((Read&)r), move(cigar), r.sample));
+            }
+
+            // Merge the forward & paired-end alignments.
+            CLocAlnSet dummy (loc_id_, loc_pos_, mpopi_);
             dummy.ref(DNASeq4(string(10, 'N')));
             aln_loc = CLocAlnSet::juxtapose(
-                    move(fw_aln_loc),
+                    move(aln_loc),
                     CLocAlnSet::juxtapose(move(dummy), move(pe_aln_loc))
                     );
             aln_loc.merge_paired_reads();
-        }
 
-    } else {
-        // With true alignments, everything should be in the same reference already.
-        aln_loc = move(fw_aln_loc);
-        if (!pe_aln_loc.reads().empty()) {
-            if (pe_aln_loc.ref().length() != aln_loc.ref().length()) {
-                cerr << "Error: DEBUG: locus length is " << aln_loc.ref().length()
-                     << " for the forward locus half and " << pe_aln_loc.ref().length()
-                     << " for the reverse half.\n";
-                throw exception();
-            }
-            for (SAlnRead& r : pe_aln_loc.reads())
-                aln_loc.add(move(r));
-            aln_loc.merge_paired_reads();
-        }
+        } while (false);
     }
-    fw_aln_loc.clear();
-    pe_aln_loc.clear();
+    loc.clear();
 
     if (dbg_write_alns)
         #pragma omp critical
-        o_aln_f << "BEGIN " << aln_loc.id() << "\n"
+        o_aln_f << "BEGIN " << loc_id_ << "\n"
                 << aln_loc
-                << "\nEND " << aln_loc.id() << "\n";
+                << "\nEND " << loc_id_ << "\n";
 
     //
     // Call SNPs.
@@ -631,6 +452,31 @@ void LocusProcessor::process(CLocReadSet&& loc) {
     write_one_locus(aln_loc, depths, calls, phase_data);
 }
 
+string LocusProcessor::assemble_contig(const vector<const DNASeq4*>& seqs) {
+    Graph graph (km_length);
+
+    graph.rebuild(seqs, min_km_count);
+    if (graph.empty()) {
+        ++stats_.n_loci_almost_no_pe_reads;
+        return string();
+    }
+
+    if (dbg_write_gfa) {
+        graph.dump_gfa(in_dir + to_string(loc_id_) + ".spaths.gfa");
+        graph.dump_gfa(in_dir + to_string(loc_id_) + ".nodes.gfa", true);
+    }
+
+    vector<const SPath*> best_path;
+    if (!graph.find_best_path(best_path)) {
+        // Not a DAG.
+        ++stats_.n_loci_pe_graph_not_dag;
+        return string();
+    }
+
+    return SPath::contig_str(best_path.begin(), best_path.end(), km_length);
+}
+
+
 vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
         const vector<SiteCall>& calls,
         const CLocAlnSet& aln_loc,
@@ -648,8 +494,8 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
 
     stringstream o_hapgraph_ss;
     if (dbg_write_hapgraphs) {
-        o_hapgraph_ss << "subgraph cluster_loc" << aln_loc.id() << " {\n"
-                      << "\tlabel=\"locus " << aln_loc.id() << "\";\n"
+        o_hapgraph_ss << "subgraph cluster_loc" << loc_id_ << " {\n"
+                      << "\tlabel=\"locus " << loc_id_ << "\";\n"
                       << "\t# snp columns: ";
         join(snp_cols, ',', o_hapgraph_ss);
         o_hapgraph_ss << "\n";
@@ -719,8 +565,8 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
 
         // Write the dot graph, if required.
         if (dbg_write_hapgraphs) {
-            auto nodeid = [&aln_loc,&sample](size_t col, Nt2 allele)
-                    {return string("l")+to_string(aln_loc.id())+"s"+to_string(sample)+"c"+to_string(col)+char(allele);};
+            auto nodeid = [this,&sample](size_t col, Nt2 allele)
+                    {return string("l")+to_string(loc_id_)+"s"+to_string(sample)+"c"+to_string(col)+char(allele);};
 
             // Initialize the subgraph.
             size_t n_reads = aln_loc.sample_reads(sample).size();
@@ -977,7 +823,7 @@ void LocusProcessor::write_one_locus (
         const vector<map<size_t,PhasedHet>>& phase_data
 ) {
     char loc_id[16];
-    sprintf(loc_id, "%d", aln_loc.id());
+    sprintf(loc_id, "%d", loc_id_);
 
     const DNASeq4& ref = aln_loc.ref();
     const MetaPopInfo& mpopi = aln_loc.mpopi();
@@ -1141,14 +987,14 @@ void LocusProcessor::write_one_locus (
                             // No phase data.
                             gt[0] = vcf_allele_indexes.at(scall.nt0());
                             gt[1] = vcf_allele_indexes.at(scall.nt1());
-                            sort(gt.begin(), gt.end()); // (Prevents '1/0'.)
+                            std::sort(gt.begin(), gt.end()); // (Prevents '1/0'.)
                             genotype << gt[0] << '/' << gt[1];
                             genotype << ":.";
                         }
                     } else {
                         gt[0] = vcf_allele_indexes.at(scall.nt0());
                         gt[1] = vcf_allele_indexes.at(scall.nt1());
-                        sort(gt.begin(), gt.end()); // (Prevents '1/0'.)
+                        std::sort(gt.begin(), gt.end()); // (Prevents '1/0'.)
                         genotype << gt[0] << '/' << gt[1];
                     }
                     break;
@@ -1229,6 +1075,11 @@ void LocusProcessor::write_one_locus (
     o_fa_ += '\n';
 }
 
+//
+// Debugging & benchmarking
+// ========================
+//
+
 Cigar dbg_extract_cigar(const string& read_id) {
     static const char keyword1[] = "cig1=";
     static const char keyword2[] = "cig2=";
@@ -1262,6 +1113,66 @@ Cigar dbg_extract_cigar(const string& read_id) {
 
     return cigar;
 }
+
+void from_true_alignments(CLocAlnSet& aln_loc, CLocReadSet&& loc) {
+    //
+    // Add forward reads.
+    //
+    for (SRead& r : loc.reads()) {
+        Cigar cigar = dbg_extract_cigar(r.name);
+        simplify_cigar_to_MDI(cigar);
+        if (aln_loc.ref().empty()) {
+            aln_loc.ref(DNASeq4(string(cigar_length_ref(cigar), 'N')));
+        } else if (cigar_length_ref(cigar) != aln_loc.ref().length()) {
+            cerr << "Error: DEBUG: ref-length of cig1 in read '" << r.name
+                 << "' was expected to be " << aln_loc.ref().length()
+                 << ", not " << cigar_length_ref(cigar) << ".\n";
+            throw exception();
+        }
+        aln_loc.add(SAlnRead(move((Read&)r), move(cigar), r.sample));
+    }
+
+    //
+    // Add paired-end reads, if any.
+    //
+    if (!ignore_pe_reads && !loc.pe_reads().empty()) {
+        for (SRead& r : loc.pe_reads()) {
+            Cigar cigar = dbg_extract_cigar(r.name);
+            simplify_cigar_to_MDI(cigar);
+            if (cigar_length_ref(cigar) != aln_loc.ref().length()) {
+                cerr << "Error: DEBUG: ref-length of cig2 in read '" << r.name
+                     << "' was expected to be " << aln_loc.ref().length()
+                     << ", not " << cigar_length_ref(cigar) << ".\n";
+                throw exception();
+            }
+            aln_loc.add(SAlnRead(move((Read&)r), move(cigar), r.sample));
+        }
+        aln_loc.merge_paired_reads();
+    }
+}
+
+Clocks& Clocks::operator+= (const Clocks& other) {
+    clocking += other.clocking;
+    reading += other.reading;
+    processing += other.processing;
+    writing_fa += other.writing_fa;
+    writing_vcf += other.writing_vcf;
+    return *this;
+}
+
+Clocks& Clocks::operator/= (double d) {
+    clocking /= d;
+    reading /= d;
+    processing /= d;
+    writing_fa /= d;
+    writing_vcf /= d;
+    return *this;
+}
+
+//
+// Arguments
+// ==========
+//
 
 const string help_string = string() +
         prog_name + " " + VERSION  + "\n" +
