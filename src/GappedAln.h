@@ -300,10 +300,6 @@ GappedAln::align_constrained(const string& query, const string& subj, const vect
     // the query sequence.
     //
     for (uint n = 0; n < alns.size(); n++) {
-        // q_min = alns[n].query_pos < q_min ? alns[n].query_pos : q_min;
-        // s_min = alns[n].subj_pos  < s_min ? alns[n].subj_pos  : s_min;
-        // q_max = alns[n].query_pos + alns[n].aln_len > q_max ? alns[n].query_pos + alns[n].aln_len : q_max;
-        // s_max = alns[n].subj_pos  + alns[n].aln_len > s_max ? alns[n].subj_pos  + alns[n].aln_len : s_max;
  
         for (uint i = alns[n].query_pos + 1; i <= alns[n].query_pos + alns[n].aln_len; i++) {
             for (uint j = alns[n].subj_pos + 1; j <= alns[n].subj_pos + alns[n].aln_len; j++) {
@@ -372,8 +368,9 @@ GappedAln::bound_region(const string& query, const int q_start, const int q_end,
 {
     int i_bnd, j_bnd;
     //
-    // Bound the region we are about to score taking care not to cross out of the bounds of the matrix..
+    // Bound the region we are about to score taking care not to cross out of the bounds of the matrix.
     //
+    // First, bound the top row.
     j_bnd = s_end + 1 > (int) subj.length() ? subj.length() : s_end + 1;
     if (q_start - 1 >= 0)
         for (int j = s_start; j <= j_bnd; j++) {
@@ -382,14 +379,7 @@ GappedAln::bound_region(const string& query, const int q_start, const int q_end,
             this->path[q_start - 1][j].left = true;
         }
 
-    j_bnd = s_start - 1 < 0 ? 0 : s_start - 1;
-    if (q_end + 1 < (int) query.length() - 1)
-        for (int j = j_bnd; j <= s_end; j++) {
-            this->path[q_end + 1][j].diag = false;
-            this->path[q_end + 1][j].up   = true;
-            this->path[q_end + 1][j].left = false;
-        }
-
+    // Second, fill the left column.
     i_bnd = q_end + 1 > (int) query.length() ? query.length() : q_end + 1;
     if (s_start - 1 >= 0)
         for (int i = q_start; i <= i_bnd; i++) {
@@ -398,6 +388,7 @@ GappedAln::bound_region(const string& query, const int q_start, const int q_end,
             this->path[i][s_start - 1].left = false;
         }
 
+    // Third, fill the right column.
     i_bnd = q_start - 1 < 0 ? 0 : q_start - 1;
     if (s_end + 1 < (int) subj.length() - 1 && s_end + 1 <= (int) subj.length())
         for (int i = i_bnd; i <= q_end; i++) {
@@ -405,6 +396,16 @@ GappedAln::bound_region(const string& query, const int q_start, const int q_end,
             this->path[i][s_end + 1].up   = false;
             this->path[i][s_end + 1].left = true;
         }
+
+    // Fourth, bound the bottom row.
+    j_bnd = s_start - 1 < 0 ? 0 : s_start - 1;
+    if (q_end + 1 < (int) query.length() - 1)
+        for (int j = j_bnd; j <= s_end; j++) {
+            this->path[q_end + 1][j].diag = false;
+            this->path[q_end + 1][j].up   = true;
+            this->path[q_end + 1][j].left = false;
+        }
+
     return 0;
 }
 
@@ -461,12 +462,12 @@ GappedAln::score(bool local,
             // If this is a local alignment and the score is zero or negative, mark this node
             // as having no valid paths exiting it.
             //
-            if (local && scores[0] <= 0) {
-                this->path[i][j].diag = false;
-                this->path[i][j].up   = false;
-                this->path[i][j].left = false;
-                continue;
-            }
+            // if (local && scores[0] <= 0) {
+            //     this->path[i][j].diag = false;
+            //     this->path[i][j].up   = false;
+            //     this->path[i][j].left = false;
+            //     continue;
+            // }
             
             if (scores[0] > scores[1]) {
                 //
