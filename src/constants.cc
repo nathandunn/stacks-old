@@ -6,6 +6,14 @@
 
 using namespace std;
 
+int stacks_handle_exceptions(const exception& e) {
+    std::cerr << "Aborted.";
+    if (typeid(e) != typeid(std::exception))
+        std::cerr << " (" << e.what() << ")";
+    std::cerr << "\n";
+    return 13;
+}
+
 const
 map<string, FileT> known_extensions = {
     {".fa", FileT::fasta},

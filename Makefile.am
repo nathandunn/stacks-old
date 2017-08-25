@@ -78,7 +78,7 @@ rxstacks_SOURCES    = libcore.a libpop.a src/rxstacks.h src/rxstacks.cc
 
 # tsv2bam & rystacks
 tsv2bam_SOURCES = libcore.a src/tsv2bam.cc
-rystacks_SOURCES = libcore.a src/rystacks.cc src/debruijn.h src/debruijn.cc src/Alignment.h
+rystacks_SOURCES = libcore.a src/rystacks.h src/rystacks.cc src/debruijn.h src/debruijn.cc src/Alignment.h
 
 estacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS) $(BAM_CFLAGS)
 estacks_LDFLAGS  = $(OPENMP_CFLAGS)

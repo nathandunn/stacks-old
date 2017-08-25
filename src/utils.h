@@ -129,6 +129,17 @@ inline
 void check_open (const gzFile fs, const string& path)
     {if (fs == NULL) {cerr << "Error: Failed to gz-open file '" << path << "'.\n"; throw exception();}}
 
+
+//
+// Timing routine "gettime".
+//
+inline
+double gettm() {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return ts.tv_sec + ts.tv_nsec / 1.0e9;
+}
+
 //
 // Class to read lines from a plain text or compressed file indifferently.
 //
