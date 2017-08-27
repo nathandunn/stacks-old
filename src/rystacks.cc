@@ -129,8 +129,8 @@ try {
 
     // For parallelization.
     int omp_return = 0;
-    std::deque<string> fa_outputs;
-    std::deque<string> vcf_outputs;
+    std::deque<pair<bool,string>> fa_outputs;
+    std::deque<pair<bool,string>> vcf_outputs;
     size_t next_fa_to_write = 0; // locus index, in the input BAM file.
     size_t next_vcf_to_write = 0;
     //TODO{
@@ -167,12 +167,12 @@ try {
                 #pragma omp critical(write_fa)
                 {
                     for (size_t i=next_fa_to_write+fa_outputs.size(); i<=loc_i; ++i)
-                        fa_outputs.push_back(string());
-                    fa_outputs[loc_i - next_fa_to_write] = move(loc_proc.fasta_out());
+                        fa_outputs.push_back( {false, string()} );
+                    fa_outputs[loc_i - next_fa_to_write] = {true, move(loc_proc.fasta_out())};
 
-                    while (!fa_outputs.empty() && !fa_outputs.front().empty()) {
-                        const string& fa = fa_outputs.front();
-                        if (gzwrite(o_gzfasta_f, fa.c_str(), fa.length()) == 0)
+                    while (!fa_outputs.empty() && fa_outputs.front().first) {
+                        const string& fa = fa_outputs.front().second;
+                        if (!fa.empty() && gzwrite(o_gzfasta_f, fa.c_str(), fa.length()) <= 0)
                             throw std::ios::failure("gzwrite");
                         fa_outputs.pop_front();
                         ++next_fa_to_write;
@@ -183,10 +183,10 @@ try {
                 #pragma omp critical(write_vcf)
                 {
                     for (size_t i=next_vcf_to_write+vcf_outputs.size(); i<=loc_i; ++i)
-                        vcf_outputs.push_back(string());
-                    vcf_outputs[loc_i - next_vcf_to_write] = move(loc_proc.vcf_out());
+                        vcf_outputs.push_back( {false, string()} );
+                    vcf_outputs[loc_i - next_vcf_to_write] = {true, move(loc_proc.vcf_out()) };
 
-                    if (!vcf_outputs.front().empty()) {
+                    if (vcf_outputs.front().first) {
                         //TODO{
                         ++n_writes;
                         if (vcf_outputs.size() > max_size_before_write)
@@ -194,11 +194,11 @@ try {
                         double start_writing = gettm();
                         //TODO}
                         do {
-                            o_vcf_f->file() << vcf_outputs.front();
+                            o_vcf_f->file() << vcf_outputs.front().second;
                             vcf_outputs.pop_front();
                             ++next_vcf_to_write;
                             ++progress;
-                        } while (!vcf_outputs.empty() && !vcf_outputs.front().empty());
+                        } while (!vcf_outputs.empty() && vcf_outputs.front().first);
                         actually_writing_vcf += gettm() - start_writing - clocking; //TODO
                     }
                 }
