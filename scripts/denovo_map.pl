@@ -111,7 +111,7 @@ sub check_return_value {
     # terminated by a signal, and by `$? >> 8` if it exited normally.
     my ($rv, $log_fh) = @_;
     if ($rv != 0) {
-        my $msg = "\nref_map.pl: Aborted because the last command failed. (" . ($rv & 255 ? $rv : $rv >> 8) . ")\n";
+        my $msg = "\nref_map.pl: Aborted because the last command failed. (" . ($rv & 255 ? $rv : 128 + ($rv >> 8)) . ")\n";
         print $log_fh $msg;
         print STDERR $msg;
         exit 1;
