@@ -94,8 +94,25 @@ private:
             set<size_t>& inconsistent_samples
     ) const;
 
-    // Prune the phasing output to keep only the best/largest phase set.
-    void rm_supernumerary_phase_sets (vector<map<size_t,PhasedHet>>& phase_data) const;
+    void count_pairwise_cooccurrences(
+            SnpAlleleCooccurrenceCounter& cooccurrences,
+            const CLocAlnSet& aln_loc,
+            size_t sample,
+            const vector<size_t>& snp_cols,
+            const vector<size_t>& het_snps,
+            const vector<const SampleCall*>& sample_het_calls
+            ) const;
+
+    // Assemble haplotypes.
+    // This is based on the graph of cooccurrences, in which nodes are the SNP
+    // alleles. Subgraphs represent haplotypes. Haplotype assembly fails if a
+    // subgraph includes two (or more) nodes/alleles from the same SNP.
+    bool assemble_haplotypes(
+            vector<vector<Nt4>>& haps,
+            const vector<size_t>& het_snps,
+            const vector<const SampleCall*>& sample_het_calls,
+            const SnpAlleleCooccurrenceCounter& cooccurrences
+            ) const;
 
     // Create the fasta/vcf text outputs.
     void write_one_locus (
