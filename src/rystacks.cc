@@ -302,7 +302,7 @@ try {
 // ============================
 //
 
-size_t& SnpAlleleCooccurrenceCounter::at(size_t snp_i1, Nt2 snp1_allele, size_t snp_i2, Nt2 snp2_allele) {
+const size_t& SnpAlleleCooccurrenceCounter::at(size_t snp_i1, Nt2 snp1_allele, size_t snp_i2, Nt2 snp2_allele) const {
     assert(snp_i1 < snp_i2);
     return cooccurences_[snp_i1*n_snps_+snp_i2][size_t(snp1_allele)][size_t(snp2_allele)];
 }
@@ -494,7 +494,8 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
 
     stringstream o_hapgraph_ss;
     if (dbg_write_hapgraphs) {
-        o_hapgraph_ss << "subgraph cluster_loc" << loc_id_ << " {\n"
+        o_hapgraph_ss << "\n"
+                      << "subgraph cluster_loc" << loc_id_ << " {\n"
                       << "\tlabel=\"locus " << loc_id_ << "\";\n"
                       << "\t# snp columns: ";
         join(snp_cols, ',', o_hapgraph_ss);
@@ -563,67 +564,8 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
             }
         }
 
-        // Write the dot graph, if required.
-        if (dbg_write_hapgraphs) {
-            auto nodeid = [this,&sample](size_t col, Nt2 allele)
-                    {return string("l")+to_string(loc_id_)+"s"+to_string(sample)+"c"+to_string(col)+char(allele);};
-
-            // Initialize the subgraph.
-            size_t n_reads = aln_loc.sample_reads(sample).size();
-            size_t n_merged_reads = 0;
-            for (size_t read_i : aln_loc.sample_reads(sample))
-                if (aln_loc.reads()[read_i].name.back() == 'm')
-                    ++n_merged_reads;
-            const string& sample_name = aln_loc.mpopi().samples()[sample].name;
-            o_hapgraph_ss << "\tsubgraph cluster_sample" << sample << " {\n"
-                          << "\t\tlabel=\""
-                          << "i" << sample << " '" << sample_name << "'\\n"
-                          << "nreads=" << n_reads << ",merged=" << n_merged_reads
-                          << "\";\n"
-                          << "\t\tstyle=dashed;\n"
-                          << "\t\t# heterozygous columns: ";
-            vector<size_t> het_cols;
-            for (size_t snp_i : het_snps)
-                het_cols.push_back(snp_cols[snp_i]);
-            join(het_cols, ',', o_hapgraph_ss);
-            o_hapgraph_ss << "\n";
-
-            // Write the node labels.
-            for (size_t i=0; i<het_snps.size(); ++i) {
-                array<Nt2,2> alleles = sample_het_calls[i]->nts();
-                size_t col = snp_cols[het_snps[i]];
-                for (Nt2 allele : alleles)
-                    o_hapgraph_ss << "\t\t" << nodeid(col, allele)
-                                  << " [label=<"
-                                  << "<sup><font point-size=\"10\">" << col+1 << "</font></sup>" << allele
-                                  << ">];\n";
-            }
-
-            // Write the edges.
-            for (size_t het_i=0; het_i<het_snps.size(); ++het_i) {
-                array<Nt2,2> alleles_i = sample_het_calls[het_i]->nts();
-                size_t snp_i = het_snps[het_i];
-                for (size_t het_j=het_i+1; het_j<het_snps.size(); ++het_j) {
-                    array<Nt2,2> alleles_j = sample_het_calls[het_j]->nts();
-                    size_t snp_j = het_snps[het_j];
-                    for (Nt2 nti : alleles_i) {
-                        for (Nt2 ntj : alleles_j) {
-                            size_t n = cooccurences.at(snp_i, nti, snp_j, ntj);
-                            if (n == 0)
-                                continue;
-                            o_hapgraph_ss << "\t\t" << nodeid(snp_cols[snp_i],nti)
-                                          << " -- " << nodeid(snp_cols[snp_j],ntj) << " [";
-                            if (n==1)
-                                o_hapgraph_ss << "style=dotted";
-                            else
-                                o_hapgraph_ss << "label=\"" << n << "\",penwidth=" << n;
-                            o_hapgraph_ss << "];\n";
-                        }
-                    }
-                }
-            }
-            o_hapgraph_ss << "\t}\n";
-        }
+        if (dbg_write_hapgraphs)
+            write_sample_hapgraph(o_hapgraph_ss, sample, het_snps, snp_cols, sample_het_calls, cooccurences);
 
         // Call haplotypes.
         // This is based on a graph of cooccurrences in which nodes are the het
@@ -1073,6 +1015,68 @@ void LocusProcessor::write_one_locus (
     o_fa_ += '\n';
     o_fa_ += ref.str();
     o_fa_ += '\n';
+}
+
+void LocusProcessor::write_sample_hapgraph(
+        ostream& os,
+        size_t sample,
+        const vector<size_t>& het_snps,
+        const vector<size_t>& snp_cols,
+        const vector<const SampleCall*>& sample_het_calls,
+        const SnpAlleleCooccurrenceCounter& cooccurrences
+        ) const {
+
+    auto nodeid = [this,&sample](size_t col, Nt2 allele)
+            {return string("l")+to_string(loc_id_)+"s"+to_string(sample)+"c"+to_string(col)+char(allele);};
+
+    // Initialize the subgraph.
+    os << "\tsubgraph cluster_sample" << sample << " {\n"
+                  << "\t\tlabel=\""
+                  << "i" << sample << " '" << mpopi_->samples()[sample].name << "'\\n"
+                  << "\";\n"
+                  << "\t\tstyle=dashed;\n"
+                  << "\t\t# heterozygous columns: ";
+    vector<size_t> het_cols;
+    for (size_t snp_i : het_snps)
+        het_cols.push_back(snp_cols[snp_i]);
+    join(het_cols, ',', os);
+    os << "\n";
+
+    // Write the node labels.
+    for (size_t i=0; i<het_snps.size(); ++i) {
+        array<Nt2,2> alleles = sample_het_calls[i]->nts();
+        size_t col = snp_cols[het_snps[i]];
+        for (Nt2 allele : alleles)
+            os << "\t\t" << nodeid(col, allele)
+                          << " [label=<"
+                          << "<sup><font point-size=\"10\">" << col+1 << "</font></sup>" << allele
+                          << ">];\n";
+    }
+
+    // Write the edges.
+    for (size_t het_i=0; het_i<het_snps.size(); ++het_i) {
+        array<Nt2,2> alleles_i = sample_het_calls[het_i]->nts();
+        size_t snp_i = het_snps[het_i];
+        for (size_t het_j=het_i+1; het_j<het_snps.size(); ++het_j) {
+            array<Nt2,2> alleles_j = sample_het_calls[het_j]->nts();
+            size_t snp_j = het_snps[het_j];
+            for (Nt2 nti : alleles_i) {
+                for (Nt2 ntj : alleles_j) {
+                    size_t n = cooccurrences.at(snp_i, nti, snp_j, ntj);
+                    if (n == 0)
+                        continue;
+                    os << "\t\t" << nodeid(snp_cols[snp_i],nti)
+                                  << " -- " << nodeid(snp_cols[snp_j],ntj) << " [";
+                    if (n==1)
+                        os << "style=dotted";
+                    else
+                        os << "label=\"" << n << "\",penwidth=" << n;
+                    os << "];\n";
+                }
+            }
+        }
+    }
+    os << "\t}\n";
 }
 
 //
