@@ -35,7 +35,9 @@ public:
     SnpAlleleCooccurrenceCounter(size_t n_snps) : n_snps_(n_snps), cooccurences_(n_snps_*n_snps_) {};
     void clear();
 
-    size_t& at(size_t snp_i1, Nt2 snp1_allele, size_t snp_i2, Nt2 snp2_allele);
+    const size_t& at(size_t snp_i1, Nt2 snp1_allele, size_t snp_i2, Nt2 snp2_allele) const;
+          size_t& at(size_t snp_i1, Nt2 snp1_allele, size_t snp_i2, Nt2 snp2_allele)
+              {return (size_t&)((const SnpAlleleCooccurrenceCounter&)*this).at(snp_i1, snp1_allele, snp_i2, snp2_allele);}
 };
 
 //
@@ -102,6 +104,16 @@ private:
             const vector<SiteCall>& calls,
             const vector<map<size_t,PhasedHet>>& phase_data // {col : phasedhet} maps, for all samples
     );
+
+    // (debug) Write a sample's haplotype graph.
+    void write_sample_hapgraph(
+            ostream& os,
+            size_t sample,
+            const vector<size_t>& het_snps,
+            const vector<size_t>& snp_cols,
+            const vector<const SampleCall*>& sample_het_calls,
+            const SnpAlleleCooccurrenceCounter& cooccurences
+            ) const;
 };
 
 //
