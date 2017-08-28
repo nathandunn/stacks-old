@@ -445,8 +445,6 @@ void LocusProcessor::process(CLocReadSet&& loc) {
         phase_data = phase_hets(calls, aln_loc, inconsistent_samples);
         if (!inconsistent_samples.empty())
             ++stats_.n_badly_phased_samples[ {inconsistent_samples.size(), aln_loc.n_samples()} ];
-
-        rm_supernumerary_phase_sets(phase_data);
     }
 
     write_one_locus(aln_loc, depths, calls, phase_data);
@@ -482,7 +480,7 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
         const CLocAlnSet& aln_loc,
         set<size_t>& inconsistent_samples
 ) const {
-    vector<map<size_t,PhasedHet>> phased_samples (aln_loc.mpopi().samples().size());
+    vector<map<size_t,PhasedHet>> phased_samples (mpopi_->samples().size());
 
     vector<size_t> snp_cols; // The SNPs of this locus.
     for (size_t i=0; i<aln_loc.ref().length(); ++i)
@@ -502,20 +500,23 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
         o_hapgraph_ss << "\n";
     }
 
-    SnpAlleleCooccurrenceCounter cooccurences (snp_cols.size());
-    for (size_t sample=0; sample<aln_loc.mpopi().samples().size(); ++sample) {
+    SnpAlleleCooccurrenceCounter cooccurrences (snp_cols.size());
+    for (size_t sample=0; sample<mpopi_->samples().size(); ++sample) {
         if (aln_loc.sample_reads(sample).empty())
             continue;
 
-        vector<size_t> het_snps; // The heterozygote SNPs of this sample.
+        //
+        // Find heterozygous positions & check that we have >= 2 hets.
+        //
+        vector<size_t> het_snps;
         for(size_t snp_i=0; snp_i<snp_cols.size(); ++snp_i)
             if (calls[snp_cols[snp_i]].sample_calls()[sample].call() == snp_type_het)
                 het_snps.push_back(snp_i);
-        // Check that we have >= 2 hets.
         if (het_snps.size() == 0) {
+            // Sample is homozygous.
             continue;
         } else if (het_snps.size() == 1) {
-            // Sample has trivial 1nt-long haplotypes.
+            // One heterozygous SNP; sample has trivial 1nt-long haplotypes.
             size_t col = snp_cols[het_snps[0]];
             const SampleCall& c = calls[col].sample_calls()[sample];
             phased_samples[sample].insert({col, {col, c.nt0(), c.nt1()}});
@@ -527,203 +528,78 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
             sample_het_calls.push_back(&calls[snp_cols[het_snps[het_i]]].sample_calls()[sample]);
 
         // Iterate over reads, record seen haplotypes (as pairwise cooccurrences).
-        cooccurences.clear();
-        vector<Nt4> read_hap (het_snps.size());
-        for (size_t read_i : aln_loc.sample_reads(sample)) {
-            // Build the haplotype.
-            size_t curr_col = 0;
-            Alignment::iterator read_itr = aln_loc.reads()[read_i].aln();
-            for (size_t het_i=0; het_i<het_snps.size(); ++het_i) {
-                size_t col = snp_cols[het_snps[het_i]];
-                read_itr += col - curr_col;
-                curr_col = col;
-                Nt4 nt = *read_itr;
-                if (nt == Nt4::n) {
-                    read_hap[het_i] = Nt4::n;
-                } else {
-                    const SampleCall& c = *sample_het_calls[het_i];
-                    Nt2 nt2 = Nt2(nt);
-                    if (nt2 == c.nt0() || nt2 == c.nt1())
-                        read_hap[het_i] = nt;
-                    else
-                        read_hap[het_i] = Nt4::n;
-                }
-            }
-
-            // Record the pairwise cooccurrences.
-            for (size_t i=0; i<het_snps.size(); ++i) {
-                Nt4 nti = read_hap[i];
-                if (nti == Nt4::n)
-                    continue;
-                for (size_t j=i+1; j<het_snps.size(); ++j) {
-                    Nt4 ntj = read_hap[j];
-                    if (ntj == Nt4::n)
-                        continue;
-                    ++cooccurences.at(het_snps[i], Nt2(nti), het_snps[j], Nt2(ntj));
-                }
-            }
-        }
+        count_pairwise_cooccurrences(cooccurrences, aln_loc, sample, snp_cols, het_snps, sample_het_calls);
 
         if (dbg_write_hapgraphs)
-            write_sample_hapgraph(o_hapgraph_ss, sample, het_snps, snp_cols, sample_het_calls, cooccurences);
+            write_sample_hapgraph(o_hapgraph_ss, sample, het_snps, snp_cols, sample_het_calls, cooccurrences);
 
-        // Call haplotypes.
-        // This is based on a graph of cooccurrences in which nodes are the het
-        // alleles. Subgraphs represent haplotypes, and may not include more than
-        // one node for each SNP.
+        // Assemble haplotypes.
         vector<vector<Nt4>> haps;
-        bool inconsistent = false;
-        // We keep track of which haplotype each allele is currently part of.
-        vector<array<size_t,4>> allele_to_hap (het_snps.size(), {SIZE_MAX,SIZE_MAX,SIZE_MAX,SIZE_MAX});
-        for (size_t het_i=0; het_i<het_snps.size(); ++het_i) {
-            array<Nt2,2> allelesi = sample_het_calls[het_i]->nts();
-            size_t snp_i = het_snps[het_i];
-            for (size_t het_j=het_i+1; het_j<het_snps.size(); ++het_j) {
-                array<Nt2,2> allelesj = sample_het_calls[het_j]->nts();
-                size_t snp_j = het_snps[het_j];
-                for (Nt2 nti : allelesi) {
-                    for (Nt2 ntj : allelesj) {
-                        size_t n = cooccurences.at(snp_i, nti, snp_j, ntj);
-                        if (n == 0)
-                            continue;
-
-                        // Discard low-coverage edges.
-                        const size_t min_n_cooccurrences = 2;
-                        if (n < min_n_cooccurrences)
-                            continue;
-
-                        size_t& hap_i = allele_to_hap[het_i][size_t(nti)];
-                        size_t& hap_j = allele_to_hap[het_j][size_t(ntj)];
-                        if (hap_i == SIZE_MAX && hap_j == SIZE_MAX) {
-                            // Both nodes are singletons. Start a new haplotype.
-                            hap_i = haps.size();
-                            hap_j = haps.size();
-                            haps.push_back(vector<Nt4>(het_snps.size(), Nt4::n));
-                            haps.back()[het_i] = Nt4(nti);
-                            haps.back()[het_j] = Nt4(ntj);
-                        } else if (hap_i == hap_j) {
-                            // Nodes are already in the same haplotype/subgraph.
-                            // Nothing to do.
-                        } else if (hap_j == SIZE_MAX) {
-                            // Add ntj to nti's haplotype (i.e. subgraph).
-                            vector<Nt4>& hap = haps[hap_i];
-                            assert(hap[het_i] == Nt4(nti));
-                            if (hap[het_j] == Nt4::n) {
-                                hap[het_j] = Nt4(ntj);
-                                hap_j = hap_i;
-                            } else {
-                                assert(hap[het_j] != Nt4(ntj)); // As `cooccurrences` is a half-matrix.
-                                // allele nti at position het_i (i.e. column `snp_cols[het_snps[het_i]]`)
-                                // is already phased with another allele at position het_j.
-                                inconsistent = true;
-                                break;
-                            }
-                        } else if (hap_i == SIZE_MAX) {
-                            // Same as immediately above, reversed (add nti to ntj's haplotype).
-                            vector<Nt4>& hap = haps[hap_j];
-                            assert(hap[het_j] == Nt4(ntj));
-                            if (hap[het_i] == Nt4::n) {
-                                hap[het_i] = Nt4(nti);
-                                hap_i = hap_j;
-                            } else {
-                                assert(hap[het_i] != Nt4(nti));
-                                inconsistent = true;
-                                break;
-                            }
-                        } else {
-                            // Both nodes are already in a haplotype. The haplotype graph
-                            // is consistent only if the positions spanned by the two
-                            // haplotypes are disjoint.
-                            assert(haps[hap_i][het_i] == Nt4(nti));
-                            assert(haps[hap_j][het_j] == Nt4(ntj));
-                            for (size_t k=0; k<het_snps.size(); ++k) {
-                                if (haps[hap_i][k] != Nt4::n && haps[hap_j][k] != Nt4::n) {
-                                    assert(haps[hap_i][k] != haps[hap_j][k]);
-                                    inconsistent = true;
-                                    break;
-                                }
-                            }
-                            if (inconsistent) {
-                                break;
-                            } else {
-                                // Merge the two haplotypes/subgraphs.
-                                vector<Nt4>& hap = haps[hap_i];
-                                vector<Nt4>& rm_hap = haps[hap_j];
-                                assert(haps[hap_i][het_j] == Nt4::n);
-                                assert(haps[hap_j][het_i] == Nt4::n);
-                                for (size_t k=0; k<het_snps.size(); ++k) {
-                                    if (rm_hap[k] != Nt4::n) {
-                                        // Transfer the allele to the kept haplotype.
-                                        hap[k] = rm_hap[k];
-                                        allele_to_hap[k][size_t(Nt2(hap[k]))] = hap_i;
-                                    }
-                                }
-                                rm_hap = vector<Nt4>();
-                                #ifdef DEBUG
-                                // Check that the discarded haplotype has become inaccessible.
-                                size_t rm_hap_i = &rm_hap - haps.data();
-                                for (auto& het : allele_to_hap)
-                                    for (auto& nt : het)
-                                        assert(nt != rm_hap_i);
-                                #endif
-                            }
-                        }
-                    }
-                    if (inconsistent)
-                        break;
-                }
-                if (inconsistent)
-                    break;
-            }
-            if (inconsistent)
-                break;
+        if (!assemble_haplotypes(haps, het_snps, sample_het_calls, cooccurrences)) {
+            inconsistent_samples.insert(sample);
+            continue;
         }
 
-        if (inconsistent) {
-            inconsistent_samples.insert(sample);
-        } else {
-            // Record haplotypes.
-            // Iterate over pairs of haplotypes; overlaps become 'phase sets'.
-            // There may be three or more haplotypes but in this case, because
-            // these haplotypes are compatible by construction, phased/overlapping
-            // columns are disjoint across all pairs.
-            for (size_t i=0; i<haps.size(); ++i) {
-                if (haps[i].empty())
-                    // Deleted remnant of a merger.
+        // Record haplotypes.
+        // Iterate over pairs of haplotypes; overlaps become 'phase sets'.
+        // There may be three or more haplotypes but in this case, because
+        // these haplotypes are compatible by construction, phased/overlapping
+        // columns are disjoint across all pairs.
+        map<size_t,PhasedHet>& sample_phase_data = phased_samples[sample];
+        for (size_t i=0; i<haps.size(); ++i) {
+            if (haps[i].empty())
+                // Deleted remnant of a merger.
+                continue;
+
+            for (size_t j=i+1; j<haps.size(); ++j) {
+                if (haps[j].empty())
                     continue;
 
-                for (size_t j=i+1; j<haps.size(); ++j) {
-                    if (haps[j].empty())
+                size_t phase_set = SIZE_MAX;
+                for (size_t het_i=0; het_i<het_snps.size(); ++het_i) {
+                    Nt4 hapi_nt = haps[i][het_i];
+                    Nt4 hapj_nt = haps[j][het_i];
+                    if (hapi_nt == Nt4::n || hapj_nt == Nt4::n)
                         continue;
 
-                    size_t phase_set = SIZE_MAX;
-                    for (size_t het_i=0; het_i<het_snps.size(); ++het_i) {
-                        Nt4 hapi_nt = haps[i][het_i];
-                        Nt4 hapj_nt = haps[j][het_i];
-                        if (hapi_nt == Nt4::n || hapj_nt == Nt4::n)
-                            continue;
+                    size_t col = snp_cols[het_snps[het_i]];
+                    if (phase_set == SIZE_MAX)
+                        // This is the first observation for this pair of haplotypes.
+                        phase_set = col;
 
-                        size_t col = snp_cols[het_snps[het_i]];
-                        if (phase_set == SIZE_MAX)
-                            // This is the first observation for this pair of haplotypes.
-                            phase_set = col;
-
-                        assert(!phased_samples[sample].count(col)); // Disjoint resolved columns across pairs.
-                        phased_samples[sample][col] = PhasedHet({phase_set, hapi_nt, hapj_nt});
-                    }
+                    assert(!sample_phase_data.count(col)); // Disjoint resolved columns across pairs.
+                    sample_phase_data[col] = PhasedHet({phase_set, hapi_nt, hapj_nt});
                 }
             }
-            // Record singleton nodes (that are implicit in our representation).
-            for (size_t het_i=0; het_i<het_snps.size(); ++het_i) {
-                size_t col = snp_cols[het_snps[het_i]];
-                if (!phased_samples[sample].count(col)) {
-                    array<Nt2,2> alleles = sample_het_calls[het_i]->nts();
-                    phased_samples[sample][col] = PhasedHet({col, alleles[0], alleles[1]});
-                }
-            }
-            assert(!phased_samples[sample].empty());
         }
+
+        // Record singleton nodes (that are implicit in our representation).
+        for (size_t het_i=0; het_i<het_snps.size(); ++het_i) {
+            size_t col = snp_cols[het_snps[het_i]];
+            if (!sample_phase_data.count(col)) {
+                array<Nt2,2> alleles = sample_het_calls[het_i]->nts();
+                sample_phase_data[col] = PhasedHet({col, alleles[0], alleles[1]});
+            }
+        }
+        assert(!sample_phase_data.empty());
+
+        // Remove all phase sets but the largest one.
+        map<size_t,size_t> phase_set_sizes;
+        for (auto& phasedhet : sample_phase_data)
+            ++phase_set_sizes[phasedhet.second.phase_set];
+        auto best_ps = phase_set_sizes.begin();
+        for (auto ps=++phase_set_sizes.begin(); ps!=phase_set_sizes.end(); ++ps)
+            if (ps->second > best_ps->second)
+                best_ps = ps;
+        for (auto phasedhet=sample_phase_data.begin(); phasedhet!=sample_phase_data.end();) {
+            if (phasedhet->second.phase_set == best_ps->first)
+                ++phasedhet;
+            else
+                sample_phase_data.erase(phasedhet++);
+        }
+
     }
+
     if (dbg_write_hapgraphs) {
         o_hapgraph_ss << "}\n";
         #pragma omp critical
@@ -733,29 +609,155 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
     return phased_samples;
 }
 
-void LocusProcessor::rm_supernumerary_phase_sets (
-        vector<map<size_t,PhasedHet>>& phase_data
-) const {
-    // We only keep one phase set per sample.
-    for (auto& sample : phase_data) {
-        if (sample.empty())
-            continue;
-        // Tally phase sets & find the one with the most SNPs.
-        map<size_t,size_t> phase_set_sizes;
-        for (auto& phasedhet : sample)
-            ++phase_set_sizes[phasedhet.second.phase_set];
-        auto best_ps = phase_set_sizes.begin();
-        for (auto ps=++phase_set_sizes.begin(); ps!=phase_set_sizes.end(); ++ps)
-            if (ps->second > best_ps->second)
-                best_ps = ps;
-        // Remove all phase sets but one.
-        for (auto phasedhet=sample.begin(); phasedhet!=sample.end();) {
-            if (phasedhet->second.phase_set == best_ps->first)
-                ++phasedhet;
-            else
-                sample.erase(phasedhet++);
+void LocusProcessor::count_pairwise_cooccurrences(
+        SnpAlleleCooccurrenceCounter& cooccurrences,
+        const CLocAlnSet& aln_loc,
+        size_t sample,
+        const vector<size_t>& snp_cols,
+        const vector<size_t>& het_snps,
+        const vector<const SampleCall*>& sample_het_calls
+        ) const {
+
+    cooccurrences.clear();
+    vector<Nt4> read_hap (het_snps.size());
+    for (size_t read_i : aln_loc.sample_reads(sample)) {
+        // Build the haplotype.
+        size_t curr_col = 0;
+        Alignment::iterator read_itr (aln_loc.reads()[read_i].aln());
+        for (size_t het_i=0; het_i<het_snps.size(); ++het_i) {
+            size_t col = snp_cols[het_snps[het_i]];
+            read_itr += col - curr_col;
+            curr_col = col;
+            Nt4 nt = *read_itr;
+            if (nt == Nt4::n) {
+                read_hap[het_i] = Nt4::n;
+            } else {
+                const SampleCall& c = *sample_het_calls[het_i];
+                Nt2 nt2 = Nt2(nt);
+                if (nt2 == c.nt0() || nt2 == c.nt1())
+                    read_hap[het_i] = nt;
+                else
+                    read_hap[het_i] = Nt4::n;
+            }
+        }
+
+        // Record the pairwise cooccurrences.
+        for (size_t i=0; i<het_snps.size(); ++i) {
+            Nt4 nti = read_hap[i];
+            if (nti == Nt4::n)
+                continue;
+            for (size_t j=i+1; j<het_snps.size(); ++j) {
+                Nt4 ntj = read_hap[j];
+                if (ntj == Nt4::n)
+                    continue;
+                ++cooccurrences.at(het_snps[i], Nt2(nti), het_snps[j], Nt2(ntj));
+            }
         }
     }
+}
+
+bool LocusProcessor::assemble_haplotypes(
+        vector<vector<Nt4>>& haps,
+        const vector<size_t>& het_snps,
+        const vector<const SampleCall*>& sample_het_calls,
+        const SnpAlleleCooccurrenceCounter& cooccurrences
+        ) const {
+
+    const size_t min_n_cooccurrences = 2;
+
+    // We keep track of which haplotype each allele is currently part of.
+    vector<array<size_t,4>> allele_to_hap (het_snps.size(), {SIZE_MAX,SIZE_MAX,SIZE_MAX,SIZE_MAX});
+
+    for (size_t het_i=0; het_i<het_snps.size(); ++het_i) {
+        array<Nt2,2> allelesi = sample_het_calls[het_i]->nts();
+        size_t snp_i = het_snps[het_i];
+        for (size_t het_j=het_i+1; het_j<het_snps.size(); ++het_j) {
+            array<Nt2,2> allelesj = sample_het_calls[het_j]->nts();
+            size_t snp_j = het_snps[het_j];
+            for (Nt2 nti : allelesi) {
+                for (Nt2 ntj : allelesj) {
+                    size_t n = cooccurrences.at(snp_i, nti, snp_j, ntj);
+                    if (n == 0)
+                        continue;
+
+                    // Discard low-coverage edges.
+                    if (n < min_n_cooccurrences)
+                        continue;
+
+                    size_t& hap_i = allele_to_hap[het_i][size_t(nti)];
+                    size_t& hap_j = allele_to_hap[het_j][size_t(ntj)];
+                    if (hap_i == SIZE_MAX && hap_j == SIZE_MAX) {
+                        // Both nodes are singletons. Start a new haplotype.
+                        hap_i = haps.size();
+                        hap_j = haps.size();
+                        haps.push_back(vector<Nt4>(het_snps.size(), Nt4::n));
+                        haps.back()[het_i] = Nt4(nti);
+                        haps.back()[het_j] = Nt4(ntj);
+                    } else if (hap_i == hap_j) {
+                        // Nodes are already in the same haplotype/subgraph.
+                        // Nothing to do.
+                    } else if (hap_j == SIZE_MAX) {
+                        // Add ntj to nti's haplotype (i.e. subgraph).
+                        vector<Nt4>& hap = haps[hap_i];
+                        assert(hap[het_i] == Nt4(nti));
+                        if (hap[het_j] == Nt4::n) {
+                            hap[het_j] = Nt4(ntj);
+                            hap_j = hap_i;
+                        } else {
+                            assert(hap[het_j] != Nt4(ntj)); // As `cooccurrences` is a half-matrix.
+                            // allele nti at position het_i (i.e. column `snp_cols[het_snps[het_i]]`)
+                            // is already phased with another allele at position het_j.
+                            return false;
+                        }
+                    } else if (hap_i == SIZE_MAX) {
+                        // Same as immediately above, reversed (add nti to ntj's haplotype).
+                        vector<Nt4>& hap = haps[hap_j];
+                        assert(hap[het_j] == Nt4(ntj));
+                        if (hap[het_i] == Nt4::n) {
+                            hap[het_i] = Nt4(nti);
+                            hap_i = hap_j;
+                        } else {
+                            assert(hap[het_i] != Nt4(nti));
+                            return false;
+                        }
+                    } else {
+                        // Both nodes are already in a haplotype. The haplotype graph
+                        // is consistent only if the positions spanned by the two
+                        // haplotypes are disjoint.
+                        assert(haps[hap_i][het_i] == Nt4(nti));
+                        assert(haps[hap_j][het_j] == Nt4(ntj));
+                        for (size_t k=0; k<het_snps.size(); ++k) {
+                            if (haps[hap_i][k] != Nt4::n && haps[hap_j][k] != Nt4::n) {
+                                assert(haps[hap_i][k] != haps[hap_j][k]);
+                                return false;
+                            }
+                        }
+                            // Merge the two haplotypes/subgraphs.
+                            vector<Nt4>& hap = haps[hap_i];
+                            vector<Nt4>& rm_hap = haps[hap_j];
+                            assert(haps[hap_i][het_j] == Nt4::n);
+                            assert(haps[hap_j][het_i] == Nt4::n);
+                            for (size_t k=0; k<het_snps.size(); ++k) {
+                                if (rm_hap[k] != Nt4::n) {
+                                    // Transfer the allele to the kept haplotype.
+                                    hap[k] = rm_hap[k];
+                                    allele_to_hap[k][size_t(Nt2(hap[k]))] = hap_i;
+                                }
+                            }
+                            rm_hap = vector<Nt4>();
+                            #ifdef DEBUG
+                            // Check that the discarded haplotype has become inaccessible.
+                            size_t rm_hap_i = &rm_hap - haps.data();
+                            for (auto& het : allele_to_hap)
+                                for (auto& nt : het)
+                                    assert(nt != rm_hap_i);
+                            #endif
+                    }
+                }
+            }
+        }
+    }
+    return true;
 }
 
 void LocusProcessor::write_one_locus (
