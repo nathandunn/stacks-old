@@ -54,6 +54,8 @@ void simplify_cigar_to_MDI(Cigar&); // Makes all operations to be one of 'M', 'D
 
 inline
 void cigar_extend_right(Cigar& cig, size_t len) {
+    if (len == 0)
+        return;
     if (cig.back().first == 'D')
         cig.back().second += len;
     else
@@ -62,6 +64,8 @@ void cigar_extend_right(Cigar& cig, size_t len) {
 
 inline
 void cigar_extend_left(Cigar& cig, size_t len) {
+    if (len == 0)
+        return;
     if (cig.front().first == 'D')
         cig.front().second += len;
     else

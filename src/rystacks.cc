@@ -405,6 +405,10 @@ LocusProcessor::process(CLocReadSet&& loc)
 
                 Cigar cigar;
                 parse_cigar(aln_res.cigar.c_str(), cigar);
+                simplify_cigar_to_MDI(cigar);
+                cigar_extend_left(cigar, aln_res.subj_pos);
+                assert(cigar_length_ref(cigar) <= pe_aln_loc.ref().length());
+                cigar_extend_right(cigar, pe_aln_loc.ref().length() - cigar_length_ref(cigar));
 
                 pe_aln_loc.add(SAlnRead(move((Read&)r), move(cigar), r.sample));
             }
