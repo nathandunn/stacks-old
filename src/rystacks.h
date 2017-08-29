@@ -37,7 +37,9 @@ public:
     SnpAlleleCooccurrenceCounter(size_t n_snps) : n_snps_(n_snps), cooccurences_(n_snps_*n_snps_) {};
     void clear();
 
-    size_t& at(size_t snp_i1, Nt2 snp1_allele, size_t snp_i2, Nt2 snp2_allele);
+    const size_t& at(size_t snp_i1, Nt2 snp1_allele, size_t snp_i2, Nt2 snp2_allele) const;
+          size_t& at(size_t snp_i1, Nt2 snp1_allele, size_t snp_i2, Nt2 snp2_allele)
+              {return (size_t&)((const SnpAlleleCooccurrenceCounter&)*this).at(snp_i1, snp1_allele, snp_i2, snp2_allele);}
 };
 
 //
@@ -96,8 +98,25 @@ private:
             set<size_t>& inconsistent_samples
     ) const;
 
-    // Prune the phasing output to keep only the best/largest phase set.
-    void rm_supernumerary_phase_sets (vector<map<size_t,PhasedHet>>& phase_data) const;
+    void count_pairwise_cooccurrences(
+            SnpAlleleCooccurrenceCounter& cooccurrences,
+            const CLocAlnSet& aln_loc,
+            size_t sample,
+            const vector<size_t>& snp_cols,
+            const vector<size_t>& het_snps,
+            const vector<const SampleCall*>& sample_het_calls
+            ) const;
+
+    // Assemble haplotypes.
+    // This is based on the graph of cooccurrences, in which nodes are the SNP
+    // alleles. Subgraphs represent haplotypes. Haplotype assembly fails if a
+    // subgraph includes two (or more) nodes/alleles from the same SNP.
+    bool assemble_haplotypes(
+            vector<vector<Nt4>>& haps,
+            const vector<size_t>& het_snps,
+            const vector<const SampleCall*>& sample_het_calls,
+            const SnpAlleleCooccurrenceCounter& cooccurrences
+            ) const;
 
     // Create the fasta/vcf text outputs.
     void write_one_locus (
@@ -106,6 +125,16 @@ private:
             const vector<SiteCall>& calls,
             const vector<map<size_t,PhasedHet>>& phase_data // {col : phasedhet} maps, for all samples
     );
+
+    // (debug) Write a sample's haplotype graph.
+    void write_sample_hapgraph(
+            ostream& os,
+            size_t sample,
+            const vector<size_t>& het_snps,
+            const vector<size_t>& snp_cols,
+            const vector<const SampleCall*>& sample_het_calls,
+            const SnpAlleleCooccurrenceCounter& cooccurences
+            ) const;
 };
 
 //

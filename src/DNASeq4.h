@@ -86,13 +86,17 @@ public:
 
     size_t length() const {return l_;}
     bool empty() const {return l_ == 0;}
-    string str() const;
-    DNASeq4 rev_compl() const;
     void set(size_t i, Nt4 nt) {i%2==0 ? v_[i/2].first(nt) : v_[i/2].second(nt);}
     void clear() {l_ = 0; v_ = vector<DiNuc>();}
     void reserve(size_t len) {v_.reserve(len/2+len%2);}
-    void push_back(Nt4 nt) {++l_; if (l_%2) v_.push_back(DiNuc(nt,Nt4(0))); else v_.back().second(nt);}
+    void push_back(Nt4 nt) {++l_; if (l_%2) v_.push_back(DiNuc(nt,Nt4::$)); else v_.back().second(nt);}
     void append(iterator first, iterator past);
+
+    DNASeq4 rev_compl() const;
+    string str() const;
+
+    void shift_Ns_towards_the_end();
+    void strip_terminal_Ns();
 
     Nt4 operator[] (size_t i) const {return i%2==0 ? v_[i/2].first() : v_[i/2].second();}
     bool  operator== (const DNASeq4& other) const {return l_ == other.l_ && v_ == other.v_;}
