@@ -1,4 +1,4 @@
-bin_PROGRAMS = ustacks pstacks estacks cstacks sstacks rxstacks hstacks process_radtags process_shortreads \
+bin_PROGRAMS = ustacks pstacks cstacks sstacks rxstacks process_radtags process_shortreads \
 	kmer_filter clone_filter genotypes populations phasedstacks \
 	tsv2bam rystacks
 
@@ -58,8 +58,6 @@ libpop_a_SOURCES = \
 libcore_a_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
 libpop_a_CXXFLAGS  = $(OPENMP_CFLAGS)
 
-estacks_SOURCES      = libcore.a src/estacks.h src/estacks.cc
-hstacks_SOURCES      = libcore.a src/hstacks.h src/hstacks.cc
 phasedstacks_SOURCES = libcore.a src/phasedstacks.h src/phasedstacks.cc
 
 process_radtags_SOURCES    = libcore.a libclean.a src/process_radtags.h src/process_radtags.cc
@@ -78,14 +76,8 @@ rxstacks_SOURCES    = libcore.a libpop.a src/rxstacks.h src/rxstacks.cc
 
 # tsv2bam & rystacks
 tsv2bam_SOURCES = libcore.a src/tsv2bam.cc
-rystacks_SOURCES = libcore.a src/rystacks.h src/rystacks.cc src/debruijn.h src/debruijn.cc src/Alignment.h
+rystacks_SOURCES = libcore.a src/rystacks.h src/rystacks.cc src/debruijn.h src/debruijn.cc src/Alignment.h src/SuffixTree.h src/SuffixTree.cc
 
-estacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS) $(BAM_CFLAGS)
-estacks_LDFLAGS  = $(OPENMP_CFLAGS)
-estacks_LDADD    = $(BAM_LIBS) libcore.a
-hstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
-hstacks_LDFLAGS  = $(OPENMP_CFLAGS)
-hstacks_LDADD    = libcore.a
 phasedstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
 phasedstacks_LDFLAGS  = $(OPENMP_CFLAGS)
 phasedstacks_LDADD    = libcore.a

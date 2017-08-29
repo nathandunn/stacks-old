@@ -10,7 +10,6 @@
 #include "locus.h"
 #include "locus_readers.h"
 #include "debruijn.h"
-#include "GappedAln.h"
 #include "aln_utils.h"
 #include "Alignment.h"
 #include "models.h"
@@ -18,25 +17,26 @@
 //
 // Argument globals.
 //
-bool quiet = false;
-int num_threads = 1;
+bool   quiet       = false;
+int    num_threads = 1;
 string in_dir;
-int batch_id = -1;
-bool ignore_pe_reads = false;
+int    batch_id        = -1;
+bool   ignore_pe_reads = false;
+double min_aln_cov     = 0.75;
 
 modelt model_type = marukilow;
 unique_ptr<const Model> model;
 
-size_t km_length = 31;
+size_t km_length    = 31;
 size_t min_km_count = 2;
 
-size_t dbg_max_loci = SIZE_MAX;
-bool dbg_no_haplotypes = false;
-bool dbg_write_gfa = false;
-bool dbg_write_alns = false;
-bool dbg_write_hapgraphs = false;
-bool dbg_write_nt_depths = false;
-bool dbg_true_alns = false;
+size_t dbg_max_loci        = SIZE_MAX;
+bool   dbg_no_haplotypes   = false;
+bool   dbg_write_gfa       = false;
+bool   dbg_write_alns      = false;
+bool   dbg_write_hapgraphs = false;
+bool   dbg_write_nt_depths = false;
+bool   dbg_true_alns       = false;
 
 //
 // Additional globals.
@@ -53,7 +53,9 @@ ofstream o_hapgraphs_f;
 // ==========
 //
 
-int main(int argc, char** argv) {
+int
+main(int argc, char** argv)
+{
 try {
 
     //
@@ -335,7 +337,9 @@ ProcessingStats& ProcessingStats::operator+= (const ProcessingStats& other) {
 // ==============
 //
 
-void LocusProcessor::process(CLocReadSet&& loc) {
+void
+LocusProcessor::process(CLocReadSet&& loc)
+{
     if (loc.reads().empty())
         return;
     ++stats_.n_nonempty_loci;
@@ -377,25 +381,36 @@ void LocusProcessor::process(CLocReadSet&& loc) {
             vector<const DNASeq4*> seqs_to_assemble;
             for (const Read& r : loc.pe_reads())
                 seqs_to_assemble.push_back(&r.seq);
+
             string ctg = assemble_contig(seqs_to_assemble);
+
             if (ctg.empty())
                 break;
 
             // Align each read to the contig.
             CLocAlnSet pe_aln_loc (loc_id_, loc_pos_, mpopi_);
             pe_aln_loc.ref(DNASeq4(ctg));
-            GappedAln aligner;
+
+            SuffixTree *stree   = new SuffixTree(pe_aln_loc.ref());
+            GappedAln  *aligner = new GappedAln(loc.pe_reads().front().seq.length(), pe_aln_loc.ref().length(), true);
+            AlignRes    aln_res;
+
             for (SRead& r : loc.pe_reads()) {
                 string seq = r.seq.str();
-                aligner.init(r.seq.length(), ctg.length());
-                aligner.align(seq, ctg);
-                Cigar cigar;
-                parse_cigar(aligner.result().cigar.c_str(), cigar);
-                if (cigar.size() > 10)
-                    // Read didn't align, discard it. xxx Refine this.
+                if (!this->align_reads_to_contig(stree, aligner, r.seq, aln_res))
                     continue;
+
+                if (aln_res.pct_id < min_aln_cov)
+                    continue;
+
+                Cigar cigar;
+                parse_cigar(aln_res.cigar.c_str(), cigar);
+
                 pe_aln_loc.add(SAlnRead(move((Read&)r), move(cigar), r.sample));
             }
+
+            delete aligner;
+            delete stree;
 
             // Merge the forward & paired-end alignments.
             CLocAlnSet dummy (loc_id_, loc_pos_, mpopi_);
@@ -452,7 +467,167 @@ void LocusProcessor::process(CLocReadSet&& loc) {
     write_one_locus(aln_loc, depths, calls, phase_data);
 }
 
-string LocusProcessor::assemble_contig(const vector<const DNASeq4*>& seqs) {
+int
+LocusProcessor::align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 enc_query, AlignRes &aln_res)
+{
+    vector<STAln> alns;
+    vector<pair<size_t, size_t> > step_alns;
+    string      query  = enc_query.str();
+    const char *q      = query.c_str();
+    const char *q_stop = q + query.length();
+    size_t      q_pos  = 0;
+    size_t      id     = 1;
+    char c[id_len];
+
+    do {
+        step_alns.clear();
+
+        q_pos = q - query.c_str();
+
+        st->align(q, step_alns);
+
+        if (step_alns.size() == 0) {
+            q++;
+        } else {
+            for (uint i = 0; i < step_alns.size(); i++)
+                alns.push_back(STAln(id, q_pos, step_alns[i].first, step_alns[i].second));
+            q += step_alns[0].second + 1;
+            id++;
+        }
+    } while (q < q_stop);
+
+    //
+    // Perfect alignmnet to the suffix tree. Return result.
+    //
+    if (alns.size() == 1 && alns[0].aln_len == query.length()) {
+        snprintf(c, id_len, "%luM", query.length());
+        aln_res.cigar    = c;
+        aln_res.subj_pos = alns[0].subj_pos;
+        return 1;
+    }
+
+    //
+    // Generate a list of all possible alignment subsets that include all query fragments.
+    //
+    set<uint>    ids_seen, ids_dropped;
+    vector<uint> aln_subset, cur_subset, best_aln_subset;
+    uint         max_depth = 0;
+    double       max_cov   = 0.0;
+    double       span      = 0.0;
+
+    //
+    // Bucket alignment fragments from the same query region.
+    //
+    vector<vector<uint> > valid_subsets(alns.back().id, vector<uint>());
+
+    for (uint i = 0; i < alns.size(); i++)
+        valid_subsets[alns[i].id - 1].push_back(i);
+    //
+    // Determine the fragment with the maximum number of alignments.
+    //
+    for (uint i = 0; i < valid_subsets.size(); i++)
+        if (valid_subsets[i].size() > max_depth)
+            max_depth = valid_subsets[i].size();
+    //
+    // Generate all possible full length subsets.
+    //
+    vector<vector<uint> > aln_subsets, b;
+    for (uint i = 0; i < valid_subsets.size(); i++) {
+
+        for (uint j = 0; j < valid_subsets[i].size(); j++) {
+            
+            if (aln_subsets.size() == 0) {
+                b.push_back(vector<uint>());
+                b.back().push_back(valid_subsets[i][j]);
+            } else {
+                for (uint k = 0; k < aln_subsets.size(); k++) {
+                    b.push_back(aln_subsets[k]);
+                    b.back().push_back(valid_subsets[i][j]);
+                }
+            }
+        }
+        aln_subsets = b;
+        b.clear();
+    }
+
+    for (uint i = 0; i < aln_subsets.size(); i++) {
+        //
+        // Iterate over each combination of the full length subset.
+        //
+        uint subset_size = aln_subsets.front().size();
+        uint num_subsets = pow(2, subset_size);
+    
+        for (uint j = 1; j < num_subsets; j++) {
+
+            double cov = 0.0;
+
+            for (uint k = 0; k < subset_size; k++)
+                if (j & (1 << k)) {
+                    aln_subset.push_back(aln_subsets[i][k]);
+                    cov += alns[aln_subset.back()].aln_len;
+                }
+
+            //
+            // Are the alignment subset's fragments in the proper order in the subject (along the alignment diagonal)?
+            //
+            uint cur     = 0;
+            uint next    = cur + 1;
+            bool ordered = true;
+
+            while (next < aln_subset.size()) {
+                if ( (alns[aln_subset[cur]].subj_pos + alns[aln_subset[cur]].aln_len) > alns[aln_subset[next]].subj_pos ) {
+                    ordered = false;
+                    break;
+                }
+                cur++;
+                next++;
+            }
+
+            if (ordered) {
+                //
+                // If there are enough alignment fragments in order, calculate:
+                //    1) the coverage of the query sequence, and
+                //    2) weight the coverage by the ratio of the length of the query / the length of the subject coverage.
+                //        - if the span of the subject alignments is less than the length of the query, set the weight to 1 to
+                //          avoid promoting fewer alignment fragments.
+                //
+                span = (alns[aln_subset.back()].subj_pos + alns[aln_subset.back()].aln_len) - alns[aln_subset.front()].subj_pos + 1;
+                span = span < (double) query.length() ? 1 : span / (double) query.length();
+                cov  = cov / (double) query.length();
+                cov  = cov * (1 / span);
+
+                if (cov > max_cov) {
+                    best_aln_subset = aln_subset;
+                    max_cov         = cov;
+                }
+            }
+        
+            aln_subset.clear();
+        }
+    }
+
+    //
+    // No useable alignment found.
+    //
+    if (best_aln_subset.size() == 0)
+        return 0;
+
+    vector<STAln> final_alns;
+    for (uint i = 0; i < best_aln_subset.size(); i++)
+        final_alns.push_back(alns[best_aln_subset[i]]);
+
+    g_aln->init(query.length(), st->seq_len(), true);
+    if (g_aln->align_constrained(query, st->seq().str(), final_alns)) {
+        aln_res         = g_aln->result();
+        aln_res.pct_id = max_cov;
+    }
+
+    return 1;
+}
+
+string
+LocusProcessor::assemble_contig(const vector<const DNASeq4*>& seqs)
+{
     Graph graph (km_length);
 
     graph.rebuild(seqs, min_km_count);
@@ -477,11 +652,11 @@ string LocusProcessor::assemble_contig(const vector<const DNASeq4*>& seqs) {
 }
 
 
-vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
-        const vector<SiteCall>& calls,
-        const CLocAlnSet& aln_loc,
-        set<size_t>& inconsistent_samples
-) const {
+vector<map<size_t, PhasedHet>>
+LocusProcessor::phase_hets(const vector<SiteCall>& calls,
+                            const CLocAlnSet& aln_loc,
+                            set<size_t>& inconsistent_samples) const
+{
     vector<map<size_t,PhasedHet>> phased_samples (aln_loc.mpopi().samples().size());
 
     vector<size_t> snp_cols; // The SNPs of this locus.

@@ -98,6 +98,9 @@ class GappedAln {
     inline int swap(double *, dynprog *, int, int);
     int        trace_global_alignment(const string&, const string&);
     int        trace_local_alignment(const string&, const string&);
+
+    GappedAln& operator= (const GappedAln&) = delete;
+
  public:
     GappedAln();
     GappedAln(int i) : GappedAln(i, i) {};
@@ -218,7 +221,7 @@ GappedAln::init(int size_1, int size_2, bool initialize)
 int
 GappedAln::align(const string& tag_1, const string& tag_2)
 {
-    //         j---->
+    //         j---->        tag_2
     //        [0][1][2][3]...[n-1]
     //       +--------------------
     // i [0] | [i][j]
@@ -227,6 +230,7 @@ GappedAln::align(const string& tag_1, const string& tag_2)
     // v [3] |
     //   ... |
     // [m-1] |
+    // tag_1
     //
 
     //
@@ -250,8 +254,7 @@ GappedAln::align(const string& tag_1, const string& tag_2)
         this->path[0][j].left = true;
     }
 
-    this->score(false, tag_1, 1, this->_m, tag_2, 1, this->_n);
-    // dump_alignment(tag_1, tag_2, matrix, path);
+    this->score(false, tag_1, 1, this->_m - 1, tag_2, 1, this->_n - 1);
 
     if (this->trace_global_alignment(tag_1, tag_2))
         return 1;
@@ -262,7 +265,7 @@ GappedAln::align(const string& tag_1, const string& tag_2)
 int
 GappedAln::align_constrained(const string& query, const string& subj, const vector<STAln> &alns)
 {
-    //         j----> subject
+    //         j---->      subject
     //        [0][1][2][3]...[n-1]
     //       +--------------------
     // i [0] | [i][j]
@@ -273,8 +276,8 @@ GappedAln::align_constrained(const string& query, const string& subj, const vect
     // [m-1] |
     // query
 
-    int  q_start, q_end, q_len, s_start, s_end;
-    uint q, s;
+    uint q_start, q_end, s_start, s_end;
+    uint q_len, q, s;
 
     //
     // Does the first pre-aligned region start at the beginning of the query? If not, fill in the matrix.
@@ -283,14 +286,14 @@ GappedAln::align_constrained(const string& query, const string& subj, const vect
         q_start = 1;
         q_end   = 1 + alns.front().query_pos - 1;
         q_len   = q_end;
-        s_start = (alns.front().subj_pos - (q_len * 2) >= 1) ? 1 + alns.front().subj_pos - (q_len * 2) : 1;
+        s_start = (alns.front().subj_pos >= (q_len * 2)) ? 1 + alns.front().subj_pos - (q_len * 2) : 1;
         s_end   = 1 + alns.front().subj_pos - 1;
 
         this->path[q_start][s_start].diag = false;
         this->path[q_start][s_start].up   = false;
         this->path[q_start][s_start].left = false;
             
-        cerr << "Filling start region; q_start: " << q_start << ", q_end: " << q_end << "; s_start: " << s_start << ", s_end: " << s_end << "\n";
+        // cerr << "Filling start region; q_start: " << q_start << ", q_end: " << q_end << "; s_start: " << s_start << ", s_end: " << s_end << "\n";
         this->bound_region(query, q_start, q_end, subj, s_start, s_end);
         this->score(true, query, q_start, q_end, subj, s_start, s_end);
     }
@@ -330,7 +333,7 @@ GappedAln::align_constrained(const string& query, const string& subj, const vect
             s_start = 1 + alns[n].subj_pos + alns[n].aln_len;
             s_end   = 1 + alns[m].subj_pos - 1;
 
-            cerr << "q_start: " << q_start << ", q_end: " << q_end << "; s_start: " << s_start << ", s_end: " << s_end << "\n";
+            // cerr << "q_start: " << q_start << ", q_end: " << q_end << "; s_start: " << s_start << ", s_end: " << s_end << "\n";
             this->bound_region(query, q_start, q_end, subj, s_start, s_end);
             this->score(true, query, q_start, q_end, subj, s_start, s_end);
         }
@@ -342,16 +345,18 @@ GappedAln::align_constrained(const string& query, const string& subj, const vect
     if (alns.back().query_pos + alns.back().aln_len != query.length()) {
         q_start = 1 + alns.back().query_pos + alns.back().aln_len;
         q_end   = query.length();
+
+        assert(q_end >= q_start);
+
         q_len   = q_end - q_start + 1;
         q       = 1 + alns.back().subj_pos + alns.back().aln_len;
-        s_start = (q < this->_n) ? q : this->_n;
-        s_end   = (s_start + (q_len * 2) < (int) this->_n) ? s_start + (q_len * 2) : this->_n;
+        s_start = (q < this->_n) ? q : this->_n - 1;
+        s_end   = (s_start + (q_len * 2) < this->_n) ? s_start + (q_len * 2) : this->_n - 1;
 
+        // cerr << "Filling end region; q_start: " << q_start << ", q_end: " << q_end << "; s_start: " << s_start << ", s_end: " << s_end << "\n";
         this->bound_region(query, q_start, q_end, subj, s_start, s_end);
         this->score(true, query, q_start, q_end, subj, s_start, s_end);
     }
-
-    this->dump_alignment(query, subj);
 
     if (this->trace_local_alignment(query, subj))
         return 1;
@@ -367,6 +372,11 @@ GappedAln::bound_region(const string& query, const int q_start, const int q_end,
     //
     // Bound the region we are about to score taking care not to cross out of the bounds of the matrix.
     //
+    assert(q_start >= 0);
+    assert(s_start >= 0);
+    assert(q_end   >= 0);
+    assert(s_end   >= 0);
+
     // First, bound the top row.
     j_bnd = s_end + 1 > (int) subj.length() ? subj.length() : s_end + 1;
     if (q_start - 1 >= 0)
@@ -423,7 +433,7 @@ GappedAln::score(bool local,
             // Calculate the score:
             //   1) If we were to move down from the above cell.
             score_down   = this->matrix[i - 1][j];
-            score_down  += this->path[i - 1][j].up ?  gapext_score : gapopen_score;
+            score_down  += this->path[i - 1][j].up ? gapext_score : gapopen_score;
             //   2) If we were to move diagonally from the above and left cell.
             score_diag   = this->matrix[i - 1][j - 1] + (query[i - 1] == subj[j - 1] ? match_score : mismatch_score);
             //   3) If we were to move over from the cell left of us.
@@ -586,7 +596,7 @@ compare_alignres(const AlignRes& a, const AlignRes& b)
 int
 GappedAln::trace_global_alignment(const string& tag_1, const string& tag_2)
 {
-    //         j---->
+    //         j---->        tag_2
     //        [0][1][2][3]...[n-1]
     //       +--------------------
     // i [0] | [i][j]
@@ -595,7 +605,8 @@ GappedAln::trace_global_alignment(const string& tag_1, const string& tag_2)
     // v [3] |
     //   ... |
     // [m-1] |
-    //
+    // tag_1
+    // 
     int    i, j, cnt, len, gaps, contiguity;
     double ident;
     string cigar;
@@ -713,14 +724,15 @@ GappedAln::trace_local_alignment(const string& query, const string& subj)
     // [m-1] |
     // query
     //
-    int    i, j, cnt, len, gaps, contiguity, query_start;
+    int    i, j, cnt, len, gaps, contiguity;
     double ident;
     string cigar;
     char   buf[id_len];
 
     vector<AlignRes> alns;
-    bool more_paths = true;
-    bool seq_break  = false;
+    bool more_paths  = true;
+    bool seq_break   = false;
+    int  query_start = 0;
 
     do {
         more_paths = false;
@@ -733,7 +745,7 @@ GappedAln::trace_local_alignment(const string& query, const string& subj)
 
         string aln_1, aln_2;
 
-        while (i > 0 || j > 0) {
+        while (i > 0 && j > 0) {
             cnt  = this->path[i][j].count();
 
             if (cnt > 1) more_paths = true;
@@ -769,7 +781,7 @@ GappedAln::trace_local_alignment(const string& query, const string& subj)
         //
         // Convert to CIGAR strings.
         //
-        cigar      = "";
+        cigar = "";
 
         //
         // If the local alignment didn't span to the beginning of the query, add
@@ -876,7 +888,7 @@ GappedAln::parse_cigar(vector<pair<char, uint> > &cigar)
 int
 GappedAln::dump_alignment(const string& tag_1, const string& tag_2)
 {
-    //         j---->
+    //         j---->        tag_2
     //        [0][1][2][3]...[n-1]
     //       +--------------------
     // i [0] | [i][j]
@@ -885,13 +897,14 @@ GappedAln::dump_alignment(const string& tag_1, const string& tag_2)
     // v [3] |
     //   ... |
     // [m-1] |
+    // tag_1
     //
 
     //
     // Output the score matrix.
     //
     cout << "         ";
-    for (uint j = 0; j < this->_n; j++)
+    for (uint j = 0; j < this->_n - 1; j++)
         cout << "   " << tag_2[j] << "  |";
     cout << "\n";
 
@@ -913,13 +926,12 @@ GappedAln::dump_alignment(const string& tag_1, const string& tag_2)
     // Output the path matrix.
     //
     cout << "      ";
-    for (uint j = 0; j < this->_n; j++)
+    for (uint j = 0; j < this->_n - 1; j++)
         cout << " " << tag_2[j] << " |";
     cout << "\n";
 
     cout << "  ";
     for (uint j = 0; j < this->_n; j++) {
-        // cout << " ";
         this->path[0][j].diag ? cout << "d" : cout << " ";
         this->path[0][j].up   ? cout << "u" : cout << " ";
         this->path[0][j].left ? cout << "l" : cout << " ";
@@ -930,7 +942,6 @@ GappedAln::dump_alignment(const string& tag_1, const string& tag_2)
     for (uint i = 1; i < this->_m; i++) {
         cout << tag_1[i - 1] << " ";
         for (uint j = 0; j < this->_n; j++) {
-            // cout << " ";
             this->path[i][j].diag ? cout << "d" : cout << " ";
             this->path[i][j].up   ? cout << "u" : cout << " ";
             this->path[i][j].left ? cout << "l" : cout << " ";
