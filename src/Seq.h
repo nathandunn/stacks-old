@@ -28,8 +28,9 @@ enum class AlnT {null, primary, secondary, supplementary};
 
 class PhyLoc {
     char* chr_;
+    static const char empty_str[1];
 public:
-    const char* chr() const {if(chr_==NULL) throw std::out_of_range("PhyLoc::chr"); return chr_;}
+    const char* chr() const {return chr_==NULL ? empty_str : chr_;}
     uint        bp;
     strand_type strand;
 
@@ -153,7 +154,7 @@ inline
 bool PhyLoc::operator==(const PhyLoc& other) const {
     if (bp == other.bp
             && strand == other.strand
-            && strcmp(chr_, other.chr_) == 0)
+            && strcmp(chr(), other.chr()) == 0)
         return true;
     else
         return false;
@@ -161,7 +162,7 @@ bool PhyLoc::operator==(const PhyLoc& other) const {
 
 inline
 bool PhyLoc::operator<(const PhyLoc& other) const {
-    const int chrcmp = strcmp(chr_, other.chr_);
+    const int chrcmp = strcmp(chr(), other.chr());
     if (chrcmp != 0)
         // Alphanumeric.
         return chrcmp < 0;
