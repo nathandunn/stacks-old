@@ -4,6 +4,8 @@
 #include "utils.h"
 #include "Seq.h"
 
+const char PhyLoc::empty_str[1] = {'\0'};
+
 PhyLoc::PhyLoc(const string& s) : PhyLoc() {
     try {
         // Chromosome.
