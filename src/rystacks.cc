@@ -1135,6 +1135,7 @@ void from_true_alignments(CLocAlnSet& aln_loc, CLocReadSet&& loc) {
                  << ", not " << cigar_length_ref(cigar) << ".\n";
             throw exception();
         }
+        r.seq.shift_Ns_towards_the_end();
         aln_loc.add(SAlnRead(move((Read&)r), move(cigar), r.sample));
     }
 
