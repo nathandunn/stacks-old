@@ -4,6 +4,8 @@
 #include "constants.h"
 #include "nucleotides.h"
 #include "models.h"
+#include "SuffixTree.h"
+#include "GappedAln.h"
 
 void parse_command_line(int argc, char* argv[]);
 void report_options(ostream& os);
@@ -84,6 +86,8 @@ private:
     string o_fa_;
 
     string assemble_contig(const vector<const DNASeq4*>& seqs);
+
+    int align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 query, AlignRes &aln_res);
 
     // For each sample, phase heterozygous SNPs.
     vector<map<size_t,PhasedHet>> phase_hets (
