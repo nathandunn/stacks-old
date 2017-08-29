@@ -125,15 +125,15 @@ int run() {
             if (omp_return != 0)
                 continue;
             try {
-                #pragma omp critical
-                cout << "Processing sample '" << samples[i] << "'...\n";
+                #pragma omp critical(cout)
+                cout << "Processing sample '" << samples[i] << "'...\n" << flush;
 
                 stringstream ss;
                 run(cloc_ids, header_sq_lines.str(), i, ss);
                 outputs[i] = ss.str();
 
             } catch (exception& e) {
-                #pragma omp critical
+                #pragma omp critical(exception)
                 omp_return = stacks_handle_exceptions(e);
             }
         }
