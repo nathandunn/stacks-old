@@ -18,7 +18,6 @@ public:
     Nt4() : nt_(Nt4::n) {}
     Nt4(char c) : nt_(from_ch[size_t(c)]) {}
     Nt4(size_t i) : nt_(i) {}
-    Nt4(int i) : nt_(i) {}
     Nt4(const Nt4& other) : nt_(other.nt_) {}
     Nt4(const Nt2 nt2);
     Nt4& operator=(const Nt4& other) {nt_ = other.nt_; return *this;}
@@ -47,6 +46,8 @@ public:
     static constexpr size_t max() {return (1 << nbits) - 1;}
 
 private:
+    Nt4(int i) : nt_(i) {}
+
     // Trivial ASCII-like hash table giving the 4-bits value of a nucleotide letter.
     // e.g. ch_to_nt [ (int)'G' ] == 4
     // Adapted from `htslib::seq_nt16_table` (hts.cc).
