@@ -348,6 +348,8 @@ LocusProcessor::process(CLocReadSet&& loc)
     loc_pos_ = loc.pos();
     mpopi_ = &loc.mpopi();
 
+    cerr << "Processing locus: " << loc_id_ << "\n";
+    
     //
     // Build the alignment matrix.
     //
@@ -384,6 +386,7 @@ LocusProcessor::process(CLocReadSet&& loc)
 
             string ctg = assemble_contig(seqs_to_assemble);
 
+            cerr << "Contig: " << ctg << "\n";
             if (ctg.empty())
                 break;
 
@@ -394,6 +397,11 @@ LocusProcessor::process(CLocReadSet&& loc)
             SuffixTree *stree   = new SuffixTree(pe_aln_loc.ref());
             GappedAln  *aligner = new GappedAln(loc.pe_reads().front().seq.length(), pe_aln_loc.ref().length(), true);
             AlignRes    aln_res;
+
+            //
+            // Build a SuffixTree of the reference sequence for this locus.
+            //
+            stree->build_tree();
 
             for (SRead& r : loc.pe_reads()) {
                 string seq = r.seq.str();
