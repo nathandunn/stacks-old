@@ -405,6 +405,9 @@ LocusProcessor::process(CLocReadSet&& loc)
 
             for (SRead& r : loc.pe_reads()) {
                 string seq = r.seq.str();
+
+                cerr << "Aligning read: " << r.seq.str() << "\n";
+
                 if (!this->align_reads_to_contig(stree, aligner, r.seq, aln_res))
                     continue;
 

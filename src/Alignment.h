@@ -68,8 +68,8 @@ struct AlnRead : Read {
 //
 
 inline
-Nt4 Alignment::operator[] (size_t ref_i) const {
-
+Nt4 Alignment::operator[] (size_t ref_i) const
+{
     size_t seq_i = 0;
     for (auto op=cig_->begin(); op!=cig_->end(); ++op) {
         if (op->first == 'M') {
@@ -101,7 +101,8 @@ Nt4 Alignment::operator[] (size_t ref_i) const {
 }
 
 inline
-Alignment::iterator& Alignment::iterator::operator++ () {
+Alignment::iterator& Alignment::iterator::operator++ ()
+{
     assert(cig_it_ != cig_past_);
 
     //
@@ -140,7 +141,9 @@ Alignment::iterator& Alignment::iterator::operator+= (size_t n) {
 }
 
 inline
-void Alignment::iterator::skip_insertion() {
+void
+Alignment::iterator::skip_insertion()
+{
     if (cig_it_ != cig_past_ && cig_it_->first == 'I') {
         // Op is I; skip this insertion.
         for (size_t i=0; i<cig_it_->second; ++i) {
@@ -151,8 +154,9 @@ void Alignment::iterator::skip_insertion() {
     }
 }
 
-inline
-bool Alignment::check_cigar_ops() const {
+inline bool
+Alignment::check_cigar_ops() const
+{
     for (auto& op : *cig_)
         if (op.first != 'M' && op.first != 'D' && op.first != 'I')
             // Oops, the class only knows M, I and D.
@@ -161,8 +165,9 @@ bool Alignment::check_cigar_ops() const {
     return true;
 }
 
-inline
-AlnRead AlnRead::merger_of(const AlnRead& r1, const AlnRead& r2) {
+inline AlnRead
+AlnRead::merger_of(const AlnRead& r1, const AlnRead& r2)
+{
     assert(cigar_length_ref(r1.cigar) == cigar_length_ref(r2.cigar));
 
     // name.
