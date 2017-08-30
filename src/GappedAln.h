@@ -775,6 +775,9 @@ GappedAln::trace_local_alignment(const string& query, const string& subj)
             }
         }
 
+        if (i > 0 && j == 0)
+            query_start = i;
+        
         reverse(aln_1.begin(), aln_1.end());
         reverse(aln_2.begin(), aln_2.end());
 
@@ -836,7 +839,7 @@ GappedAln::trace_local_alignment(const string& query, const string& subj)
         //
         // If the entire query was not aligned, add the softmasked bases to the cigar.
         //
-        if (this->_max_score_m < query.length() - 1) {
+        if (this->_max_score_m < query.length()) {
             sprintf(buf, "%dS", (int) query.length() - this->_max_score_m);
             cigar += buf;
         }

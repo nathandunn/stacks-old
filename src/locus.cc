@@ -1,4 +1,4 @@
-// -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
+// -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-OA
 //
 // Copyright 2013-2015, Julian Catchen <jcatchen@illinois.edu>
 //
@@ -323,7 +323,8 @@ QLocus::clear_matches()
     return 0;
 }
 
-void CLocAlnSet::clear() {
+void
+CLocAlnSet::clear() {
     id_= -1;
     aln_pos_.clear();
     ref_ = DNASeq4();
@@ -333,8 +334,11 @@ void CLocAlnSet::clear() {
 }
 
 
-void CLocAlnSet::merge_paired_reads() {
-
+void
+CLocAlnSet::merge_paired_reads()
+{
+    cerr << "Reference length: " << this->ref_.length() << "\n";
+    
     // Sort reads by name. Paired reads should have the same name but end with
     // respectively "/1" and "/2".
     sort(reads_.begin(), reads_.end(),
@@ -347,6 +351,15 @@ void CLocAlnSet::merge_paired_reads() {
         const string& n1 = r1->name;
         const string& n2 = r2->name;
         const size_t l = n1.length();
+
+        if (r1->cigar.size() == 0)
+            cerr << "No cigar.\n";
+        for (uint z = 0; z < r1->cigar.size(); z++)
+            cerr << r1->cigar[z].first << r1->cigar[z].second;
+        cerr << "\n";
+        cerr << "r1 cigar length: " << cigar_length_query(r1->cigar) << "; name: " << r1->name << "\n";
+        cerr << "r2 cigar length: " << cigar_length_query(r2->cigar) << "; name: " << r2->name << "\n";
+        
         if (n2.length() == l && l >= 2
                 && n1[l-2] == '/' && n1[l-1] == '1'
                 && n2[l-2] == '/' && n2[l-1] == '2'
@@ -355,6 +368,7 @@ void CLocAlnSet::merge_paired_reads() {
             // r1 and r2 are paired, merge them.
             assert(r1->sample == r2->sample);
             *r1 = SAlnRead(AlnRead::merger_of(move(*r1), move(*r2)), r1->sample);
+            
             assert(cigar_length_ref(r1->cigar) == ref_.length());
 
             // Mark r2 for removal and skip it.
@@ -383,7 +397,9 @@ ostream& operator<< (ostream& os, const CLocAlnSet& loc) {
     return os;
 }
 
-CLocAlnSet CLocAlnSet::juxtapose(CLocAlnSet&& left, CLocAlnSet&& right) {
+CLocAlnSet
+CLocAlnSet::juxtapose(CLocAlnSet&& left, CLocAlnSet&& right)
+{
 
     assert(left.id() == right.id());
     assert(left.pos() == right.pos());
