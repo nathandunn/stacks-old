@@ -1272,10 +1272,12 @@ Cigar dbg_extract_cigar(const string& read_id) {
 
     Cigar cigar;
 
+    bool paired_end = read_id.back() == '2' && read_id.at(read_id.length()-2) == '/';
+
     // Find the start.
     const char* cig_start = read_id.c_str();
     const char* kw = keyword1;
-    if (read_id.back() == '2' && read_id.at(read_id.length()-2) == '/')
+    if (paired_end)
         kw = keyword2;
     while (*cig_start != '\0'
             && ! (*cig_start == kw[0] && strncmp(cig_start, kw, kw_len) == 0))
@@ -1294,6 +1296,10 @@ Cigar dbg_extract_cigar(const string& read_id) {
 
     // Extract the cigar.
     parse_cigar(string(cig_start, cig_past).c_str(), cigar, true);
+
+    // For paired-end reads, reverse complement (i.e. just reverse) the cigar.
+    if (paired_end)
+        std::reverse(cigar.begin(), cigar.end());
 
     return cigar;
 }
