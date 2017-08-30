@@ -103,8 +103,8 @@ try {
         check_open(o_aln_f, o_aln_path);
         o_aln_f <<
             "# This prints observed read haplotypes:\n"
-            "# show_loc() { loc=$1; sed -n \"/^END $loc\\b/ q; /^BEGIN $loc\\b/,$ p\" ${RY_DIR:-.}/batch_1.rystacks.alns | tail -n+2; }\n"
-            "# snp_cols() { loc=$1; awk \"\\$1==$loc; \\$1>$loc {exit}\" ${RY_DIR:-.}/batch_1.rystacks.vcf | awk '$5!=\".\"' | cut -f2 | paste -sd ','; }\n"
+            "# show_loc() { loc=$1; cat ${RY_DIR:-.}/batch_1.rystacks.alns | sed -n \"/^END $loc\\b/ q; /^BEGIN $loc\\b/,$ p\" | tail -n+2; }\n"
+            "# snp_cols() { loc=$1; zcat ${RY_DIR:-.}/batch_1.rystacks.vcf.gz | awk \"\\$1==$loc; \\$1>$loc {exit}\" | awk '$5!=\".\"' | cut -f2 | paste -sd ','; }\n"
             "# show_haps() { loc=$1; cols=$2; spl=$3; show_loc $loc | grep \"\\b$spl\\b\" | cut -f3 | cut -c \"$cols\" | sort; }\n"
             "# true_loci() { loc=$1; spl=$2; show_loc $loc | grep \"\\b$spl\\b\" | grep -v ref | cut -d: -f1 | sort -u; }\n"
             ;
