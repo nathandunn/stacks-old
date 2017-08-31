@@ -380,19 +380,19 @@ std::tuple<uint,uint,uint> cigar_lengths(const Cigar& cigar) {
     uint padded_len = 0;
     uint ref_len = 0;
     uint seq_len = 0;
-    for (auto& op : cigar) {
-        padded_len += op.second;
-        switch (op.first) {
+    for (vector<pair<char, uint>>::const_iterator op = cigar.begin(); op != cigar.end(); ++op) {
+        padded_len += op->second;
+        switch (op->first) {
         case 'M':
         case '=':
         case 'X':
             // Consume both ref & seq.
-            ref_len += op.second;
-            seq_len += op.second;
+            ref_len += op->second;
+            seq_len += op->second;
             break;
         case 'I':
             // Consume seq.
-            seq_len += op.second;
+            seq_len += op->second;
             break;
         case 'D':
         case 'S':
@@ -400,7 +400,7 @@ std::tuple<uint,uint,uint> cigar_lengths(const Cigar& cigar) {
         case 'H':
         case 'P':
             // Consume ref.
-            ref_len += op.second;
+            ref_len += op->second;
             break;
         default:
             DOES_NOT_HAPPEN;
