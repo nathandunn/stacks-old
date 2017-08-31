@@ -347,24 +347,21 @@ CLocAlnSet::merge_paired_reads()
 
     // Merge paired reads.
     for (auto r1=reads_.begin(); r1!=reads_.end(); ++r1) {
-        auto r2 = r1+1;
+        auto r2 = r1;
+        ++r2;
+
+        if (r2 == this->reads_.end())
+            break;
+        
         const string& n1 = r1->name;
         const string& n2 = r2->name;
         const size_t l = n1.length();
+                
+        if (n2.length() == l && l >= 2 &&
+            n1[l-2] == '/'   && n1[l-1] == '1' &&
+            n2[l-2] == '/'   && n2[l-1] == '2' && 
+            n1.substr(0, l-2) == n2.substr(0, l-2)) {
 
-        if (r1->cigar.size() == 0)
-            cerr << "No cigar.\n";
-        for (uint z = 0; z < r1->cigar.size(); z++)
-            cerr << r1->cigar[z].first << r1->cigar[z].second;
-        cerr << "\n";
-        cerr << "r1 cigar length: " << cigar_length_query(r1->cigar) << "; name: " << r1->name << "\n";
-        cerr << "r2 cigar length: " << cigar_length_query(r2->cigar) << "; name: " << r2->name << "\n";
-        
-        if (n2.length() == l && l >= 2
-                && n1[l-2] == '/' && n1[l-1] == '1'
-                && n2[l-2] == '/' && n2[l-1] == '2'
-                && n1.substr(0, l-2) == n2.substr(0, l-2)
-                ){
             // r1 and r2 are paired, merge them.
             assert(r1->sample == r2->sample);
             *r1 = SAlnRead(AlnRead::merger_of(move(*r1), move(*r2)), r1->sample);
@@ -374,6 +371,8 @@ CLocAlnSet::merge_paired_reads()
             // Mark r2 for removal and skip it.
             r2->seq.clear();
             ++r1;
+            if (r1 == this->reads_.end())
+                break;
         }
     }
 

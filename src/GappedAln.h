@@ -78,19 +78,19 @@ public:
 //
 // Needleman-Wunsch Alignment
 //
-const double gapopen_score  = -10;
-const double gapext_score   = -0.5;
-const double mismatch_score = -4;
-const double match_score    =  5;
+static const double gapopen_score  = -10.0;
+static const double gapext_score   =  -0.5;
+static const double mismatch_score =  -4.0;
+static const double match_score    =   5.0;
 
 class GappedAln {
     uint        _m;
     uint        _n;
     uint        _m_size;
     uint        _n_size;
-    uint        _max_score;   // For local alignment.
+    uint        _max_score;   //
     uint        _max_score_m; // For local alignment.
-    uint        _max_score_n; // For local alignment.
+    uint        _max_score_n; //
     double    **matrix;
     AlignPath **path;
     AlignRes    _aln;
@@ -118,7 +118,7 @@ class GappedAln {
     int dump_alignment(const string&, const string&);
 
 private:
-    int bound_region(const string&, const int, const int, const string&, const int, const int);
+    int bound_region(const int, const int, const int, const int);
     int score(bool, const string&, const int, const int, const string&, const int, const int);
 };
 
@@ -294,7 +294,7 @@ GappedAln::align_constrained(const string& query, const string& subj, const vect
         this->path[q_start][s_start].left = false;
             
         // cerr << "Filling start region; q_start: " << q_start << ", q_end: " << q_end << "; s_start: " << s_start << ", s_end: " << s_end << "\n";
-        this->bound_region(query, q_start, q_end, subj, s_start, s_end);
+        this->bound_region(q_start, q_end, s_start, s_end);
         this->score(true, query, q_start, q_end, subj, s_start, s_end);
     }
 
@@ -334,7 +334,7 @@ GappedAln::align_constrained(const string& query, const string& subj, const vect
             s_end   = 1 + alns[m].subj_pos - 1;
 
             // cerr << "q_start: " << q_start << ", q_end: " << q_end << "; s_start: " << s_start << ", s_end: " << s_end << "\n";
-            this->bound_region(query, q_start, q_end, subj, s_start, s_end);
+            this->bound_region(q_start, q_end, s_start, s_end);
             this->score(true, query, q_start, q_end, subj, s_start, s_end);
         }
     }
@@ -354,7 +354,7 @@ GappedAln::align_constrained(const string& query, const string& subj, const vect
         s_end   = (s_start + (q_len * 2) < this->_n) ? s_start + (q_len * 2) : this->_n - 1;
 
         // cerr << "Filling end region; q_start: " << q_start << ", q_end: " << q_end << "; s_start: " << s_start << ", s_end: " << s_end << "\n";
-        this->bound_region(query, q_start, q_end, subj, s_start, s_end);
+        this->bound_region(q_start, q_end, s_start, s_end);
         this->score(true, query, q_start, q_end, subj, s_start, s_end);
     }
 
@@ -365,10 +365,21 @@ GappedAln::align_constrained(const string& query, const string& subj, const vect
 }
 
 inline int
-GappedAln::bound_region(const string& query, const int q_start, const int q_end,
-                        const string& subj, const int s_start, const int s_end)
+GappedAln::bound_region(const int q_start, const int q_end,
+                        const int s_start, const int s_end)
 {
-    int i_bnd, j_bnd;
+    //         j---->      subject
+    //        [0][1][2][3]...[n-1]
+    //       +--------------------
+    // i [0] | [i][j]
+    // | [1] |
+    // | [2] |
+    // v [3] |
+    //   ... |
+    // [m-1] |
+    // query
+
+    int i_bnd, i_bnd_low, j_bnd, j_bnd_low;
     //
     // Bound the region we are about to score taking care not to cross out of the bounds of the matrix.
     //
@@ -377,40 +388,48 @@ GappedAln::bound_region(const string& query, const int q_start, const int q_end,
     assert(q_end   >= 0);
     assert(s_end   >= 0);
 
-    // First, bound the top row.
-    j_bnd = s_end + 1 > (int) subj.length() ? subj.length() : s_end + 1;
-    if (q_start - 1 >= 0)
+    //
+    // _n and _m are the length of the subject and query, respectively. however, as they are
+    // indexes into a zero-based array, their maximum value is _n - 1 and _m - 1.
+    //
+    j_bnd     = s_end + 1   > (int) this->_n - 1 ? this->_n - 1 : s_end + 1;
+    j_bnd_low = s_start - 1 < 0 ? 0 : s_start - 1;
+    i_bnd     = q_end + 1   > (int) this->_m - 1 ? this->_m - 1 : q_end + 1;
+    i_bnd_low = q_start - 1 < 0 ? 0 : q_start - 1;
+
+    assert(j_bnd < (int) this->_n_size);
+    assert(i_bnd < (int) this->_m_size);
+
+    // First, bound the top row.    
+    if (i_bnd_low >= 0)
         for (int j = s_start; j <= j_bnd; j++) {
-            this->path[q_start - 1][j].diag = false;
-            this->path[q_start - 1][j].up   = false;
-            this->path[q_start - 1][j].left = true;
+            this->path[i_bnd_low][j].diag = false;
+            this->path[i_bnd_low][j].up   = false;
+            this->path[i_bnd_low][j].left = true;
         }
 
     // Second, fill the left column.
-    i_bnd = q_end + 1 > (int) query.length() ? query.length() : q_end + 1;
-    if (s_start - 1 >= 0)
+    if (j_bnd_low >= 0)
         for (int i = q_start; i <= i_bnd; i++) {
-            this->path[i][s_start - 1].diag = false;
-            this->path[i][s_start - 1].up   = true;
-            this->path[i][s_start - 1].left = false;
+            this->path[i][j_bnd_low].diag = false;
+            this->path[i][j_bnd_low].up   = true;
+            this->path[i][j_bnd_low].left = false;
         }
 
     // Third, fill the right column.
-    i_bnd = q_start - 1 < 0 ? 0 : q_start - 1;
-    if (s_end + 1 < (int) subj.length() - 1 && s_end + 1 <= (int) subj.length())
-        for (int i = i_bnd; i <= q_end; i++) {
-            this->path[i][s_end + 1].diag = false;
-            this->path[i][s_end + 1].up   = false;
-            this->path[i][s_end + 1].left = true;
+    if (s_end + 1 < (int) this->_n)
+        for (int i = i_bnd_low; i <= i_bnd; i++) {
+            this->path[i][j_bnd].diag = false;
+            this->path[i][j_bnd].up   = false;
+            this->path[i][j_bnd].left = true;
         }
 
     // Fourth, bound the bottom row.
-    j_bnd = s_start - 1 < 0 ? 0 : s_start - 1;
-    if (q_end + 1 < (int) query.length() - 1)
-        for (int j = j_bnd; j <= s_end; j++) {
-            this->path[q_end + 1][j].diag = false;
-            this->path[q_end + 1][j].up   = true;
-            this->path[q_end + 1][j].left = false;
+    if (q_end + 1 < (int) this->_m)
+        for (int j = j_bnd_low; j <= j_bnd; j++) {
+            this->path[i_bnd][j].diag = false;
+            this->path[i_bnd][j].up   = true;
+            this->path[i_bnd][j].left = false;
         }
 
     return 0;

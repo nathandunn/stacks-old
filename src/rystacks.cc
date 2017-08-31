@@ -406,11 +406,9 @@ LocusProcessor::process(CLocReadSet&& loc)
             for (SRead& r : loc.pe_reads()) {
                 string seq = r.seq.str();
 
-                cerr << "Aligning read: " << r.seq.str() << "\n";
-
                 if (!this->align_reads_to_contig(stree, aligner, r.seq, aln_res))
                     continue;
-
+                
                 if (aln_res.pct_id < min_aln_cov)
                     continue;
 
@@ -624,7 +622,7 @@ LocusProcessor::align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 
     //
     if (best_aln_subset.size() == 0)
         return 0;
-
+    
     vector<STAln> final_alns;
     for (uint i = 0; i < best_aln_subset.size(); i++)
         final_alns.push_back(alns[best_aln_subset[i]]);
