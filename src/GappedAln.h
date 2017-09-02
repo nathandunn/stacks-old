@@ -400,9 +400,14 @@ GappedAln::bound_region(const int q_start, const int q_end,
     assert(j_bnd < (int) this->_n_size);
     assert(i_bnd < (int) this->_m_size);
 
+    double score_down, score_right;
+
     // First, bound the top row.    
     if (i_bnd_low >= 0)
         for (int j = s_start; j <= j_bnd; j++) {
+            score_right  = this->matrix[i_bnd_low][j - 1];
+            score_right += this->path[i_bnd_low][j - 1].left ? gapext_score : gapopen_score;
+            this->matrix[i_bnd_low][j]    = score_right < 0 ? 0 : score_right;
             this->path[i_bnd_low][j].diag = false;
             this->path[i_bnd_low][j].up   = false;
             this->path[i_bnd_low][j].left = true;
@@ -411,6 +416,9 @@ GappedAln::bound_region(const int q_start, const int q_end,
     // Second, fill the left column.
     if (j_bnd_low >= 0)
         for (int i = q_start; i <= i_bnd; i++) {
+            score_down  = this->matrix[i - 1][j_bnd_low];
+            score_down += this->path[i - 1][j_bnd_low].up ? gapext_score : gapopen_score;
+            this->matrix[i][j_bnd_low]    = score_down < 0 ? 0 : score_down;
             this->path[i][j_bnd_low].diag = false;
             this->path[i][j_bnd_low].up   = true;
             this->path[i][j_bnd_low].left = false;
@@ -419,6 +427,9 @@ GappedAln::bound_region(const int q_start, const int q_end,
     // Third, fill the right column.
     if (s_end + 1 < (int) this->_n)
         for (int i = i_bnd_low; i <= i_bnd; i++) {
+            score_right  = this->matrix[i][j_bnd - 1];
+            score_right += this->path[i][j_bnd - 1].left ? gapext_score : gapopen_score;
+            this->matrix[i][j_bnd]    = score_right < 0 ? 0 : score_right;
             this->path[i][j_bnd].diag = false;
             this->path[i][j_bnd].up   = false;
             this->path[i][j_bnd].left = true;
@@ -427,6 +438,9 @@ GappedAln::bound_region(const int q_start, const int q_end,
     // Fourth, bound the bottom row.
     if (q_end + 1 < (int) this->_m)
         for (int j = j_bnd_low; j <= j_bnd; j++) {
+            score_down  = this->matrix[i_bnd - 1][j];
+            score_down += this->path[i_bnd - 1][j].up ? gapext_score : gapopen_score;
+            this->matrix[i_bnd][j]    = score_down < 0 ? 0 : score_down;
             this->path[i_bnd][j].diag = false;
             this->path[i_bnd][j].up   = true;
             this->path[i_bnd][j].left = false;
@@ -751,10 +765,11 @@ GappedAln::trace_local_alignment(const string& query, const string& subj)
     vector<AlignRes> alns;
     bool more_paths  = true;
     bool seq_break   = false;
-    int  query_start = 0;
-
+    int  query_start;
+    
     do {
-        more_paths = false;
+        query_start = 0;
+        more_paths  = false;
 
         //
         // For a local alignment, begin the trace at the matrix cell with the highest score.
