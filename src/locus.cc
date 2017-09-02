@@ -337,17 +337,17 @@ CLocAlnSet::clear() {
 void
 CLocAlnSet::merge_paired_reads()
 {
-    cerr << "Reference length: " << this->ref_.length() << "\n";
-    
+    //
     // Sort reads by name. Paired reads should have the same name but end with
     // respectively "/1" and "/2".
-    sort(reads_.begin(), reads_.end(),
-         [](const SAlnRead& r1, const SAlnRead& r2){return r1.name < r2.name;}
+    //
+    sort(this->reads_.begin(), this->reads_.end(),
+         [](const SAlnRead& r1, const SAlnRead& r2) { return r1.name < r2.name; }
          );
 
     // Merge paired reads.
-    for (auto r1=reads_.begin(); r1!=reads_.end(); ++r1) {
-        auto r2 = r1;
+    for (auto r1 = this->reads_.begin(); r1 != this->reads_.end(); ++r1) {
+        auto  r2 = r1;
         ++r2;
 
         if (r2 == this->reads_.end())
@@ -355,11 +355,11 @@ CLocAlnSet::merge_paired_reads()
         
         const string& n1 = r1->name;
         const string& n2 = r2->name;
-        const size_t l = n1.length();
-                
+        const size_t   l = n1.length();
+
         if (n2.length() == l && l >= 2 &&
-            n1[l-2] == '/'   && n1[l-1] == '1' &&
-            n2[l-2] == '/'   && n2[l-1] == '2' && 
+            n1[l-2] == '/' && n1[l-1] == '1' &&
+            n2[l-2] == '/' && n2[l-1] == '2' && 
             n1.substr(0, l-2) == n2.substr(0, l-2)) {
 
             // r1 and r2 are paired, merge them.
@@ -377,11 +377,11 @@ CLocAlnSet::merge_paired_reads()
     }
 
     // Remove emptied reads.
-    reads_.erase(std::remove_if(
-            reads_.begin(),
-            reads_.end(),
-            [](const Read& r){return r.seq.empty();}
-            ), reads_.end());
+    reads_.erase(std::remove_if(reads_.begin(),
+                                reads_.end(),
+                                [](const Read& r) { return r.seq.empty(); }
+                                ),
+                 reads_.end());
 
     // Refresh `reads_per_sample_`.
     reads_per_sample_ = vector<vector<size_t>>(mpopi().samples().size());

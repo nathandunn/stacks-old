@@ -144,7 +144,7 @@ class CSLocus : public Locus {
 public:
     CSLocus() : Locus() {
         this->f          = 0.0;
-        this->cnt  = 0;
+        this->cnt        = 0;
         this->hcnt       = 0;
         this->gcnt       = 0;
         this->trans_gcnt = 0;

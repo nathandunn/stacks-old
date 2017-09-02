@@ -348,7 +348,7 @@ LocusProcessor::process(CLocReadSet&& loc)
     loc_pos_ = loc.pos();
     mpopi_ = &loc.mpopi();
 
-    cerr << "Processing locus: " << loc_id_ << "\n";
+    // cerr << "Processing locus: " << loc_id_ << "\n";
     
     //
     // Build the alignment matrix.
@@ -386,7 +386,6 @@ LocusProcessor::process(CLocReadSet&& loc)
 
             string ctg = assemble_contig(seqs_to_assemble);
 
-            cerr << "Contig: " << ctg << "\n";
             if (ctg.empty())
                 break;
 
@@ -397,6 +396,9 @@ LocusProcessor::process(CLocReadSet&& loc)
             SuffixTree *stree   = new SuffixTree(pe_aln_loc.ref());
             GappedAln  *aligner = new GappedAln(loc.pe_reads().front().seq.length(), pe_aln_loc.ref().length(), true);
             AlignRes    aln_res;
+
+            // cerr << "True Locus: " << loc.pe_reads().front().name.substr(0,7) << "\n";
+            // cerr << "Contig: " << ctg << "\n";
 
             //
             // Build a SuffixTree of the reference sequence for this locus.
@@ -425,13 +427,16 @@ LocusProcessor::process(CLocReadSet&& loc)
             delete aligner;
             delete stree;
 
+            // if (loc_id_ == 250) 
+            //     for (auto r1 = pe_aln_loc.reads().begin(); r1 != pe_aln_loc.reads().end(); ++r1) {
+            //         cerr << "Read " << r1->name << "; cigar: " << r1->cigar << "; cigar length: " << cigar_length_query(r1->cigar) << "\n";
+            //     }
+            
             // Merge the forward & paired-end alignments.
             CLocAlnSet dummy (loc_id_, loc_pos_, mpopi_);
             dummy.ref(DNASeq4(string(10, 'N')));
-            aln_loc = CLocAlnSet::juxtapose(
-                    move(aln_loc),
-                    CLocAlnSet::juxtapose(move(dummy), move(pe_aln_loc))
-                    );
+            aln_loc = CLocAlnSet::juxtapose( move(aln_loc),
+                                             CLocAlnSet::juxtapose(move(dummy), move(pe_aln_loc)) );
             aln_loc.merge_paired_reads();
 
         } while (false);
@@ -450,7 +455,7 @@ LocusProcessor::process(CLocReadSet&& loc)
     vector<SiteCounts> depths;
     vector<SiteCall> calls;
     calls.reserve(aln_loc.ref().length());
-    for(CLocAlnSet::site_iterator site (aln_loc); bool(site); ++site) {
+    for (CLocAlnSet::site_iterator site (aln_loc); bool(site); ++site) {
         depths.push_back(site.counts());
         calls.push_back(model->call(depths.back()));
     }
@@ -508,6 +513,12 @@ LocusProcessor::align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 
     } while (q < q_stop);
 
     //
+    // No alignments to the suffix tree were found.
+    //
+    if (alns.size() == 0)
+        return 0;
+
+    //
     // Perfect alignmnet to the suffix tree. Return result.
     //
     if (alns.size() == 1 && alns[0].aln_len == query.length()) {
@@ -525,7 +536,7 @@ LocusProcessor::align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 
     uint         max_depth = 0;
     double       max_cov   = 0.0;
     double       span      = 0.0;
-
+    
     //
     // Bucket alignment fragments from the same query region.
     //

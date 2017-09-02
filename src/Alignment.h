@@ -11,9 +11,10 @@ class Alignment {
     const Cigar* cig_;
 
 public:
-    Alignment(const DNASeq4& seq, const Cigar& cigar)
-        : seq_(&seq), cig_(&cigar)
-        {assert(cigar_length_query(*cig_) == seq_->length()); assert(check_cigar_ops());}
+    Alignment(const DNASeq4& seq, const Cigar& cigar) : seq_(&seq), cig_(&cigar) {
+        assert(cigar_length_query(*cig_) == seq_->length());
+        assert(check_cigar_ops());
+    }
 
     // N.B. Inefficient; prefer iteration.
     Nt4 operator[] (size_t ref_i) const;
