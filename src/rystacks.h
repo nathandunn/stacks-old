@@ -90,6 +90,7 @@ private:
     string assemble_contig(const vector<const DNASeq4*>& seqs);
 
     int align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 query, AlignRes &aln_res);
+    int find_locus_overlap(SuffixTree *st, DNASeq4 se_consensus, int &overlap);
 
     // For each sample, phase heterozygous SNPs.
     vector<map<size_t,PhasedHet>> phase_hets (

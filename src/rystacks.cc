@@ -424,6 +424,13 @@ LocusProcessor::process(CLocReadSet&& loc)
                 pe_aln_loc.add(SAlnRead(move((Read&)r), move(cigar), r.sample));
             }
 
+            //
+            // Determine if there is overlap -- and how much -- between the SE and PE contigs.
+            //   We will query the PE contig suffix tree using the SE consensus sequence.
+            //
+            int overlap = 0;
+            this->find_locus_overlap(stree, aln_loc.ref(), overlap);
+
             delete aligner;
             delete stree;
 
@@ -431,8 +438,10 @@ LocusProcessor::process(CLocReadSet&& loc)
             //     for (auto r1 = pe_aln_loc.reads().begin(); r1 != pe_aln_loc.reads().end(); ++r1) {
             //         cerr << "Read " << r1->name << "; cigar: " << r1->cigar << "; cigar length: " << cigar_length_query(r1->cigar) << "\n";
             //     }
-            
+
+            //
             // Merge the forward & paired-end alignments.
+            //
             CLocAlnSet dummy (loc_id_, loc_pos_, mpopi_);
             dummy.ref(DNASeq4(string(10, 'N')));
             aln_loc = CLocAlnSet::juxtapose( move(aln_loc),
@@ -645,6 +654,60 @@ LocusProcessor::align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 
     }
 
     return 1;
+}
+
+int
+LocusProcessor::find_locus_overlap(SuffixTree *stree, DNASeq4 se_consensus, int &overlap)
+{
+    vector<STAln> alns;
+    vector<pair<size_t, size_t> > step_alns;
+
+    string      query  = se_consensus.str();
+    const char *q      = query.c_str();
+    const char *q_stop = q + query.length();
+    size_t      q_pos  = 0;
+    size_t      id     = 1;
+
+    do {
+        step_alns.clear();
+
+        q_pos = q - query.c_str();
+
+        stree->align(q, step_alns);
+
+        if (step_alns.size() == 0) {
+            q++;
+        } else {
+            for (uint i = 0; i < step_alns.size(); i++)
+                alns.push_back(STAln(id, q_pos, step_alns[i].first, step_alns[i].second));
+            q += step_alns[0].second + 1;
+            id++;
+        }
+    } while (q < q_stop);
+
+    //
+    // No alignments to the suffix tree were found.
+    //
+    if (alns.size() == 0) {
+        cerr << "No overlab.\n";
+        overlap = 0;
+        return 0;
+    }
+
+    size_t max_len = 0;
+    size_t max_idx = 0;
+
+    for (uint i = 0; i < alns.size(); i++)
+        if (alns[i].aln_len > max_len) {
+            max_len = alns[i].aln_len;
+            max_idx = i;
+        }
+    
+    cerr << "SE Con: " << se_consensus << "\n"
+         << "PE Ctg: " << stree->seq() << "\n"
+         << "Maximal overlap: " << max_len << " from alignment " << max_idx << "; query pos: " << alns[max_idx].query_pos << ", subj pos: " << alns[max_idx].subj_pos << "\n";
+    
+    return 0;
 }
 
 string
