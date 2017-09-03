@@ -20,9 +20,10 @@
 bool   quiet       = false;
 int    num_threads = 1;
 string in_dir;
-int    batch_id        = -1;
-bool   ignore_pe_reads = false;
-double min_aln_cov     = 0.75;
+int    batch_id          = -1;
+bool   ignore_pe_reads   = false;
+double min_aln_cov       = 0.75;
+int    min_se_pe_overlap = 5;
 
 modelt model_type = marukilow;
 unique_ptr<const Model> model;
@@ -222,8 +223,9 @@ try {
         #pragma omp critical
         stats += loc_proc.stats();
     }
+
     if (omp_return != 0)
-         return omp_return;
+        return omp_return;
     progress.done();
 
     //TODO{
@@ -258,23 +260,28 @@ try {
     //
     {
         size_t tot = stats.n_nonempty_loci;
-        size_t ph = stats.n_loci_phasing_issues();
-        auto pct = [tot](size_t n) {return as_percentage((double) n / tot) ;};
+        size_t ph  = stats.n_loci_phasing_issues();
+        auto   pct = [tot](size_t n) { return as_percentage((double) n / tot); };
+
         cout << "\n"
              << "Processed " << tot << " loci:\n"
              << "  (All loci are always conserved)\n"
-             << "  " << ph << " loci had phasing issues (" << pct(ph) << ")\n"
-             ;
+             << "  " << ph << " loci had phasing issues (" << pct(ph) << ")\n";
+
         if (stats.n_loci_w_pe_reads > 0) {
             assert(!ignore_pe_reads);
-            size_t no_pe = stats.n_loci_no_pe_reads() + stats.n_loci_almost_no_pe_reads;
-            size_t pe_dag = stats.n_loci_pe_graph_not_dag;
+            size_t no_pe   = stats.n_loci_no_pe_reads() + stats.n_loci_almost_no_pe_reads;
+            size_t pe_dag  = stats.n_loci_pe_graph_not_dag;
             size_t pe_good = stats.n_loci_usable_pe_reads();
             cout << "  " << no_pe << " loci had no or almost no paired-end reads (" << pct(no_pe) << ")\n"
                  << "  " << pe_dag
                  << " loci had paired-end reads that couldn't be assembled into a contig (" << pct(pe_dag) << ")\n"
                  << "  " << pe_good << " loci had usable paired-end reads (" << pct(pe_good) << ")\n"
-                 ;
+                 << stats.n_aln_reads << " reads were aligned out of " << stats.n_tot_reads << " ("
+                 << as_percentage((double) stats.n_aln_reads / (double) stats.n_tot_reads) << "); "
+                 << (double) stats.n_aln_reads / (double) pe_good << " mean reads per locus.\n"
+                 << stats.n_se_pe_loc_overlaps << " loci overlapped between SE locus and PE contig "
+                 << "(mean length of overlap: " << (double) stats.mean_se_pe_loc_overlap / (double) stats.n_se_pe_loc_overlaps << "bp).\n";
         }
         cout << "\n";
 
@@ -321,13 +328,17 @@ void SnpAlleleCooccurrenceCounter::clear() {
 //
 
 ProcessingStats& ProcessingStats::operator+= (const ProcessingStats& other) {
-    n_nonempty_loci += other.n_nonempty_loci;
-    n_loci_w_pe_reads += other.n_loci_w_pe_reads;
-    n_loci_almost_no_pe_reads += other.n_loci_almost_no_pe_reads;
-    n_loci_pe_graph_not_dag += other.n_loci_pe_graph_not_dag;
-
+    this->n_nonempty_loci           += other.n_nonempty_loci;
+    this->n_loci_w_pe_reads         += other.n_loci_w_pe_reads;
+    this->n_loci_almost_no_pe_reads += other.n_loci_almost_no_pe_reads;
+    this->n_loci_pe_graph_not_dag   += other.n_loci_pe_graph_not_dag;
+    this->n_aln_reads               += other.n_aln_reads;
+    this->n_tot_reads               += other.n_tot_reads;
+    this->n_se_pe_loc_overlaps      += other.n_se_pe_loc_overlaps;
+    this->mean_se_pe_loc_overlap    += other.mean_se_pe_loc_overlap;
+    
     for (auto count : other.n_badly_phased_samples)
-        n_badly_phased_samples[count.first] += count.second;
+        this->n_badly_phased_samples[count.first] += count.second;
 
     return *this;
 }
@@ -344,11 +355,9 @@ LocusProcessor::process(CLocReadSet&& loc)
         return;
     ++stats_.n_nonempty_loci;
 
-    loc_id_ = loc.id();
-    loc_pos_ = loc.pos();
-    mpopi_ = &loc.mpopi();
-
-    // cerr << "Processing locus: " << loc_id_ << "\n";
+    this->loc_id_  =  loc.id();
+    this->loc_pos_ =  loc.pos();
+    this->mpopi_   = &loc.mpopi();
     
     //
     // Build the alignment matrix.
@@ -377,7 +386,7 @@ LocusProcessor::process(CLocReadSet&& loc)
                 break;
             if (loc.pe_reads().empty())
                 break;
-            ++stats_.n_loci_w_pe_reads;
+            ++this->stats_.n_loci_w_pe_reads;
 
             // Assemble a contig.
             vector<const DNASeq4*> seqs_to_assemble;
@@ -405,6 +414,8 @@ LocusProcessor::process(CLocReadSet&& loc)
             //
             stree->build_tree();
 
+            this->stats_.n_tot_reads += loc.pe_reads().size();
+
             for (SRead& r : loc.pe_reads()) {
                 string seq = r.seq.str();
 
@@ -414,6 +425,8 @@ LocusProcessor::process(CLocReadSet&& loc)
                 if (aln_res.pct_id < min_aln_cov)
                     continue;
 
+                this->stats_.n_aln_reads++;
+                
                 Cigar cigar;
                 parse_cigar(aln_res.cigar.c_str(), cigar);
                 simplify_cigar_to_MDI(cigar);
@@ -428,9 +441,12 @@ LocusProcessor::process(CLocReadSet&& loc)
             // Determine if there is overlap -- and how much -- between the SE and PE contigs.
             //   We will query the PE contig suffix tree using the SE consensus sequence.
             //
-            int overlap = 0;
-            this->find_locus_overlap(stree, aln_loc.ref(), overlap);
-
+            int overlap;
+            if ( (overlap = this->find_locus_overlap(stree, aln_loc.ref())) > 0) {
+                this->stats_.n_se_pe_loc_overlaps++;
+                this->stats_.mean_se_pe_loc_overlap += overlap;
+            }
+            
             delete aligner;
             delete stree;
 
@@ -657,7 +673,7 @@ LocusProcessor::align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 
 }
 
 int
-LocusProcessor::find_locus_overlap(SuffixTree *stree, DNASeq4 se_consensus, int &overlap)
+LocusProcessor::find_locus_overlap(SuffixTree *stree, DNASeq4 se_consensus)
 {
     vector<STAln> alns;
     vector<pair<size_t, size_t> > step_alns;
@@ -667,6 +683,7 @@ LocusProcessor::find_locus_overlap(SuffixTree *stree, DNASeq4 se_consensus, int 
     const char *q_stop = q + query.length();
     size_t      q_pos  = 0;
     size_t      id     = 1;
+    const char *p;
 
     do {
         step_alns.clear();
@@ -686,27 +703,45 @@ LocusProcessor::find_locus_overlap(SuffixTree *stree, DNASeq4 se_consensus, int 
     } while (q < q_stop);
 
     //
-    // No alignments to the suffix tree were found.
+    // Alignments are naturally ordered from start to end of query, so traverse the list in
+    // reverse order to look for matches at the end of the query sequence.
     //
-    if (alns.size() == 0) {
-        cerr << "No overlab.\n";
-        overlap = 0;
-        return 0;
+    size_t query_stop;
+    for (int i = (int) alns.size() - 1; i >= 0; i--) {
+        //
+        // Matching fragment must be within min_aln to the end of the query,
+        // and within min_aln from the start of the PE contig.
+        //
+        query_stop = alns[i].query_pos + alns[i].aln_len - 1;
+        if (query_stop >= (query.length() - 1 - stree->min_aln()) &&
+            alns[i].subj_pos <= stree->min_aln()) {
+            int overlap = query.length() - alns[i].query_pos + alns[i].subj_pos;
+
+            // cerr << "SE: ..." << query.substr(75, 75) << "\n"
+            //      << "PE: " << stree->seq().str().substr(0, 75) << "...\n";
+            // cerr << "  i: " << i << "; Query pos: " << alns[i].query_pos << " - " <<  alns[i].query_pos + alns[i].aln_len - 1 << ", "
+            //      << "subj pos: " << alns[i].subj_pos << "; aln len: " << alns[i].aln_len << "\n"
+            //      << "overlap: " << overlap << "\n";
+            return overlap;
+        }
     }
 
-    size_t max_len = 0;
-    size_t max_idx = 0;
+    //
+    // If no alignments have been found, search the tails of the query and subject for any overlap
+    // that is too small to be picked up by the SuffixTree.
+    //
+    int    min_olap = (int) stree->min_aln() > min_se_pe_overlap ? stree->min_aln() : min_se_pe_overlap;
+    string pe_ctg   = stree->seq().str().substr(0, min_olap);
+    p = pe_ctg.c_str();
+    q = query.c_str() + (query.length() - min_olap);
 
-    for (uint i = 0; i < alns.size(); i++)
-        if (alns[i].aln_len > max_len) {
-            max_len = alns[i].aln_len;
-            max_idx = i;
-        }
-    
-    cerr << "SE Con: " << se_consensus << "\n"
-         << "PE Ctg: " << stree->seq() << "\n"
-         << "Maximal overlap: " << max_len << " from alignment " << max_idx << "; query pos: " << alns[max_idx].query_pos << ", subj pos: " << alns[max_idx].subj_pos << "\n";
-    
+    while (min_olap >= min_se_pe_overlap && *q != '\0') {
+        if (strncmp(q, p, min_olap) == 0)
+            return min_olap;
+        min_olap--;
+        q++;
+    }
+        
     return 0;
 }
 
