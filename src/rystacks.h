@@ -47,17 +47,22 @@ public:
 // ----------
 // Statistics produced by `LocusProcessor::process()`.
 //
-struct ProcessingStats {
+class ProcessingStats {
+ public:
     size_t n_nonempty_loci;
     size_t n_loci_w_pe_reads;
     size_t n_loci_almost_no_pe_reads;
     size_t n_loci_pe_graph_not_dag;
-
+    size_t n_aln_reads;
+    size_t n_tot_reads;
+    size_t n_se_pe_loc_overlaps;
+    size_t mean_se_pe_loc_overlap;
+    
     map<pair<size_t,size_t>,size_t> n_badly_phased_samples; // { {n_bad_samples, n_tot_samples} : count }
 
-    size_t n_loci_phasing_issues()  const {size_t n=0; for(auto& e: n_badly_phased_samples) n+=e.second; return n;}
-    size_t n_loci_no_pe_reads()     const {return n_nonempty_loci - n_loci_w_pe_reads;}
-    size_t n_loci_usable_pe_reads() const {return n_loci_w_pe_reads - n_loci_almost_no_pe_reads - n_loci_pe_graph_not_dag;}
+    size_t n_loci_phasing_issues()  const { size_t n = 0; for (auto& e: n_badly_phased_samples) n+=e.second; return n; }
+    size_t n_loci_no_pe_reads()     const { return n_nonempty_loci - n_loci_w_pe_reads; }
+    size_t n_loci_usable_pe_reads() const { return n_loci_w_pe_reads - n_loci_almost_no_pe_reads - n_loci_pe_graph_not_dag; }
 
     ProcessingStats& operator+= (const ProcessingStats& other);
 };
@@ -90,7 +95,7 @@ private:
     string assemble_contig(const vector<const DNASeq4*>& seqs);
 
     int align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 query, AlignRes &aln_res);
-    int find_locus_overlap(SuffixTree *st, DNASeq4 se_consensus, int &overlap);
+    int find_locus_overlap(SuffixTree *st, DNASeq4 se_consensus);
 
     // For each sample, phase heterozygous SNPs.
     vector<map<size_t,PhasedHet>> phase_hets (

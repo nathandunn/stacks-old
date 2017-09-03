@@ -93,7 +93,7 @@ public:
 class SuffixTree {
     DNASeq4 seq_;
     STNode *root;
-    const size_t min_align = 7;
+    const size_t min_align_ = 7;
 
 public:
     SuffixTree(DNASeq4 s): seq_(s)  { this->root = new STNode(1); }
@@ -107,6 +107,7 @@ public:
     size_t  write_suffixes(ostream &);
     DNASeq4 seq()     { return this->seq_; };
     size_t  seq_len() { return this->seq_.length(); };
+    size_t  min_aln() { return this->min_align_; }
 
 private:
     size_t find_leaf_dist(STNode *);

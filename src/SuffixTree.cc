@@ -112,7 +112,7 @@ SuffixTree::align(DNASeq4 query, vector<pair<size_t, size_t> > &alns)
         }
     } while (qcnt <= q_stop);
 
-    if (qcnt < this->min_align)
+    if (qcnt < this->min_align_)
         return 0;
 
     if (active_node->edge(active_edge)->succ() == NULL) {
@@ -203,7 +203,7 @@ SuffixTree::align(const char *query, vector<pair<size_t, size_t> > &alns)
         }
     } while (qcnt <= q_stop);
 
-    if (qcnt < this->min_align)
+    if (qcnt < this->min_align_)
         return 0;
 
     if (active_edge == Nt4::$) {
