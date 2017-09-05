@@ -685,6 +685,9 @@ LocusProcessor::find_locus_overlap(SuffixTree *stree, DNASeq4 se_consensus)
     size_t      id     = 1;
     const char *p;
 
+    cerr << "SE: " << query << "\n"
+         << "PE: " << stree->seq().str().substr(0, 150) << "...\n";
+    
     do {
         step_alns.clear();
 
