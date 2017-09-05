@@ -52,96 +52,7 @@ STNode::add_suffix_link(STNode *node)
 size_t
 SuffixTree::align(DNASeq4 query, vector<pair<size_t, size_t> > &alns)
 {
-    size_t qcnt   = 0;
-    size_t q_len  = query.length();
-    size_t q_stop = q_len - 1;
-    int seq_stop = this->seq_.length() - 1;
-    int next_pos = 0;
-
-    STNode *active_node = this->root;
-    Nt4     active_edge = active_node->edge(query[0]) != NULL ? query[0] : Nt4::$;
-    int     node_pos    = active_node->edge(active_edge)->start();
-    int     node_stop   = active_node->edge(active_edge)->end() == -1 ? seq_stop : active_node->edge(active_edge)->end();
-    
-    if (active_edge == Nt4::$)
-        return 0;
-    else {
-        qcnt++;
-        // cerr << "  Exiting the root on active edge " << char(active_edge) << "; qcnt: " << qcnt << "\n";
-    }
-
-    //
-    // Walk the tree until we reach a non-matching nucleotide or hit a leaf node.
-    //
-    do {
-        next_pos = node_pos + 1;
-
-        if (next_pos > node_stop && active_node->edge(active_edge)->succ() == NULL) {
-            //
-            // We have reached a leaf node.
-            //
-            break;
-
-        } else if (next_pos > node_stop && active_node->edge(active_edge)->succ() != NULL) {
-            //
-            // Traverse to the next node.
-            //
-            active_node = active_node->edge(active_edge)->succ();
-            active_edge = active_node->edge(query[qcnt]) == NULL ? Nt4::$ : query[qcnt];
-            //
-            // The next required edge is not available in the successor node.
-            //
-            if (active_edge == Nt4::$)
-                break;
-
-            node_pos  = active_node->edge(active_edge)->start();
-            node_stop = active_node->edge(active_edge)->end() == -1 ? seq_stop : active_node->edge(active_edge)->end();
-            qcnt++;
-            // cerr << "  Traversing to node " << active_node->id() << "; active edge: " << char(active_edge) << "; qcnt: " << qcnt << "\n";
-
-        } else if (qcnt <= q_stop && this->seq_[next_pos] != query[qcnt]) {
-            //
-            // Next nucleotide does not match.
-            //
-            break;
-
-        } else {
-            node_pos++;
-            qcnt++;
-            // cerr << "    Matching character '" << char(this->seq_[next_pos]) << "' on active edge " << char(active_edge) << "; qcnt: " << qcnt << "\n";
-        }
-    } while (qcnt <= q_stop);
-
-    if (qcnt < this->min_align_)
-        return 0;
-
-    if (active_node->edge(active_edge)->succ() == NULL) {
-        //
-        // Are we at a leaf node?
-        //
-        size_t aln_pos = node_pos - qcnt + 1;
-        alns.push_back(make_pair(aln_pos, qcnt));
-
-    } else if (node_pos < node_stop) {
-        //
-        // Otherwise, traverse this path to the first leaf node to determine the alignment position.
-        //
-        size_t aln_pos = find_leaf_dist(active_node->edge(active_edge)->succ()) - qcnt + 1;
-        alns.push_back(make_pair(aln_pos, qcnt));
-
-    } else {
-        //
-        // Traverse the remaining paths out of active_node to determine all the alignments for this fragment.
-        //
-        vector<size_t> dists;
-
-        find_all_leaf_dists(active_node->edge(active_edge)->succ(), dists);
-
-        for (uint i = 0; i < dists.size(); i++)
-            alns.push_back(make_pair(dists[i] - qcnt + 1, qcnt));
-    }
-    
-    return 0;
+    return this->align(query.str().c_str(), alns);
 }
 
 size_t
@@ -155,13 +66,14 @@ SuffixTree::align(const char *query, vector<pair<size_t, size_t> > &alns)
 
     STNode *active_node = this->root;
     Nt4     active_edge = active_node->edge(Nt4(query[0])) != NULL ? Nt4(query[0]) : Nt4::$;
-    int     node_pos    = active_node->edge(active_edge)->start();
-    int     node_stop   = active_node->edge(active_edge)->end() == -1 ? seq_stop : active_node->edge(active_edge)->end();
     
     if (active_edge == Nt4::$)
         return 0;
     else
         qcnt++;
+
+    int node_pos  = active_node->edge(active_edge)->start();
+    int node_stop = active_node->edge(active_edge)->end() == -1 ? seq_stop : active_node->edge(active_edge)->end();
 
     //
     // Walk the tree until we reach a non-matching nucleotide or hit a leaf node.
