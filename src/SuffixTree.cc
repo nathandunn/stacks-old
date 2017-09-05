@@ -310,7 +310,8 @@ SuffixTree::build_tree()
     int     forward_len = 0;
     size_t  id          = 2;
 
-    STNode *split_node, *prev_node;
+    STNode *split_node = NULL;
+    STNode *prev_node  = NULL;
     STEdge *old_edge;
 
     for (uint i = 0; i < slen; i++) {
@@ -419,6 +420,7 @@ SuffixTree::build_tree()
 		    old_edge->end(next_pos - 1);
 
 		    if (add_suffix_link == true) {
+                        assert(prev_node != NULL);
 			prev_node->add_suffix_link(split_node);
 			// cerr << "      Adding suffix link between node " << prev_node->id() << " and " << split_node->id() << "\n";
 		    }
