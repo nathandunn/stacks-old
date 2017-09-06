@@ -446,6 +446,7 @@ LocusProcessor::process(CLocReadSet&& loc)
                 this->stats_.n_se_pe_loc_overlaps++;
                 this->stats_.mean_se_pe_loc_overlap += overlap;
             }
+            assert(overlap >= 0);
             
             delete aligner;
             delete stree;
@@ -458,10 +459,7 @@ LocusProcessor::process(CLocReadSet&& loc)
             //
             // Merge the forward & paired-end alignments.
             //
-            CLocAlnSet dummy (loc_id_, loc_pos_, mpopi_);
-            dummy.ref(DNASeq4(string(10, 'N')));
-            aln_loc = CLocAlnSet::juxtapose( move(aln_loc),
-                                             CLocAlnSet::juxtapose(move(dummy), move(pe_aln_loc)) );
+            aln_loc = CLocAlnSet::juxtapose(move(aln_loc), move(pe_aln_loc), +10);
             aln_loc.merge_paired_reads();
 
         } while (false);

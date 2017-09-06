@@ -397,8 +397,9 @@ ostream& operator<< (ostream& os, const CLocAlnSet& loc) {
 }
 
 CLocAlnSet
-CLocAlnSet::juxtapose(CLocAlnSet&& left, CLocAlnSet&& right)
+CLocAlnSet::juxtapose(CLocAlnSet&& left, CLocAlnSet&& right, long offset)
 {
+    assert(offset == +10); // xxx Overlapping contigs aren't actually implemented.
 
     assert(left.id() == right.id());
     assert(left.pos() == right.pos());
@@ -408,17 +409,21 @@ CLocAlnSet::juxtapose(CLocAlnSet&& left, CLocAlnSet&& right)
     size_t left_ref_len = merged.ref().length();
 
     // Extend the reference sequence.
+    for (long i=0; i<offset; ++i)
+        merged.ref_.push_back(Nt4::n);
     merged.ref_.append(right.ref().begin(), right.ref().end());
 
     // Extend the left reads.
     for (SAlnRead& r : merged.reads_) {
-        cigar_extend_right(r.cigar, right.ref().length());
+        assert(offset >= 0);
+        cigar_extend_right(r.cigar, offset + right.ref().length());
         assert(cigar_length_ref(r.cigar) == merged.ref().length());
     }
 
     // Extend & add the right reads.
     for (SAlnRead& r : right.reads_) {
-        cigar_extend_left(r.cigar, left_ref_len);
+        assert(offset >= 0);
+        cigar_extend_left(r.cigar, offset + left_ref_len);
         merged.add(move(r));
     }
     right.reads_ = vector<SAlnRead>();
