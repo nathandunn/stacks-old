@@ -76,8 +76,8 @@ Locus::populate_alleles()
     uint   k;
 
     if (this->len > strlen(this->con))
-	cerr << "Recorded locus->len: " << this->len << "; consensus length: " << strlen(this->con) << "\n";
-    
+        cerr << "Recorded locus->len: " << this->len << "; consensus length: " << strlen(this->con) << "\n";
+
     //
     // Is this effective?
     //
@@ -352,20 +352,20 @@ CLocAlnSet::merge_paired_reads()
 
         if (r2 == this->reads_.end())
             break;
-        
+
         const string& n1 = r1->name;
         const string& n2 = r2->name;
         const size_t   l = n1.length();
 
         if (n2.length() == l && l >= 2 &&
             n1[l-2] == '/' && n1[l-1] == '1' &&
-            n2[l-2] == '/' && n2[l-1] == '2' && 
+            n2[l-2] == '/' && n2[l-1] == '2' &&
             n1.substr(0, l-2) == n2.substr(0, l-2)) {
 
             // r1 and r2 are paired, merge them.
             assert(r1->sample == r2->sample);
             *r1 = SAlnRead(AlnRead::merger_of(move(*r1), move(*r2)), r1->sample);
-            
+
             assert(cigar_length_ref(r1->cigar) == ref_.length());
 
             // Mark r2 for removal and skip it.

@@ -57,7 +57,7 @@ class ProcessingStats {
     size_t n_tot_reads;
     size_t n_se_pe_loc_overlaps;
     size_t mean_se_pe_loc_overlap;
-    
+
     map<pair<size_t,size_t>,size_t> n_badly_phased_samples; // { {n_bad_samples, n_tot_samples} : count }
 
     size_t n_loci_phasing_issues()  const { size_t n = 0; for (auto& e: n_badly_phased_samples) n+=e.second; return n; }
@@ -84,7 +84,7 @@ public:
     string& vcf_out() {return o_vcf_;}
     string& fasta_out() {return o_fa_;}
     string& details_out() {return o_details_;}
-    
+
 private:
     ProcessingStats stats_;
     int loc_id_;

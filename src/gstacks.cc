@@ -215,7 +215,7 @@ try {
                     }
                 }
                 double clock_write_vcf = gettm();//TODO
-                
+
                 if (detailed_output) {
                     #pragma omp critical(write_details)
                     {
@@ -231,7 +231,7 @@ try {
                     }
                 }
                 double clock_write_details = gettm();
-                
+
                 //TODO{
                 clocks.clocking     += 6 * clocking;
                 clocks.reading     += clock_read       - clock_loop_start - clocking;
@@ -364,7 +364,7 @@ ProcessingStats& ProcessingStats::operator+= (const ProcessingStats& other) {
     this->n_tot_reads               += other.n_tot_reads;
     this->n_se_pe_loc_overlaps      += other.n_se_pe_loc_overlaps;
     this->mean_se_pe_loc_overlap    += other.mean_se_pe_loc_overlap;
-    
+
     for (auto count : other.n_badly_phased_samples)
         this->n_badly_phased_samples[count.first] += count.second;
 
@@ -436,13 +436,13 @@ LocusProcessor::process(CLocReadSet&& loc)
             CLocAlnSet pe_aln_loc (loc_id_, loc_pos_, mpopi_);
             pe_aln_loc.ref(DNASeq4(ctg));
             this->stats_.n_tot_reads += loc.pe_reads().size();
-            
+
             //
             // Build a SuffixTree of the reference sequence for this locus.
             //
             SuffixTree *stree   = new SuffixTree(pe_aln_loc.ref());
             stree->build_tree();
-            
+
             //
             // Determine if there is overlap -- and how much -- between the SE and PE contigs.
             //   We will query the PE contig suffix tree using the SE consensus sequence.
@@ -453,7 +453,7 @@ LocusProcessor::process(CLocReadSet&& loc)
                 this->stats_.mean_se_pe_loc_overlap += overlap;
             }
             assert(overlap >= 0);
-            
+
             if (detailed_output)
                 details_ss_ << "pe_ctg"
                             << "\tolap=" << overlap
@@ -467,12 +467,12 @@ LocusProcessor::process(CLocReadSet&& loc)
 
                 if (!this->align_reads_to_contig(stree, aligner, r.seq, aln_res))
                     continue;
-                
+
                 if (aln_res.pct_id < min_aln_cov)
                     continue;
 
                 this->stats_.n_aln_reads++;
-                
+
                 Cigar cigar;
                 parse_cigar(aln_res.cigar.c_str(), cigar);
                 simplify_cigar_to_MDI(cigar);
@@ -613,7 +613,7 @@ LocusProcessor::align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 
     uint         max_depth = 0;
     double       max_cov   = 0.0;
     double       span      = 0.0;
-    
+
     //
     // Bucket alignment fragments from the same query region.
     //
@@ -634,7 +634,7 @@ LocusProcessor::align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 
     for (uint i = 0; i < valid_subsets.size(); i++) {
 
         for (uint j = 0; j < valid_subsets[i].size(); j++) {
-            
+
             if (aln_subsets.size() == 0) {
                 b.push_back(vector<uint>());
                 b.back().push_back(valid_subsets[i][j]);
@@ -655,7 +655,7 @@ LocusProcessor::align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 
         //
         uint subset_size = aln_subsets.front().size();
         uint num_subsets = pow(2, subset_size);
-    
+
         for (uint j = 1; j < num_subsets; j++) {
 
             double cov = 0.0;
@@ -700,7 +700,7 @@ LocusProcessor::align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 
                     max_cov         = cov;
                 }
             }
-        
+
             aln_subset.clear();
         }
     }
@@ -710,7 +710,7 @@ LocusProcessor::align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 
     //
     if (best_aln_subset.size() == 0)
         return 0;
-    
+
     vector<STAln> final_alns;
     for (uint i = 0; i < best_aln_subset.size(); i++)
         final_alns.push_back(alns[best_aln_subset[i]]);
@@ -793,7 +793,7 @@ LocusProcessor::find_locus_overlap(SuffixTree *stree, DNASeq4 se_consensus)
         min_olap--;
         q++;
     }
-        
+
     return 0;
 }
 
@@ -1667,7 +1667,7 @@ try {
         case 1013://details
             detailed_output = true;
             break;
-        
+
         //
         // Debug options
         //

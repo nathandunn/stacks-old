@@ -394,7 +394,7 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
         // Adjust the postition of any SNPs that were shifted down sequence due to a gap.
         //
         if (gapped_aln) {
-	    cseq_len  = parse_cigar(cigar_str.c_str(), cigar);
+            cseq_len  = parse_cigar(cigar_str.c_str(), cigar);
             qseq      = apply_cigar_to_seq(qtag->con, cigar);
             adjust_snps_for_gaps(cigar, qtag);
 
@@ -403,12 +403,12 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
             cseq      = apply_cigar_to_seq(ctag->con, cigar);
             adjust_snps_for_gaps(cigar, ctag);
 
-	    if (qseq.length() != cseq.length())
-		cerr << "Sample ID: " << qtag->sample_id << "; Query ID: " << qtag->id << "; catalog ID: " << ctag->id << ";\n"
-		     << "qloc: " << qtag->con << "\n"
-		     << "qseq: " << qseq << "\n"
-		     << "cloc: " << ctag->con << " [" << cigar_str << "]\n"
-		     << "cseq: " << cseq << "\n";
+            if (qseq.length() != cseq.length())
+                cerr << "Sample ID: " << qtag->sample_id << "; Query ID: " << qtag->id << "; catalog ID: " << ctag->id << ";\n"
+                     << "qloc: " << qtag->con << "\n"
+                     << "qseq: " << qseq << "\n"
+                     << "cloc: " << ctag->con << " [" << cigar_str << "]\n"
+                     << "cseq: " << cseq << "\n";
 
             //
             // If the alignment modified the catalog locus, record it so we can re-align

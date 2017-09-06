@@ -231,7 +231,7 @@ GappedAln::init(int size_1, int size_2, bool initialize)
         this->_max_score_n = 0;
 
     }
-    
+
     return 0;
 }
 
@@ -309,7 +309,7 @@ GappedAln::align_constrained(const string& query, const string& subj, const vect
         this->path[q_start][s_start].diag = false;
         this->path[q_start][s_start].up   = false;
         this->path[q_start][s_start].left = false;
-            
+
         // cerr << "Filling start region; q_start: " << q_start << ", q_end: " << q_end << "; s_start: " << s_start << ", s_end: " << s_end << "\n";
         this->bound_region(q_start, q_end, s_start, s_end);
         this->score(true, query, q_start, q_end, subj, s_start, s_end);
@@ -320,7 +320,7 @@ GappedAln::align_constrained(const string& query, const string& subj, const vect
     // the query sequence.
     //
     for (uint n = 0; n < alns.size(); n++) {
- 
+
         for (uint i = alns[n].query_pos + 1; i <= alns[n].query_pos + alns[n].aln_len; i++) {
             for (uint j = alns[n].subj_pos + 1; j <= alns[n].subj_pos + alns[n].aln_len; j++) {
                 q = i - alns[n].query_pos;
@@ -336,7 +336,7 @@ GappedAln::align_constrained(const string& query, const string& subj, const vect
                         this->_max_score_m = i;
                         this->_max_score_n = j;
                     }
-                }                
+                }
             }
         }
 
@@ -419,7 +419,7 @@ GappedAln::bound_region(const int q_start, const int q_end,
 
     double score_down, score_right;
 
-    // First, bound the top row.    
+    // First, bound the top row.
     if (i_bnd_low >= 0)
         for (int j = s_start; j <= j_bnd; j++) {
             score_right  = this->matrix[i_bnd_low][j - 1];
@@ -525,7 +525,7 @@ GappedAln::score(bool local,
                 this->path[i][j].left = false;
                 continue;
             }
-            
+
             if (scores[0] > scores[1]) {
                 //
                 // One path is best.
@@ -570,7 +570,7 @@ GappedAln::score(bool local,
                     break;
                 case dynp_down:
                     this->path[i][j].up = true;
-                    
+
                     switch (direction[1]) {
                     case dynp_right:
                         this->path[i][j].diag  = false;
@@ -656,7 +656,7 @@ GappedAln::trace_global_alignment(const string& tag_1, const string& tag_2)
     //   ... |
     // [m-1] |
     // tag_1
-    // 
+    //
     int    i, j, cnt, len, gaps, contiguity;
     double ident;
     string cigar;
@@ -783,7 +783,7 @@ GappedAln::trace_local_alignment(const string& query, const string& subj)
     bool more_paths  = true;
     bool seq_break   = false;
     int  query_start;
-    
+
     do {
         query_start = 0;
         more_paths  = false;
@@ -828,7 +828,7 @@ GappedAln::trace_local_alignment(const string& query, const string& subj)
 
         if (i > 0 && j == 0)
             query_start = i;
-        
+
         reverse(aln_1.begin(), aln_1.end());
         reverse(aln_2.begin(), aln_2.end());
 
@@ -845,7 +845,7 @@ GappedAln::trace_local_alignment(const string& query, const string& subj)
             sprintf(buf, "%dS", (int) query_start);
             cigar += buf;
         }
-        
+
         len        = aln_1.length();
         gaps       = 0;
         contiguity = 0;
@@ -894,7 +894,7 @@ GappedAln::trace_local_alignment(const string& query, const string& subj)
             sprintf(buf, "%dS", (int) query.length() - this->_max_score_m);
             cigar += buf;
         }
-   
+
         alns.push_back(AlignRes(move(cigar), gaps, contiguity, (ident / (double) len), (uint) j));
 
     } while (more_paths);
