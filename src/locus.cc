@@ -397,28 +397,47 @@ ostream& operator<< (ostream& os, const CLocAlnSet& loc) {
 }
 
 CLocAlnSet
-CLocAlnSet::juxtapose(CLocAlnSet&& left, CLocAlnSet&& right)
+CLocAlnSet::juxtapose(CLocAlnSet&& left, CLocAlnSet&& right, long offset)
 {
-
     assert(left.id() == right.id());
     assert(left.pos() == right.pos());
     assert(&left.mpopi() == &right.mpopi());
+    if (offset < 0
+            && (size_t(-offset) > left.ref().length() || size_t(-offset) > right.ref().length()))
+        DOES_NOT_HAPPEN;
 
+    size_t left_ref_len = left.ref().length();
     CLocAlnSet merged (move(left));
-    size_t left_ref_len = merged.ref().length();
 
     // Extend the reference sequence.
-    merged.ref_.append(right.ref().begin(), right.ref().end());
+    if (offset >= 0) {
+        for (long i=0; i<offset; ++i)
+            merged.ref_.push_back(Nt4::n);
+        merged.ref_.append(right.ref().begin(), right.ref().end());
+    } else {
+        auto right_itr = right.ref().begin();
+        for (long i=0; i<-offset; ++i) {
+            assert(right_itr != right.ref().end());
+            ++right_itr;
+        }
+        merged.ref_.append(right_itr, right.ref().end());
+    }
 
     // Extend the left reads.
     for (SAlnRead& r : merged.reads_) {
-        cigar_extend_right(r.cigar, right.ref().length());
+        cigar_extend_right(r.cigar, right.ref().length() + offset);
         assert(cigar_length_ref(r.cigar) == merged.ref().length());
     }
 
-    // Extend & add the right reads.
+    // Extend/Trim & add the right reads.
     for (SAlnRead& r : right.reads_) {
-        cigar_extend_left(r.cigar, left_ref_len);
+        if (offset >= 0) {
+           cigar_extend_left(r.cigar, left_ref_len + offset);
+        } else {
+            cigar_trim_left(r.cigar, -offset);
+            assert(cigar_length_query(r.cigar) == r.seq.length());
+            cigar_extend_left(r.cigar, left_ref_len);
+        }
         merged.add(move(r));
     }
     right.reads_ = vector<SAlnRead>();

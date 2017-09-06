@@ -411,7 +411,7 @@ std::tuple<uint,uint,uint> cigar_lengths(const Cigar& cigar) {
     return std::make_tuple(padded_len, ref_len, seq_len);
 }
 
-void simplify_cigar_to_MDI(Cigar& cig) {
+void cigar_simplify_to_MDI(Cigar& cig) {
     if (cig.empty())
         return;
 
