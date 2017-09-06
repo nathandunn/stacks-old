@@ -310,8 +310,8 @@ int main (int argc, char* argv[]) {
         cloci_vcf_records.reset(new unordered_map<int,vector<VcfRecord>>());
 
         // Open the files.
-        string catalog_fa_path = in_path + "batch_" + to_string(batch_id) + ".rystacks.fa.gz";
-        string catalog_vcf_path = in_path + "batch_" + to_string(batch_id) + ".rystacks.vcf.gz";
+        string catalog_fa_path = in_path + "batch_" + to_string(batch_id) + ".gstacks.fa.gz";
+        string catalog_vcf_path = in_path + "batch_" + to_string(batch_id) + ".gstacks.vcf.gz";
         GzFasta fasta_f (catalog_fa_path);
         VcfCLocReader reader (catalog_vcf_path);
 

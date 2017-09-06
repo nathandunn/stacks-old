@@ -213,7 +213,7 @@ void VcfRecord::util::build_haps(
     haplotypes.second.resize(snp_records.size(), 'N');
 
     #ifdef DEBUG
-    // rystacks should have written a single non-null phase set.
+    // gstacks should have written a single non-null phase set.
     size_t phase_set = SIZE_MAX;
     #endif
 

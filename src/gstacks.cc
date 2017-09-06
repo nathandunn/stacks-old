@@ -1,7 +1,7 @@
 #include <getopt.h>
 #include <zlib.h>
 
-#include "rystacks.h"
+#include "gstacks.h"
 
 #include "constants.h"
 #include "utils.h"
@@ -42,7 +42,7 @@ bool   dbg_true_alns       = false;
 //
 // Additional globals.
 //
-const string prog_name = "rystacks";
+const string prog_name = "gstacks";
 unique_ptr<LogAlterator> logger;
 gzFile o_gzfasta_f = NULL;
 unique_ptr<VcfWriter> o_vcf_f;
@@ -104,8 +104,8 @@ try {
         check_open(o_aln_f, o_aln_path);
         o_aln_f <<
             "# This prints observed read haplotypes:\n"
-            "# show_loc() { loc=$1; cat ${RY_DIR:-.}/batch_1.rystacks.alns | sed -n \"/^END $loc\\b/ q; /^BEGIN $loc\\b/,$ p\" | tail -n+2; }\n"
-            "# snp_cols() { loc=$1; zcat ${RY_DIR:-.}/batch_1.rystacks.vcf.gz | awk \"\\$1==$loc; \\$1>$loc {exit}\" | awk '$5!=\".\"' | cut -f2 | paste -sd ','; }\n"
+            "# show_loc() { loc=$1; cat ${RY_DIR:-.}/batch_1.gstacks.alns | sed -n \"/^END $loc\\b/ q; /^BEGIN $loc\\b/,$ p\" | tail -n+2; }\n"
+            "# snp_cols() { loc=$1; zcat ${RY_DIR:-.}/batch_1.gstacks.vcf.gz | awk \"\\$1==$loc; \\$1>$loc {exit}\" | awk '$5!=\".\"' | cut -f2 | paste -sd ','; }\n"
             "# show_haps() { loc=$1; cols=$2; spl=$3; show_loc $loc | grep \"\\b$spl\\b\" | cut -f3 | cut -c \"$cols\" | sort; }\n"
             "# true_loci() { loc=$1; spl=$2; show_loc $loc | grep \"\\b$spl\\b\" | grep -v ref | cut -d: -f1 | sort -u; }\n"
             ;
@@ -115,9 +115,9 @@ try {
         string o_hapgraphs_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".hapgraphs.dot";
         o_hapgraphs_f.open(o_hapgraphs_path);
         check_open(o_hapgraphs_f, o_hapgraphs_path);
-        o_hapgraphs_f << "# dot -Tpdf -O batch_1.rystacks.hapgraphs.dot\n"
+        o_hapgraphs_f << "# dot -Tpdf -O batch_1.gstacks.hapgraphs.dot\n"
                       << "# loc=371\n"
-                      << "# { g=batch_1.rystacks.hapgraphs.dot; sed -n '0,/^subgraph/p' $g | head -n-1; sed -n \"/^subgraph cluster_loc$loc\\b/,/^}/p\" $g; echo \\}; } | dot -Tpdf -o haps.$loc.pdf\n"
+                      << "# { g=batch_1.gstacks.hapgraphs.dot; sed -n '0,/^subgraph/p' $g | head -n-1; sed -n \"/^subgraph cluster_loc$loc\\b/,/^}/p\" $g; echo \\}; } | dot -Tpdf -o haps.$loc.pdf\n"
                       << "graph {\n"
                       << "edge[color=\"grey60\",fontsize=12,labeljust=\"l\"];\n";
     }

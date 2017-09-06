@@ -62,7 +62,7 @@ my @parents;
 my @progeny;
 my @samples;
 
-my (@_pstacks, @_cstacks, @_sstacks, @_tsv2bam, @_samtools_merge, @_rystacks, @_genotypes, @_populations);
+my (@_pstacks, @_cstacks, @_sstacks, @_tsv2bam, @_samtools_merge, @_gstacks, @_genotypes, @_populations);
 
 my $cmd_str = $0 . " " . join(" ", @ARGV);
 
@@ -73,7 +73,7 @@ my $cnf = (-e $ENV{"HOME"} . "/.my.cnf") ? $ENV{"HOME"} . "/.my.cnf" : $mysql_co
 #
 # Check for the existence of the necessary pipeline programs
 #
-foreach my $prog ("pstacks", "cstacks", "sstacks", "tsv2bam", "rystacks", "genotypes", "populations", "index_radtags.pl") {
+foreach my $prog ("pstacks", "cstacks", "sstacks", "tsv2bam", "gstacks", "genotypes", "populations", "index_radtags.pl") {
     die "Unable to find '" . $exe_path . $prog . "'.\n" if (!-e $exe_path . $prog || !-x $exe_path . $prog);
 }
 die("Unable to find 'samtools'.\n") if (! which "samtools");
@@ -283,14 +283,13 @@ sub execute_stacks {
     	}
     	
     	#
-    	# Call genotypes / run rystacks.
-    	# TODO: Update after renaming rystacks.
+    	# Call genotypes / run gstacks.
     	#
         print STDERR "Calling variants, genotypes and haplotypes...\n";
-        print $log_fh "\nrystacks\n==========\n";
+        print $log_fh "\ngstacks\n==========\n";
 
-    	$cmd = $exe_path . "rystacks -P $out_path";
-    	foreach (@_rystacks) {
+    	$cmd = $exe_path . "gstacks -P $out_path";
+    	foreach (@_gstacks) {
     	    $cmd .= " " . $_;
     	}
         $cmd .= " 2>&1";
@@ -925,8 +924,8 @@ sub parse_command_line {
             } elsif ($prog eq "samtools_merge") {
                 push(@_samtools_merge, $opt); 
 
-            } elsif ($prog eq "rystacks") {
-                push(@_rystacks, $opt); 
+            } elsif ($prog eq "gstacks") {
+                push(@_gstacks, $opt); 
 
 	    } elsif ($prog eq "populations") {
 		push(@_populations, $opt); 
