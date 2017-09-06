@@ -24,6 +24,7 @@ int    batch_id          = -1;
 bool   ignore_pe_reads   = false;
 double min_aln_cov       = 0.75;
 int    min_se_pe_overlap = 5;
+bool   detailed_output   = false;
 
 modelt model_type = marukilow;
 unique_ptr<const Model> model;
@@ -46,6 +47,7 @@ const string prog_name = "gstacks";
 unique_ptr<LogAlterator> logger;
 gzFile o_gzfasta_f = NULL;
 unique_ptr<VcfWriter> o_vcf_f;
+unique_ptr<VersatileWriter> o_details_f;
 ofstream o_aln_f;
 ofstream o_hapgraphs_f;
 
@@ -98,6 +100,11 @@ try {
         vcf_header.add_sample(s.name);
     o_vcf_f.reset(new VcfWriter(o_vcf_path, move(vcf_header)));
 
+    if (detailed_output) {
+        string o_details_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".details.gz";
+        o_details_f.reset(new VersatileWriter(o_details_path));
+    }
+
     if (dbg_write_alns) {
         string o_aln_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".alns";
         o_aln_f.open(o_aln_path);
@@ -134,8 +141,10 @@ try {
     int omp_return = 0;
     std::deque<pair<bool,string>> fa_outputs;
     std::deque<pair<bool,string>> vcf_outputs;
+    std::deque<pair<bool,string>> det_outputs; // (details)
     size_t next_fa_to_write = 0; // locus index, in the input BAM file.
     size_t next_vcf_to_write = 0;
+    size_t next_det_to_write = 0;
     //TODO{
     double clock_parallel_start = gettm();
     vector<Clocks> clocks_all (num_threads);
@@ -205,13 +214,31 @@ try {
                         actually_writing_vcf += gettm() - start_writing - clocking; //TODO
                     }
                 }
+                double clock_write_vcf = gettm();//TODO
+                
+                if (detailed_output) {
+                    #pragma omp critical(write_details)
+                    {
+                        for (size_t i=next_det_to_write+det_outputs.size(); i<=loc_i; ++i)
+                            det_outputs.push_back( {false, string()} );
+                        det_outputs[loc_i - next_det_to_write] = {true, move(loc_proc.details_out())};
+
+                        while (!det_outputs.empty() && det_outputs.front().first) {
+                            *o_details_f << det_outputs.front().second;
+                            det_outputs.pop_front();
+                            ++next_det_to_write;
+                        }
+                    }
+                }
+                double clock_write_details = gettm();
+                
                 //TODO{
-                double clock_write_vcf = gettm();
                 clocks.clocking     += 6 * clocking;
                 clocks.reading     += clock_read       - clock_loop_start - clocking;
                 clocks.processing  += clock_process    - clock_read - clocking;
                 clocks.writing_fa  += clock_write_fa   - clock_process - clocking;
                 clocks.writing_vcf += clock_write_vcf  - clock_write_fa - clocking;
+                clocks.writing_details += clock_write_details  - clock_write_vcf - clocking;
                 //TODO}
 
             } catch (exception& e) {
@@ -246,6 +273,7 @@ try {
            << std::setw(8) << totals.processing << "  processing (" << as_percentage(totals.processing / total_time) << ")\n"
            << std::setw(8) << totals.writing_fa << "  writing_fa (" << as_percentage(totals.writing_fa / total_time) << ")\n"
            << std::setw(8) << totals.writing_vcf << "  writing_vcf (" << as_percentage(totals.writing_vcf / total_time) << ")\n"
+           << std::setw(8) << totals.writing_details << "  writing_details (" << as_percentage(totals.writing_details / total_time) << ")\n"
            << std::setw(8) << totals.clocking  << "  clocking (" << as_percentage(totals.clocking / total_time) << ")\n"
            << std::setw(8) << totals.sum() << "  total (" << as_percentage(totals.sum() / total_time) << ")\n"
            << "Time spent actually_writing_vcf: " << actually_writing_vcf << " (" << as_percentage(actually_writing_vcf / total_time) << ")\n"
@@ -358,7 +386,13 @@ LocusProcessor::process(CLocReadSet&& loc)
     this->loc_id_  =  loc.id();
     this->loc_pos_ =  loc.pos();
     this->mpopi_   = &loc.mpopi();
-    
+
+    if (detailed_output) {
+        details_ss_.clear();
+        details_ss_.str(string());
+        details_ss_ << "BEGIN " << loc_id_ << "\n";
+    }
+
     //
     // Build the alignment matrix.
     //
@@ -401,21 +435,33 @@ LocusProcessor::process(CLocReadSet&& loc)
             // Align each read to the contig.
             CLocAlnSet pe_aln_loc (loc_id_, loc_pos_, mpopi_);
             pe_aln_loc.ref(DNASeq4(ctg));
-
-            SuffixTree *stree   = new SuffixTree(pe_aln_loc.ref());
-            GappedAln  *aligner = new GappedAln(loc.pe_reads().front().seq.length(), pe_aln_loc.ref().length(), true);
-            AlignRes    aln_res;
-
-            // cerr << "True Locus: " << loc.pe_reads().front().name.substr(0,7) << "\n";
-            // cerr << "Contig: " << ctg << "\n";
-
+            this->stats_.n_tot_reads += loc.pe_reads().size();
+            
             //
             // Build a SuffixTree of the reference sequence for this locus.
             //
+            SuffixTree *stree   = new SuffixTree(pe_aln_loc.ref());
             stree->build_tree();
+            
+            //
+            // Determine if there is overlap -- and how much -- between the SE and PE contigs.
+            //   We will query the PE contig suffix tree using the SE consensus sequence.
+            //
+            int overlap;
+            if ( (overlap = this->find_locus_overlap(stree, aln_loc.ref())) > 0) {
+                this->stats_.n_se_pe_loc_overlaps++;
+                this->stats_.mean_se_pe_loc_overlap += overlap;
+            }
+            assert(overlap >= 0);
+            
+            if (detailed_output)
+                details_ss_ << "pe_ctg"
+                            << "\tolap=" << overlap
+                            << '\t' << ctg
+                            << '\n';
 
-            this->stats_.n_tot_reads += loc.pe_reads().size();
-
+            GappedAln  *aligner = new GappedAln(loc.pe_reads().front().seq.length(), pe_aln_loc.ref().length(), true);
+            AlignRes    aln_res;
             for (SRead& r : loc.pe_reads()) {
                 string seq = r.seq.str();
 
@@ -434,32 +480,35 @@ LocusProcessor::process(CLocReadSet&& loc)
                 assert(cigar_length_ref(cigar) <= pe_aln_loc.ref().length());
                 cigar_extend_right(cigar, pe_aln_loc.ref().length() - cigar_length_ref(cigar));
 
+                if (detailed_output)
+                    details_ss_ << "pe_read"
+                                << '\t' << r.name
+                                << '\t' << mpopi_->samples()[r.sample].name
+                                << '\t' << r.seq
+                                << '\n'
+                                << "pe_aln_local"
+                                << '\t' << r.name
+                                << '\t' << aln_res.subj_pos + 1
+                                << '\t' << aln_res.cigar
+                                << '\n';
+
                 pe_aln_loc.add(SAlnRead(move((Read&)r), move(cigar), r.sample));
             }
-
-            //
-            // Determine if there is overlap -- and how much -- between the SE and PE contigs.
-            //   We will query the PE contig suffix tree using the SE consensus sequence.
-            //
-            int overlap;
-            if ( (overlap = this->find_locus_overlap(stree, aln_loc.ref())) > 0) {
-                this->stats_.n_se_pe_loc_overlaps++;
-                this->stats_.mean_se_pe_loc_overlap += overlap;
-            }
-            assert(overlap >= 0);
-
             delete aligner;
             delete stree;
-
-            // if (loc_id_ == 250) 
-            //     for (auto r1 = pe_aln_loc.reads().begin(); r1 != pe_aln_loc.reads().end(); ++r1) {
-            //         cerr << "Read " << r1->name << "; cigar: " << r1->cigar << "; cigar length: " << cigar_length_query(r1->cigar) << "\n";
-            //     }
 
             //
             // Merge the forward & paired-end alignments.
             //
             aln_loc = CLocAlnSet::juxtapose(move(aln_loc), move(pe_aln_loc), (overlap > 0 ? -long(overlap) : +10));
+            if (detailed_output)
+                for (auto& r : aln_loc.reads())
+                    if (r.name.length() >= 2 && strncmp(r.name.c_str()+r.name.length()-2, "/2", 2) == 0)
+                        details_ss_ << "pe_aln_global"
+                                    << '\t' << r.name
+                                    << '\t' << r.cigar
+                                    << '\n';
+
             aln_loc.merge_paired_reads();
 
         } while (false);
@@ -504,6 +553,11 @@ LocusProcessor::process(CLocReadSet&& loc)
     }
 
     write_one_locus(aln_loc, depths, calls, phase_data);
+
+    if (detailed_output) {
+        details_ss_ << "END " << loc_id_ << "\n";
+        o_details_ = details_ss_.str();
+    }
 }
 
 int
@@ -1534,19 +1588,21 @@ try {
         {"in-dir",       required_argument, NULL,  'P'},
         {"batch-id",     required_argument, NULL,  'b'},
         {"threads",      required_argument, NULL,  't'},
-        {"ignore-pe-reads", no_argument,    NULL,  1012},
         {"model",        required_argument, NULL,  1006},
         {"gt-alpha",     required_argument, NULL,  1005},
         {"var-alpha",    required_argument, NULL,  1008},
         {"kmer-length",  required_argument, NULL,  1001},
         {"min-kmer-cov", required_argument, NULL,  1002},
-        {"dbg-max-loci", required_argument, NULL,  2000},
-        {"true-alns",    no_argument,       NULL,  1011},
         {"no-haps",      no_argument,       NULL,  1009},
-        {"gfa",          no_argument,       NULL,  1003},
-        {"alns",         no_argument,       NULL,  1004},
-        {"hap-graphs",   no_argument,       NULL,  1010},
-        {"depths",       no_argument,       NULL,  1007},
+        {"ignore-pe-reads", no_argument,    NULL,  1012},
+        {"details",      no_argument,       NULL,  1013},
+        //debug options
+        {"dbg-max-loci", required_argument, NULL,  2000},
+        {"dbg-gfa",      no_argument,       NULL,  2003},
+        {"dbg-alns",     no_argument,       NULL,  2004}, {"alns", no_argument, NULL, 3004},
+        {"dbg-depths",   no_argument,       NULL,  2007},
+        {"dbg-hap-graphs", no_argument,     NULL,  2010},
+        {"dbg-true-alns", no_argument,      NULL,  2011}, {"true-alns", no_argument, NULL, 3011},
         {0, 0, 0, 0}
     };
 
@@ -1605,25 +1661,34 @@ try {
         case 1002://min-cov
             min_km_count = atoi(optarg);
             break;
-        case 2000:
-            dbg_max_loci = is_integer(optarg);
-            break;
-        case 1011://true-alns
-            dbg_true_alns = true;
-            break;
-        case 1009://no-haps
+            case 1009://no-haps
             dbg_no_haplotypes = true;
             break;
-        case 1003://gfa
+        case 1013://details
+            detailed_output = true;
+            break;
+        
+        //
+        // Debug options
+        //
+        case 2000://dbg-max-loci
+            dbg_max_loci = is_integer(optarg);
+            break;
+        case 3011:
+        case 2011://dbg-true-alns
+            dbg_true_alns = true;
+            break;
+        case 2003://dbg-gfa
             dbg_write_gfa = true;
             break;
-        case 1004://aln
+        case 3004:
+        case 2004://dbg-alns
             dbg_write_alns = true;
             break;
-        case 1010://hap-graphs
+        case 2010://dbg-hap-graphs
             dbg_write_hapgraphs = true;
             break;
-        case 1007://depths
+        case 2007://dbg-depths
             dbg_write_nt_depths = true;
             break;
         case '?':

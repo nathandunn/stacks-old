@@ -83,14 +83,18 @@ public:
     const ProcessingStats& stats() const {return stats_;}
     string& vcf_out() {return o_vcf_;}
     string& fasta_out() {return o_fa_;}
-
+    string& details_out() {return o_details_;}
+    
 private:
     ProcessingStats stats_;
     int loc_id_;
     PhyLoc loc_pos_;
     const MetaPopInfo* mpopi_;
+
     string o_vcf_;
     string o_fa_;
+    stringstream details_ss_;
+    string o_details_;
 
     string assemble_contig(const vector<const DNASeq4*>& seqs);
 
@@ -175,7 +179,8 @@ struct Clocks {
     double processing;
     double writing_fa;
     double writing_vcf;
-    double sum() const {return clocking+reading+processing+writing_fa+writing_vcf;}
+    double writing_details;
+    double sum() const {return clocking + reading + processing + writing_fa + writing_vcf + writing_details;}
 
     Clocks& operator+= (const Clocks& other);
     Clocks& operator/= (double d);
