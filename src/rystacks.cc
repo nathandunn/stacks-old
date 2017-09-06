@@ -459,7 +459,7 @@ LocusProcessor::process(CLocReadSet&& loc)
             //
             // Merge the forward & paired-end alignments.
             //
-            aln_loc = CLocAlnSet::juxtapose(move(aln_loc), move(pe_aln_loc), +10);
+            aln_loc = CLocAlnSet::juxtapose(move(aln_loc), move(pe_aln_loc), (overlap > 0 ? -long(overlap) : +10));
             aln_loc.merge_paired_reads();
 
         } while (false);
