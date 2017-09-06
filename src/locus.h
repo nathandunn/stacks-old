@@ -241,7 +241,7 @@ public:
 
     friend ostream& operator<< (ostream& os, const CLocAlnSet& loc);
 
-    static CLocAlnSet juxtapose(CLocAlnSet&& left, CLocAlnSet&& right);
+    static CLocAlnSet juxtapose(CLocAlnSet&& left, CLocAlnSet&& right, long offset);
 
     //
     // Class to iterate over sites.
