@@ -52,6 +52,13 @@ public:
         this->pct_id     = pct_id;
         this->subj_pos   = pos;
     }
+    void clear() {
+        this->cigar.clear();
+        this->gap_cnt    = 0;
+        this->contiguity = 0;
+        this->pct_id     = 0.0;
+        this->subj_pos   = 0;
+    }
 };
 
 class AlignPath {
@@ -124,13 +131,15 @@ private:
 
 GappedAln::GappedAln()
 {
-    this->_m         = 0;
-    this->_n         = 0;
-    this->_m_size    = this->_m;
-    this->_n_size    = this->_n;
-    this->_max_score = 0;
-    this->matrix     = NULL;
-    this->path       = NULL;
+    this->_m           = 0;
+    this->_n           = 0;
+    this->_m_size      = this->_m;
+    this->_n_size      = this->_n;
+    this->_max_score   = 0;
+    this->_max_score_m = 0;
+    this->_max_score_n = 0;
+    this->matrix       = NULL;
+    this->path         = NULL;
 }
 
 GappedAln::GappedAln(int len_1, int len_2, bool initialize)
@@ -139,8 +148,10 @@ GappedAln::GappedAln(int len_1, int len_2, bool initialize)
     this->_n      = len_2 + 1;
     this->_m_size = this->_m;
     this->_n_size = this->_n;
-    this->_max_score = 0;
-    
+    this->_max_score   = 0;
+    this->_max_score_m = 0;
+    this->_max_score_n = 0;
+
     this->matrix = new double * [this->_m];
     for (uint i = 0; i < this->_m; i++)
         this->matrix[i] = new double [this->_n];
@@ -211,10 +222,16 @@ GappedAln::init(int size_1, int size_2, bool initialize)
     this->_m = size_1 + 1;
     this->_n = size_2 + 1;
 
-    if (initialize)
+    if (initialize) {
         for (uint i = 0; i < this->_m_size; i++)
             memset(this->matrix[i], 0, sizeof(double) * this->_n_size);
+        this->_aln.clear();
+        this->_max_score   = 0;
+        this->_max_score_m = 0;
+        this->_max_score_n = 0;
 
+    }
+    
     return 0;
 }
 
