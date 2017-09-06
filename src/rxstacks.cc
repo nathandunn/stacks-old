@@ -1252,12 +1252,12 @@ write_results(string file, map<int, Locus *> &m)
     string snp_file = out_path + file + ".snps.tsv";
     string all_file = out_path + file + ".alleles.tsv";
     string mod_file = out_path + file + ".models.tsv";
-    
+
     if (gzip) {
         tag_file += ".gz";
         snp_file += ".gz";
         all_file += ".gz";
-	mod_file += ".gz";
+        mod_file += ".gz";
     }
 
     //
@@ -1304,7 +1304,7 @@ write_results(string file, map<int, Locus *> &m)
             cerr << "Error: Unable to open tag file for writing.\n";
             exit(1);
         }
-	mods.open(mod_file.c_str());
+        mods.open(mod_file.c_str());
         if (mods.fail()) {
             cerr << "Error: Unable to open model file for writing.\n";
             exit(1);
@@ -1477,12 +1477,12 @@ write_results(string file, map<int, Locus *> &m)
 
     if (gzip) {
         gzclose(gz_tags);
-	gzclose(gz_mods);
+        gzclose(gz_mods);
         gzclose(gz_snps);
         gzclose(gz_alle);
     } else {
         tags.close();
-	mods.close();
+        mods.close();
         snps.close();
         alle.close();
     }

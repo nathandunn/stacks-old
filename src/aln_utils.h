@@ -118,7 +118,7 @@ void cigar_trim_left(Cigar& cig, size_t len) {
                 n_i += op->second;
             to_trim -= op->second;
         }
-        
+
         ++op;
         if (op == cig.end()) {
             assert(len == cigar_length_ref(cig));

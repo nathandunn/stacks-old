@@ -95,7 +95,7 @@ public:
 
     // Construct the log alterator.
     // cout and cerr will also write to the log file (if quiet
-	// is true, output to stdout and stderr is suppressed i.e. they only
+        // is true, output to stdout and stderr is suppressed i.e. they only
     // write to the log file).
     LogAlterator(const string& log_path, bool quiet, int argc, char ** argv);
 

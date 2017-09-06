@@ -23,8 +23,8 @@
 STNode::~STNode()
 {
     for (uint i = 0; i < NT4cnt; i++) {
-	if (this->edges_[i] != NULL)
-	    delete this->edges_[i];
+        if (this->edges_[i] != NULL)
+            delete this->edges_[i];
     }
     this->suffix_link_ = NULL;
 }
@@ -66,7 +66,7 @@ SuffixTree::align(const char *query, vector<pair<size_t, size_t> > &alns)
 
     STNode *active_node = this->root;
     Nt4     active_edge = active_node->edge(Nt4(query[0])) != NULL ? Nt4(query[0]) : Nt4::$;
-    
+
     if (active_edge == Nt4::$)
         return 0;
     else
@@ -154,7 +154,7 @@ SuffixTree::align(const char *query, vector<pair<size_t, size_t> > &alns)
         for (uint i = 0; i < dists.size(); i++)
             alns.push_back(make_pair(dists[i] - qcnt + 1, qcnt));
     }
-    
+
     return 0;
 }
 
@@ -232,7 +232,7 @@ SuffixTree::build_tree()
         assert(seq_index >= 0);
         assert(forward_len >= 0);
 
-	//
+        //
         // With each letter in the string, we have one insertion remaining to make.
         //
         remainder++;
@@ -240,130 +240,130 @@ SuffixTree::build_tree()
         //
         // Increment the end position for all prefixes in the suffix tree.
         //
-	end_pos += 1;
+        end_pos += 1;
 
-	// cerr << "beginning step i: " << i
+        // cerr << "beginning step i: " << i
         //      << ";\n  active node: " << active_node->id()
         //      << ", active edge: " << char(active_edge)
         //      << ", active len: " << active_len
         //      << "; remainder: " << remainder
-        //      << "; forward len: " << forward_len 
+        //      << "; forward len: " << forward_len
         //      << "; seq index: " << seq_index << "\n";
-	// cerr << "  Adding '" << char(this->seq_[i]) << "' to the tree.\n";
+        // cerr << "  Adding '" << char(this->seq_[i]) << "' to the tree.\n";
 
-	//
-	// Set the active_edge if we can. Grab the next position for insertion in the suffix tree.
-	//
-	if (active_edge == Nt4::$ && active_node->edge(this->seq_[i]) != NULL)
-	    active_edge = this->seq_[i];
-	next_pos = active_edge == Nt4::$ ? -1 : active_node->edge(active_edge)->start() + active_len;
-        
-	//
-	// Compare the next character in the suffix tree to the current character for insertion.
-	//
-	if (next_pos > -1 && this->seq_[i] == this->seq_[next_pos]) {
-	    //
-	    // If the character is already in the tree, do not insert it, but set the active point to it.
-	    //
-	    // cerr << "    Not inserting '" << char(this->seq_[i]) << "', it is in the tree.\n";
+        //
+        // Set the active_edge if we can. Grab the next position for insertion in the suffix tree.
+        //
+        if (active_edge == Nt4::$ && active_node->edge(this->seq_[i]) != NULL)
+            active_edge = this->seq_[i];
+        next_pos = active_edge == Nt4::$ ? -1 : active_node->edge(active_edge)->start() + active_len;
+
+        //
+        // Compare the next character in the suffix tree to the current character for insertion.
+        //
+        if (next_pos > -1 && this->seq_[i] == this->seq_[next_pos]) {
+            //
+            // If the character is already in the tree, do not insert it, but set the active point to it.
+            //
+            // cerr << "    Not inserting '" << char(this->seq_[i]) << "', it is in the tree.\n";
             active_len++;
 
-	    //
-	    // If, after incrementing the active_len, we have reached an internal node, move the active point to this node.
-	    //
+            //
+            // If, after incrementing the active_len, we have reached an internal node, move the active point to this node.
+            //
             forward_len += this->forward_nodes(&active_node, active_edge, active_len, seq_index + forward_len, remainder, end_pos);
 
-	} else {
-	    //
-	    // Otherwise, we have reached a suffix that is not yet present in the tree.
-	    //   - We currently have remainder insertions queued up to add to the tree, which we will iterate over now.
-	    //   - For each insertion: split the active edge exiting the active node at position active_len.
-	    //       - Adjust the active point.
-	    //   - If this is the second or later insertion of this round, connect the latter node to the former inserted node with a suffix link.
-	    //   - We stop inserting suffixes if we find a suffix is already in the tree.
+        } else {
+            //
+            // Otherwise, we have reached a suffix that is not yet present in the tree.
+            //   - We currently have remainder insertions queued up to add to the tree, which we will iterate over now.
+            //   - For each insertion: split the active edge exiting the active node at position active_len.
+            //       - Adjust the active point.
+            //   - If this is the second or later insertion of this round, connect the latter node to the former inserted node with a suffix link.
+            //   - We stop inserting suffixes if we find a suffix is already in the tree.
 
-	    bool stop_insertion  = false;
+            bool stop_insertion  = false;
             bool add_suffix_link = false;
 
-	    while (stop_insertion == false && remainder > 0) {
+            while (stop_insertion == false && remainder > 0) {
                 string suf = this->seq_.str().substr(seq_index, remainder);
-		// cerr << "  Inserting suffix '" << suf << "' into the tree.\n";
+                // cerr << "  Inserting suffix '" << suf << "' into the tree.\n";
 
                 if (active_edge == Nt4::$ && active_node->edge(this->seq_[i]) != NULL)
                     active_edge = this->seq_[i];
 
-		//
-		// Is an edge, representing the next character to insert, not already present in the tree?
-		//
-		if (active_edge == Nt4::$) {
+                //
+                // Is an edge, representing the next character to insert, not already present in the tree?
+                //
+                if (active_edge == Nt4::$) {
                     // cerr << "    Adding edge " << char(this->seq_[i]) << " to node " << active_node->id() << "\n";
-		    active_node->add_edge(this->seq_[i], i);
+                    active_node->add_edge(this->seq_[i], i);
                     if (active_node == this->root)
                         active_len++;
                     remainder--;
 
-		} else if (active_len == 0 && active_node->edge(active_edge) != NULL) {
-		    active_len++;
+                } else if (active_len == 0 && active_node->edge(active_edge) != NULL) {
+                    active_len++;
                     forward_len += this->forward_nodes(&active_node, active_edge, active_len, seq_index, remainder, end_pos);
-		    stop_insertion = true;
+                    stop_insertion = true;
                     // cerr << "  Stopping, active_edge " << char(active_edge) << " is already in the tree.\n";
-		    continue;
+                    continue;
 
-		} else {
-		    //
-		    // Split the node necessary to insert the next suffix.
-		    //
-		    // cerr << "      Splitting node " << active_node->id() << " at active edge: " << char(active_edge) << "; active len: " << active_len << " (created node " << id << ")\n";
+                } else {
+                    //
+                    // Split the node necessary to insert the next suffix.
+                    //
+                    // cerr << "      Splitting node " << active_node->id() << " at active edge: " << char(active_edge) << "; active len: " << active_len << " (created node " << id << ")\n";
                     next_pos   = active_node->edge(active_edge)->start() + active_len;
-		    split_node = new STNode(id);
-		    old_edge   = active_node->edge(active_edge);
-		    split_node->add_edge(this->seq_[next_pos], next_pos);
-		    split_node->add_edge(this->seq_[i], i);
+                    split_node = new STNode(id);
+                    old_edge   = active_node->edge(active_edge);
+                    split_node->add_edge(this->seq_[next_pos], next_pos);
+                    split_node->add_edge(this->seq_[i], i);
 
-		    //
-		    // Does the edge being split already point to an internal node? If so, reconnect the new node to the existing nodes.
-		    //
-		    if (old_edge->succ() != NULL) {
-			split_node->edge(this->seq_[next_pos])->succ(old_edge->succ());
-			split_node->edge(this->seq_[next_pos])->end(old_edge->end());
-		    }
+                    //
+                    // Does the edge being split already point to an internal node? If so, reconnect the new node to the existing nodes.
+                    //
+                    if (old_edge->succ() != NULL) {
+                        split_node->edge(this->seq_[next_pos])->succ(old_edge->succ());
+                        split_node->edge(this->seq_[next_pos])->end(old_edge->end());
+                    }
 
-		    old_edge->succ(split_node);
-		    old_edge->end(next_pos - 1);
+                    old_edge->succ(split_node);
+                    old_edge->end(next_pos - 1);
 
-		    if (add_suffix_link == true) {
+                    if (add_suffix_link == true) {
                         assert(prev_node != NULL);
-			prev_node->add_suffix_link(split_node);
-			// cerr << "      Adding suffix link between node " << prev_node->id() << " and " << split_node->id() << "\n";
-		    }
+                        prev_node->add_suffix_link(split_node);
+                        // cerr << "      Adding suffix link between node " << prev_node->id() << " and " << split_node->id() << "\n";
+                    }
 
                     add_suffix_link = true;
                     prev_node       = split_node;
                     remainder--;
                     id++;
-		}
+                }
 
                 //
-		// Update the active point. 
-		//
-		if (active_node != this->root) {
-		    //
-		    // If there is a suffix link, follow it.
-		    //
-		    if (active_node->suffix_link() != NULL) {
-			// cerr << "      Following suffix link to node " << active_node->suffix_link()->id() << "\n";
-			active_node = active_node->suffix_link();
+                // Update the active point.
+                //
+                if (active_node != this->root) {
+                    //
+                    // If there is a suffix link, follow it.
+                    //
+                    if (active_node->suffix_link() != NULL) {
+                        // cerr << "      Following suffix link to node " << active_node->suffix_link()->id() << "\n";
+                        active_node = active_node->suffix_link();
                         seq_index++;
                         forward_len--;
                         assert(forward_len >= 0);
-			// cerr << "      Resetting the active node to " << active_node->id() << ", active edge: " << char(active_edge) << ".\n";
+                        // cerr << "      Resetting the active node to " << active_node->id() << ", active edge: " << char(active_edge) << ".\n";
                         forward_len += this->forward_nodes(&active_node, active_edge, active_len, seq_index + forward_len, remainder, end_pos);
-			// cerr << "          Active node: " << active_node->id() << ", active len: " << active_len << ", actvie edge: " << char(active_edge) << ".\n";
+                        // cerr << "          Active node: " << active_node->id() << ", active len: " << active_len << ", actvie edge: " << char(active_edge) << ".\n";
 
-		    } else {
-			//
-			// Otherwise, reset the active node to the root.
-			//
+                    } else {
+                        //
+                        // Otherwise, reset the active node to the root.
+                        //
                         active_node = this->root;
                         seq_index++;
                         forward_len = 0;
@@ -373,17 +373,17 @@ SuffixTree::build_tree()
                             active_edge   = this->seq_[seq_index];
                             active_len    = end_pos - seq_index;
                         }
-			// cerr << "      Resetting the active node to the root, active edge: " << char(active_edge) << ".\n";
+                        // cerr << "      Resetting the active node to the root, active edge: " << char(active_edge) << ".\n";
                         forward_len += this->forward_nodes(&active_node, active_edge, active_len, seq_index, remainder, end_pos);
-			// cerr << "          Active node: " << active_node->id() << ", active len: " << active_len << ", actvie edge: " << char(active_edge) << ".\n";
-		    }
+                        // cerr << "          Active node: " << active_node->id() << ", active len: " << active_len << ", actvie edge: " << char(active_edge) << ".\n";
+                    }
 
-		} else {
-		    //
-		    // Rule 1: after insertion at root, active_node remains root, active len is reduced by one, active edge is advanced to the next suffix.
-		    //
-		    active_len--;
-		    seq_index++;
+                } else {
+                    //
+                    // Rule 1: after insertion at root, active_node remains root, active len is reduced by one, active edge is advanced to the next suffix.
+                    //
+                    active_len--;
+                    seq_index++;
 
                     if (active_len > 0) {
                         // cerr << "    Changing the active edge from: " << char(active_edge) << " to " << char(this->seq_[seq_index]) << ", active len: " << active_len << "\n";
@@ -395,9 +395,9 @@ SuffixTree::build_tree()
                     }
                 }
 
-		// cerr << "      Remainder: " << remainder << "\n";
-	    }
-	}
+                // cerr << "      Remainder: " << remainder << "\n";
+            }
+        }
 
         // cerr << "  ending step i: " << i
         //      << "; active node: " << active_node->id()
@@ -424,22 +424,22 @@ SuffixTree::forward_nodes(STNode **active_node, Nt4 &active_edge, int &active_le
 
     local_len = (*active_node)->edge(active_edge)->end() == -1 ? end_pos : (*active_node)->edge(active_edge)->end();
     local_len = local_len - (*active_node)->edge(active_edge)->start() + 1;
-    
+
     assert(local_len >= 0);
-    
+
     while (active_len >= local_len && (*active_node)->edge(active_edge)->succ() != NULL) {
-	active_len    -= local_len;
-	seq_index     += local_len;
+        active_len    -= local_len;
+        seq_index     += local_len;
         forwarded_len += local_len;
-	*active_node   = (*active_node)->edge(active_edge)->succ();
-	// cerr << "      Forwarding active node to node " << (*active_node)->id() << ", active len: " << active_len << ", active edge: " << char(active_edge) << ", seq_index: " << seq_index << "\n";
-	if (active_len == 0) {
-	    active_edge = Nt4::$;
-	} else {
-	    active_edge = this->seq_[seq_index];
-	    local_len   = (*active_node)->edge(active_edge)->end() == -1 ? end_pos : (*active_node)->edge(active_edge)->end();
-	    local_len   = local_len - (*active_node)->edge(active_edge)->start() + 1;
-	}
+        *active_node   = (*active_node)->edge(active_edge)->succ();
+        // cerr << "      Forwarding active node to node " << (*active_node)->id() << ", active len: " << active_len << ", active edge: " << char(active_edge) << ", seq_index: " << seq_index << "\n";
+        if (active_len == 0) {
+            active_edge = Nt4::$;
+        } else {
+            active_edge = this->seq_[seq_index];
+            local_len   = (*active_node)->edge(active_edge)->end() == -1 ? end_pos : (*active_node)->edge(active_edge)->end();
+            local_len   = local_len - (*active_node)->edge(active_edge)->start() + 1;
+        }
         // cerr << "        Reset active edge: " << char(active_edge) << "\n";
     }
 
@@ -452,7 +452,7 @@ SuffixTree::write_dot(ofstream &fh)
     string s = this->seq_.str();
 
     fh << "digraph G {\n";
-    
+
     queue<STNode *> q;
     STNode *node;
     string  label;
@@ -465,17 +465,17 @@ SuffixTree::write_dot(ofstream &fh)
         node = q.front();
         q.pop();
 
-	fh << "  " << node->id() << "\n";
+        fh << "  " << node->id() << "\n";
 
         for (uint i = 0; i < NT4cnt; i++) {
             if (node->edge(i) != NULL) {
 
                 uint end = node->edge(i)->end() == -1 ? this->seq_.length() - 1 : node->edge(i)->end();
                 uint len = end - node->edge(i)->start() + 1;
-                
+
                 label = s.substr(node->edge(i)->start(), len);
-		range.str("");
-		range << "/* s: " << node->edge(i)->start() << ", e: " << end << " */";
+                range.str("");
+                range << "/* s: " << node->edge(i)->start() << ", e: " << end << " */";
 
                 if (node->edge(i)->succ() != NULL) {
                     q.push(node->edge(i)->succ());
@@ -485,7 +485,7 @@ SuffixTree::write_dot(ofstream &fh)
                        << " [label=\"" << label << "\"]; " << range.str() << "\n";
                 } else {
                     fh << "  leaf" << leaf_id << " [shape=point]\n"
-		       << "  "
+                       << "  "
                        << node->id() << " -> leaf" << leaf_id
                        << " [label=\"" << label << "\"]; " << range.str() << "\n";
                     leaf_id++;
@@ -519,7 +519,7 @@ SuffixTree::write_suffixes(ostream &fh)
 
     for (uint i = 0; i < suffixes.size(); i++)
         fh << suffixes[i] << "\n";
-    
+
     return 0;
 }
 
