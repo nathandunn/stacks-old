@@ -447,7 +447,7 @@ LocusProcessor::process(CLocReadSet&& loc)
                 this->stats_.mean_se_pe_loc_overlap += overlap;
             }
             assert(overlap >= 0);
-            
+
             delete aligner;
             delete stree;
 
