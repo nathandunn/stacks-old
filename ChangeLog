@@ -1,8 +1,8 @@
-Stacks 1.47 - tba
---------------------------
+Stacks 1.47 - Sept 06, 2017
+---------------------------
     Feature: Improved populations's fasta output options (especially,
              added a option to export locus consensus sequences).
-    Feature: denovo_map.pl and red_map.pl now stop if a component
+    Feature: denovo_map.pl and ref_map.pl now stop if a component
              of the pipeline fails.
     Feature: Improved the output of denovo_map.pl and ref_map.pl.
     Bugfix: Added a format check in Fasta/GzFasta to avoid a potential
