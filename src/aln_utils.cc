@@ -118,7 +118,7 @@ parse_cigar(const char *cigar_str, Cigar &cigar, bool check_correctness)
 }
 
 string
-apply_cigar_to_seq(const char *seq, Cigar &cigar)
+apply_cigar_to_seq(const char *seq, const Cigar &cigar)
 {
     uint   size = cigar.size();
     char   op;
@@ -172,7 +172,7 @@ apply_cigar_to_seq(const char *seq, Cigar &cigar)
 }
 
 string
-apply_cigar_to_model_seq(const char *seq, Cigar &cigar)
+apply_cigar_to_model_seq(const char *seq, const Cigar &cigar)
 {
     uint   size = cigar.size();
     char   op;
@@ -330,7 +330,7 @@ apply_cigar_to_model_seq(char *seq, uint seq_len, const char *model, Cigar &ciga
 }
 
 string
-remove_cigar_from_seq(const char *seq, Cigar &cigar)
+remove_cigar_from_seq(const char *seq, const Cigar &cigar)
 {
     uint   size = cigar.size();
     char   op;
