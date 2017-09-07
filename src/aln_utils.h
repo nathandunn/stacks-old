@@ -33,9 +33,9 @@ ostream& operator<< (ostream&, const Cigar&);
 
 string invert_cigar(string);
 int    parse_cigar(const char*, Cigar&, bool check_correctness = false);
-string apply_cigar_to_seq(const char*, Cigar&);
-string remove_cigar_from_seq(const char*, Cigar&);
-string apply_cigar_to_model_seq(const char*, Cigar&);
+string apply_cigar_to_seq(const char*, const Cigar&);
+string remove_cigar_from_seq(const char*, const Cigar&);
+string apply_cigar_to_model_seq(const char*, const Cigar&);
 int    apply_cigar_to_seq(char*, uint, const char*, Cigar&);
 int    apply_cigar_to_model_seq(char*, uint, const char*, Cigar&);
 
