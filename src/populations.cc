@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2012-2016, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2012-2017, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -132,70 +132,18 @@ int main (int argc, char* argv[]) {
     // Parse the command line.
     //
     parse_command_line(argc, argv);
-
-    cerr << "populations parameters selected:\n";
-    if (input_mode == InputMode::vcf)
-        cerr << "  Input mode: VCF\n";
-    else if (input_mode == InputMode::stacks)
-        cerr << "  Input mode: v1\n";
-    cerr << "  Fst kernel smoothing: " << (kernel_smoothed == true ? "on" : "off") << "\n"
-         << "  Bootstrap resampling: ";
-    if (bootstrap)
-        cerr << "on, " << (bootstrap_type == bs_exact ? "exact; " : "approximate; ") << bootstrap_reps << " reptitions\n";
-    else
-        cerr << "off\n";
-    cerr
-        << "  Percent samples limit per population: " << sample_limit << "\n"
-        << "  Locus Population limit: " << population_limit << "\n"
-        << "  Minimum stack depth: " << min_stack_depth << "\n"
-        << "  Log liklihood filtering: " << (filter_lnl == true ? "on"  : "off") << "; threshold: " << lnl_limit << "\n"
-        << "  Minor allele frequency cutoff: " << minor_allele_freq << "\n"
-        << "  Maximum observed heterozygosity cutoff: " << max_obs_het << "\n"
-        << "  Applying Fst correction: ";
-    switch(fst_correction) {
-    case p_value:
-        cerr << "P-value correction.\n";
-        break;
-    case bonferroni_win:
-        cerr << "Bonferroni correction within sliding window.\n";
-        break;
-    case bonferroni_gen:
-        cerr << "Bonferroni correction across genome wide sites.\n";
-        break;
-    case no_correction:
-        cerr << "none.\n";
-        break;
-    }
-    cerr << "\n";
+    output_parameters(cerr);
 
     //
     // Open and initialize the log file.
     //
-    struct stat out_path_stat;
-    if (stat(out_path.substr(0, out_path.length()-1).c_str(), &out_path_stat) == 0) {
-        // Path exists, check that it is a directory
-        if (!S_ISDIR(out_path_stat.st_mode)) {
-            cerr << "Error: '" << out_path.substr(0, out_path.length()-1) << "' is not a directory.\n";
-            throw exception();
-        }
-    } else if (mkdir(out_path.c_str(), ACCESSPERMS) != 0) {
-        // Failed to create the directory.
-        cerr << "Error: Failed to create directory '" << out_path << "'.\n";
-        throw exception();
-    }
-    string log_path = out_path + out_prefix + ".populations.log";
-    ofstream log_fh(log_path.c_str(), ofstream::out);
-    if (log_fh.fail()) {
-        cerr << "Error opening log file '" << log_path << "'\n";
-        throw exception();
-    }
+    ofstream log_fh;
+    open_log(log_fh);
     init_log(log_fh, argc, argv);
-    log_fh << flush;
 
     //
     // Set the number of OpenMP parallel threads to execute.
     //
-
     #ifdef _OPENMP
     omp_set_num_threads(num_threads);
     #endif
@@ -203,11 +151,9 @@ int main (int argc, char* argv[]) {
     //
     // Initialize the catalog and the MetaPopInfo
     //
-
     map<int, CSLocus *> catalog;
 
     // We need some objects in the main scope for each mode.
-    vector<vector<CatMatch *> > catalog_matches;
     unique_ptr<unordered_map<int,vector<VcfRecord>>> cloci_vcf_records;
     unique_ptr<VcfHeader> vcf_header;
     unique_ptr<vector<VcfRecord>> vcf_records;
@@ -220,100 +166,17 @@ int main (int argc, char* argv[]) {
              << mpopi.pops().size() << " population(s), " << mpopi.groups().size() << " group(s).\n";
     }
 
-    if (input_mode == InputMode::stacks) {
-        //
-        // Stacks mode
-        //
-        if (pmap_path.empty()) {
-            cerr << "No population map specified, building file list...\n";
-            mpopi.init_directory(in_path);
-        }
-
-        // Check that at least one sample file exists in the directory.
-        bool dir_good = false;
-        for (vector<Sample>::const_iterator s=mpopi.samples().begin(); s!=mpopi.samples().end(); ++s) {
-            ifstream f;
-            string path = in_path + s->name + ".matches.tsv";
-            f.open(path);
-            if (f.is_open()) {
-                dir_good = true;
-                break;
-            }
-#if HAVE_LIBZ
-            path += ".gz";
-            gzFile g = gzopen(path.c_str(), "rb");
-            if (g != NULL) {
-                dir_good = true;
-                gzclose(g);
-                break;
-            }
-#endif
-        }
-        if (!dir_good) {
-            cerr << "Error: Unable to locate any file in input directory '" << in_path << "'.\n";
-            throw exception();
-        }
-
-        //
-        // Load the catalog
-        //
-        cerr << "Reading the catalog...\n";
-        string catalog_prefix = in_path + "batch_" + to_string(batch_id) + ".catalog";
-        bool   compressed     = false;
-        int    res = load_loci(catalog_prefix, catalog, 0, false, compressed);
-        if (res == 0) {
-            cerr << "Unable to load the catalog '" << catalog_prefix << "'\n";
-            throw exception();
-        }
-
-        //
-        // Load the matches
-        //
-        cerr << "Reading matches to the catalog...\n";
-        vector<size_t> samples_to_remove;
-        set<size_t>    seen_samples;
-        for (size_t i = 0; i < mpopi.samples().size(); ++i) {
-            catalog_matches.push_back(vector<CatMatch*>());
-            vector<CatMatch *>& m = catalog_matches.back();
-            load_catalog_matches(in_path + mpopi.samples().at(i).name, m);
-
-            if (m.size() == 0 || m[0]->batch_id != batch_id) {
-                cerr << "Warning: File '" << mpopi.samples()[i].name << ".matches.tsv(.gz)'"
-                        " is absent, malformed, or does not match the catalog batch ID. Excluding"
-                        " this sample from population analysis.\n";
-                samples_to_remove.push_back(i);
-                catalog_matches.pop_back(); // This introduces an index shift between catalog_matches and [i]/[mpopi],
-                                            // which will be resolved by a call to MetaPopInfo::delete_samples().
-                continue;
-            }
-
-            size_t sample_id = m[0]->sample_id;
-            if (seen_samples.count(sample_id) > 0) {
-                cerr << "Error: sample ID " << sample_id << " occurs twice in this data set, likely the pipeline was run incorrectly.\n";
-                exit(1);
-            }
-            seen_samples.insert(sample_id);
-            mpopi.set_sample_id(i, sample_id);
-        }
-
-        mpopi.delete_samples(samples_to_remove);
-        if (mpopi.samples().size() == 0) {
-            cerr << "Error: Couln't find any matches files.\n";
-            throw exception();
-        }
-        // [mpopi] is definitive.
-
-    } else if (input_mode == InputMode::stacks2) {
+    if (input_mode == InputMode::stacks2) {
         //
         // Stacks v2 mode
         //
         cloci_vcf_records.reset(new unordered_map<int,vector<VcfRecord>>());
 
         // Open the files.
-        string catalog_fa_path = in_path + "batch_" + to_string(batch_id) + ".gstacks.fa.gz";
+        string catalog_fa_path  = in_path + "batch_" + to_string(batch_id) + ".gstacks.fa.gz";
         string catalog_vcf_path = in_path + "batch_" + to_string(batch_id) + ".gstacks.vcf.gz";
-        GzFasta fasta_f (catalog_fa_path);
-        VcfCLocReader reader (catalog_vcf_path);
+        GzFasta       fasta_f(catalog_fa_path);
+        VcfCLocReader reader(catalog_vcf_path);
 
         // Create the population map or check that all samples have data.
         if (pmap_path.empty()) {
@@ -505,20 +368,10 @@ int main (int argc, char* argv[]) {
     //
     // Initialize the PopMap
     //
-
     cerr << "Populating observed haplotypes for " << mpopi.samples().size() << " samples, " << catalog.size() << " loci.\n";
     PopMap<CSLocus> *pmap = new PopMap<CSLocus>(mpopi, catalog.size());
 
-    if (input_mode == InputMode::stacks) {
-        // Using SStacks matches files...
-        pmap->populate(catalog, catalog_matches);
-
-        for(vector<vector<CatMatch *> >::iterator sample = catalog_matches.begin(); sample != catalog_matches.end(); ++sample)
-            for(vector<CatMatch*>::iterator match = sample->begin(); match != sample->end(); ++match)
-                delete *match;
-        catalog_matches.clear();
-
-    } else if (input_mode == InputMode::stacks2) {
+    if (input_mode == InputMode::stacks2) {
         // Using Stacks v2 files.
         pmap->populate(catalog, *cloci_vcf_records, *vcf_header);
         cloci_vcf_records.reset();
@@ -5226,11 +5079,82 @@ int load_marker_column_list(string path, map<int, set<int> > &list) {
     return 0;
 }
 
-bool hap_compare(const pair<string, int>& a, const pair<string, int>& b) {
+bool
+hap_compare(const pair<string, int>& a, const pair<string, int>& b)
+{
     return (a.second > b.second);
 }
 
-int parse_command_line(int argc, char* argv[]) {
+void
+open_log(ofstream &log_fh)
+{
+    struct stat out_path_stat;
+
+    if (stat(out_path.substr(0, out_path.length()-1).c_str(), &out_path_stat) == 0) {
+        //
+        // Path exists, check that it is a directory
+        //
+        if (!S_ISDIR(out_path_stat.st_mode)) {
+            cerr << "Error: '" << out_path.substr(0, out_path.length()-1) << "' is not a directory.\n";
+            throw exception();
+        }
+
+    } else if (mkdir(out_path.c_str(), ACCESSPERMS) != 0) {
+        //
+        // Failed to create the directory.
+        //
+        cerr << "Error: Failed to create directory '" << out_path << "'.\n";
+        throw exception();
+    }
+
+    string log_path = out_path + out_prefix + ".populations.log";
+    log_fh.open(log_path.c_str(), ofstream::out);
+    if (log_fh.fail()) {
+        cerr << "Error opening log file '" << log_path << "'\n";
+        throw exception();
+    }
+}
+
+void
+output_parameters(ostream &fh)
+{
+    fh << "populations parameters selected:\n";
+    if (input_mode == InputMode::vcf)
+        fh << "  Input mode: VCF\n";
+    fh << "  Fst kernel smoothing: " << (kernel_smoothed == true ? "on" : "off") << "\n"
+         << "  Bootstrap resampling: ";
+    if (bootstrap)
+        fh << "on, " << (bootstrap_type == bs_exact ? "exact; " : "approximate; ") << bootstrap_reps << " reptitions\n";
+    else
+        fh << "off\n";
+    fh
+        << "  Percent samples limit per population: " << sample_limit << "\n"
+        << "  Locus Population limit: " << population_limit << "\n"
+        << "  Minimum stack depth: " << min_stack_depth << "\n"
+        << "  Log liklihood filtering: " << (filter_lnl == true ? "on"  : "off") << "; threshold: " << lnl_limit << "\n"
+        << "  Minor allele frequency cutoff: " << minor_allele_freq << "\n"
+        << "  Maximum observed heterozygosity cutoff: " << max_obs_het << "\n"
+        << "  Applying Fst correction: ";
+    switch(fst_correction) {
+    case p_value:
+        fh << "P-value correction.\n";
+        break;
+    case bonferroni_win:
+        fh << "Bonferroni correction within sliding window.\n";
+        break;
+    case bonferroni_gen:
+        fh << "Bonferroni correction across genome wide sites.\n";
+        break;
+    case no_correction:
+        fh << "none.\n";
+        break;
+    }
+    fh << "\n";
+}
+
+int
+parse_command_line(int argc, char* argv[])
+{
 
     while (1) {
         static struct option long_options[] = {

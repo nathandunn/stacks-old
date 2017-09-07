@@ -69,6 +69,8 @@ const int max_snp_dist = 500;
 void    help( void );
 void    version( void );
 int     parse_command_line(int, char**);
+void    output_parameters(ostream &);
+void    open_log(ofstream &);
 int     build_file_list();
 int     load_marker_list(string, set<int> &);
 int     load_marker_column_list(string, map<int, set<int> > &);
