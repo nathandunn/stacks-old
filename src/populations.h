@@ -42,6 +42,7 @@ using std::fixed;
 #include <vector>
 #include <map>
 #include <set>
+using std::unique_ptr;
 
 #include "constants.h"
 #include "stacks.h"
@@ -72,6 +73,8 @@ int     parse_command_line(int, char**);
 void    output_parameters(ostream &);
 void    open_log(ofstream &);
 int     build_file_list();
+int     process_loci(unique_ptr<VcfHeader> &, unique_ptr<unordered_map<int, vector<VcfRecord>>> &, map<int, CSLocus *> &, ofstream &log_fh);
+int     process_loci(unique_ptr<VcfHeader> &, unique_ptr<vector<VcfRecord>> &, map<int, CSLocus *> &, ofstream &log_fh);
 int     load_marker_list(string, set<int> &);
 int     load_marker_column_list(string, map<int, set<int> > &);
 int     apply_locus_constraints(map<int, CSLocus *> &, PopMap<CSLocus> *, ofstream &);
