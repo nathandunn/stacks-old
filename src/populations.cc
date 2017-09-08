@@ -158,7 +158,9 @@ int main (int argc, char* argv[]) {
     unique_ptr<VcfHeader> vcf_header;
     unique_ptr<vector<VcfRecord>> vcf_records;
 
+    //
     // Read the population map file, if any.
+    //
     if (not pmap_path.empty()) {
         cerr << "Parsing population map...\n";
         mpopi.init_popmap(pmap_path);
@@ -166,155 +168,11 @@ int main (int argc, char* argv[]) {
              << mpopi.pops().size() << " population(s), " << mpopi.groups().size() << " group(s).\n";
     }
 
-    if (input_mode == InputMode::stacks2) {
-        //
-        // Stacks v2 mode
-        //
-        cloci_vcf_records.reset(new unordered_map<int,vector<VcfRecord>>());
-
-        // Open the files.
-        string catalog_fa_path  = in_path + "batch_" + to_string(batch_id) + ".gstacks.fa.gz";
-        string catalog_vcf_path = in_path + "batch_" + to_string(batch_id) + ".gstacks.vcf.gz";
-        GzFasta       fasta_f(catalog_fa_path);
-        VcfCLocReader reader(catalog_vcf_path);
-
-        // Create the population map or check that all samples have data.
-        if (pmap_path.empty()) {
-            cerr << "No population map specified, using all samples...\n";
-            mpopi.init_names(reader.header().samples());
-        } else {
-            size_t n_samples_before = mpopi.samples().size();
-            mpopi.intersect_with(reader.header().samples());
-            size_t n_rm_samples = n_samples_before - mpopi.samples().size();
-            if (n_rm_samples > 0) {
-                cerr << "Warning: No genotype data exists for " << n_rm_samples
-                     << " of the samples listed in the population map.\n";
-                if (mpopi.samples().empty()) {
-                    cerr << "Error: No more samples.\n";
-                    throw exception();
-                }
-            }
-        }
-        reader.set_sample_ids(mpopi);
-
-        // Read the files, create the loci.
-        vector<VcfRecord> records;
-        Seq seq;
-        seq.id   = new char[id_len];
-        seq.seq  = new char[max_len];
-        seq.qual = new char[max_len];
-        while (reader.read_one_locus(records)) {
-            // Get the current locus ID.
-            assert(!records.empty());
-            int cloc_id = is_integer(records[0].chrom());
-            assert(cloc_id >= 0);
-
-            // Find the corresponding fasta record. (Note: c-loci with very low
-            // coverage might be entirely missing from the VCF; in this case
-            // ignore them.)
-            int rv = fasta_f.next_seq(seq);
-            while(rv != 0 && atoi(seq.id) != cloc_id)
-                rv = fasta_f.next_seq(seq);
-            if (rv == 0) {
-                cerr << "Error: files are discordant, maybe trucated: '"
-                     << catalog_fa_path << "' and '" << catalog_vcf_path << "'.\n";
-                throw exception();
-            }
-
-            // Create the CSLocus.
-            catalog.insert({cloc_id, new_cslocus(seq, records, cloc_id)});
-
-            // Save the records (they are needed for the PopMap object).
-            (*cloci_vcf_records)[cloc_id] = move(records);
-        }
-
-        vcf_header.reset(new VcfHeader(reader.header()));
-
-    } else if (input_mode == InputMode::vcf) {
-
-        //
-        // VCF mode
-        //
-
-        // Open the VCF file
-        cerr << "Opening the VCF file...\n";
-        VcfParser parser (in_vcf_path);
-
-        if (parser.header().samples().empty()) {
-            cerr << "Error: No samples in VCF file '" << in_vcf_path << "'.\n";
-            throw exception();
-        }
-
-        // Reconsider the MetaPopInfo in light of the VCF header.
-        if (pmap_path.empty()) {
-            cerr << "No population map specified, creating one from the VCF header...\n";
-            mpopi.init_names(parser.header().samples());
-        } else {
-            // Intersect the samples present in the population map and the VCF.
-            size_t n_samples_before = mpopi.samples().size();
-            mpopi.intersect_with(parser.header().samples());
-            size_t n_rm_samples = n_samples_before - mpopi.samples().size();
-            if (n_rm_samples > 0) {
-                cerr << "Warning: Of the samples listed in the population map, "
-                     << n_rm_samples << " could not be found in the VCF :";
-                if (mpopi.samples().empty()) {
-                    cerr << "Error: No more samples.\n";
-                    throw exception();
-                }
-            }
-        }
-
-        // Create arbitrary sample IDs.
-        for (size_t i = 0; i < mpopi.samples().size(); ++i)
-            mpopi.set_sample_id(i, i+1); //id=i+1
-
-        // [mpopi] is definitive.
-
-        // Read the SNP records
-        cerr << "Reading the VCF records...\n";
-        vcf_records.reset(new vector<VcfRecord>());
-        vector<size_t> skipped_notsnp;
-        vector<size_t> skipped_filter;
-
-        vcf_records->push_back(VcfRecord());
-        VcfRecord* rec = & vcf_records->back();
-        while (parser.next_record(*rec)) {
-            // Check for a SNP.
-            if (not rec->is_snp()) {
-                skipped_notsnp.push_back(parser.line_number());
-                continue;
-            }
-
-            // Check for a filtered-out SNP
-            if (strncmp(rec->filters(), ".", 2) != 0 && strncmp(rec->filters(), "PASS", 5) != 0) {
-                skipped_filter.push_back(parser.line_number());
-                continue;
-            }
-
-            // Save the SNP.
-            vcf_records->push_back(VcfRecord());
-            rec = & vcf_records->back();
-        }
-        vcf_records->pop_back();
-
-        cerr << "Found " << vcf_records->size() << " SNP records in file '" << in_vcf_path
-             << "'. (Skipped " << skipped_filter.size() << " already filtered-out SNPs and "
-             << skipped_notsnp.size() << " non-SNP records ; more with --verbose.)\n";
-        if (verbose && not skipped_notsnp.empty()) {
-            log_fh << "The following VCF record lines were determined not to be SNPs and skipped :";
-            for (vector<size_t>::const_iterator l=skipped_notsnp.begin(); l!=skipped_notsnp.end(); ++l)
-                log_fh << " " << *l;
-            log_fh << "\n";
-        }
-        if (vcf_records->size() == 0) {
-            cerr << "Error: No records.\n";
-            throw exception();
-        }
-
-        catalog = create_catalog(*vcf_records);
-        vcf_header.reset(new VcfHeader(parser.header()));
-    }
-
+    if (input_mode == InputMode::vcf)
+        process_loci(vcf_header, vcf_records, catalog, log_fh);
+    else
+        process_loci(vcf_header, cloci_vcf_records, catalog, log_fh);
+    
     //
     // Read the blacklist, the whitelist, and the bootstrap-whitelist.
     //
@@ -403,48 +261,6 @@ int main (int argc, char* argv[]) {
 
     log_fh << "# Distribution of population loci after applying locus constraints.\n";
     log_haplotype_cnts(catalog, log_fh);
-
-    if (input_mode == InputMode::stacks) {
-        //
-        // Load the output from the SNP calling model (hOm/hEt/Unk) for
-        // each individual at each locus.
-        //
-
-        cerr << "Loading model outputs for " << mpopi.samples().size() << " samples, " << catalog.size() << " loci.\n";
-
-        map<int, CSLocus *>::iterator it;
-        map<int, ModRes *>::iterator mit;
-        Datum   *d;
-        CSLocus *loc;
-
-        for (uint i = 0; i < mpopi.samples().size(); i++) {
-            map<int, ModRes *> modres;
-            load_model_results(in_path + mpopi.samples()[i].name, modres);
-
-            if (modres.size() == 0) {
-                cerr << "    Warning: unable to find any model results in file '" << mpopi.samples()[i].name << ".models.tsv(.gz)', excluding this sample from population analysis.\n";
-                continue;
-            }
-
-            for (it = catalog.begin(); it != catalog.end(); it++) {
-                loc = it->second;
-                d = pmap->datum(loc->id, mpopi.samples()[i].id);
-
-                if (d != NULL) {
-                    if (modres.count(d->id) == 0) {
-                        cerr << "Fatal error: Unable to find model data for catalog locus " << loc->id
-                             << ", sample ID " << mpopi.samples()[i].id << ", sample locus " << d->id
-                             << "; likely IDs were mismatched when running pipeline.\n";
-                        exit(1);
-                    }
-                    d->add_model(modres[d->id]->model);
-                }
-            }
-            for (mit = modres.begin(); mit != modres.end(); mit++)
-                delete mit->second;
-            modres.clear();
-        }
-    }
 
     //
     // Create the PopSum object and compute the summary statistics.
@@ -628,8 +444,167 @@ int main (int argc, char* argv[]) {
     IF_NDEBUG_CATCH_ALL_EXCEPTIONS
 }
 
-void vcfcomp_simplify_pmap (map<int, CSLocus*>& catalog, PopMap<CSLocus>* pmap) {
+int
+process_loci(unique_ptr<VcfHeader> &vcf_header,
+             unique_ptr<unordered_map<int, vector<VcfRecord>>> &cloci_vcf_records,
+             map<int, CSLocus *> &catalog, ofstream &log_fh)
+{
+    cloci_vcf_records.reset(new unordered_map<int,vector<VcfRecord>>());
 
+    // Open the files.
+    string catalog_fa_path  = in_path + "batch_" + to_string(batch_id) + ".gstacks.fa.gz";
+    string catalog_vcf_path = in_path + "batch_" + to_string(batch_id) + ".gstacks.vcf.gz";
+    GzFasta       fasta_f(catalog_fa_path);
+    VcfCLocReader reader(catalog_vcf_path);
+
+    // Create the population map or check that all samples have data.
+    if (pmap_path.empty()) {
+        cerr << "No population map specified, using all samples...\n";
+        mpopi.init_names(reader.header().samples());
+    } else {
+        size_t n_samples_before = mpopi.samples().size();
+        mpopi.intersect_with(reader.header().samples());
+        size_t n_rm_samples = n_samples_before - mpopi.samples().size();
+        if (n_rm_samples > 0) {
+            cerr << "Warning: No genotype data exists for " << n_rm_samples
+                 << " of the samples listed in the population map.\n";
+            if (mpopi.samples().empty()) {
+                cerr << "Error: No more samples.\n";
+                throw exception();
+            }
+        }
+    }
+    reader.set_sample_ids(mpopi);
+
+    // Read the files, create the loci.
+    vector<VcfRecord> records;
+    Seq seq;
+    seq.id   = new char[id_len];
+    seq.seq  = new char[max_len];
+    seq.qual = new char[max_len];
+    while (reader.read_one_locus(records)) {
+        // Get the current locus ID.
+        assert(!records.empty());
+        int cloc_id = is_integer(records[0].chrom());
+        assert(cloc_id >= 0);
+
+        // Find the corresponding fasta record. (Note: c-loci with very low
+        // coverage might be entirely missing from the VCF; in this case
+        // ignore them.)
+        int rv = fasta_f.next_seq(seq);
+        while(rv != 0 && atoi(seq.id) != cloc_id)
+            rv = fasta_f.next_seq(seq);
+        if (rv == 0) {
+            cerr << "Error: files are discordant, maybe trucated: '"
+                 << catalog_fa_path << "' and '" << catalog_vcf_path << "'.\n";
+            throw exception();
+        }
+
+        // Create the CSLocus.
+        catalog.insert({cloc_id, new_cslocus(seq, records, cloc_id)});
+
+        // Save the records (they are needed for the PopMap object).
+        (*cloci_vcf_records)[cloc_id] = move(records);
+    }
+
+    vcf_header.reset(new VcfHeader(reader.header()));
+
+    return 0;
+}
+
+int
+process_loci(unique_ptr<VcfHeader> &vcf_header,
+             unique_ptr<vector<VcfRecord>> &vcf_records,
+             map<int, CSLocus *> &catalog, ofstream &log_fh)
+{
+    //
+    // VCF mode
+    //
+
+    // Open the VCF file
+    cerr << "Opening the VCF file...\n";
+    VcfParser parser (in_vcf_path);
+
+    if (parser.header().samples().empty()) {
+        cerr << "Error: No samples in VCF file '" << in_vcf_path << "'.\n";
+        throw exception();
+    }
+
+    // Reconsider the MetaPopInfo in light of the VCF header.
+    if (pmap_path.empty()) {
+        cerr << "No population map specified, creating one from the VCF header...\n";
+        mpopi.init_names(parser.header().samples());
+    } else {
+        // Intersect the samples present in the population map and the VCF.
+        size_t n_samples_before = mpopi.samples().size();
+        mpopi.intersect_with(parser.header().samples());
+        size_t n_rm_samples = n_samples_before - mpopi.samples().size();
+        if (n_rm_samples > 0) {
+            cerr << "Warning: Of the samples listed in the population map, "
+                 << n_rm_samples << " could not be found in the VCF :";
+            if (mpopi.samples().empty()) {
+                cerr << "Error: No more samples.\n";
+                throw exception();
+            }
+        }
+    }
+
+    // Create arbitrary sample IDs.
+    for (size_t i = 0; i < mpopi.samples().size(); ++i)
+        mpopi.set_sample_id(i, i+1); //id=i+1
+
+    // [mpopi] is definitive.
+
+    // Read the SNP records
+    cerr << "Reading the VCF records...\n";
+    vcf_records.reset(new vector<VcfRecord>());
+    vector<size_t> skipped_notsnp;
+    vector<size_t> skipped_filter;
+
+    vcf_records->push_back(VcfRecord());
+    VcfRecord* rec = & vcf_records->back();
+    while (parser.next_record(*rec)) {
+        // Check for a SNP.
+        if (not rec->is_snp()) {
+            skipped_notsnp.push_back(parser.line_number());
+            continue;
+        }
+
+        // Check for a filtered-out SNP
+        if (strncmp(rec->filters(), ".", 2) != 0 && strncmp(rec->filters(), "PASS", 5) != 0) {
+            skipped_filter.push_back(parser.line_number());
+            continue;
+        }
+
+        // Save the SNP.
+        vcf_records->push_back(VcfRecord());
+        rec = & vcf_records->back();
+    }
+    vcf_records->pop_back();
+
+    cerr << "Found " << vcf_records->size() << " SNP records in file '" << in_vcf_path
+         << "'. (Skipped " << skipped_filter.size() << " already filtered-out SNPs and "
+         << skipped_notsnp.size() << " non-SNP records ; more with --verbose.)\n";
+    if (verbose && not skipped_notsnp.empty()) {
+        log_fh << "The following VCF record lines were determined not to be SNPs and skipped :";
+        for (vector<size_t>::const_iterator l=skipped_notsnp.begin(); l!=skipped_notsnp.end(); ++l)
+            log_fh << " " << *l;
+        log_fh << "\n";
+    }
+    if (vcf_records->size() == 0) {
+        cerr << "Error: No records.\n";
+        throw exception();
+    }
+
+    catalog = create_catalog(*vcf_records);
+    vcf_header.reset(new VcfHeader(parser.header()));
+
+    return 0;
+}
+
+void
+vcfcomp_simplify_pmap (map<int, CSLocus*>& catalog, PopMap<CSLocus>* pmap)
+{
     cerr << "DEBUG Deleting information from the pmap & catalog so that they resemble what can be retrieved from a VCF.\n";
     // n.b. In this configuration we only have one SNP per locus so we don't have
     // to worry about what U's imply regarding haplotypes.
