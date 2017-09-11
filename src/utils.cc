@@ -308,13 +308,18 @@ bool compare_str_len(string a, string b) {
     return (a.length() < b.length());
 }
 
+VersatileLineReader::VersatileLineReader()
+    : path_(), line_number_(0), is_gzipped_(false),
+      ifs_(), ifsbuffer_(),
+      gzfile_(NULL), gzbuffer_(NULL), gzbuffer_size_(0), gzline_len_(0) {}
+
 VersatileLineReader::VersatileLineReader(const string& path)
-: path_(path), line_number_(0), is_gzipped_(false),
-  ifs_(), ifsbuffer_(),
-  gzfile_(NULL), gzbuffer_(NULL), gzbuffer_size_(0), gzline_len_(0)
+    : path_(path), line_number_(0), is_gzipped_(false),
+      ifs_(), ifsbuffer_(),
+      gzfile_(NULL), gzbuffer_(NULL), gzbuffer_size_(0), gzline_len_(0)
 {
     std::smatch m;
-    std::regex_search(path, m, std::regex("\\.[Gg][Zz]$"));
+    std::regex_search(path_, m, std::regex("\\.[Gg][Zz]$"));
     is_gzipped_ = !m.empty();
 
     if (!is_gzipped_) {
@@ -333,6 +338,28 @@ VersatileLineReader::~VersatileLineReader() {
         gzclose(gzfile_);
         delete[] gzbuffer_;
     }
+}
+
+int
+VersatileLineReader::open(string &path)
+{
+    this->path_ = path;
+    
+    std::smatch m;
+    std::regex_search(this->path_, m, std::regex("\\.[Gg][Zz]$"));
+    this->is_gzipped_ = !m.empty();
+
+    if (!this->is_gzipped_) {
+        this->ifs_.open(this->path_);
+        check_open(this->ifs_, this->path_);
+    } else {
+        this->gzfile_ = gzopen(this->path_.c_str(), "rb");
+        check_open(this->gzfile_, this->path_);
+        this->gzbuffer_size_ = gzbuffer_init_size;
+        this->gzbuffer_ = new char[this->gzbuffer_size_];
+    }
+
+    return 0;
 }
 
 bool VersatileLineReader::getline(const char*& line, size_t& len) {

@@ -224,22 +224,24 @@ class VcfParser {
 
 public:
     VcfParser(const string& path);
+    VcfParser(): file_(), header_() {};
 
     bool next_record(VcfRecord& rec) {
-    try {
-        const char* line;
-        size_t len;
-        if (!file_.getline(line, len))
-            return false;
-        rec.assign(line, len, header_);
-        return true;
-    } catch (const exception& e) {
-        cerr << "Error: At line " << file_.line_number()
-             << " in file '" << file_.path () << "'.\n";
-        throw e;
-    }
+        try {
+            const char* line;
+            size_t len;
+            if (!file_.getline(line, len))
+                return false;
+            rec.assign(line, len, header_);
+            return true;
+        } catch (const exception& e) {
+            cerr << "Error: At line " << file_.line_number()
+                 << " in file '" << file_.path () << "'.\n";
+            throw e;
+        }
     }
 
+    int open(string &path);
     const VcfHeader& header() const {return header_;};
     const string& path() const {return file_.path();};
     size_t line_number() const {return file_.line_number();}

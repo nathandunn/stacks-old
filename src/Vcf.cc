@@ -268,6 +268,22 @@ VcfParser::VcfParser(const string& path) : file_(path), header_() {
     read_header();
 }
 
+int
+VcfParser::open(string &path) {
+    this->file_.open(path);
+
+    FileT ftype = guess_file_type(path);
+
+    if (ftype != FileT::vcf && ftype != FileT::gzvcf) {
+        cerr << "Error: File '" << path << "' : expected '.vcf(.gz)' suffix.\n";
+        throw exception();
+    }
+
+    read_header();
+
+    return 0;
+}
+
 void
 VcfParser::read_header()
 {
