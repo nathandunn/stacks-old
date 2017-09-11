@@ -58,6 +58,9 @@ using std::unique_ptr;
 #include "ordered.h"
 #include "smoothing.h"
 #include "bootstrap.h"
+#include "MetaPopInfo.h"
+#include "gzFasta.h"
+#include "locus_readers.h"
 
 enum corr_type {p_value, bonferroni_win, bonferroni_gen, no_correction};
 enum bs_type   {bs_exact, bs_approx, bs_none};
@@ -67,14 +70,54 @@ enum class InputMode {stacks, stacks2, vcf};
 
 const int max_snp_dist = 500;
 
+//
+// BatchLocusProcessor
+// ----------
+// Class for processing loci in batches, or per chromosome.
+//
+class BatchLocusProcessor {
+public:
+    BatchLocusProcessor():
+        _input_mode(InputMode::stacks2), _mpopi(NULL), _vcf_parser(), _cloc_reader(), _fasta_reader(), _vcf_header(NULL) {}
+    BatchLocusProcessor(InputMode mode, MetaPopInfo *popi):
+        _input_mode(mode), _mpopi(popi), _vcf_parser(), _cloc_reader(), _fasta_reader(), _vcf_header(NULL) {}
+    BatchLocusProcessor(InputMode mode): 
+        _input_mode(mode), _mpopi(NULL), _vcf_parser(), _cloc_reader(), _fasta_reader(), _vcf_header(NULL) {}
+    ~BatchLocusProcessor() {
+        if (this->_vcf_header != NULL)
+            delete this->_vcf_header;
+    };
+    
+    int                  init(int, string, string);
+    int                  next_batch();
+
+    MetaPopInfo*   pop_info()     { return this->_mpopi; }
+    int            pop_info(MetaPopInfo *popi) { this->_mpopi = popi; return 0; }
+    VcfParser&     vcf_reader()   { return this->_vcf_parser; }
+    GzFasta&       fasta_reader() { return this->_fasta_reader; }
+    VcfCLocReader& cloc_reader()  { return this->_cloc_reader; }
+    VcfHeader*     vcf_header()   { return this->_vcf_header; }
+    
+private:
+    InputMode          _input_mode;
+    MetaPopInfo        *_mpopi;
+    VcfParser          _vcf_parser;
+    VcfCLocReader      _cloc_reader;
+    GzFasta            _fasta_reader;
+    VcfHeader         *_vcf_header;
+
+    int init_external_loci(string, string);
+    int init_stacks_loci(int, string, string);
+};
+
 void    help( void );
 void    version( void );
 int     parse_command_line(int, char**);
 void    output_parameters(ostream &);
 void    open_log(ofstream &);
 int     build_file_list();
-int     process_loci(unique_ptr<VcfHeader> &, unique_ptr<unordered_map<int, vector<VcfRecord>>> &, map<int, CSLocus *> &, ofstream &log_fh);
-int     process_loci(unique_ptr<VcfHeader> &, unique_ptr<vector<VcfRecord>> &, map<int, CSLocus *> &, ofstream &log_fh);
+int     process_loci(BatchLocusProcessor &, unique_ptr<unordered_map<int, vector<VcfRecord>>> &, map<int, CSLocus *> &, ofstream &);
+int     process_loci(BatchLocusProcessor &, unique_ptr<vector<VcfRecord>> &, map<int, CSLocus *> &, ofstream &);
 int     load_marker_list(string, set<int> &);
 int     load_marker_column_list(string, map<int, set<int> > &);
 int     apply_locus_constraints(map<int, CSLocus *> &, PopMap<CSLocus> *, ofstream &);

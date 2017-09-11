@@ -83,10 +83,11 @@ public:
 };
 
 class Seq {
- public:
+public:
     char *id;
     char *seq;
     char *qual;
+    char *comment;
 
     //
     // Information for an aligned sequence.
@@ -106,6 +107,8 @@ class Seq {
     ~Seq( void ) {
         if (id != NULL)
             delete[] id;
+        if (comment != NULL)
+            delete[] comment;
         if (seq != NULL)
             delete[] seq;
         if (qual != NULL)

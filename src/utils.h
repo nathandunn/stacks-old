@@ -144,7 +144,7 @@ double gettm() {
 // Class to read lines from a plain text or compressed file indifferently.
 //
 class VersatileLineReader {
-    const string path_;
+    string path_;
     size_t line_number_;
     bool is_gzipped_;
 
@@ -159,12 +159,17 @@ class VersatileLineReader {
 
 public:
     VersatileLineReader(const string& path);
+    VersatileLineReader();
     ~VersatileLineReader();
 
+    int open(string &);
+
+    //
     // Reads one line from the file, removing the trailing '\n' (and '\r', if any).
     // Returns false on EOF, or throws an exception if the file doesn't end with a newline.
     // e.g.:
     // const char* line; size_t len; while (file.getline(line, len)) {...}
+    //
     bool getline(const char*& line, size_t& len);
 
     const string& path() const {return path_;}

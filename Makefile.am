@@ -19,7 +19,7 @@ libcore_a_SOURCES = \
 	src/FastaI.h \
 	src/FastqI.h \
 	src/GappedAln.h \
-	src/gzFasta.h \
+	src/gzFasta.h src/gzFasta.cc \
 	src/gzFastq.h \
 	src/input.h src/input.cc \
 	src/kmers.h src/kmers.cc \
@@ -56,7 +56,7 @@ libpop_a_SOURCES = \
 	src/smoothing_utils.h
 
 libcore_a_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
-libpop_a_CXXFLAGS  = $(OPENMP_CFLAGS)
+libpop_a_CXXFLAGS  = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
 
 phasedstacks_SOURCES = libcore.a src/phasedstacks.h src/phasedstacks.cc
 
@@ -78,43 +78,43 @@ rxstacks_SOURCES    = libcore.a libpop.a src/rxstacks.h src/rxstacks.cc
 tsv2bam_SOURCES = libcore.a src/tsv2bam.cc
 gstacks_SOURCES = libcore.a src/gstacks.h src/gstacks.cc src/debruijn.h src/debruijn.cc src/Alignment.h src/SuffixTree.h src/SuffixTree.cc
 
-phasedstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
+phasedstacks_CXXFLAGS = $(OPENMP_CFLAGS)
 phasedstacks_LDFLAGS  = $(OPENMP_CFLAGS)
 phasedstacks_LDADD    = libcore.a
 
-ustacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
+ustacks_CXXFLAGS = $(OPENMP_CFLAGS)
 ustacks_LDFLAGS  = $(OPENMP_CFLAGS)
 ustacks_LDADD    = libcore.a
-pstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS) $(SPARSEHASH_CFLAGS)
+pstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
 pstacks_LDFLAGS  = $(OPENMP_CFLAGS)
 pstacks_LDADD    = $(BAM_LIBS) libcore.a
-cstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
+cstacks_CXXFLAGS = $(OPENMP_CFLAGS)
 cstacks_LDFLAGS  = $(OPENMP_CFLAGS)
 cstacks_LDADD    = libcore.a
-sstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS) $(BAM_CFLAGS)
+sstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
 sstacks_LDFLAGS  = $(OPENMP_CFLAGS)
 sstacks_LDADD    = $(BAM_LIBS) libcore.a
 
-process_radtags_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS) $(BAM_CFLAGS)
+process_radtags_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
 process_radtags_LDFLAGS  = $(OPENMP_CFLAGS)
 process_radtags_LDADD    = $(BAM_LIBS) libcore.a libclean.a
-process_shortreads_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS) $(BAM_CFLAGS)
+process_shortreads_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
 process_shortreads_LDFLAGS  = $(OPENMP_CFLAGS)
 process_shortreads_LDADD    = $(BAM_LIBS) libcore.a libclean.a
-clone_filter_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS) $(BAM_CFLAGS)
+clone_filter_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
 clone_filter_LDFLAGS  = $(OPENMP_CFLAGS)
 clone_filter_LDADD    = $(BAM_LIBS) libcore.a libclean.a
-kmer_filter_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
+kmer_filter_CXXFLAGS = $(OPENMP_CFLAGS) 
 kmer_filter_LDFLAGS  = $(OPENMP_CFLAGS)
 kmer_filter_LDADD    = libcore.a libclean.a
 
-genotypes_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
+genotypes_CXXFLAGS = $(OPENMP_CFLAGS)
 genotypes_LDFLAGS  = $(OPENMP_CFLAGS)
 genotypes_LDADD    = libcore.a libpop.a
-populations_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS) $(BAM_CFLAGS)
+populations_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
 populations_LDFLAGS  = $(OPENMP_CFLAGS)
 populations_LDADD    = $(OPENMP_CFLAGS) $(BAM_LIBS) libcore.a libpop.a
-rxstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
+rxstacks_CXXFLAGS = $(OPENMP_CFLAGS)
 rxstacks_LDFLAGS  = $(OPENMP_CFLAGS)
 rxstacks_LDADD    = $(OPENMP_CFLAGS) libcore.a libpop.a
 

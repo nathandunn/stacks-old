@@ -63,8 +63,36 @@ Seq *Fasta::next_seq() {
     // Initialize the Seq structure and store the FASTA ID
     //
     Seq *s = new Seq;
-    s->id = new char[len + 1];
-    strcpy(s->id, this->line + 1);
+
+    //
+    // Check if the ID line of the FASTA file has a comment after the ID.
+    //
+    const char *p, *q;
+    p = this->line + 1;
+    for (q = this->line; *q != '\0' && *q != ' ' && *q != '\t'; q++);
+    
+    if (*q == '\0') {
+        // Comment not present.
+        s->id = new char[len + 1];
+        strcpy(s->id, p);
+
+    } else {
+        // Comment present.
+        int l = q - p;
+        assert(l > 0);
+        s->id = new char[l + 1];
+        strncpy(s->id, p, l);
+        s->id[l] = '\0';
+
+        q++;
+        p = q;
+        for (; *q != '\0'; q++);
+        l = q - p;
+        assert(l > 0);
+        s->comment = new char[l + 1];
+        strncpy(s->comment, p, l);
+        s->comment[l] = '\0';
+    }
 
     //
     // Read the sequence from the file -- keep reading lines until we reach the next
@@ -116,9 +144,30 @@ int Fasta::next_seq(Seq &s) {
     if (this->line[len - 1] == '\r') this->line[len - 1] = '\0';
 
     //
-    // Store the FASTA ID
+    // Check if the ID line of the FASTA file has a comment after the ID.
     //
-    strcpy(s.id, this->line + 1);
+    const char *p, *q;
+    p = this->line + 1;
+    for (q = this->line; *q != '\0' && *q != ' ' && *q != '\t'; q++);
+    
+    if (*q == '\0') {
+        // Comment not present.
+        strncpy(s.id, p, id_len);
+        s.id[id_len - 1] = '\0';
+        
+    } else {
+        // Comment present.
+        len = q - p;
+        strncpy(s.id, p, id_len);
+        s.id[id_len - 1] = '\0';
+
+        q++;
+        p = q;
+        for (; *q != '\0'; q++);
+        len = q - p;
+        strncpy(s.comment, p, id_len);
+        s.comment[id_len - 1] = '\0';
+    }
 
     //
     // Read the sequence from the file -- keep reading lines until we reach the next

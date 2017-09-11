@@ -28,11 +28,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include "MetaPopInfo.h"
 #include "export_formats.h"
-#include "locus_readers.h"
-#include "gzFasta.h"
-
 #include "populations.h"
 
 using namespace std;
@@ -155,7 +151,6 @@ int main (int argc, char* argv[]) {
 
     // We need some objects in the main scope for each mode.
     unique_ptr<unordered_map<int,vector<VcfRecord>>> cloci_vcf_records;
-    unique_ptr<VcfHeader> vcf_header;
     unique_ptr<vector<VcfRecord>> vcf_records;
 
     //
@@ -168,10 +163,14 @@ int main (int argc, char* argv[]) {
              << mpopi.pops().size() << " population(s), " << mpopi.groups().size() << " group(s).\n";
     }
 
+    BatchLocusProcessor bloc(input_mode, &mpopi);
+
+    bloc.init(batch_id, in_path, pmap_path);
+
     if (input_mode == InputMode::vcf)
-        process_loci(vcf_header, vcf_records, catalog, log_fh);
+        process_loci(bloc, vcf_records, catalog, log_fh);
     else
-        process_loci(vcf_header, cloci_vcf_records, catalog, log_fh);
+        process_loci(bloc, cloci_vcf_records, catalog, log_fh);
     
     //
     // Read the blacklist, the whitelist, and the bootstrap-whitelist.
@@ -197,24 +196,7 @@ int main (int argc, char* argv[]) {
     loci_ordered = order_unordered_loci(catalog);
 
     // Report information on the MetaPopInfo.
-    cerr << "Working on " << mpopi.samples().size() << " samples.\n";
-    cerr << "Working on " << mpopi.pops().size() << " population(s):\n";
-    for (vector<Pop>::const_iterator p = mpopi.pops().begin(); p != mpopi.pops().end(); p++) {
-        cerr << "    " << p->name << ": ";
-        for (size_t s = p->first_sample; s < p->last_sample; ++s) {
-            cerr << mpopi.samples()[s].name << ", ";
-        }
-        cerr << mpopi.samples()[p->last_sample].name << "\n";
-    }
-    cerr << "Working on " << mpopi.groups().size() << " group(s) of populations:\n";
-    for (vector<Group>::const_iterator g = mpopi.groups().begin(); g != mpopi.groups().end(); g++) {
-        cerr << "    " << g->name << ": ";
-        for (vector<size_t>::const_iterator p = g->pops.begin(); p != g->pops.end() -1; ++p) {
-            //rem. end()-1 and back() are safe, there's always at least one pop
-            cerr << mpopi.pops()[*p].name << ", ";
-        }
-        cerr << mpopi.pops()[g->pops.back()].name << "\n";
-    }
+    mpopi.status();
 
     if (size_t(population_limit) > mpopi.pops().size()) {
         cerr << "Notice: Population limit (" << population_limit << ")"
@@ -231,11 +213,11 @@ int main (int argc, char* argv[]) {
 
     if (input_mode == InputMode::stacks2) {
         // Using Stacks v2 files.
-        pmap->populate(catalog, *cloci_vcf_records, *vcf_header);
+        pmap->populate(catalog, *cloci_vcf_records, *bloc.vcf_header());
         cloci_vcf_records.reset();
     } else if (input_mode == InputMode::vcf) {
         // ...or using VCF records.
-        pmap->populate(catalog, *vcf_records, *vcf_header);
+        pmap->populate(catalog, *vcf_records, *bloc.vcf_header());
         vcf_records.reset();
     }
 
@@ -445,58 +427,91 @@ int main (int argc, char* argv[]) {
 }
 
 int
-process_loci(unique_ptr<VcfHeader> &vcf_header,
-             unique_ptr<unordered_map<int, vector<VcfRecord>>> &cloci_vcf_records,
-             map<int, CSLocus *> &catalog, ofstream &log_fh)
+BatchLocusProcessor::init(int batch_id, string in_path, string pmap_path)
 {
-    cloci_vcf_records.reset(new unordered_map<int,vector<VcfRecord>>());
+    if (this->_input_mode == InputMode::vcf)
+        this->init_external_loci(in_path, pmap_path);
+    else
+        this->init_stacks_loci(batch_id, in_path, pmap_path);
 
+    return 0;
+}
+
+int
+BatchLocusProcessor::init_stacks_loci(int batch_id, string in_path, string pmap_path)
+{
+    //
     // Open the files.
+    //
     string catalog_fa_path  = in_path + "batch_" + to_string(batch_id) + ".gstacks.fa.gz";
     string catalog_vcf_path = in_path + "batch_" + to_string(batch_id) + ".gstacks.vcf.gz";
-    GzFasta       fasta_f(catalog_fa_path);
-    VcfCLocReader reader(catalog_vcf_path);
+
+    this->_fasta_reader.open(catalog_fa_path);
+    this->_cloc_reader.open(catalog_vcf_path);
 
     // Create the population map or check that all samples have data.
     if (pmap_path.empty()) {
         cerr << "No population map specified, using all samples...\n";
-        mpopi.init_names(reader.header().samples());
+        this->_mpopi->init_names(this->cloc_reader().header().samples());
     } else {
-        size_t n_samples_before = mpopi.samples().size();
-        mpopi.intersect_with(reader.header().samples());
-        size_t n_rm_samples = n_samples_before - mpopi.samples().size();
+        size_t n_samples_before = this->_mpopi->samples().size();
+        this->_mpopi->intersect_with(this->cloc_reader().header().samples());
+        size_t n_rm_samples = n_samples_before - this->_mpopi->samples().size();
+
         if (n_rm_samples > 0) {
             cerr << "Warning: No genotype data exists for " << n_rm_samples
                  << " of the samples listed in the population map.\n";
-            if (mpopi.samples().empty()) {
+            if (this->_mpopi->samples().empty()) {
                 cerr << "Error: No more samples.\n";
                 throw exception();
             }
         }
     }
-    reader.set_sample_ids(mpopi);
+
+    this->cloc_reader().set_sample_ids(*this->_mpopi);
+
+    //
+    // Store the VCF header data.
+    //
+    this->_vcf_header = new VcfHeader(this->cloc_reader().header());
+
+    return 0;
+}
+
+int
+process_loci(BatchLocusProcessor &bloc,
+             unique_ptr<unordered_map<int, vector<VcfRecord>>> &cloci_vcf_records,
+             map<int, CSLocus *> &catalog, ofstream &log_fh)
+{
+    cloci_vcf_records.reset(new unordered_map<int, vector<VcfRecord>>());
 
     // Read the files, create the loci.
     vector<VcfRecord> records;
     Seq seq;
-    seq.id   = new char[id_len];
-    seq.seq  = new char[max_len];
-    seq.qual = new char[max_len];
-    while (reader.read_one_locus(records)) {
+    seq.id      = new char[id_len];
+    seq.comment = new char[id_len];
+    seq.seq     = new char[max_len];
+
+    int cloc_id, rv;
+
+    while (bloc.cloc_reader().read_one_locus(records)) {
+        //
         // Get the current locus ID.
+        //
         assert(!records.empty());
-        int cloc_id = is_integer(records[0].chrom());
+        cloc_id = is_integer(records[0].chrom());
         assert(cloc_id >= 0);
 
-        // Find the corresponding fasta record. (Note: c-loci with very low
-        // coverage might be entirely missing from the VCF; in this case
-        // ignore them.)
-        int rv = fasta_f.next_seq(seq);
-        while(rv != 0 && atoi(seq.id) != cloc_id)
-            rv = fasta_f.next_seq(seq);
+        //
+        // Find the corresponding fasta record. (Note: c-loci with very low coverage
+        // might be entirely missing from the VCF; in this case ignore them.)
+        //
+        do {
+            rv = bloc.fasta_reader().next_seq(seq);
+        } while (rv != 0 && is_integer(seq.id) != cloc_id);
+
         if (rv == 0) {
-            cerr << "Error: files are discordant, maybe trucated: '"
-                 << catalog_fa_path << "' and '" << catalog_vcf_path << "'.\n";
+            cerr << "Error: catalog VCF and FASTA files are discordant, maybe trucated. rv: " << rv << "; cloc_id: " << cloc_id << "\n";
             throw exception();
         }
 
@@ -507,42 +522,39 @@ process_loci(unique_ptr<VcfHeader> &vcf_header,
         (*cloci_vcf_records)[cloc_id] = move(records);
     }
 
-    vcf_header.reset(new VcfHeader(reader.header()));
-
     return 0;
 }
 
 int
-process_loci(unique_ptr<VcfHeader> &vcf_header,
-             unique_ptr<vector<VcfRecord>> &vcf_records,
-             map<int, CSLocus *> &catalog, ofstream &log_fh)
+BatchLocusProcessor::init_external_loci(string in_path, string pmap_path)
 {
     //
-    // VCF mode
-    //
-
     // Open the VCF file
+    //
     cerr << "Opening the VCF file...\n";
-    VcfParser parser (in_vcf_path);
+    this->_vcf_parser.open(in_path);
 
-    if (parser.header().samples().empty()) {
-        cerr << "Error: No samples in VCF file '" << in_vcf_path << "'.\n";
+    if (this->_vcf_parser.header().samples().empty()) {
+        cerr << "Error: No samples in VCF file '" << in_path << "'.\n";
         throw exception();
     }
 
     // Reconsider the MetaPopInfo in light of the VCF header.
     if (pmap_path.empty()) {
         cerr << "No population map specified, creating one from the VCF header...\n";
-        mpopi.init_names(parser.header().samples());
+        this->_mpopi->init_names(this->_vcf_parser.header().samples());
+
     } else {
         // Intersect the samples present in the population map and the VCF.
-        size_t n_samples_before = mpopi.samples().size();
-        mpopi.intersect_with(parser.header().samples());
-        size_t n_rm_samples = n_samples_before - mpopi.samples().size();
+        size_t n_samples_before = this->_mpopi->samples().size();
+
+        this->_mpopi->intersect_with(this->_vcf_parser.header().samples());
+        
+        size_t n_rm_samples = n_samples_before - this->_mpopi->samples().size();
         if (n_rm_samples > 0) {
             cerr << "Warning: Of the samples listed in the population map, "
                  << n_rm_samples << " could not be found in the VCF :";
-            if (mpopi.samples().empty()) {
+            if (this->_mpopi->samples().empty()) {
                 cerr << "Error: No more samples.\n";
                 throw exception();
             }
@@ -550,11 +562,26 @@ process_loci(unique_ptr<VcfHeader> &vcf_header,
     }
 
     // Create arbitrary sample IDs.
-    for (size_t i = 0; i < mpopi.samples().size(); ++i)
-        mpopi.set_sample_id(i, i+1); //id=i+1
+    for (size_t i = 0; i < this->_mpopi->samples().size(); ++i)
+        this->_mpopi->set_sample_id(i, i+1); //id=i+1
 
-    // [mpopi] is definitive.
+    //
+    // Store the VCF header data.
+    //
+    this->_vcf_header = new VcfHeader(this->vcf_reader().header());
 
+    return 0;
+}
+
+int
+process_loci(BatchLocusProcessor &bloc,
+             unique_ptr<vector<VcfRecord>> &vcf_records,
+             map<int, CSLocus *> &catalog, ofstream &log_fh)
+{
+    //
+    // VCF mode
+    //
+    
     // Read the SNP records
     cerr << "Reading the VCF records...\n";
     vcf_records.reset(new vector<VcfRecord>());
@@ -563,16 +590,16 @@ process_loci(unique_ptr<VcfHeader> &vcf_header,
 
     vcf_records->push_back(VcfRecord());
     VcfRecord* rec = & vcf_records->back();
-    while (parser.next_record(*rec)) {
+    while (bloc.vcf_reader().next_record(*rec)) {
         // Check for a SNP.
         if (not rec->is_snp()) {
-            skipped_notsnp.push_back(parser.line_number());
+            skipped_notsnp.push_back(bloc.vcf_reader().line_number());
             continue;
         }
 
         // Check for a filtered-out SNP
         if (strncmp(rec->filters(), ".", 2) != 0 && strncmp(rec->filters(), "PASS", 5) != 0) {
-            skipped_filter.push_back(parser.line_number());
+            skipped_filter.push_back(bloc.vcf_reader().line_number());
             continue;
         }
 
@@ -597,7 +624,6 @@ process_loci(unique_ptr<VcfHeader> &vcf_header,
     }
 
     catalog = create_catalog(*vcf_records);
-    vcf_header.reset(new VcfHeader(parser.header()));
 
     return 0;
 }

@@ -40,6 +40,7 @@ PhyLoc::PhyLoc(const string& s) : PhyLoc() {
 
 Seq::Seq() {
     this->id       = NULL;
+    this->comment  = NULL;
     this->seq      = NULL;
     this->qual     = NULL;
     this->loc_str  = NULL;
@@ -55,6 +56,12 @@ Seq::Seq(const Seq& other)
         strcpy(id, other.id);
     } else {
         id = NULL;
+    }
+    if (other.comment != NULL) {
+        comment = new char[strlen(other.comment)+1];
+        strcpy(comment, other.comment);
+    } else {
+        comment = NULL;
     }
     if (other.seq != NULL) {
         seq = new char[strlen(other.seq)+1];
