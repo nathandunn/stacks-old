@@ -220,10 +220,10 @@ void run(const vector<int>& cloc_ids, const string& header_sq_lines, size_t samp
     //
     // Align the sample loci to the catalog.
     //
-    size_t prev_sloc = SIZE_MAX;
+    int prev_sloc = -1;
     Cigar c;
     for (const CatMatch* m : matches) {
-        assert(m->tag_id >= prev_sloc || prev_sloc == SIZE_MAX); // Matches files are sorted by sloc_id
+        assert(m->tag_id >= prev_sloc); // Matches files are sorted by sloc_id
         if (m->tag_id == prev_sloc)
             // We have already aligned this sample locus.
             continue;
