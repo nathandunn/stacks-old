@@ -89,7 +89,7 @@ void cigar_trim_left(Cigar& cig, size_t len) {
         cig.front().second -= len;
         if (cig.front().second == 0)
             cig.erase(cig.begin());
-            return;
+        return;
     }
     // Trimming of the CIGAR isn't trivial.
     // We must remove as many M/D operations as necessary, and merge the I operations.
