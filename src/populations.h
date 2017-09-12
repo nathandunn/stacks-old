@@ -71,6 +71,53 @@ enum class InputMode {stacks, stacks2, vcf};
 const int max_snp_dist = 500;
 
 //
+// Class for filtering whole loci based on the sample and population limits (-r, -p).
+//
+class LocusFilter {
+public:
+    LocusFilter() {
+        this->_pop_cnt    = 0;
+        this->_sample_cnt = 0;
+        this->_pop_order  = NULL; // The array order of each population.
+        this->_samples    = NULL; // Which population each sample belongs to.
+        this->_pop_cnts   = NULL; // For a locus, how many samples are present in each population.
+        this->_pop_tot    = NULL; // The total number of samples in each population.
+        this->_filtered_loci = 0;
+    }
+    LocusFilter(const MetaPopInfo *mpopi) {
+        this->_pop_cnt    = mpopi->pops().size();
+        this->_sample_cnt = mpopi->samples().size();
+        this->_pop_order  = new size_t [this->_pop_cnt];
+        this->_samples    = new size_t [this->_sample_cnt];
+        this->_pop_cnts   = new size_t [this->_pop_cnt];
+        this->_pop_tot    = new size_t [this->_pop_cnt];
+
+        this->init(mpopi);
+    }
+    ~LocusFilter() {
+        delete [] this->_pop_cnts;
+        delete [] this->_pop_tot;
+        delete [] this->_pop_order;
+        delete [] this->_samples;
+    }
+
+    bool   filter(MetaPopInfo *mpopi, Datum **d);
+    size_t filtered() { return this->_filtered_loci; }
+    
+private:
+    size_t  _pop_cnt;
+    size_t  _sample_cnt;
+    size_t *_pop_order;
+    size_t *_samples;
+    size_t *_pop_cnts;
+    size_t *_pop_tot;
+    size_t  _filtered_loci;
+
+    void init(const MetaPopInfo *mpopi);
+    void reset();
+};
+
+//
 // BatchLocusProcessor
 // ----------
 // Class for processing loci in batches, or per chromosome.
