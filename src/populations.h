@@ -80,13 +80,13 @@ public:
     BatchLocusProcessor():
         _input_mode(InputMode::stacks2), _batch_size(0), _mpopi(NULL),
         _vcf_parser(), _cloc_reader(), _fasta_reader(),
-        _vcf_header(NULL), _cloc_vcf_rec(NULL), _ext_vcf_rec(NULL), _catalog(NULL) {}
+        _vcf_header(NULL), _cloc_vcf_rec(NULL), _ext_vcf_rec(NULL), _catalog(NULL), _blacklist(), _whitelist() {}
     BatchLocusProcessor(InputMode mode, size_t batch_size, MetaPopInfo *popi):
         _input_mode(mode), _batch_size(batch_size), _mpopi(popi), _vcf_parser(), _cloc_reader(), _fasta_reader(),
-        _vcf_header(NULL), _cloc_vcf_rec(NULL), _ext_vcf_rec(NULL), _catalog(NULL) {}
+        _vcf_header(NULL), _cloc_vcf_rec(NULL), _ext_vcf_rec(NULL), _catalog(NULL), _blacklist(), _whitelist() {}
     BatchLocusProcessor(InputMode mode, size_t batch_size): 
         _input_mode(mode), _batch_size(batch_size), _mpopi(NULL), _vcf_parser(), _cloc_reader(), _fasta_reader(),
-        _vcf_header(NULL), _cloc_vcf_rec(NULL), _ext_vcf_rec(NULL), _catalog(NULL) {}
+        _vcf_header(NULL), _cloc_vcf_rec(NULL), _ext_vcf_rec(NULL), _catalog(NULL), _blacklist(), _whitelist() {}
     ~BatchLocusProcessor() {
         if (this->_ext_vcf_rec != NULL)
             delete this->_ext_vcf_rec;
@@ -97,7 +97,7 @@ public:
     };
     
     int            init(int, string, string);
-    int            next_batch(ostream &);
+    size_t         next_batch(ostream &);
 
     MetaPopInfo*   pop_info()      { return this->_mpopi; }
     int            pop_info(MetaPopInfo *popi) { this->_mpopi = popi; return 0; }
@@ -108,10 +108,12 @@ public:
     size_t         batch_size()    { return this->_batch_size; }
     size_t         batch_size(size_t bsize) { this->_batch_size = bsize; return bsize; }
     
-    const map<int, CSLocus *>& catalog()  { return *this->_catalog; }
-    const unordered_map<int, vector<VcfRecord>>& cloc_vcf_records()  { return *this->_cloc_vcf_rec; }
-    const vector<VcfRecord>& ext_vcf_records()  { return *this->_ext_vcf_rec; }
-    
+    const map<int, CSLocus *>& catalog()         { return *this->_catalog; }
+    const unordered_map<int, vector<VcfRecord>>& cloc_vcf_records() { return *this->_cloc_vcf_rec; }
+    const vector<VcfRecord>&   ext_vcf_records() { return *this->_ext_vcf_rec; }
+    const set<int>&            blacklist()       { return this->_blacklist; }
+    const map<int, set<int> >& whitelist()       { return this->_whitelist; }
+
 private:
     InputMode    _input_mode;
     size_t       _batch_size; // Number of loci to process at a time.
@@ -128,10 +130,14 @@ private:
     vector<VcfRecord>                     *_ext_vcf_rec;
     map<int, CSLocus *>                   *_catalog;
 
-    int init_external_loci(string, string);
-    int init_stacks_loci(int, string, string);
-    int next_batch_external_loci(ostream &);
-    int next_batch_stacks_loci();
+    // Controls for which loci are loaded
+    set<int>            _blacklist;
+    map<int, set<int> > _whitelist;
+    
+    int    init_external_loci(string, string);
+    int    init_stacks_loci(int, string, string);
+    size_t next_batch_external_loci(ostream &);
+    size_t next_batch_stacks_loci();
 };
 
 void    help( void );

@@ -99,8 +99,7 @@ string    out_prefix;
 
 MetaPopInfo mpopi;
 
-set<int> blacklist, bootstraplist;
-map<int, set<int> > whitelist;
+set<int> bootstraplist;
 
 //
 // Hold information about restriction enzymes
@@ -156,33 +155,33 @@ int main (int argc, char* argv[]) {
 
     BatchLocusProcessor bloc(input_mode, 100, &mpopi);
 
+    //
+    // Locate and open input files, read VCF headers, parse population map, load black/white lists.
+    //
     bloc.init(batch_id, in_path, pmap_path);
 
+    //
+    // Read the next set of loci to process.
+    // - If data are denovo, load blim._batch_size loci.
+    // - If data are reference aligned, load one chromosome.
+    //
     bloc.next_batch(log_fh);
     
     map<int, CSLocus *> catalog = bloc.catalog();
 
     //
-    // Read the blacklist, the whitelist, and the bootstrap-whitelist.
+    // Read the bootstrap-whitelist.
     //
-    if (bl_file.length() > 0) {
-        load_marker_list(bl_file, blacklist);
-        cerr << "Loaded " << blacklist.size() << " blacklisted markers.\n";
-    }
-    if (wl_file.length() > 0) {
-        load_marker_column_list(wl_file, whitelist);
-        cerr << "Loaded " << whitelist.size() << " whitelisted markers.\n";
-        check_whitelist_integrity(catalog, whitelist);
-    }
     if (bs_wl_file.length() > 0) {
         load_marker_list(bs_wl_file, bootstraplist);
         cerr << "Loaded " << bootstraplist.size() << " markers to include when bootstrapping.\n";
     }
-
+    set<int> blacklist(bloc.blacklist());
+    map<int, set<int>> whitelist(bloc.whitelist());
+    
     //
-    // Reduce the catalog accordingly, and retrieve the genomic order of loci.
+    // Retrieve the genomic order of loci.
     //
-    reduce_catalog(catalog, whitelist, blacklist);
     loci_ordered = order_unordered_loci(catalog);
 
     // Report information on the MetaPopInfo.
@@ -416,6 +415,19 @@ int main (int argc, char* argv[]) {
 int
 BatchLocusProcessor::init(int batch_id, string in_path, string pmap_path)
 {
+    //
+    // Read the blacklist and whitelist to control which loci we load..
+    //
+    if (bl_file.length() > 0) {
+        load_marker_list(bl_file, this->_blacklist);
+        cerr << "Loaded " << this->_blacklist.size() << " blacklisted markers.\n";
+    }
+    if (wl_file.length() > 0) {
+        load_marker_column_list(wl_file, this->_whitelist);
+        cerr << "Loaded " << this->_whitelist.size() << " whitelisted markers.\n";
+        //// check_whitelist_integrity(catalog, whitelist);
+    }
+    
     if (this->_input_mode == InputMode::vcf)
         this->init_external_loci(in_path, pmap_path);
     else
@@ -424,15 +436,17 @@ BatchLocusProcessor::init(int batch_id, string in_path, string pmap_path)
     return 0;
 }
 
-int
+size_t
 BatchLocusProcessor::next_batch(ostream &log_fh)
 {
+    size_t loc_cnt;
+    
     if (this->_input_mode == InputMode::vcf)
-        this->next_batch_external_loci(log_fh);
+        loc_cnt = this->next_batch_external_loci(log_fh);
     else
-        this->next_batch_stacks_loci();
+        loc_cnt = this->next_batch_stacks_loci();
 
-    return 0;
+    return loc_cnt;
 }
 
 int
@@ -476,7 +490,7 @@ BatchLocusProcessor::init_stacks_loci(int batch_id, string in_path, string pmap_
     return 0;
 }
 
-int
+size_t
 BatchLocusProcessor::next_batch_stacks_loci()
 {
     if (this->_catalog != NULL)
@@ -517,6 +531,18 @@ BatchLocusProcessor::next_batch_stacks_loci()
             throw exception();
         }
 
+        //
+        // Check if this locus is filtered.
+        //
+        if (this->_whitelist.size() > 0 && this->_whitelist.count(cloc_id) == 0) {
+            records.clear();
+            continue;
+        }
+        if (this->_blacklist.count(cloc_id)) {
+            records.clear();
+            continue;
+        }
+
         // Create the CSLocus.
         this->_catalog->insert({cloc_id, new_cslocus(seq, records, cloc_id)});
 
@@ -526,7 +552,7 @@ BatchLocusProcessor::next_batch_stacks_loci()
         loc_cnt++;
     }
 
-    return 0;
+    return loc_cnt;
 }
 
 int
@@ -577,7 +603,7 @@ BatchLocusProcessor::init_external_loci(string in_path, string pmap_path)
     return 0;
 }
 
-int
+size_t
 BatchLocusProcessor::next_batch_external_loci(ostream &log_fh)
 {
     //
@@ -635,7 +661,7 @@ BatchLocusProcessor::next_batch_external_loci(ostream &log_fh)
         delete this->_catalog;
     this->_catalog = create_catalog(this->ext_vcf_records());
 
-    return 0;
+    return loc_cnt;
 }
 
 void
