@@ -78,36 +78,60 @@ const int max_snp_dist = 500;
 class BatchLocusProcessor {
 public:
     BatchLocusProcessor():
-        _input_mode(InputMode::stacks2), _mpopi(NULL), _vcf_parser(), _cloc_reader(), _fasta_reader(), _vcf_header(NULL) {}
-    BatchLocusProcessor(InputMode mode, MetaPopInfo *popi):
-        _input_mode(mode), _mpopi(popi), _vcf_parser(), _cloc_reader(), _fasta_reader(), _vcf_header(NULL) {}
-    BatchLocusProcessor(InputMode mode): 
-        _input_mode(mode), _mpopi(NULL), _vcf_parser(), _cloc_reader(), _fasta_reader(), _vcf_header(NULL) {}
+        _input_mode(InputMode::stacks2), _batch_size(0), _mpopi(NULL),
+        _vcf_parser(), _cloc_reader(), _fasta_reader(),
+        _vcf_header(NULL), _cloc_vcf_rec(NULL), _ext_vcf_rec(NULL), _catalog(NULL) {}
+    BatchLocusProcessor(InputMode mode, size_t batch_size, MetaPopInfo *popi):
+        _input_mode(mode), _batch_size(batch_size), _mpopi(popi), _vcf_parser(), _cloc_reader(), _fasta_reader(),
+        _vcf_header(NULL), _cloc_vcf_rec(NULL), _ext_vcf_rec(NULL), _catalog(NULL) {}
+    BatchLocusProcessor(InputMode mode, size_t batch_size): 
+        _input_mode(mode), _batch_size(batch_size), _mpopi(NULL), _vcf_parser(), _cloc_reader(), _fasta_reader(),
+        _vcf_header(NULL), _cloc_vcf_rec(NULL), _ext_vcf_rec(NULL), _catalog(NULL) {}
     ~BatchLocusProcessor() {
-        if (this->_vcf_header != NULL)
-            delete this->_vcf_header;
+        if (this->_ext_vcf_rec != NULL)
+            delete this->_ext_vcf_rec;
+        if (this->_cloc_vcf_rec != NULL)
+            delete this->_cloc_vcf_rec;
+        if (this->_catalog != NULL)
+            delete this->_catalog;
     };
     
-    int                  init(int, string, string);
-    int                  next_batch();
+    int            init(int, string, string);
+    int            next_batch(ostream &);
 
-    MetaPopInfo*   pop_info()     { return this->_mpopi; }
+    MetaPopInfo*   pop_info()      { return this->_mpopi; }
     int            pop_info(MetaPopInfo *popi) { this->_mpopi = popi; return 0; }
-    VcfParser&     vcf_reader()   { return this->_vcf_parser; }
-    GzFasta&       fasta_reader() { return this->_fasta_reader; }
-    VcfCLocReader& cloc_reader()  { return this->_cloc_reader; }
-    VcfHeader*     vcf_header()   { return this->_vcf_header; }
+    VcfParser&     vcf_reader()    { return this->_vcf_parser; }
+    GzFasta&       fasta_reader()  { return this->_fasta_reader; }
+    VcfCLocReader& cloc_reader()   { return this->_cloc_reader; }
+    VcfHeader*     vcf_header()    { return this->_vcf_header; }
+    size_t         batch_size()    { return this->_batch_size; }
+    size_t         batch_size(size_t bsize) { this->_batch_size = bsize; return bsize; }
+    
+    const map<int, CSLocus *>& catalog()  { return *this->_catalog; }
+    const unordered_map<int, vector<VcfRecord>>& cloc_vcf_records()  { return *this->_cloc_vcf_rec; }
+    const vector<VcfRecord>& ext_vcf_records()  { return *this->_ext_vcf_rec; }
     
 private:
-    InputMode          _input_mode;
-    MetaPopInfo        *_mpopi;
-    VcfParser          _vcf_parser;
-    VcfCLocReader      _cloc_reader;
-    GzFasta            _fasta_reader;
-    VcfHeader         *_vcf_header;
+    InputMode    _input_mode;
+    size_t       _batch_size; // Number of loci to process at a time.
+    MetaPopInfo *_mpopi;      // Population Map
+
+    // Parsers
+    VcfParser     _vcf_parser;
+    VcfCLocReader _cloc_reader;
+    GzFasta       _fasta_reader;
+
+    // Data stores
+    VcfHeader                             *_vcf_header;
+    unordered_map<int, vector<VcfRecord>> *_cloc_vcf_rec;
+    vector<VcfRecord>                     *_ext_vcf_rec;
+    map<int, CSLocus *>                   *_catalog;
 
     int init_external_loci(string, string);
     int init_stacks_loci(int, string, string);
+    int next_batch_external_loci(ostream &);
+    int next_batch_stacks_loci();
 };
 
 void    help( void );
@@ -116,8 +140,6 @@ int     parse_command_line(int, char**);
 void    output_parameters(ostream &);
 void    open_log(ofstream &);
 int     build_file_list();
-int     process_loci(BatchLocusProcessor &, unique_ptr<unordered_map<int, vector<VcfRecord>>> &, map<int, CSLocus *> &, ofstream &);
-int     process_loci(BatchLocusProcessor &, unique_ptr<vector<VcfRecord>> &, map<int, CSLocus *> &, ofstream &);
 int     load_marker_list(string, set<int> &);
 int     load_marker_column_list(string, map<int, set<int> > &);
 int     apply_locus_constraints(map<int, CSLocus *> &, PopMap<CSLocus> *, ofstream &);

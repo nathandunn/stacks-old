@@ -157,16 +157,18 @@ int Fasta::next_seq(Seq &s) {
         
     } else {
         // Comment present.
-        len = q - p;
-        strncpy(s.id, p, id_len);
-        s.id[id_len - 1] = '\0';
+        int l = q - p;
+        assert(l > 0);
+        strncpy(s.id, p, l);
+        s.id[l] = '\0';
 
         q++;
         p = q;
         for (; *q != '\0'; q++);
-        len = q - p;
-        strncpy(s.comment, p, id_len);
-        s.comment[id_len - 1] = '\0';
+        l = q - p;
+        assert(l > 0);
+        strncpy(s.comment, p, l);
+        s.comment[l] = '\0';
     }
 
     //

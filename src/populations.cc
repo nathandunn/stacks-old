@@ -145,15 +145,6 @@ int main (int argc, char* argv[]) {
     #endif
 
     //
-    // Initialize the catalog and the MetaPopInfo
-    //
-    map<int, CSLocus *> catalog;
-
-    // We need some objects in the main scope for each mode.
-    unique_ptr<unordered_map<int,vector<VcfRecord>>> cloci_vcf_records;
-    unique_ptr<vector<VcfRecord>> vcf_records;
-
-    //
     // Read the population map file, if any.
     //
     if (not pmap_path.empty()) {
@@ -163,15 +154,14 @@ int main (int argc, char* argv[]) {
              << mpopi.pops().size() << " population(s), " << mpopi.groups().size() << " group(s).\n";
     }
 
-    BatchLocusProcessor bloc(input_mode, &mpopi);
+    BatchLocusProcessor bloc(input_mode, 100, &mpopi);
 
     bloc.init(batch_id, in_path, pmap_path);
 
-    if (input_mode == InputMode::vcf)
-        process_loci(bloc, vcf_records, catalog, log_fh);
-    else
-        process_loci(bloc, cloci_vcf_records, catalog, log_fh);
+    bloc.next_batch(log_fh);
     
+    map<int, CSLocus *> catalog = bloc.catalog();
+
     //
     // Read the blacklist, the whitelist, and the bootstrap-whitelist.
     //
@@ -211,15 +201,12 @@ int main (int argc, char* argv[]) {
     cerr << "Populating observed haplotypes for " << mpopi.samples().size() << " samples, " << catalog.size() << " loci.\n";
     PopMap<CSLocus> *pmap = new PopMap<CSLocus>(mpopi, catalog.size());
 
-    if (input_mode == InputMode::stacks2) {
-        // Using Stacks v2 files.
-        pmap->populate(catalog, *cloci_vcf_records, *bloc.vcf_header());
-        cloci_vcf_records.reset();
-    } else if (input_mode == InputMode::vcf) {
-        // ...or using VCF records.
-        pmap->populate(catalog, *vcf_records, *bloc.vcf_header());
-        vcf_records.reset();
-    }
+    // Using Stacks v2 files.
+    if (input_mode == InputMode::stacks2)
+        pmap->populate(catalog, bloc.cloc_vcf_records(), *bloc.vcf_header());
+    // ...or using VCF records.
+    else if (input_mode == InputMode::vcf)
+        pmap->populate(catalog, bloc.ext_vcf_records(), *bloc.vcf_header());
 
     //
     // Tabulate haplotypes present and in what combinations.
@@ -438,6 +425,17 @@ BatchLocusProcessor::init(int batch_id, string in_path, string pmap_path)
 }
 
 int
+BatchLocusProcessor::next_batch(ostream &log_fh)
+{
+    if (this->_input_mode == InputMode::vcf)
+        this->next_batch_external_loci(log_fh);
+    else
+        this->next_batch_stacks_loci();
+
+    return 0;
+}
+
+int
 BatchLocusProcessor::init_stacks_loci(int batch_id, string in_path, string pmap_path)
 {
     //
@@ -479,11 +477,14 @@ BatchLocusProcessor::init_stacks_loci(int batch_id, string in_path, string pmap_
 }
 
 int
-process_loci(BatchLocusProcessor &bloc,
-             unique_ptr<unordered_map<int, vector<VcfRecord>>> &cloci_vcf_records,
-             map<int, CSLocus *> &catalog, ofstream &log_fh)
+BatchLocusProcessor::next_batch_stacks_loci()
 {
-    cloci_vcf_records.reset(new unordered_map<int, vector<VcfRecord>>());
+    if (this->_catalog != NULL)
+        delete this->_catalog;
+    this->_catalog = new map<int, CSLocus *>();
+    if (this->_cloc_vcf_rec != NULL)
+        delete _cloc_vcf_rec;
+    this->_cloc_vcf_rec = new unordered_map<int, vector<VcfRecord>>();
 
     // Read the files, create the loci.
     vector<VcfRecord> records;
@@ -492,9 +493,10 @@ process_loci(BatchLocusProcessor &bloc,
     seq.comment = new char[id_len];
     seq.seq     = new char[max_len];
 
-    int cloc_id, rv;
+    int    cloc_id, rv;
+    size_t loc_cnt = 0;
 
-    while (bloc.cloc_reader().read_one_locus(records)) {
+    while (loc_cnt < this->_batch_size && this->_cloc_reader.read_one_locus(records)) {
         //
         // Get the current locus ID.
         //
@@ -507,7 +509,7 @@ process_loci(BatchLocusProcessor &bloc,
         // might be entirely missing from the VCF; in this case ignore them.)
         //
         do {
-            rv = bloc.fasta_reader().next_seq(seq);
+            rv = this->_fasta_reader.next_seq(seq);
         } while (rv != 0 && is_integer(seq.id) != cloc_id);
 
         if (rv == 0) {
@@ -516,10 +518,12 @@ process_loci(BatchLocusProcessor &bloc,
         }
 
         // Create the CSLocus.
-        catalog.insert({cloc_id, new_cslocus(seq, records, cloc_id)});
+        this->_catalog->insert({cloc_id, new_cslocus(seq, records, cloc_id)});
 
         // Save the records (they are needed for the PopMap object).
-        (*cloci_vcf_records)[cloc_id] = move(records);
+        (*this->_cloc_vcf_rec)[cloc_id] = move(records);
+
+        loc_cnt++;
     }
 
     return 0;
@@ -574,42 +578,46 @@ BatchLocusProcessor::init_external_loci(string in_path, string pmap_path)
 }
 
 int
-process_loci(BatchLocusProcessor &bloc,
-             unique_ptr<vector<VcfRecord>> &vcf_records,
-             map<int, CSLocus *> &catalog, ofstream &log_fh)
+BatchLocusProcessor::next_batch_external_loci(ostream &log_fh)
 {
     //
     // VCF mode
     //
     
-    // Read the SNP records
-    cerr << "Reading the VCF records...\n";
-    vcf_records.reset(new vector<VcfRecord>());
+    if (this->_ext_vcf_rec != NULL)
+        delete this->_ext_vcf_rec;
+    this->_ext_vcf_rec = new vector<VcfRecord>();
+
     vector<size_t> skipped_notsnp;
     vector<size_t> skipped_filter;
+    size_t loc_cnt = 0;
 
-    vcf_records->push_back(VcfRecord());
-    VcfRecord* rec = & vcf_records->back();
-    while (bloc.vcf_reader().next_record(*rec)) {
+    this->_ext_vcf_rec->push_back(VcfRecord());
+    VcfRecord* rec = & this->_ext_vcf_rec->back();
+
+    while (loc_cnt < this->_batch_size && this->_vcf_parser.next_record(*rec)) {
         // Check for a SNP.
         if (not rec->is_snp()) {
-            skipped_notsnp.push_back(bloc.vcf_reader().line_number());
+            skipped_notsnp.push_back(this->_vcf_parser.line_number());
             continue;
         }
 
         // Check for a filtered-out SNP
         if (strncmp(rec->filters(), ".", 2) != 0 && strncmp(rec->filters(), "PASS", 5) != 0) {
-            skipped_filter.push_back(bloc.vcf_reader().line_number());
+            skipped_filter.push_back(this->_vcf_parser.line_number());
             continue;
         }
 
         // Save the SNP.
-        vcf_records->push_back(VcfRecord());
-        rec = & vcf_records->back();
-    }
-    vcf_records->pop_back();
+        this->_ext_vcf_rec->push_back(VcfRecord());
+        rec = & this->_ext_vcf_rec->back();
 
-    cerr << "Found " << vcf_records->size() << " SNP records in file '" << in_vcf_path
+        loc_cnt++;
+    }
+
+    this->_ext_vcf_rec->pop_back();
+
+    cerr << "Found " << this->_ext_vcf_rec->size() << " SNP records in file '" << in_vcf_path
          << "'. (Skipped " << skipped_filter.size() << " already filtered-out SNPs and "
          << skipped_notsnp.size() << " non-SNP records ; more with --verbose.)\n";
     if (verbose && not skipped_notsnp.empty()) {
@@ -618,12 +626,14 @@ process_loci(BatchLocusProcessor &bloc,
             log_fh << " " << *l;
         log_fh << "\n";
     }
-    if (vcf_records->size() == 0) {
+    if (this->_ext_vcf_rec->size() == 0) {
         cerr << "Error: No records.\n";
         throw exception();
     }
 
-    catalog = create_catalog(*vcf_records);
+    if (this->_catalog != NULL)
+        delete this->_catalog;
+    this->_catalog = create_catalog(this->ext_vcf_records());
 
     return 0;
 }
