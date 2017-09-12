@@ -829,6 +829,8 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
         const CLocAlnSet& aln_loc,
         set<size_t>& inconsistent_samples
 ) const {
+    inconsistent_samples.clear();
+
     vector<map<size_t,PhasedHet>> phased_samples (mpopi_->samples().size());
     vector<size_t> snp_cols; // The SNPs of this locus.
     for (size_t i=0; i<aln_loc.ref().length(); ++i)
@@ -1004,6 +1006,8 @@ bool LocusProcessor::assemble_phase_sets(
 ) const {
 
     static const size_t min_n_cooccurrences = 2;
+
+    phase_sets.clear();
 
     // We keep track of which phase set each het is currently part of.
     vector<size_t> allele_to_ps (het_snps.size(), SIZE_MAX);
