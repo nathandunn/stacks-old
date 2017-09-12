@@ -153,12 +153,14 @@ int main (int argc, char* argv[]) {
              << mpopi.pops().size() << " population(s), " << mpopi.groups().size() << " group(s).\n";
     }
 
-    BatchLocusProcessor bloc(input_mode, 100, &mpopi);
-
     //
     // Locate and open input files, read VCF headers, parse population map, load black/white lists.
     //
+    BatchLocusProcessor bloc(input_mode, 100, &mpopi);
+
     bloc.init(batch_id, in_path, pmap_path);
+
+    LocusFilter loc_filter(&mpopi);
 
     //
     // Initialize the PopMap
@@ -212,23 +214,28 @@ int main (int argc, char* argv[]) {
     //
     tabulate_haplotypes(catalog, pmap);
 
+    // //
+    // // Output a list of heterozygous loci and the associate haplotype frequencies.
+    // //
+    // if (sql_out)
+    //     write_sql(catalog, pmap);
+
+    // log_fh << "# Distribution of population loci.\n";
+    // log_haplotype_cnts(catalog, log_fh);
+
     //
-    // Output a list of heterozygous loci and the associate haplotype frequencies.
+    // Apply locus constraints.
     //
-    if (sql_out)
-        write_sql(catalog, pmap);
+    for (auto it = catalog.begin(); it != catalog.end(); it++)
+        loc_filter.filter(&mpopi, pmap->locus(it->first));
 
-    log_fh << "# Distribution of population loci.\n";
-    log_haplotype_cnts(catalog, log_fh);
+    // if (pmap->loci_cnt() == 0) {
+    //     cerr << "Error: All loci have been filtered out.\n";
+    //     throw exception();
+    // }
 
-    apply_locus_constraints(catalog, pmap, log_fh);
-    if (pmap->loci_cnt() == 0) {
-        cerr << "Error: All loci have been filtered out.\n";
-        throw exception();
-    }
-
-    log_fh << "# Distribution of population loci after applying locus constraints.\n";
-    log_haplotype_cnts(catalog, log_fh);
+    // log_fh << "# Distribution of population loci after applying locus constraints.\n";
+    // log_haplotype_cnts(catalog, log_fh);
 
     //
     // Create the PopSum object and compute the summary statistics.
@@ -289,6 +296,8 @@ int main (int argc, char* argv[]) {
     if (debug_flags.count("VCFCOMP"))
         vcfcomp_simplify_pmap(catalog, pmap);
 
+    cerr << "Removed " << loc_filter.filtered() << " loci that did not pass sample/population constraints.\n";
+
     delete psum;
     psum = new PopSum<CSLocus>(*pmap, mpopi);
     for (size_t i=0; i<mpopi.pops().size(); ++i) {
@@ -310,10 +319,10 @@ int main (int argc, char* argv[]) {
         }
     }
 
-    //
-    // Log the SNPs per locus distribution.
-    //
-    log_snps_per_loc_distrib(log_fh, catalog);
+    // //
+    // // Log the SNPs per locus distribution.
+    // //
+    // log_snps_per_loc_distrib(log_fh, catalog);
 
     calculate_haplotype_stats(catalog, pmap, psum);
 
@@ -662,6 +671,104 @@ BatchLocusProcessor::next_batch_external_loci(ostream &log_fh)
     this->_catalog = create_catalog(this->ext_vcf_records());
 
     return loc_cnt;
+}
+
+bool
+LocusFilter::filter(MetaPopInfo *mpopi, Datum **d)
+{
+    this->reset();
+
+    double pct       = 0.0;
+    bool   pop_limit = false;
+    int    pops      = 0;
+
+    for (size_t i = 0; i < this->_sample_cnt; i++) {
+        //
+        // Check that each sample is over the log likelihood threshold.
+        //
+        if (d[i] != NULL &&
+            filter_lnl   &&
+            d[i]->lnl < lnl_limit) {
+            // below_lnl_thresh++;
+            delete d[i];
+            d[i] = NULL;
+            // loc->hcnt--;
+        }
+    }
+
+    //
+    // Tally up the count of samples in this population.
+    //
+    for (size_t i = 0; i < this->_sample_cnt; i++) {
+        if (d[i] != NULL)
+            this->_pop_cnts[this->_samples[i]]++;
+    }
+
+    //
+    // Check that the counts for each population are over sample_limit. If not, zero out
+    // the members of that population.
+    //
+    for (uint i = 0; i < this->_pop_cnt; i++) {
+        const Pop& pop = mpopi->pops()[this->_pop_order[i]];
+
+        pct = (double) this->_pop_cnts[i] / (double) this->_pop_tot[i];
+
+        if (this->_pop_cnts[i] > 0 && pct < sample_limit) {
+            for (uint j = pop.first_sample; j <= pop.last_sample; j++) {
+                if (d[j] != NULL) {
+                    delete d[j];
+                    d[j] = NULL;
+                    // loc->hcnt--;
+                }
+            }
+            this->_pop_cnts[i] = 0;
+        }
+    }
+
+    //
+    // Check that this locus is present in enough populations.
+    //
+    for (uint i = 0; i < this->_pop_cnt; i++)
+        if (this->_pop_cnts[i] > 0) pops++;
+    if (pops < population_limit)
+        pop_limit = true;
+
+    if (pop_limit)
+        this->_filtered_loci++;
+
+    return pop_limit;
+}
+
+void
+LocusFilter::init(const MetaPopInfo *mpopi)
+{
+    this->_filtered_loci = 0;
+
+    size_t pop_sthg = 0;
+
+    for (size_t i_pop = 0; i_pop < mpopi->pops().size(); ++i_pop) {
+        const Pop& pop = mpopi->pops()[i_pop];
+        this->_pop_tot[pop_sthg]  = 0;
+
+        for (uint i = pop.first_sample; i <= pop.last_sample; i++) {
+            this->_samples[i] = pop_sthg;
+            this->_pop_tot[pop_sthg]++;
+        }
+        this->_pop_order[pop_sthg] = i_pop;
+        pop_sthg++;
+    }
+}
+
+void
+LocusFilter::reset()
+{
+    // memset(this->_samples,  0, this->_sample_cnt * sizeof(size_t));
+    // memset(this->_pop_cnts, 0, this->_pop_cnt * sizeof(size_t));
+
+    for (uint i = 0; i < this->_sample_cnt; i++)
+        this->_samples[i] = 0;
+    for (uint i = 0; i < this->_pop_cnt; i++)
+        this->_pop_cnts[i] = 0;
 }
 
 void

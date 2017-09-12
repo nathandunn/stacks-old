@@ -203,7 +203,7 @@ void PopMap<LocusT>::populate(map<int, LocusT*>& catalog,
         Datum** locdata = this->data[this->locus_index(cloc.id)];
 
         populate_locus(locdata, cloc, cloc_records, header, this->metapopinfo);
-        for (size_t s=0; s<sample_cnt(); ++s) {
+        for (int s = 0; s < sample_cnt(); ++s) {
             if (locdata[s] != NULL) {
                 ++cloc.cnt;
                 ++cloc.hcnt;
