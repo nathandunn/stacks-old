@@ -161,6 +161,12 @@ int main (int argc, char* argv[]) {
     bloc.init(batch_id, in_path, pmap_path);
 
     //
+    // Initialize the PopMap
+    //
+    //// cerr << "Populating observed haplotypes for " << mpopi.samples().size() << " samples, " << catalog.size() << " loci.\n";
+    PopMap<CSLocus> *pmap = new PopMap<CSLocus>(mpopi, bloc.batch_size());
+    
+    //
     // Read the next set of loci to process.
     // - If data are denovo, load blim._batch_size loci.
     // - If data are reference aligned, load one chromosome.
@@ -193,12 +199,6 @@ int main (int argc, char* argv[]) {
              << mpopi.pops().size() << "\n";
         population_limit = mpopi.pops().size();
     }
-
-    //
-    // Initialize the PopMap
-    //
-    cerr << "Populating observed haplotypes for " << mpopi.samples().size() << " samples, " << catalog.size() << " loci.\n";
-    PopMap<CSLocus> *pmap = new PopMap<CSLocus>(mpopi, catalog.size());
 
     // Using Stacks v2 files.
     if (input_mode == InputMode::stacks2)
