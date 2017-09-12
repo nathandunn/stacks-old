@@ -85,7 +85,7 @@ int implement_random_snp_whitelist(map<int, CSLocus *> &, PopSum<CSLocus> *, map
  * model, blacklisted, deleveraged, lumberjack, components, reads, comp_cnt,
  * comp_type, annotation, uncor_marker, hap_cnts, f, trans_gcnt, chisq.
  */
-map<int, CSLocus*> create_catalog(const vector<VcfRecord>& vcf_records);
+map<int, CSLocus*>* create_catalog(const vector<VcfRecord>& vcf_records);
 
 /*
  * Creates a CSLocus based on a consensus sequence and a set of VCF records for
