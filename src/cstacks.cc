@@ -979,6 +979,24 @@ int find_matches_by_genomic_loc(map<string, int> &cat_index, map<int, QLocus *> 
 }
 
 int write_catalog(map<int, CLocus *> &catalog) {
+
+    if (search_type == genomic_loc) {
+        // Reorder the catalog loci by genomic position.
+        vector<CLocus*> reordered_catalog;
+        reordered_catalog.reserve(catalog.size());
+        for (pair<int,CLocus*> cloc : catalog)
+            reordered_catalog.push_back(cloc.second);
+        std::sort(reordered_catalog.begin(), reordered_catalog.end(),
+                  [] (const CLocus* p, const CLocus* q) {return p->loc < q->loc;});
+        catalog.clear();
+        int id = 1;
+        for (CLocus* loc : reordered_catalog) {
+            loc->id = id;
+            catalog[id] = loc;
+            ++id;
+        }
+    }
+
     map<int, CLocus *>::iterator i;
     CLocus  *tag;
     set<int> matches;

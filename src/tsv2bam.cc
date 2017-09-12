@@ -22,6 +22,7 @@ void parse_command_line(int argc, char* argv[]);
 void report_options(ostream& os);
 int  run();
 void run(const vector<int>& cloc_ids, const string& header_sq_lines, size_t sample_i, ostream& os);
+void cigar_apply_to_locus(Locus* l, const Cigar& c);
 
 //
 // Argument globals.
@@ -217,6 +218,34 @@ void run(const vector<int>& cloc_ids, const string& header_sq_lines, size_t samp
     }
 
     //
+    // Align the sample loci to the catalog.
+    //
+    int prev_sloc = -1;
+    Cigar c;
+    for (const CatMatch* m : matches) {
+        assert(m->tag_id >= prev_sloc); // Matches files are sorted by sloc_id
+        if (m->tag_id == prev_sloc)
+            // We have already aligned this sample locus.
+            continue;
+        
+        if (m->cigar != NULL && m->cigar[0] != '\0') {
+            auto itr = sloci.find(m->tag_id);
+            if (itr == sloci.end())
+                // Loci that aren't bijective with the catalog have been removed.
+                continue;
+            Locus* l = itr->second;
+            parse_cigar(m->cigar, c);
+            cigar_apply_to_locus(l, c);
+            
+            // `apply_cigar_to_seq` returns a padded sequence, so insertions would be
+            // a problem. However, "match" CIGARs should in principle not contain them.
+            assert(cigar_is_MDI(c) && strchr(m->cigar, 'I') == NULL);
+            assert(strlen(l->con) == l->len);
+        }
+        prev_sloc = m->tag_id;
+    }
+
+    //
     // Sort the loci by catalog ID & prepare the loading of paired-end reads.
     //
     struct Loc {
@@ -391,6 +420,22 @@ void run(const vector<int>& cloc_ids, const string& header_sq_lines, size_t samp
         for (Loc& loc : sorted_loci)
             delete loc.pe_reads;
     hts_close(bam_f);
+}
+
+void cigar_apply_to_locus(Locus* l, const Cigar& c) {
+    // Align the consensus & model.
+    // (@Nick Sep2017: This is for consistency, I don't think these variables
+    // are actually used later.)
+    string new_con = apply_cigar_to_seq(l->con, c);
+    string new_model = apply_cigar_to_model_seq(l->model, c);
+    strncpy(l->con, new_con.c_str(), l->len);
+    strncpy(l->model, new_model.c_str(), l->len);
+    
+    // Align the reads.
+    for (char* r : l->reads) {
+        string new_r = apply_cigar_to_seq(r, c);
+        strncpy(r, new_r.c_str(), l->len);                
+    }
 }
 
 void parse_command_line(int argc, char* argv[]) {

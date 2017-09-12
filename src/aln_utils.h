@@ -33,9 +33,9 @@ ostream& operator<< (ostream&, const Cigar&);
 
 string invert_cigar(string);
 int    parse_cigar(const char*, Cigar&, bool check_correctness = false);
-string apply_cigar_to_seq(const char*, Cigar&);
-string remove_cigar_from_seq(const char*, Cigar&);
-string apply_cigar_to_model_seq(const char*, Cigar&);
+string apply_cigar_to_seq(const char*, const Cigar&);
+string remove_cigar_from_seq(const char*, const Cigar&);
+string apply_cigar_to_model_seq(const char*, const Cigar&);
 int    apply_cigar_to_seq(char*, uint, const char*, Cigar&);
 int    apply_cigar_to_model_seq(char*, uint, const char*, Cigar&);
 
@@ -89,7 +89,7 @@ void cigar_trim_left(Cigar& cig, size_t len) {
         cig.front().second -= len;
         if (cig.front().second == 0)
             cig.erase(cig.begin());
-            return;
+        return;
     }
     // Trimming of the CIGAR isn't trivial.
     // We must remove as many M/D operations as necessary, and merge the I operations.
