@@ -138,17 +138,6 @@ private:
             const vector<const SampleCall*>& sample_het_calls
             ) const;
 
-    // Assemble haplotypes.
-    // This is based on the graph of cooccurrences, in which nodes are the SNP
-    // alleles. Subgraphs represent haplotypes. Haplotype assembly fails if a
-    // subgraph includes two (or more) nodes/alleles from the same SNP.
-    bool assemble_haplotypes(
-            vector<vector<Nt4>>& haps,
-            const vector<size_t>& het_snps,
-            const vector<const SampleCall*>& sample_het_calls,
-            const SnpAlleleCooccurrenceCounter& cooccurrences
-            ) const;
-
     // Assemble phase sets.
     // This is based on the graph of cooccurrences between the het alleles.
     // We build a graph in which the nodes are phased pairs of hets alleles
