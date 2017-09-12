@@ -118,6 +118,7 @@ public:
 
     // Populates the PopMap based on Stacks (v2) files.
     void populate(map<int, LocusT*>& catalog, const unordered_map<int,vector<VcfRecord>>& cloci_records, const VcfHeader& header);
+    static void populate_locus(Datum** locdata, const LocusT& cloc, const vector<VcfRecord>& cloc_records, const VcfHeader& header, const MetaPopInfo& mpopi);
 
     // Populates the PopMap based on VCF (SNP) records.
     // The catalog is modified (LocusT must be CSLocus, and
@@ -156,8 +157,7 @@ public:
 };
 
 template<class LocusT>
-PopMap<LocusT>::PopMap(const MetaPopInfo& mpopi, int num_loci)
-: metapopinfo(mpopi)
+PopMap<LocusT>::PopMap(const MetaPopInfo& mpopi, int num_loci): metapopinfo(mpopi)
 {
     this->data = new Datum **[num_loci];
 
@@ -182,8 +182,160 @@ PopMap<LocusT>::~PopMap() {
 }
 
 template<class LocusT>
+void PopMap<LocusT>::populate(map<int, LocusT*>& catalog,
+                              const unordered_map<int,vector<VcfRecord>>& cloci_records,
+                              const VcfHeader& header)
+{
+    // Initalize [locus_order], [rev_locus_order].
+    size_t i = 0;
+    for (auto& cloc : catalog) {
+        locus_order[cloc.second->id] = i;
+        rev_locus_order[i] = cloc.second->id;
+        ++i;
+    }
+
+    // Initialize [ordered_loci].
+    order_loci(catalog);
+
+    for (auto& cloc_pair : catalog) {
+        LocusT& cloc = *cloc_pair.second;
+        const vector<VcfRecord>& cloc_records = cloci_records.at(cloc.id);
+        Datum** locdata = this->data[this->locus_index(cloc.id)];
+
+        populate_locus(locdata, cloc, cloc_records, header, this->metapopinfo);
+        for (size_t s=0; s<sample_cnt(); ++s) {
+            if (locdata[s] != NULL) {
+                ++cloc.cnt;
+                ++cloc.hcnt;
+            }
+        }
+    }
+}
+
+template<class LocusT>
+void PopMap<LocusT>::populate_locus(Datum** locdata,
+                                    const LocusT& cloc,
+                                    const vector<VcfRecord>& cloc_records,
+                                    const VcfHeader& header,
+                                    const MetaPopInfo& mpopi)
+{
+    /*
+     * Fill the PopMap.
+     *
+     * We observe the following rules to create the Datums (@ when the value
+     * is obvious) :
+     * [id] the c-locus ID.
+     * [len] the full length of the c-locus
+     * [model] @
+     * [cigar] is left to NULL.
+     * [obshap] haplotypes, relative to [model].
+     * [tot_depth], [depths] set to 0 as they don't make sense for
+     *     variable-coverage data.
+     * [lnl] is set to 0.
+     *
+     * Other members need not be set, c.f. `populate(vector<VcfRecord>&)`.
+     */
+    string model;
+    model.resize(cloc.len, 'U');
+    pair<string,string> obshaps;
+    for (size_t sample=0; sample<mpopi.samples().size(); ++sample) {
+        size_t sample_vcf_i = header.sample_index(mpopi.samples()[sample].name);
+        bool no_data = true;
+
+        // Get the sample's model string.
+        auto rec = cloc_records.begin();
+        for (size_t col=0; col<cloc.len; ++col) {
+            if (rec == cloc_records.end()) {
+                // No more VCF records.
+                break;
+            } else if (rec->pos() != col) {
+                // No VCF record for this column, skip it.
+                assert(model[col] == 'U'); // Position never changes as it's missing for all samples.
+                continue;
+            }
+
+            const char* gt_str = rec->find_sample(sample_vcf_i);
+            if (rec->is_monomorphic()) {
+                // Monomorphic site.
+                assert(rec->count_formats() == 1 && strcmp(rec->format0(),"DP")==0); // Only the samples overall depths are given.
+                if (gt_str[0] == '.') {
+                    model[col] = 'U';
+                } else {
+                    if (no_data)
+                        no_data = false;
+                    model[col] = 'O';
+                }
+            } else {
+                // Polymorphic site.
+                pair<int,int> gt = rec->parse_genotype_nochecks(gt_str);
+                if (gt.first == -1) {
+                    model[col] = 'U';
+                } else {
+                    if (no_data)
+                        no_data = false;
+                    model[col] = gt.first == gt.second ? 'O' : 'E';
+                }
+            }
+            ++rec;
+        }
+        assert(rec == cloc_records.end());
+
+        if (!no_data) {
+            // Create the Datum (see rules above).
+            Datum* d = new Datum();
+            locdata[sample] = d;
+
+            d->id = cloc.id;
+            d->len = cloc.len;
+            d->model = new char[cloc.len+1];
+            strncpy(d->model, model.c_str(), cloc.len+1);
+            d->cigar = NULL;
+            if (cloc.snps.empty()) {
+                d->obshap.push_back(new char[10]);
+                strncpy(d->obshap[0], "consensus", 10);
+            } else {
+                // Build the haplotypes from the records. (Note: We can't get
+                // the indexes of the SNP records directly from `cloc.snps`
+                // as the records vector skips columns without any calls.
+                vector<const VcfRecord*> snp_records;
+                for (auto& rec : cloc_records) {
+                    if (!rec.is_monomorphic()) {
+                        assert(rec.pos() == cloc.snps.at(snp_records.size())->col);
+                        snp_records.push_back(&rec);
+                    }
+                }
+                assert(snp_records.size() == cloc.snps.size());
+                VcfRecord::util::build_haps(obshaps, snp_records, sample_vcf_i);
+
+                // Record the haplotypes.
+                for (size_t i=0; i<2; ++i)
+                    d->obshap.push_back(new char[snp_records.size()+1]);
+                strncpy(d->obshap[0], obshaps.first.c_str(), snp_records.size()+1);
+                strncpy(d->obshap[1], obshaps.second.c_str(), snp_records.size()+1);
+
+                // Discard het calls that aren't phased, so that the model is
+                // always 'U' (rather than 'E') where the obshaps are 'N'.
+                for (size_t snp_i=0; snp_i<cloc.snps.size(); ++snp_i) {
+                    if (d->obshap[0][snp_i] == 'N') {
+                        size_t col = cloc.snps[snp_i]->col;
+                        assert(d->model[col] == 'U' || d->model[col] == 'E');
+                        if (d->model[col] == 'E')
+                            d->model[col] = 'U';
+                    }
+                }
+            }
+            for (size_t i=0; i<d->obshap.size(); ++i)
+                d->depth.push_back(0);
+            d->tot_depth = 0;
+            d->lnl = 0;
+        }
+    }
+}
+
+template<class LocusT>
 int PopMap<LocusT>::populate(map<int, LocusT*> &catalog,
-                             const vector<vector<CatMatch *> > &matches) {
+                             const vector<vector<CatMatch *> > &matches)
+{
     //
     // Create an index showing what position each catalog locus is stored at in the datum
     // array. Create a second index allowing ordering of Loci by genomic position.
@@ -278,149 +430,10 @@ int PopMap<LocusT>::populate(map<int, LocusT*> &catalog,
 }
 
 template<class LocusT>
-void PopMap<LocusT>::populate(map<int, LocusT*>& catalog,
-                             const unordered_map<int,vector<VcfRecord>>& cloci_records,
-                             const VcfHeader& header
-                             ) {
-
-    // Initalize [locus_order], [rev_locus_order].
-    size_t i = 0;
-    for (auto& cloc : catalog) {
-        locus_order[cloc.second->id] = i;
-        rev_locus_order[i] = cloc.second->id;
-        ++i;
-    }
-
-    // Initialize [ordered_loci].
-    order_loci(catalog);
-
-    /*
-     * Fill the PopMap.
-     *
-     * We observe the following rules to create the Datums (@ when the value
-     * is obvious) :
-     * [id] the c-locus ID.
-     * [len] the full length of the c-locus
-     * [model] @
-     * [cigar] is left to NULL.
-     * [obshap] haplotypes, relative to [model].
-     * [tot_depth], [depths] set to 0 as they don't make sense for
-     *     variable-coverage data.
-     * [lnl] is set to 0.
-     *
-     * Other members need not be set, c.f. `populate(vector<VcfRecord>&)`.
-     */
-
-    for (auto& cloc_pair : catalog) {
-        LocusT& cloc = *cloc_pair.second;
-        const vector<VcfRecord>& cloc_records = cloci_records.at(cloc.id);
-
-        string model;
-        model.resize(cloc.len, 'U');
-        pair<string,string> obshaps;
-        for (size_t sample=0; sample<metapopinfo.samples().size(); ++sample) {
-            size_t sample_vcf_i = header.sample_index(metapopinfo.samples()[sample].name);
-            bool no_data = true;
-
-            // Get the sample's model string.
-            auto rec = cloc_records.begin();
-            for (size_t col=0; col<cloc.len; ++col) {
-                if (rec == cloc_records.end()) {
-                    // No more VCF records.
-                    break;
-                } else if (rec->pos() != col) {
-                    // No VCF record for this column, skip it.
-                    assert(model[col] == 'U'); // Position never changes as it's missing for all samples.
-                    continue;
-                }
-
-                const char* gt_str = rec->find_sample(sample_vcf_i);
-                if (rec->is_monomorphic()) {
-                    // Monomorphic site.
-                    assert(rec->count_formats() == 1 && strcmp(rec->format0(),"DP")==0); // Only the samples overall depths are given.
-                    if (gt_str[0] == '.') {
-                        model[col] = 'U';
-                    } else {
-                        if (no_data)
-                            no_data = false;
-                        model[col] = 'O';
-                    }
-                } else {
-                    // Polymorphic site.
-                    pair<int,int> gt = rec->parse_genotype_nochecks(gt_str);
-                    if (gt.first == -1) {
-                        model[col] = 'U';
-                    } else {
-                        if (no_data)
-                            no_data = false;
-                        model[col] = gt.first == gt.second ? 'O' : 'E';
-                    }
-                }
-                ++rec;
-            }
-            assert(rec == cloc_records.end());
-
-            if (!no_data) {
-                // Create the Datum (see rules above).
-                Datum* d = new Datum();
-                data[locus_index(cloc.id)][sample] = d;
-                ++cloc.cnt;
-                ++cloc.hcnt;
-
-                d->id = cloc.id;
-                d->len = cloc.len;
-                d->model = new char[cloc.len+1];
-                strncpy(d->model, model.c_str(), cloc.len+1);
-                d->cigar = NULL;
-                if (cloc.snps.empty()) {
-                    d->obshap.push_back(new char[10]);
-                    strncpy(d->obshap[0], "consensus", 10);
-                } else {
-                    // Build the haplotypes from the records. (Note: We can't get
-                    // the indexes of the SNP records directly from `cloc.snps`
-                    // as the records vector skips columns without any calls.
-                    vector<const VcfRecord*> snp_records;
-                    for (auto& rec : cloc_records) {
-                        if (!rec.is_monomorphic()) {
-                            assert(rec.pos() == cloc.snps.at(snp_records.size())->col);
-                            snp_records.push_back(&rec);
-                        }
-                    }
-                    assert(snp_records.size() == cloc.snps.size());
-                    VcfRecord::util::build_haps(obshaps, snp_records, sample_vcf_i);
-
-                    // Record the haplotypes.
-                    for (size_t i=0; i<2; ++i)
-                        d->obshap.push_back(new char[snp_records.size()+1]);
-                    strncpy(d->obshap[0], obshaps.first.c_str(), snp_records.size()+1);
-                    strncpy(d->obshap[1], obshaps.second.c_str(), snp_records.size()+1);
-
-                    // Discard het calls that aren't phased, so that the model is
-                    // always 'U' (rather than 'E') where the obshaps are 'N'.
-                    for (size_t snp_i=0; snp_i<cloc.snps.size(); ++snp_i) {
-                        if (d->obshap[0][snp_i] == 'N') {
-                            size_t col = cloc.snps[snp_i]->col;
-                            assert(d->model[col] == 'U' || d->model[col] == 'E');
-                            if (d->model[col] == 'E')
-                                d->model[col] = 'U';
-                        }
-                    }
-                }
-                for (size_t i=0; i<d->obshap.size(); ++i)
-                    d->depth.push_back(0);
-                d->tot_depth = 0;
-                d->lnl = 0;
-            }
-        }
-    }
-}
-
-template<class LocusT>
 int PopMap<LocusT>::populate(map<int, LocusT*>& catalog,
                              const vector<VcfRecord>& records,
-                             const VcfHeader& header
-                             ) {
-
+                             const VcfHeader& header)
+{
     // Initalize [locus_order], [rev_locus_order].
     size_t loc_index = 0;
     for (typename map<int, LocusT*>::iterator
