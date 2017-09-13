@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2011-2012, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2011-2017, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -220,6 +220,28 @@ public:
     ~LocTally() {
         delete [] this->nucs;
     }
+};
+
+//
+// per-Locus Population-level summary
+//
+class LocPopSum {
+    size_t    _pop_cnt;
+    LocSum  **_per_pop;
+    LocTally *_meta_pop;
+
+public:
+    LocPopSum(size_t cloc_len, const MetaPopInfo& mpopi);
+    ~LocPopSum();
+
+    int sum_pops(const CSLocus *, const Datum **, const MetaPopInfo&, bool, ofstream &);
+    int tally_metapop(const CSLocus *);
+
+private:
+    int tally_heterozygous_pos(const CSLocus *, const Datum **, LocSum *, int, int, uint, uint);
+    int tally_fixed_pos(const CSLocus *, const Datum **, LocSum *, int, uint, uint);
+    int tally_ref_alleles(int, uint16_t &, char &, char &, uint16_t &, uint16_t &);
+    int tally_observed_haplotypes(const vector<char *> &, int);
 };
 
 //

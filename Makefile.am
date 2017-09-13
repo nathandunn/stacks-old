@@ -51,7 +51,7 @@ libpop_a_SOURCES = \
 	src/genotype_dictionaries.h src/genotype_dictionaries.cc \
 	src/ordered.h \
 	src/PopMap.h \
-	src/PopSum.h \
+	src/PopSum.h src/PopSum.cc \
 	src/smoothing.h \
 	src/smoothing_utils.h
 
