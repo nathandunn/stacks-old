@@ -234,8 +234,11 @@ public:
     LocPopSum(size_t cloc_len, const MetaPopInfo& mpopi);
     ~LocPopSum();
 
-    int sum_pops(const CSLocus *, const Datum **, const MetaPopInfo&, bool, ofstream &);
-    int tally_metapop(const CSLocus *);
+    int             sum_pops(const CSLocus *, const Datum **, const MetaPopInfo&, bool, ostream &);
+    int             tally_metapop(const CSLocus *);
+    const LocSum   *per_pop(size_t pop_index) { return this->_per_pop[pop_index]; }
+    const LocTally *meta_pop()                { return this->_meta_pop; }
+    size_t          pop_cnt()                 { return this->_pop_cnt; }
 
 private:
     int tally_heterozygous_pos(const CSLocus *, const Datum **, LocSum *, int, int, uint, uint);
