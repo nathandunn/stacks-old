@@ -160,22 +160,30 @@ int main (int argc, char* argv[]) {
 
     bloc.init(batch_id, in_path, pmap_path);
 
-    LocusFilter loc_filter(&mpopi);
+    //
+    // Report information on the structure of the populations specified.
+    //
+    mpopi.status();
 
-    //
-    // Initialize the PopMap
-    //
-    //// cerr << "Populating observed haplotypes for " << mpopi.samples().size() << " samples, " << catalog.size() << " loci.\n";
-    PopMap<CSLocus> *pmap = new PopMap<CSLocus>(mpopi, bloc.batch_size());
-    
+    if (size_t(population_limit) > mpopi.pops().size()) {
+        cerr << "Notice: Population limit (" << population_limit << ")"
+             << " larger than number of popualtions present, adjusting parameter to "
+             << mpopi.pops().size() << "\n";
+        population_limit = mpopi.pops().size();
+    }
+
     //
     // Read the next set of loci to process.
     // - If data are denovo, load blim._batch_size loci.
     // - If data are reference aligned, load one chromosome.
     //
-    bloc.next_batch(log_fh);
-    
-    map<int, CSLocus *> catalog = bloc.catalog();
+    int loc_cnt = bloc.next_batch(log_fh);
+
+    const LocusFilter &filter = bloc.filter();
+    cerr << "Removed " << filter.filtered() << " loci that did not pass sample/population constraints from " << filter.total() << " loci.\n"
+         << "Kept "    << loc_cnt << " loci.\n";
+
+    cerr << "Total polymorphic sites examined: " << filter.total_sites() << "; filtered " << filter.filtered_sites() << " of those sites.\n";
 
     //
     // Read the bootstrap-whitelist.
@@ -187,32 +195,15 @@ int main (int argc, char* argv[]) {
     set<int> blacklist(bloc.blacklist());
     map<int, set<int>> whitelist(bloc.whitelist());
     
-    //
-    // Retrieve the genomic order of loci.
-    //
-    loci_ordered = order_unordered_loci(catalog);
+    // //
+    // // Retrieve the genomic order of loci.
+    // //
+    // loci_ordered = order_unordered_loci(catalog);
 
-    // Report information on the MetaPopInfo.
-    mpopi.status();
-
-    if (size_t(population_limit) > mpopi.pops().size()) {
-        cerr << "Notice: Population limit (" << population_limit << ")"
-             << " larger than number of popualtions present, adjusting parameter to "
-             << mpopi.pops().size() << "\n";
-        population_limit = mpopi.pops().size();
-    }
-
-    // Using Stacks v2 files.
-    if (input_mode == InputMode::stacks2)
-        pmap->populate(catalog, bloc.cloc_vcf_records(), *bloc.vcf_header());
-    // ...or using VCF records.
-    else if (input_mode == InputMode::vcf)
-        pmap->populate(catalog, bloc.ext_vcf_records(), *bloc.vcf_header());
-
-    //
-    // Tabulate haplotypes present and in what combinations.
-    //
-    tabulate_haplotypes(catalog, pmap);
+    // //
+    // // Tabulate haplotypes present and in what combinations.
+    // //
+    // tabulate_haplotypes(catalog, pmap);
 
     // //
     // // Output a list of heterozygous loci and the associate haplotype frequencies.
@@ -223,12 +214,6 @@ int main (int argc, char* argv[]) {
     // log_fh << "# Distribution of population loci.\n";
     // log_haplotype_cnts(catalog, log_fh);
 
-    //
-    // Apply locus constraints.
-    //
-    for (auto it = catalog.begin(); it != catalog.end(); it++)
-        loc_filter.filter(&mpopi, pmap->locus(it->first));
-
     // if (pmap->loci_cnt() == 0) {
     //     cerr << "Error: All loci have been filtered out.\n";
     //     throw exception();
@@ -237,187 +222,136 @@ int main (int argc, char* argv[]) {
     // log_fh << "# Distribution of population loci after applying locus constraints.\n";
     // log_haplotype_cnts(catalog, log_fh);
 
-    //
-    // Create the PopSum object and compute the summary statistics.
-    //
-
-    PopSum<CSLocus> *psum = new PopSum<CSLocus>(*pmap, mpopi);
-    for (size_t i=0; i<mpopi.pops().size(); ++i) {
-        cerr << "Generating nucleotide-level summary statistics for population '" << mpopi.pops()[i].name << "'\n";
-        psum->add_population(catalog, pmap, i, verbose, log_fh);
-    }
-
-    cerr << "Tallying loci across populations...";
-    psum->tally(catalog);
-    cerr << "done.\n";
-
-    //
-    // We have removed loci that were below the -r and -p thresholds. Now we need to
-    // identify individual SNPs that are below the -r threshold or the minor allele
-    // frequency threshold (-a). In these cases we will remove the SNP, but keep the locus.
-    //
-    blacklist.clear();
-    int pruned_snps = prune_polymorphic_sites(catalog, pmap, psum, whitelist, blacklist, log_fh);
-    cerr << "Pruned " << pruned_snps << " variant sites due to filter constraints (more with --verbose).\n";
-
-    //
-    // Create an artificial whitelist if the user requested only the first or a random SNP per locus.
-    //
-    if (write_single_snp)
-        implement_single_snp_whitelist(catalog, psum, whitelist);
-    else if (write_random_snp)
-        implement_random_snp_whitelist(catalog, psum, whitelist);
-
-    //
-    // Remove the accumulated SNPs
-    //
-    cerr << "Removing " << blacklist.size() << " additional loci for which all variant sites were filtered...";
-    set<int> empty_list;
-    reduce_catalog(catalog, empty_list, blacklist);
-    reduce_catalog_snps(catalog, whitelist, pmap);
-    int retained = pmap->prune(blacklist);
-    cerr << " retained " << retained << " loci.\n";
-    if (pmap->loci_cnt() == 0) {
-        cerr << "Error: All loci have been filtered out.\n";
-        throw exception();
-    }
-
-    //
-    // Merge loci that overlap on a common restriction enzyme cut site.
-    //
-    map<int, pair<merget, int> > merge_map;
-    if (merge_sites && loci_ordered)
-        merge_shared_cutsite_loci(catalog, pmap, psum, merge_map, log_fh);
-
-    //
-    // Regenerate summary statistics after pruning SNPs and  merging loci.
-    //
-
-    if (debug_flags.count("VCFCOMP"))
-        vcfcomp_simplify_pmap(catalog, pmap);
-
-    cerr << "Removed " << loc_filter.filtered() << " loci that did not pass sample/population constraints.\n";
-
-    delete psum;
-    psum = new PopSum<CSLocus>(*pmap, mpopi);
-    for (size_t i=0; i<mpopi.pops().size(); ++i) {
-        cerr << "Regenerating nucleotide-level summary statistics for population '" << mpopi.pops()[i].name << "'\n";
-        psum->add_population(catalog, pmap, i, verbose, log_fh);
-    }
-    cerr << "Re-tallying loci across populations...";
-    psum->tally(catalog);
-    cerr << "done.\n";
-
-    if (kernel_smoothed) {
-        if (loci_ordered) {
-            for (size_t i=0; i<mpopi.pops().size(); ++i) {
-                cerr << "  Generating kernel-smoothed population statistics for population '" << mpopi.pops()[i].name << "'...\n";
-                kernel_smoothed_popstats(catalog, pmap, psum, i, log_fh);
-            }
-        } else {
-            cerr << "Notice: Smoothing was requested (-k), but will not be performed as the loci are not ordered.\n";
-        }
-    }
+    // //
+    // // Create an artificial whitelist if the user requested only the first or a random SNP per locus.
+    // //
+    // if (write_single_snp)
+    //     implement_single_snp_whitelist(catalog, psum, whitelist);
+    // else if (write_random_snp)
+    //     implement_random_snp_whitelist(catalog, psum, whitelist);
 
     // //
-    // // Log the SNPs per locus distribution.
+    // // Merge loci that overlap on a common restriction enzyme cut site.
     // //
-    // log_snps_per_loc_distrib(log_fh, catalog);
+    // map<int, pair<merget, int> > merge_map;
+    // if (merge_sites && loci_ordered)
+    //     merge_shared_cutsite_loci(catalog, pmap, psum, merge_map, log_fh);
 
-    calculate_haplotype_stats(catalog, pmap, psum);
+    // if (debug_flags.count("VCFCOMP"))
+    //     vcfcomp_simplify_pmap(catalog, pmap);
 
-    if (calc_fstats) {
-        calculate_haplotype_divergence(catalog, pmap, psum);
-        calculate_haplotype_divergence_pairwise(catalog, pmap, psum);
-    }
+    // if (kernel_smoothed) {
+    //     if (loci_ordered) {
+    //         for (size_t i=0; i<mpopi.pops().size(); ++i) {
+    //             cerr << "  Generating kernel-smoothed population statistics for population '" << mpopi.pops()[i].name << "'...\n";
+    //             kernel_smoothed_popstats(catalog, pmap, psum, i, log_fh);
+    //         }
+    //     } else {
+    //         cerr << "Notice: Smoothing was requested (-k), but will not be performed as the loci are not ordered.\n";
+    //     }
+    // }
 
-    //
-    // Calculate and output the locus-level summary statistics.
-    //
-    calculate_summary_stats(catalog, pmap, psum);
+    // // //
+    // // // Log the SNPs per locus distribution.
+    // // //
+    // // log_snps_per_loc_distrib(log_fh, catalog);
 
-    //
-    // Output the observed haplotypes.
-    //
-    write_generic(catalog, pmap, false);
+    // calculate_haplotype_stats(catalog, pmap, psum);
 
-    //
-    // Output data in requested formats
-    //
-    if (fasta_loci_out)
-        write_fasta_loci(catalog, pmap);
+    // if (calc_fstats) {
+    //     calculate_haplotype_divergence(catalog, pmap, psum);
+    //     calculate_haplotype_divergence_pairwise(catalog, pmap, psum);
+    // }
 
-    if (fasta_samples_out)
-        write_fasta_samples(catalog, pmap);
+    // //
+    // // Calculate and output the locus-level summary statistics.
+    // //
+    // calculate_summary_stats(catalog, pmap, psum);
 
-    if (fasta_samples_raw_out)
-        write_fasta_samples_raw(catalog, pmap);
+    // //
+    // // Output the observed haplotypes.
+    // //
+    // write_generic(catalog, pmap, false);
 
-    if (genepop_out && ordered_export)
-        write_genepop_ordered(catalog, pmap, psum, log_fh);
-    else if (genepop_out)
-        write_genepop(catalog, pmap, psum);
+    // //
+    // // Output data in requested formats
+    // //
+    // if (fasta_loci_out)
+    //     write_fasta_loci(catalog, pmap);
 
-    if (structure_out && ordered_export)
-        write_structure_ordered(catalog, pmap, psum, log_fh);
-    else if (structure_out)
-        write_structure(catalog, pmap, psum);
+    // if (fasta_samples_out)
+    //     write_fasta_samples(catalog, pmap);
 
-    if (fastphase_out)
-        write_fastphase(catalog, pmap, psum);
+    // if (fasta_samples_raw_out)
+    //     write_fasta_samples_raw(catalog, pmap);
 
-    if (phase_out)
-        write_phase(catalog, pmap, psum);
+    // if (genepop_out && ordered_export)
+    //     write_genepop_ordered(catalog, pmap, psum, log_fh);
+    // else if (genepop_out)
+    //     write_genepop(catalog, pmap, psum);
 
-    if (beagle_out)
-        write_beagle(catalog, pmap, psum);
+    // if (structure_out && ordered_export)
+    //     write_structure_ordered(catalog, pmap, psum, log_fh);
+    // else if (structure_out)
+    //     write_structure(catalog, pmap, psum);
 
-    if (beagle_phased_out)
-        write_beagle_phased(catalog, pmap, psum);
+    // if (fastphase_out)
+    //     write_fastphase(catalog, pmap, psum);
 
-    if (plink_out)
-        write_plink(catalog, pmap, psum);
+    // if (phase_out)
+    //     write_phase(catalog, pmap, psum);
 
-    if (hzar_out)
-        write_hzar(catalog, pmap, psum);
+    // if (beagle_out)
+    //     write_beagle(catalog, pmap, psum);
 
-    if (treemix_out)
-        write_treemix(catalog, pmap, psum);
+    // if (beagle_phased_out)
+    //     write_beagle_phased(catalog, pmap, psum);
 
-    if (phylip_out || phylip_var)
-        write_phylip(catalog, pmap, psum);
+    // if (plink_out)
+    //     write_plink(catalog, pmap, psum);
 
-    if (phylip_var_all)
-        write_fullseq_phylip(catalog, pmap, psum);
+    // if (hzar_out)
+    //     write_hzar(catalog, pmap, psum);
 
-    if (vcf_haplo_out)
-        write_vcf_haplotypes(catalog, pmap, psum);
+    // if (treemix_out)
+    //     write_treemix(catalog, pmap, psum);
 
-    if (vcf_out && ordered_export)
-        write_vcf_ordered(catalog, pmap, psum, merge_map, log_fh);
-    else if (vcf_out)
-        write_vcf(catalog, pmap, psum, merge_map);
+    // if (phylip_out || phylip_var)
+    //     write_phylip(catalog, pmap, psum);
 
-    //
-    // Calculate and write Fst.
-    //
-    if (calc_fstats)
-        write_fst_stats(catalog, pmap, psum, log_fh);
+    // if (phylip_var_all)
+    //     write_fullseq_phylip(catalog, pmap, psum);
 
-    //
-    // Output nucleotide-level genotype calls for each individual.
-    //
-    if (genomic_out)
-        write_genomic(catalog, pmap);
+    // if (vcf_haplo_out)
+    //     write_vcf_haplotypes(catalog, pmap, psum);
 
-    for (auto& cloc : catalog)
-        delete cloc.second;
-    delete psum;
-    delete pmap;
+    // if (vcf_out && ordered_export)
+    //     write_vcf_ordered(catalog, pmap, psum, merge_map, log_fh);
+    // else if (vcf_out)
+    //     write_vcf(catalog, pmap, psum, merge_map);
+
+    // //
+    // // Calculate and write Fst.
+    // //
+    // if (calc_fstats)
+    //     write_fst_stats(catalog, pmap, psum, log_fh);
+
+    // //
+    // // Output nucleotide-level genotype calls for each individual.
+    // //
+    // if (genomic_out)
+    //     write_genomic(catalog, pmap);
+
+    // for (auto& cloc : catalog)
+    //     delete cloc.second;
+    // delete psum;
+    // delete pmap;
     log_fh.close();
 
     cerr << "Populations is done.\n";
+
     return 0;
+
     IF_NDEBUG_CATCH_ALL_EXCEPTIONS
 }
 
@@ -453,7 +387,7 @@ BatchLocusProcessor::next_batch(ostream &log_fh)
     if (this->_input_mode == InputMode::vcf)
         loc_cnt = this->next_batch_external_loci(log_fh);
     else
-        loc_cnt = this->next_batch_stacks_loci();
+        loc_cnt = this->next_batch_stacks_loci(log_fh);
 
     return loc_cnt;
 }
@@ -492,6 +426,11 @@ BatchLocusProcessor::init_stacks_loci(int batch_id, string in_path, string pmap_
     this->cloc_reader().set_sample_ids(*this->_mpopi);
 
     //
+    // Initialize the locus filter after we have constructed the population map.
+    //
+    this->_loc_filter.init(this->pop_info());
+
+    //
     // Store the VCF header data.
     //
     this->_vcf_header = new VcfHeader(this->cloc_reader().header());
@@ -500,7 +439,7 @@ BatchLocusProcessor::init_stacks_loci(int batch_id, string in_path, string pmap_
 }
 
 size_t
-BatchLocusProcessor::next_batch_stacks_loci()
+BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
 {
     if (this->_catalog != NULL)
         delete this->_catalog;
@@ -516,8 +455,9 @@ BatchLocusProcessor::next_batch_stacks_loci()
     seq.comment = new char[id_len];
     seq.seq     = new char[max_len];
 
-    int    cloc_id, rv;
-    size_t loc_cnt = 0;
+    LocBin *loc;
+    int     cloc_id, rv;
+    size_t  loc_cnt = 0;
 
     while (loc_cnt < this->_batch_size && this->_cloc_reader.read_one_locus(records)) {
         //
@@ -552,12 +492,59 @@ BatchLocusProcessor::next_batch_stacks_loci()
             continue;
         }
 
-        // Create the CSLocus.
-        this->_catalog->insert({cloc_id, new_cslocus(seq, records, cloc_id)});
+        //
+        // Create and populate a new catalog locus.
+        //
+        loc = new LocBin();
+        loc->cloc = new_cslocus(seq, records, cloc_id);
 
-        // Save the records (they are needed for the PopMap object).
-        (*this->_cloc_vcf_rec)[cloc_id] = move(records);
+        //
+        // Create and populate a map of the population genotypes.
+        //
+        loc->d = new Datum *[this->_mpopi->samples().size()];
+        for (size_t i = 0; i < this->_mpopi->samples().size(); i++) loc->d[i] = NULL;
+        PopMap<CSLocus>::populate_locus(loc->d, *loc->cloc, records, (const VcfHeader &) *this->_vcf_header, (const MetaPopInfo &) *this->_mpopi);
 
+        records.clear();
+
+        //
+        // Apply locus constraints to remove entire loci below the -r/-p thresholds.
+        //
+        if (this->_loc_filter.filter(this->_mpopi, loc->d)) {
+            delete loc;
+            continue;
+        }
+
+        //
+        // Create the PopSum object and compute the summary statistics for this locus.
+        //
+        loc->s = new LocPopSum(strlen(loc->cloc->con), (const MetaPopInfo &) *this->_mpopi);
+        loc->s->sum_pops(loc->cloc, (const Datum **) loc->d, (const MetaPopInfo &) *this->_mpopi, verbose, cerr);
+        loc->s->tally_metapop(loc->cloc);
+
+        //
+        // Identify individual SNPs that are below the -r threshold or the minor allele
+        // frequency threshold (-a). In these cases we will remove the SNP, but keep the locus.
+        // If all SNPs are filtered, delete the locus.
+        //
+        if (this->_loc_filter.prune_sites(this->_mpopi, loc->cloc, loc->d, loc->s, log_fh)) {
+            delete loc;
+            continue;
+        }
+
+        //
+        // If write_single_snp or write_random_snp has been specified, prune appropriate SNPs.
+        //
+
+        
+        //
+        // Regenerate summary statistics after pruning SNPs.
+        //
+        loc->s->sum_pops(loc->cloc, (const Datum **) loc->d, (const MetaPopInfo &) *this->_mpopi, verbose, cerr);
+        loc->s->tally_metapop(loc->cloc);
+        
+        this->_loci.push_back(loc);
+        
         loc_cnt++;
     }
 
@@ -677,10 +664,7 @@ bool
 LocusFilter::filter(MetaPopInfo *mpopi, Datum **d)
 {
     this->reset();
-
-    double pct       = 0.0;
-    bool   pop_limit = false;
-    int    pops      = 0;
+    this->_total_loci++;
 
     for (size_t i = 0; i < this->_sample_cnt; i++) {
         //
@@ -708,6 +692,8 @@ LocusFilter::filter(MetaPopInfo *mpopi, Datum **d)
     // Check that the counts for each population are over sample_limit. If not, zero out
     // the members of that population.
     //
+    double pct = 0.0;
+
     for (uint i = 0; i < this->_pop_cnt; i++) {
         const Pop& pop = mpopi->pops()[this->_pop_order[i]];
 
@@ -728,6 +714,9 @@ LocusFilter::filter(MetaPopInfo *mpopi, Datum **d)
     //
     // Check that this locus is present in enough populations.
     //
+    bool pop_limit = false;
+    int  pops      = 0;
+
     for (uint i = 0; i < this->_pop_cnt; i++)
         if (this->_pop_cnts[i] > 0) pops++;
     if (pops < population_limit)
@@ -740,9 +729,32 @@ LocusFilter::filter(MetaPopInfo *mpopi, Datum **d)
 }
 
 void
-LocusFilter::init(const MetaPopInfo *mpopi)
+LocusFilter::init(MetaPopInfo *mpopi)
 {
-    this->_filtered_loci = 0;
+    this->_pop_cnt    = mpopi->pops().size();
+    this->_sample_cnt = mpopi->samples().size();
+
+    assert(this->_pop_cnt > 0);
+    assert(this->_sample_cnt > 0);
+    
+    if (this->_pop_order != NULL)
+        delete [] this->_pop_order;
+    if (this->_samples != NULL)
+        delete [] this->_samples;
+    if (this->_pop_cnts != NULL)
+        delete [] this->_pop_cnts;
+    if (this->_pop_tot != NULL)
+        delete [] this->_pop_tot;
+
+    this->_pop_order  = new size_t [this->_pop_cnt];
+    this->_samples    = new size_t [this->_sample_cnt];
+    this->_pop_cnts   = new size_t [this->_pop_cnt];
+    this->_pop_tot    = new size_t [this->_pop_cnt];
+
+    this->_filtered_loci  = 0;
+    this->_total_loci     = 0;
+    this->_filtered_sites = 0;
+    this->_total_sites    = 0;
 
     size_t pop_sthg = 0;
 
@@ -762,13 +774,132 @@ LocusFilter::init(const MetaPopInfo *mpopi)
 void
 LocusFilter::reset()
 {
-    // memset(this->_samples,  0, this->_sample_cnt * sizeof(size_t));
-    // memset(this->_pop_cnts, 0, this->_pop_cnt * sizeof(size_t));
+    memset(this->_samples,  0, this->_sample_cnt * sizeof(size_t));
+    memset(this->_pop_cnts, 0, this->_pop_cnt * sizeof(size_t));
+}
 
-    for (uint i = 0; i < this->_sample_cnt; i++)
-        this->_samples[i] = 0;
-    for (uint i = 0; i < this->_pop_cnt; i++)
-        this->_pop_cnts[i] = 0;
+bool
+LocusFilter::prune_sites(MetaPopInfo *mpopi, CSLocus *cloc, Datum **d, LocPopSum *s, ostream &log_fh)
+{
+    set<int>    site_list;
+    vector<int> pop_prune_list;
+    bool        sample_prune, maf_prune, het_prune, inc_prune;
+
+    //
+    // If this locus is fixed, ignore it.
+    //
+    if (cloc->snps.size() == 0)
+        return false;
+
+    const LocSum   *sum;
+    const LocTally *t;
+    int  pruned = 0;
+
+    for (uint i = 0; i < cloc->snps.size(); i++) {
+        t = s->meta_pop();
+
+        //
+        // If the site is fixed, ignore it.
+        //
+        if (t->nucs[cloc->snps[i]->col].fixed == true)
+            continue;
+
+        this->_total_sites++;
+        
+        sample_prune = false;
+        maf_prune    = false;
+        het_prune    = false;
+        inc_prune    = false;
+        pop_prune_list.clear();
+
+        for (size_t p = 0; p < s->pop_cnt(); ++p) {
+            sum = s->per_pop(p);
+            
+            if (sum->nucs[cloc->snps[i]->col].incompatible_site)
+                inc_prune = true;
+
+            else if (sum->nucs[cloc->snps[i]->col].num_indv == 0 ||
+                     (double) sum->nucs[cloc->snps[i]->col].num_indv / (double) this->_pop_tot[p] < sample_limit)
+                pop_prune_list.push_back(p);
+        }
+
+        //
+        // Check how many populations have to be pruned out due to sample limit. If less than
+        // population limit, prune them; if more than population limit, mark locus for deletion.
+        //
+        if ((mpopi->pops().size() - pop_prune_list.size()) < (uint) population_limit) {
+            sample_prune = true;
+        } else {
+            for (size_t p : pop_prune_list) {
+                if (s->per_pop(p)->nucs[cloc->snps[i]->col].num_indv == 0)
+                    continue;
+
+                const Pop& pop = mpopi->pops()[p];
+                for (uint k = pop.first_sample; k <= pop.last_sample; k++) {
+                    if (d[k] == NULL || cloc->snps[i]->col >= (uint) d[k]->len)
+                        continue;
+                    if (d[k]->model != NULL) {
+                        d[k]->model[cloc->snps[i]->col] = 'U';
+                    }
+                }
+            }
+        }
+
+        if (t->nucs[cloc->snps[i]->col].allele_cnt > 1) {
+            //
+            // Test for minor allele frequency.
+            //
+            if ((1 - t->nucs[cloc->snps[i]->col].p_freq) < minor_allele_freq)
+                maf_prune = true;
+            //
+            // Test for observed heterozygosity.
+            //
+            if (t->nucs[cloc->snps[i]->col].obs_het > max_obs_het)
+                het_prune = true;
+        }
+
+        if (maf_prune == false && het_prune == false && sample_prune == false && inc_prune == false) {
+            site_list.insert(cloc->snps[i]->col);
+        } else {
+            pruned++;
+            this->_filtered_sites++;
+            sum->nucs[cloc->snps[i]->col].filtered_site = true;
+
+            if (verbose) {
+                log_fh << "pruned_polymorphic_site\t"
+                       << cloc->id << "\t"
+                       << cloc->loc.chr() << "\t"
+                       << cloc->sort_bp(cloc->snps[i]->col) +1 << "\t"
+                       << cloc->snps[i]->col << "\t";
+                if (inc_prune)
+                    log_fh << "incompatible_site\n";
+                else if (sample_prune)
+                    log_fh << "sample_limit\n";
+                else if (maf_prune)
+                    log_fh << "maf_limit\n";
+                else if (het_prune)
+                    log_fh << "obshet_limit\n";
+                else
+                    log_fh << "unknown_reason\n";
+            }
+        }
+    }
+
+    //
+    // If no SNPs were retained for this locus, then mark it to be removed entirely.
+    //
+    if (site_list.size() == 0) {
+        if (verbose)
+            log_fh << "removed_locus\t"
+                   << cloc->id << "\t"
+                   << cloc->loc.chr() << "\t"
+                   << cloc->sort_bp() +1 << "\t"
+                   << 0 << "\tno_snps_remaining\n";
+        this->_filtered_loci++;
+        return true;
+    }
+    
+    return false;
 }
 
 void

@@ -38,7 +38,7 @@ LocPopSum::~LocPopSum()
 
 int
 LocPopSum::sum_pops(const CSLocus *cloc, const Datum **d, const MetaPopInfo &mpopi,
-                    bool verbose, ofstream &log_fh)
+                    bool verbose, ostream &log_fh)
 {
     uint len = strlen(cloc->con);
     int res;
