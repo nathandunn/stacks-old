@@ -1018,7 +1018,7 @@ bool LocusProcessor::assemble_phase_sets(
         array<Nt2,2> allelesi = sample_het_calls[het_i]->nts();
         for (size_t het_j=het_i+1; het_j<het_snps.size(); ++het_j) {
             size_t snp_j = het_snps[het_j];
-            size_t ps_j = allele_to_ps[het_j];
+            size_t& ps_j = allele_to_ps[het_j];
             array<Nt2,2> allelesj = sample_het_calls[het_j]->nts();
 
             for (Nt2 nti : allelesi) {
