@@ -191,6 +191,7 @@ public:
     const set<int>&            blacklist()       { return this->_blacklist; }
     const map<int, set<int>>&  whitelist()       { return this->_whitelist; }
     const LocusFilter&         filter()          { return this->_loc_filter; }
+    const vector<LocBin *>&    loci()            { return this->_loci; }
 
 private:
     InputMode    _input_mode;
@@ -238,8 +239,9 @@ phaset  merge_and_phase_loci(PopMap<CSLocus> *, CSLocus *, CSLocus *, set<int> &
 int     merge_datums(int, int, Datum **, Datum **, set<string> &, int);
 int     merge_csloci(CSLocus *, CSLocus *, set<string> &);
 int     tabulate_haplotypes(map<int, CSLocus *> &, PopMap<CSLocus> *);
-int     create_genotype_map(CSLocus *, PopMap<CSLocus> *);
-int     call_population_genotypes(CSLocus *, PopMap<CSLocus> *);
+int     tabulate_locus_haplotypes(CSLocus *, Datum **, int);
+int     create_genotype_map(CSLocus *, Datum **, int);
+int     call_population_genotypes(CSLocus *, Datum **, int);
 int     translate_genotypes(map<string, string> &, map<string, map<string, string> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, map<int, string> &, set<int> &); // This function doesn't exist (March 24, 2016)
 int     correct_fst_bonferroni_win(vector<PopPair *> &);
 int     bootstrap_fst_approximate_dist(vector<double> &, vector<int>  &, double *, int *, map<int, vector<double> > &); // not used (March 23, 2016)

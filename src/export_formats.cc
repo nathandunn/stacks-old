@@ -24,6 +24,86 @@ extern set<string> debug_flags;
 extern MetaPopInfo mpopi;
 extern map<string, int> renz_olap;
 
+
+MarkersExport::MarkersExport() : Export(ExportType::markers)
+{
+    this->_path = out_path + out_prefix + ".markers.tsv";
+}
+
+int
+MarkersExport::open(const MetaPopInfo *mpopi)
+{
+    this->_mpopi = mpopi;
+
+    this->_fh.open(this->_path.c_str(), ofstream::out);
+    if (this->_fh.fail()) {
+        cerr << "Error opening markers file '" << this->_path << "'\n";
+        exit(1);
+    }
+    this->_fh.precision(fieldw);
+    this->_fh.setf(std::ios::fixed);
+
+    cerr << "Genotyping markers will be written to '" << this->_path << "'\n";
+
+    return 0;
+}
+
+int
+MarkersExport::write_header()
+{
+    this->_fh << "# SQL ID"            << "\t"
+              << "Batch ID"            << "\t"
+              << "Catalog Locus ID"    << "\t"
+              << "\t"
+              << "Total Genotypes"     << "\t"
+              << "Max"                 << "\t"
+              << "Genotype Freqs"      << "\t"
+              << "F"                   << "\t"
+              << "Mean Log Likelihood" << "\t"
+              << "Genotype Map"        << "\t"
+              << "\n";
+    return 0;
+}
+
+int
+MarkersExport::write_batch(const vector<LocBin *> &loci)
+{
+    stringstream gtype_map;
+
+    for (uint i = 0; i < loci.size(); i++) {
+        string freq  = "";
+        double max   = 0.0;
+        int    total = 0;
+        gtype_map.str("");
+
+        if (loci[i]->cloc->marker.length() > 0) {
+            tally_haplotype_freq(loci[i]->cloc, loci[i]->d, this->_mpopi->samples().size(), total, max, freq);
+
+            //
+            // Record the haplotype to genotype map.
+            //
+            map<string, string>::iterator j;
+            for (j = loci[i]->cloc->gmap.begin(); j != loci[i]->cloc->gmap.end(); j++)
+                gtype_map << j->first << ":" << j->second << ";";
+        }
+
+        this->_fh
+            << 0                  << "\t"
+            << batch_id           << "\t"
+            << loci[i]->cloc->id  << "\t"
+            << "\t"                       // Marker
+            << total              << "\t"
+            << max                << "\t"
+            << freq               << "\t"
+            << loci[i]->cloc->f   << "\t"
+            << loci[i]->cloc->lnl << "\t"
+            << gtype_map.str()    << "\t"
+            << "\n";
+    }
+
+    return 0;
+}
+
 int
 write_sql(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
 {
@@ -64,7 +144,7 @@ write_sql(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
         gtype_map.str("");
 
         if (loc->marker.length() > 0) {
-            tally_haplotype_freq(loc, pmap, total, max, freq);
+            tally_haplotype_freq(loc, pmap->locus(loc->id), pmap->sample_cnt(), total, max, freq);
 
             //
             // Record the haplotype to genotype map.
@@ -3102,16 +3182,16 @@ tally_observed_haplotypes(vector<char *> &obshap, int snp_index, char &p_allele,
     return 0;
 }
 
-int tally_haplotype_freq(CSLocus *locus, PopMap<CSLocus> *pmap,
-                         int &total, double &max, string &freq_str) {
-
+int
+tally_haplotype_freq(CSLocus *locus, Datum **d, uint sample_cnt,
+                     int &total, double &max, string &freq_str)
+{
     map<string, double> freq;
-    Datum **d = pmap->locus(locus->id);
 
     total = 0;
     max   = 0;
 
-    for (int i = 0; i < pmap->sample_cnt(); i++) {
+    for (uint i = 0; i < sample_cnt; i++) {
         if (d[i] == NULL)
             continue;
 

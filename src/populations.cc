@@ -173,18 +173,41 @@ int main (int argc, char* argv[]) {
     }
 
     //
+    // Setup the default data exports.
+    //
+    vector<Export *> exports;
+    Export *exp;
+    exp = new MarkersExport();
+    exports.push_back(exp);
+
+    //
+    // Open the export files and write any headers.
+    //
+    for (uint i = 0; i < exports.size(); i++) {
+        exports[i]->open((const MetaPopInfo *) &mpopi);
+        exports[i]->write_header();
+    }
+
+    //
     // Read the next set of loci to process.
     // - If data are denovo, load blim._batch_size loci.
     // - If data are reference aligned, load one chromosome.
     //
     int loc_cnt = bloc.next_batch(log_fh);
 
+    //
+    // Export this subset of the loci.
+    //
+    for (uint i = 0; i < exports.size(); i++)
+        exports[i]->write_batch(bloc.loci());
+
     const LocusFilter &filter = bloc.filter();
     cerr << "Removed " << filter.filtered() << " loci that did not pass sample/population constraints from " << filter.total() << " loci.\n"
          << "Kept "    << loc_cnt << " loci.\n";
-
     cerr << "Total polymorphic sites examined: " << filter.total_sites() << "; filtered " << filter.filtered_sites() << " of those sites.\n";
 
+    
+    
     //
     // Read the bootstrap-whitelist.
     //
@@ -199,11 +222,6 @@ int main (int argc, char* argv[]) {
     // // Retrieve the genomic order of loci.
     // //
     // loci_ordered = order_unordered_loci(catalog);
-
-    // //
-    // // Tabulate haplotypes present and in what combinations.
-    // //
-    // tabulate_haplotypes(catalog, pmap);
 
     // //
     // // Output a list of heterozygous loci and the associate haplotype frequencies.
@@ -348,6 +366,15 @@ int main (int argc, char* argv[]) {
     // delete pmap;
     log_fh.close();
 
+    //
+    // Close the export files and do any required post processing.
+    //
+    for (uint i = 0; i < exports.size(); i++) {
+        exports[i]->close();
+        exports[i]->post_processing();
+        delete exports[i];
+    }
+
     cerr << "Populations is done.\n";
 
     return 0;
@@ -459,6 +486,8 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
     int     cloc_id, rv;
     size_t  loc_cnt = 0;
 
+    this->_loci.clear();
+
     while (loc_cnt < this->_batch_size && this->_cloc_reader.read_one_locus(records)) {
         //
         // Get the current locus ID.
@@ -542,7 +571,12 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
         //
         loc->s->sum_pops(loc->cloc, (const Datum **) loc->d, (const MetaPopInfo &) *this->_mpopi, verbose, cerr);
         loc->s->tally_metapop(loc->cloc);
-        
+
+        //
+        // Tabulate haplotypes present and in what combinations.
+        //
+        tabulate_locus_haplotypes(loc->cloc, loc->d, this->_mpopi->samples().size());
+
         this->_loci.push_back(loc);
         
         loc_cnt++;
@@ -1503,6 +1537,33 @@ log_haplotype_cnts(map<int, CSLocus *> &catalog, ofstream &log_fh)
 }
 
 int
+tabulate_locus_haplotypes(CSLocus *cloc, Datum **d, int sample_cnt)
+{
+    double mean = 0.0;
+    double cnt  = 0.0;
+
+    for (int i = 0; i < sample_cnt; i++) {
+        if (d[i] == NULL)
+            continue;
+
+        if (d[i]->obshap.size() > 1)
+            cloc->marker = "heterozygous";
+
+        mean += d[i]->lnl;
+        cnt++;
+    }
+
+    if (cloc->marker.length() > 0) {
+        create_genotype_map(cloc, d, sample_cnt);
+        call_population_genotypes(cloc, d, sample_cnt);
+    }
+
+    cloc->lnl = mean / cnt;
+
+    return 0;
+}
+
+int
 tabulate_haplotypes(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
 {
     map<int, CSLocus *>::iterator it;
@@ -1530,8 +1591,8 @@ tabulate_haplotypes(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
         }
 
         if (loc->marker.length() > 0) {
-            create_genotype_map(loc, pmap);
-            call_population_genotypes(loc, pmap);
+            create_genotype_map(loc, d, pmap->sample_cnt());
+            call_population_genotypes(loc, d, pmap->sample_cnt());
         }
 
         loc->lnl = mean / cnt;
@@ -2184,7 +2245,7 @@ merge_datums(int sample_cnt,
 }
 
 int
-create_genotype_map(CSLocus *locus, PopMap<CSLocus> *pmap)
+create_genotype_map(CSLocus *locus, Datum **d, int sample_cnt)
 {
     //
     // Create a genotype map. For any set of haplotypes, this routine will
@@ -2199,14 +2260,11 @@ create_genotype_map(CSLocus *locus, PopMap<CSLocus> *pmap)
                       'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
                       'u', 'v', 'w', 'x', 'y', 'z'};
 
-    Datum **d;
     map<string, int> haplotypes;
     map<string, int>::iterator k;
     vector<pair<string, int> > sorted_haplotypes;
 
-    d = pmap->locus(locus->id);
-
-    for (int i = 0; i < pmap->sample_cnt(); i++) {
+    for (int i = 0; i < sample_cnt; i++) {
 
         if (d[i] != NULL)
             for (uint n = 0; n < d[i]->obshap.size(); n++)
@@ -2233,14 +2291,13 @@ create_genotype_map(CSLocus *locus, PopMap<CSLocus> *pmap)
     return 0;
 }
 
-int call_population_genotypes(CSLocus *locus,
-                              PopMap<CSLocus> *pmap) {
+int
+call_population_genotypes(CSLocus *locus, Datum **d, int sample_cnt)
+{
     //
     // Fetch the array of observed haplotypes from the population
     //
-    Datum **d = pmap->locus(locus->id);
-
-    for (int i = 0; i < pmap->sample_cnt(); i++) {
+    for (int i = 0; i < sample_cnt; i++) {
         if (d[i] == NULL)
             continue;
 
@@ -5813,7 +5870,7 @@ parse_command_line(int argc, char* argv[])
         if (out_path.empty())
             out_path = in_path;
 
-        out_prefix = string("batch_") + to_string(batch_id);
+        out_prefix = "populations";
 
     } else if (input_mode == InputMode::vcf) {
 
