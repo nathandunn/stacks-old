@@ -179,7 +179,9 @@ int main (int argc, char* argv[]) {
     Export *exp;
     exp = new MarkersExport();
     exports.push_back(exp);
-
+    exp = new SumstatsExport();
+    exports.push_back(exp);
+    
     //
     // Open the export files and write any headers.
     //
@@ -4107,7 +4109,7 @@ SumStatsSummary::accumulate(const vector<LocBin *> &loci)
                 
                 for (uint pop = 0; pop < this->_pop_cnt; pop++) {
                     s = loci[i]->s->per_pop(pop);
-                    
+
                     if (s->nucs[pos].num_indv == 0) continue;
 
                     _n_all[pop]++;
@@ -4119,7 +4121,7 @@ SumStatsSummary::accumulate(const vector<LocBin *> &loci)
                     _exp_hom_mean_all[pop]  += s->nucs[pos].exp_hom;
                     _pi_mean_all[pop]       += s->nucs[pos].stat[0];
                     _fis_mean_all[pop]      += s->nucs[pos].stat[1] != -7.0 ? s->nucs[pos].stat[1] : 0.0;
-                    
+
                     _num_indv_var_all[pop] += this->online_variance(s->nucs[pos].num_indv, _num_indv_acc_mean_all[pop], _n_all[pop]);
                     _p_var_all[pop]        += this->online_variance(s->nucs[pos].p,        _p_acc_mean_all[pop],        _n_all[pop]);
                     _obs_het_var_all[pop]  += this->online_variance(s->nucs[pos].obs_het,  _obs_het_acc_mean_all[pop],  _n_all[pop]);

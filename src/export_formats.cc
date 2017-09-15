@@ -24,6 +24,142 @@ extern set<string> debug_flags;
 extern MetaPopInfo mpopi;
 extern map<string, int> renz_olap;
 
+SumstatsExport::SumstatsExport() : Export(ExportType::sumstats)
+{
+    this->_path = out_path + out_prefix + ".sumstats.tsv";
+}
+
+int
+SumstatsExport::open(const MetaPopInfo *mpopi)
+{
+    this->_mpopi   = mpopi;
+    this->_pop_cnt = this->_mpopi->pops().size();
+    
+    this->_fh.open(this->_path.c_str(), ofstream::out);
+    if (this->_fh.fail()) {
+        cerr << "Error opening sumstats file '" << this->_path << "'\n";
+        exit(1);
+    }
+    this->_fh.precision(fieldw);
+    this->_fh.setf(std::ios::fixed);
+
+    cerr << "Population-level summary statistics will be written to '" << this->_path << "'\n";
+
+    return 0;
+}
+
+int
+SumstatsExport::write_header()
+{
+    //
+    // Write the population members.
+    //
+    for (auto& pop : mpopi.pops()) {
+        this->_fh << "# " << pop.name << "\t";
+        for (size_t i = pop.first_sample; i <= pop.last_sample; i++) {
+            this->_fh << mpopi.samples()[i].name;
+            if (i < pop.last_sample)
+                this->_fh << ",";
+        }
+        this->_fh << "\n";
+    }
+
+    this->_fh << "# Locus ID" << "\t"
+              << "Chr"      << "\t"
+              << "BP"       << "\t"
+              << "Col"      << "\t"
+              << "Pop ID"   << "\t"
+              << "P Nuc"    << "\t"
+              << "Q Nuc"    << "\t"
+              << "N"        << "\t"
+              << "P"        << "\t"
+              << "Obs Het"  << "\t"
+              << "Obs Hom"  << "\t"
+              << "Exp Het"  << "\t"
+              << "Exp Hom"  << "\t"
+              << "Pi"       << "\t"
+              << "Smoothed Pi"  << "\t"
+              << "Smoothed Pi P-value"  << "\t"
+              << "Fis"          << "\t"
+              << "Smoothed Fis" << "\t"
+              << "Smoothed Fis P-value" << "\t"
+              << "Private"      << "\n";
+    return 0;
+}
+
+int
+SumstatsExport::write_batch(const vector<LocBin *> &loci)
+{
+    CSLocus        *cloc;
+    const LocSum   *s;
+    const LocTally *t;
+    double          p_freq;
+
+    for (uint i = 0; i < loci.size(); i++) {
+        cloc = loci[i]->cloc;
+        t    = loci[i]->s->meta_pop();
+        uint len = strlen(cloc->con);
+
+        for (uint pos = 0; pos < len; pos++) {
+
+            //
+            // If this site is fixed in all populations, DON'T output it. If it is variable,
+            // or fixed within populations but variable among, DO output it.
+            //
+            if (t->nucs[pos].allele_cnt == 2) {
+
+                for (uint pop = 0; pop < this->_pop_cnt; pop++) {
+
+                    s = loci[i]->s->per_pop(pop);
+
+                    if (s->nucs[pos].num_indv == 0)
+                        continue;
+
+                    this->_fh 
+                       << cloc->id << "\t"
+                       << cloc->loc.chr() << "\t"
+                       << cloc->sort_bp(i) + 1 << "\t"
+                       << i << "\t"
+                       << this->_mpopi->pops()[pop].name << "\t";
+
+                    //
+                    // Output the p and q alleles in the same order in each population.
+                    //
+                    if (t->nucs[pos].p_allele == s->nucs[pos].p_nuc) {
+                        if (s->nucs[pos].q_nuc == 0)
+                            this->_fh << s->nucs[pos].p_nuc << "\t" << "-";
+                        else
+                            this->_fh << s->nucs[pos].p_nuc << "\t" << s->nucs[pos].q_nuc;
+                        p_freq = s->nucs[pos].p;
+
+                    } else {
+                        if (s->nucs[pos].q_nuc == 0)
+                            this->_fh << "-\t" << s->nucs[pos].p_nuc;
+                        else
+                            this->_fh << s->nucs[pos].q_nuc << "\t" << s->nucs[pos].p_nuc;
+                        p_freq = 1 - s->nucs[pos].p;
+                    }
+
+                    this->_fh << "\t" << (int) s->nucs[pos].num_indv << "\t"
+                              << std::setprecision(8)      << p_freq << "\t"
+                              << std::setprecision(fieldw) << s->nucs[pos].obs_het << "\t"
+                              << s->nucs[pos].obs_hom   << "\t"
+                              << s->nucs[pos].exp_het   << "\t"
+                              << s->nucs[pos].exp_hom   << "\t"
+                              << s->nucs[pos].stat[0]   << "\t" // Pi
+                              << s->nucs[pos].smoothed[0] << "\t"  // Smoothed Pi
+                              << s->nucs[pos].bs[0]       << "\t"  // Pi bootstrapped p-value
+                              << (s->nucs[pos].stat[1] == -7.0 ? 0.0 : s->nucs[pos].stat[1]) << "\t"  // Fis
+                              << s->nucs[pos].smoothed[1] << "\t"  // Smoothed Fis
+                              << s->nucs[pos].bs[1]       << "\t"; // Fis bootstrapped p-value.
+                    (t->nucs[pos].priv_allele == (int) pop) ? this->_fh << "1\n" : this->_fh << "0\n";
+                }
+            }
+        }
+    }
+    
+    return 0;
+}
 
 MarkersExport::MarkersExport() : Export(ExportType::markers)
 {
@@ -51,9 +187,7 @@ MarkersExport::open(const MetaPopInfo *mpopi)
 int
 MarkersExport::write_header()
 {
-    this->_fh << "# SQL ID"            << "\t"
-              << "Batch ID"            << "\t"
-              << "Catalog Locus ID"    << "\t"
+    this->_fh << "# Catalog Locus ID"    << "\t"
               << "\t"
               << "Total Genotypes"     << "\t"
               << "Max"                 << "\t"
@@ -88,8 +222,6 @@ MarkersExport::write_batch(const vector<LocBin *> &loci)
         }
 
         this->_fh
-            << 0                  << "\t"
-            << batch_id           << "\t"
             << loci[i]->cloc->id  << "\t"
             << "\t"                       // Marker
             << total              << "\t"

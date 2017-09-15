@@ -73,6 +73,26 @@ class MarkersExport: public Export {
     }
 };
 
+class SumstatsExport: public Export {
+    //
+    // Output the locus-level summary statistics.
+    //
+    const MetaPopInfo *_mpopi;
+    uint  _pop_cnt;
+
+ public:
+    SumstatsExport();
+    ~SumstatsExport() {};
+    int  open(const MetaPopInfo *mpopi);
+    int  write_header();
+    int  write_batch(const vector<LocBin *> &);
+    int  post_processing() { return 0; }
+    void close() {
+        this->_fh.close();
+        return;
+    }
+};
+
 int write_sql(map<int, CSLocus *> &, PopMap<CSLocus> *);
 int write_fst_stats(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, ofstream &);
 int write_generic(map<int, CSLocus *> &, PopMap<CSLocus> *, bool);
