@@ -188,6 +188,8 @@ int main (int argc, char* argv[]) {
         exports[i]->write_header();
     }
 
+    SumStatsSummary sumstats(mpopi.pops().size());
+    
     //
     // Read the next set of loci to process.
     // - If data are denovo, load blim._batch_size loci.
@@ -195,18 +197,23 @@ int main (int argc, char* argv[]) {
     //
     int loc_cnt = bloc.next_batch(log_fh);
 
+    sumstats.accumulate(bloc.loci());
+
+    sumstats.final_calculation();
+    sumstats.write_results();
+    
     //
     // Export this subset of the loci.
     //
     for (uint i = 0; i < exports.size(); i++)
         exports[i]->write_batch(bloc.loci());
 
+
     const LocusFilter &filter = bloc.filter();
     cerr << "Removed " << filter.filtered() << " loci that did not pass sample/population constraints from " << filter.total() << " loci.\n"
          << "Kept "    << loc_cnt << " loci.\n";
     cerr << "Total polymorphic sites examined: " << filter.total_sites() << "; filtered " << filter.filtered_sites() << " of those sites.\n";
 
-    
     
     //
     // Read the bootstrap-whitelist.
@@ -222,13 +229,7 @@ int main (int argc, char* argv[]) {
     // // Retrieve the genomic order of loci.
     // //
     // loci_ordered = order_unordered_loci(catalog);
-
-    // //
-    // // Output a list of heterozygous loci and the associate haplotype frequencies.
-    // //
-    // if (sql_out)
-    //     write_sql(catalog, pmap);
-
+    
     // log_fh << "# Distribution of population loci.\n";
     // log_haplotype_cnts(catalog, log_fh);
 
@@ -3902,6 +3903,512 @@ void log_snps_per_loc_distrib(ostream& log_fh, map<int, CSLocus*>& catalog)
         log_fh << n_snps.first << "\t" << n_snps.second << "\n";
 }
 
+SumStatsSummary::SumStatsSummary(size_t pop_cnt)
+{
+    this->_pop_cnt           = pop_cnt;
+    this->_private_cnt       = new int[this->_pop_cnt];
+    this->_n                 = new double[this->_pop_cnt];
+    this->_var_sites         = new double[this->_pop_cnt];
+
+    this->_num_indv_mean     = new double[this->_pop_cnt];
+    this->_num_indv_acc_mean = new double[this->_pop_cnt];    
+    this->_num_indv_var      = new double[this->_pop_cnt];
+    this->_p_mean            = new double[this->_pop_cnt];
+    this->_p_acc_mean        = new double[this->_pop_cnt];    
+    this->_p_var             = new double[this->_pop_cnt];
+    this->_obs_het_mean      = new double[this->_pop_cnt];
+    this->_obs_het_acc_mean  = new double[this->_pop_cnt];    
+    this->_obs_het_var       = new double[this->_pop_cnt];
+    this->_obs_hom_mean      = new double[this->_pop_cnt];
+    this->_obs_hom_acc_mean  = new double[this->_pop_cnt];    
+    this->_obs_hom_var       = new double[this->_pop_cnt];
+    this->_exp_het_mean      = new double[this->_pop_cnt];
+    this->_exp_het_acc_mean  = new double[this->_pop_cnt];    
+    this->_exp_het_var       = new double[this->_pop_cnt];
+    this->_exp_hom_mean      = new double[this->_pop_cnt];
+    this->_exp_hom_acc_mean  = new double[this->_pop_cnt];    
+    this->_exp_hom_var       = new double[this->_pop_cnt];
+    this->_pi_mean           = new double[this->_pop_cnt];
+    this->_pi_acc_mean       = new double[this->_pop_cnt];    
+    this->_pi_var            = new double[this->_pop_cnt];
+    this->_fis_mean          = new double[this->_pop_cnt];
+    this->_fis_acc_mean      = new double[this->_pop_cnt];
+    this->_fis_var           = new double[this->_pop_cnt];
+
+    this->_n_all                 = new double[this->_pop_cnt];
+    this->_num_indv_mean_all     = new double[this->_pop_cnt];
+    this->_num_indv_acc_mean_all = new double[this->_pop_cnt];    
+    this->_num_indv_var_all      = new double[this->_pop_cnt];
+    this->_p_mean_all            = new double[this->_pop_cnt];
+    this->_p_acc_mean_all        = new double[this->_pop_cnt];    
+    this->_p_var_all             = new double[this->_pop_cnt];
+    this->_obs_het_mean_all      = new double[this->_pop_cnt];
+    this->_obs_het_acc_mean_all  = new double[this->_pop_cnt];    
+    this->_obs_het_var_all       = new double[this->_pop_cnt];
+    this->_obs_hom_mean_all      = new double[this->_pop_cnt];
+    this->_obs_hom_acc_mean_all  = new double[this->_pop_cnt];    
+    this->_obs_hom_var_all       = new double[this->_pop_cnt];
+    this->_exp_het_mean_all      = new double[this->_pop_cnt];
+    this->_exp_het_acc_mean_all  = new double[this->_pop_cnt];    
+    this->_exp_het_var_all       = new double[this->_pop_cnt];
+    this->_exp_hom_mean_all      = new double[this->_pop_cnt];
+    this->_exp_hom_acc_mean_all  = new double[this->_pop_cnt];    
+    this->_exp_hom_var_all       = new double[this->_pop_cnt];
+    this->_pi_mean_all           = new double[this->_pop_cnt];
+    this->_pi_acc_mean_all       = new double[this->_pop_cnt];    
+    this->_pi_var_all            = new double[this->_pop_cnt];
+    this->_fis_mean_all          = new double[this->_pop_cnt];
+    this->_fis_acc_mean_all      = new double[this->_pop_cnt];    
+    this->_fis_var_all           = new double[this->_pop_cnt];
+
+    this->_sq_n     = new double[this->_pop_cnt];
+    this->_sq_n_all = new double[this->_pop_cnt];
+
+    for (uint j = 0; j < this->_pop_cnt; j++) {
+        this->_private_cnt[j]       = 0;
+        this->_n[j]                 = 0.0;
+        this->_var_sites[j]         = 0.0;
+        this->_num_indv_mean[j]     = 0.0;
+        this->_num_indv_acc_mean[j] = 0.0;        
+        this->_num_indv_var[j]      = 0.0;
+        this->_p_mean[j]            = 0.0;
+        this->_p_acc_mean[j]        = 0.0;        
+        this->_p_var[j]             = 0.0;
+        this->_obs_het_mean[j]      = 0.0;
+        this->_obs_het_acc_mean[j]  = 0.0;        
+        this->_obs_het_var[j]       = 0.0;
+        this->_obs_hom_mean[j]      = 0.0;
+        this->_obs_hom_acc_mean[j]  = 0.0;        
+        this->_obs_hom_var[j]       = 0.0;
+        this->_exp_het_mean[j]      = 0.0;
+        this->_exp_het_acc_mean[j]  = 0.0;        
+        this->_exp_het_var[j]       = 0.0;
+        this->_exp_hom_mean[j]      = 0.0;
+        this->_exp_hom_acc_mean[j]  = 0.0;        
+        this->_exp_hom_var[j]       = 0.0;
+        this->_pi_mean[j]           = 0.0;
+        this->_pi_acc_mean[j]       = 0.0;        
+        this->_pi_var[j]            = 0.0;
+        this->_fis_mean[j]          = 0.0;
+        this->_fis_acc_mean[j]      = 0.0;        
+        this->_fis_var[j]           = 0.0;
+
+        this->_n_all[j]                 = 0.0;
+        this->_num_indv_mean_all[j]     = 0.0;
+        this->_num_indv_acc_mean_all[j] = 0.0;
+        this->_num_indv_var_all[j]      = 0.0;
+        this->_p_mean_all[j]            = 0.0;
+        this->_p_acc_mean_all[j]        = 0.0;
+        this->_p_var_all[j]             = 0.0;
+        this->_obs_het_mean_all[j]      = 0.0;
+        this->_obs_het_acc_mean_all[j]  = 0.0;
+        this->_obs_het_var_all[j]       = 0.0;
+        this->_obs_hom_mean_all[j]      = 0.0;
+        this->_obs_hom_acc_mean_all[j]  = 0.0;
+        this->_obs_hom_var_all[j]       = 0.0;
+        this->_exp_het_mean_all[j]      = 0.0;
+        this->_exp_het_acc_mean_all[j]  = 0.0;
+        this->_exp_het_var_all[j]       = 0.0;
+        this->_exp_hom_mean_all[j]      = 0.0;
+        this->_exp_hom_acc_mean_all[j]  = 0.0;
+        this->_exp_hom_var_all[j]       = 0.0;
+        this->_pi_mean_all[j]           = 0.0;
+        this->_pi_acc_mean_all[j]       = 0.0;
+        this->_pi_var_all[j]            = 0.0;
+        this->_fis_mean_all[j]          = 0.0;
+        this->_fis_acc_mean_all[j]      = 0.0;
+        this->_fis_var_all[j]           = 0.0;
+    }
+}
+
+int
+SumStatsSummary::accumulate(const vector<LocBin *> &loci)
+{
+    //
+    // We are calculating the mean, variance, and standard deviation for several variables.
+    //   We will calculate them partially, for each set of loci input to the program using
+    //   the algorithm described in:
+    //     B. P. Welford. (1962) Note on a Method for Calculating Corrected Sums of Squares and
+    //     Products. Technometrics: 4(3), pp. 419-420.
+    //
+    CSLocus        *cloc;
+    const LocSum   *s;
+    const LocTally *t;
+
+    for (uint i = 0; i < loci.size(); i++) {
+        cloc = loci[i]->cloc;
+        t    = loci[i]->s->meta_pop();
+        uint len = strlen(cloc->con);
+
+        for (uint pos = 0; pos < len; pos++) {
+            //
+            // Compile private alleles
+            //
+            if (t->nucs[pos].priv_allele >= 0)
+                _private_cnt[t->nucs[pos].priv_allele]++;
+
+            if (t->nucs[pos].allele_cnt == 2) {
+
+                for (uint pop = 0; pop < this->_pop_cnt; pop++) {
+
+                    s = loci[i]->s->per_pop(pop);
+
+                    if (s->nucs[pos].num_indv == 0) continue;
+
+                    _n[pop]++;
+
+                    if (s->nucs[pos].pi > 0) _var_sites[pop]++;
+
+                    //
+                    // Accumulate sums for each variable to calculate the means.
+                    // 
+                    _num_indv_mean[pop] += s->nucs[pos].num_indv;
+                    _p_mean[pop]        += s->nucs[pos].p;
+                    _obs_het_mean[pop]  += s->nucs[pos].obs_het;
+                    _obs_hom_mean[pop]  += s->nucs[pos].obs_hom;
+                    _exp_het_mean[pop]  += s->nucs[pos].exp_het;
+                    _exp_hom_mean[pop]  += s->nucs[pos].exp_hom;
+                    _pi_mean[pop]       += s->nucs[pos].stat[0];
+                    _fis_mean[pop]      += s->nucs[pos].stat[1] != -7.0 ? s->nucs[pos].stat[1] : 0.0;
+
+                    _n_all[pop]++;
+                    _num_indv_mean_all[pop] += s->nucs[pos].num_indv;
+                    _p_mean_all[pop]        += s->nucs[pos].p;
+                    _obs_het_mean_all[pop]  += s->nucs[pos].obs_het;
+                    _obs_hom_mean_all[pop]  += s->nucs[pos].obs_hom;
+                    _exp_het_mean_all[pop]  += s->nucs[pos].exp_het;
+                    _exp_hom_mean_all[pop]  += s->nucs[pos].exp_hom;
+                    _pi_mean_all[pop]       += s->nucs[pos].stat[0];
+                    _fis_mean_all[pop]      += s->nucs[pos].stat[1] != -7.0 ? s->nucs[pos].stat[1] : 0.0;
+
+                    //
+                    // Accumulate a partial sum of squares to calculate the variance.
+                    //
+                    _num_indv_var[pop] += this->online_variance(s->nucs[pos].num_indv, _num_indv_acc_mean[pop], _n[pop]);
+                    _p_var[pop]        += this->online_variance(s->nucs[pos].p,        _p_acc_mean[pop],        _n[pop]);
+                    _obs_het_var[pop]  += this->online_variance(s->nucs[pos].obs_het,  _obs_het_acc_mean[pop],  _n[pop]);
+                    _obs_hom_var[pop]  += this->online_variance(s->nucs[pos].obs_hom,  _obs_hom_acc_mean[pop],  _n[pop]);
+                    _exp_het_var[pop]  += this->online_variance(s->nucs[pos].exp_het,  _exp_het_acc_mean[pop],  _n[pop]);
+                    _exp_hom_var[pop]  += this->online_variance(s->nucs[pos].exp_hom,  _exp_hom_acc_mean[pop],  _n[pop]);
+                    _pi_var[pop]       += this->online_variance(s->nucs[pos].stat[0],  _pi_acc_mean[pop],       _n[pop]);
+                    _fis_var[pop]      += this->online_variance(s->nucs[pos].stat[1] != -7.0 ? s->nucs[pos].stat[1] : 0.0, _fis_acc_mean[pop], _n[pop]);
+
+                    _num_indv_var_all[pop] += this->online_variance(s->nucs[pos].num_indv, _num_indv_acc_mean_all[pop], _n_all[pop]);
+                    _p_var_all[pop]        += this->online_variance(s->nucs[pos].p,        _p_acc_mean_all[pop],        _n_all[pop]);
+                    _obs_het_var_all[pop]  += this->online_variance(s->nucs[pos].obs_het,  _obs_het_acc_mean_all[pop],  _n_all[pop]);
+                    _obs_hom_var_all[pop]  += this->online_variance(s->nucs[pos].obs_hom,  _obs_hom_acc_mean_all[pop],  _n_all[pop]);
+                    _exp_het_var_all[pop]  += this->online_variance(s->nucs[pos].exp_het,  _exp_het_acc_mean_all[pop],  _n_all[pop]);
+                    _exp_hom_var_all[pop]  += this->online_variance(s->nucs[pos].exp_hom,  _exp_hom_acc_mean_all[pop],  _n_all[pop]);
+                    _pi_var_all[pop]       += this->online_variance(s->nucs[pos].stat[0],  _pi_acc_mean_all[pop],       _n_all[pop]);
+                    _fis_var_all[pop]      += this->online_variance(s->nucs[pos].stat[1] != -7.0 ? s->nucs[pos].stat[1] : 0.0, _fis_acc_mean_all[pop], _n_all[pop]);
+                }
+
+            } else if (t->nucs[pos].allele_cnt == 1) {
+                
+                for (uint pop = 0; pop < this->_pop_cnt; pop++) {
+                    s = loci[i]->s->per_pop(pop);
+                    
+                    if (s->nucs[pos].num_indv == 0) continue;
+
+                    _n_all[pop]++;
+                    _num_indv_mean_all[pop] += s->nucs[pos].num_indv;
+                    _p_mean_all[pop]        += s->nucs[pos].p;
+                    _obs_het_mean_all[pop]  += s->nucs[pos].obs_het;
+                    _obs_hom_mean_all[pop]  += s->nucs[pos].obs_hom;
+                    _exp_het_mean_all[pop]  += s->nucs[pos].exp_het;
+                    _exp_hom_mean_all[pop]  += s->nucs[pos].exp_hom;
+                    _pi_mean_all[pop]       += s->nucs[pos].stat[0];
+                    _fis_mean_all[pop]      += s->nucs[pos].stat[1] != -7.0 ? s->nucs[pos].stat[1] : 0.0;
+                    
+                    _num_indv_var_all[pop] += this->online_variance(s->nucs[pos].num_indv, _num_indv_acc_mean_all[pop], _n_all[pop]);
+                    _p_var_all[pop]        += this->online_variance(s->nucs[pos].p,        _p_acc_mean_all[pop],        _n_all[pop]);
+                    _obs_het_var_all[pop]  += this->online_variance(s->nucs[pos].obs_het,  _obs_het_acc_mean_all[pop],  _n_all[pop]);
+                    _obs_hom_var_all[pop]  += this->online_variance(s->nucs[pos].obs_hom,  _obs_hom_acc_mean_all[pop],  _n_all[pop]);
+                    _exp_het_var_all[pop]  += this->online_variance(s->nucs[pos].exp_het,  _exp_het_acc_mean_all[pop],  _n_all[pop]);
+                    _exp_hom_var_all[pop]  += this->online_variance(s->nucs[pos].exp_hom,  _exp_hom_acc_mean_all[pop],  _n_all[pop]);
+                    _pi_var_all[pop]       += this->online_variance(s->nucs[pos].stat[0],  _pi_acc_mean_all[pop],       _n_all[pop]);
+                    _fis_var_all[pop]      += this->online_variance(s->nucs[pos].stat[1] != -7.0 ? s->nucs[pos].stat[1] : 0.0, _fis_acc_mean_all[pop], _n_all[pop]);
+                }
+            }
+        }
+    }
+    
+    return 0;
+}
+
+inline double
+SumStatsSummary::online_variance(double x, double &acc_mean, double n)
+{
+    double delta1, delta2;
+
+    delta1    = x - acc_mean;
+    acc_mean += delta1 / n;
+    delta2    = x - acc_mean;
+    return delta1 * delta2;    
+}
+
+int
+SumStatsSummary::final_calculation()
+{
+    //
+    // Finish the mean calculation.
+    //
+    for (uint j = 0; j < this->_pop_cnt; j++) {
+        _num_indv_mean[j] = _num_indv_mean[j] / _n[j];
+        _p_mean[j]        = _p_mean[j]        / _n[j];
+        _obs_het_mean[j]  = _obs_het_mean[j]  / _n[j];
+        _obs_hom_mean[j]  = _obs_hom_mean[j]  / _n[j];
+        _exp_het_mean[j]  = _exp_het_mean[j]  / _n[j];
+        _exp_hom_mean[j]  = _exp_hom_mean[j]  / _n[j];
+        _pi_mean[j]       = _pi_mean[j]       / _n[j];
+        _fis_mean[j]      = _fis_mean[j]      / _n[j];
+
+        _num_indv_mean_all[j] = _num_indv_mean_all[j] / _n_all[j];
+        _p_mean_all[j]        = _p_mean_all[j]        / _n_all[j];
+        _obs_het_mean_all[j]  = _obs_het_mean_all[j]  / _n_all[j];
+        _obs_hom_mean_all[j]  = _obs_hom_mean_all[j]  / _n_all[j];
+        _exp_het_mean_all[j]  = _exp_het_mean_all[j]  / _n_all[j];
+        _exp_hom_mean_all[j]  = _exp_hom_mean_all[j]  / _n_all[j];
+        _pi_mean_all[j]       = _pi_mean_all[j]       / _n_all[j];
+        _fis_mean_all[j]      = _fis_mean_all[j]      / _n_all[j];
+    }    
+
+    //
+    // Finish the online variance calculation.
+    //
+    for (uint j = 0; j < this->_pop_cnt; j++) {
+        _num_indv_var[j] = _num_indv_var[j] / (_n[j] - 1);
+        _p_var[j]        = _p_var[j]        / (_n[j] - 1);
+        _obs_het_var[j]  = _obs_het_var[j]  / (_n[j] - 1);
+        _obs_hom_var[j]  = _obs_hom_var[j]  / (_n[j] - 1);
+        _exp_het_var[j]  = _exp_het_var[j]  / (_n[j] - 1);
+        _exp_hom_var[j]  = _exp_hom_var[j]  / (_n[j] - 1);
+        _pi_var[j]       = _pi_var[j]       / (_n[j] - 1);
+        _fis_var[j]      = _fis_var[j]      / (_n[j] - 1);
+
+        _num_indv_var_all[j] = _num_indv_var_all[j] / (_n_all[j] - 1);
+        _p_var_all[j]        = _p_var_all[j]        / (_n_all[j] - 1);
+        _obs_het_var_all[j]  = _obs_het_var_all[j]  / (_n_all[j] - 1);
+        _obs_hom_var_all[j]  = _obs_hom_var_all[j]  / (_n_all[j] - 1);
+        _exp_het_var_all[j]  = _exp_het_var_all[j]  / (_n_all[j] - 1);
+        _exp_hom_var_all[j]  = _exp_hom_var_all[j]  / (_n_all[j] - 1);
+        _pi_var_all[j]       = _pi_var_all[j]       / (_n_all[j] - 1);
+        _fis_var_all[j]      = _fis_var_all[j]      / (_n_all[j] - 1);
+    }
+
+    //
+    // Calculate the first half of the standard deviation.
+    //
+    for (uint j = 0; j < this->_pop_cnt; j++) {
+        _sq_n[j]     = sqrt(_n[j]);
+        _sq_n_all[j] = sqrt(_n_all[j]);
+    }
+
+    return 0;
+}
+
+int
+SumStatsSummary::write_results()
+{
+    string   path = out_path + out_prefix + ".sumstats_summary.tsv";
+    ofstream fh(path.c_str(), ofstream::out);
+    if (fh.fail()) {
+        cerr << "Error opening sumstats summary file '" << path << "'\n";
+        exit(1);
+    }
+    fh.precision(fieldw);
+    fh.setf(std::ios::fixed);
+
+    cerr << "Summaries of statistics describing the metapopulation will be written to '" << path << "'\n";
+
+    //
+    // Write out summary statistics of the summary statistics.
+    //
+    fh << "# Variant positions\n"
+       << "# Pop ID\t"
+       << "Private\t"
+       << "Num Indv\t"
+       << "Var\t"
+       << "StdErr\t"
+       << "P\t"
+       << "Var\t"
+       << "StdErr\t"
+       << "Obs Het\t"
+       << "Var\t"
+       << "StdErr\t"
+       << "Obs Hom\t"
+       << "Var\t"
+       << "StdErr\t"
+       << "Exp Het\t"
+       << "Var\t"
+       << "StdErr\t"
+       << "Exp Hom\t"
+       << "Var\t"
+       << "StdErr\t"
+       << "Pi\t"
+       << "Var\t"
+       << "StdErr\t"
+       << "Fis\t"
+       << "Var\t"
+       << "StdErr\n";
+
+    for (uint j = 0; j < this->_pop_cnt; j++)
+        fh << mpopi.pops()[j].name << "\t"
+           << _private_cnt[j]         << "\t"
+           << _num_indv_mean[j]       << "\t"
+           << _num_indv_var[j]        << "\t"
+           << sqrt(_num_indv_var[j]) / _sq_n[j] << "\t"
+           << _p_mean[j]              << "\t"
+           << _p_var[j]               << "\t"
+           << sqrt(_p_var[j])         / _sq_n[j] << "\t"
+           << _obs_het_mean[j]        << "\t"
+           << _obs_het_var[j]         << "\t"
+           << sqrt(_obs_het_var[j])   / _sq_n[j] << "\t"
+           << _obs_hom_mean[j]        << "\t"
+           << _obs_hom_var[j]         << "\t"
+           << sqrt(_obs_hom_var[j])   / _sq_n[j] << "\t"
+           << _exp_het_mean[j]        << "\t"
+           << _exp_het_var[j]         << "\t"
+           << sqrt(_exp_het_var[j])   / _sq_n[j] << "\t"
+           << _exp_hom_mean[j]        << "\t"
+           << _exp_hom_var[j]         << "\t"
+           << sqrt(_exp_hom_var[j])   / _sq_n[j] << "\t"
+           << _pi_mean[j]             << "\t"
+           << _pi_var[j]              << "\t"
+           << sqrt(_pi_var[j])        / _sq_n[j] << "\t"
+           << _fis_mean[j]            << "\t"
+           << _fis_var[j]             << "\t"
+           << sqrt(_num_indv_var[j])  / _sq_n[j] << "\n";
+
+    fh << "# All positions (variant and fixed)\n"
+       << "# Pop ID\t"
+       << "Private\t"
+       << "Sites\t"
+       << "Variant Sites\t"
+       << "Polymorphic Sites\t"
+       << "% Polymorphic Loci\t"
+       << "Num Indv\t"
+       << "Var\t"
+       << "StdErr\t"
+       << "P\t"
+       << "Var\t"
+       << "StdErr\t"
+       << "Obs Het\t"
+       << "Var\t"
+       << "StdErr\t"
+       << "Obs Hom\t"
+       << "Var\t"
+       << "StdErr\t"
+       << "Exp Het\t"
+       << "Var\t"
+       << "StdErr\t"
+       << "Exp Hom\t"
+       << "Var\t"
+       << "StdErr\t"
+       << "Pi\t"
+       << "Var\t"
+       << "StdErr\t"
+       << "Fis\t"
+       << "Var\t"
+       << "StdErr\n";
+
+    for (uint j = 0; j < this->_pop_cnt; j++) {
+        fh << mpopi.pops()[j].name << "\t"
+           << _private_cnt[j]             << "\t"
+           << _n_all[j]                   << "\t"
+           << _n[j]                       << "\t"
+           << _var_sites[j]               << "\t"
+           << _var_sites[j]             / _n_all[j] * 100 << "\t"
+           << _num_indv_mean_all[j]       << "\t"
+           << _num_indv_var_all[j]        << "\t"
+           << sqrt(_num_indv_var_all[j]) / _sq_n_all[j] << "\t"
+           << _p_mean_all[j]              << "\t"
+           << _p_var_all[j]               << "\t"
+           << sqrt(_p_var_all[j])        / _sq_n_all[j] << "\t"
+           << _obs_het_mean_all[j]        << "\t"
+           << _obs_het_var_all[j]         << "\t"
+           << sqrt(_obs_het_var_all[j])  / _sq_n_all[j] << "\t"
+           << _obs_hom_mean_all[j]        << "\t"
+           << _obs_hom_var_all[j]         << "\t"
+           << sqrt(_obs_hom_var_all[j])  / _sq_n_all[j] << "\t"
+           << _exp_het_mean_all[j]        << "\t"
+           << _exp_het_var_all[j]         << "\t"
+           << sqrt(_exp_het_var_all[j])  / _sq_n_all[j] << "\t"
+           << _exp_hom_mean_all[j]        << "\t"
+           << _exp_hom_var_all[j]         << "\t"
+           << sqrt(_exp_hom_var_all[j])  / _sq_n_all[j] << "\t"
+           << _pi_mean_all[j]             << "\t"
+           << _pi_var_all[j]              << "\t"
+           << sqrt(_pi_var_all[j])       / _sq_n_all[j] << "\t"
+           << _fis_mean_all[j]            << "\t"
+           << _fis_var_all[j]             << "\t"
+           << sqrt(_num_indv_var_all[j]) / _sq_n_all[j] << "\n";
+    }
+
+    fh.close();
+    
+    return 0;
+}
+
+SumStatsSummary::~SumStatsSummary()
+{
+    delete [] this->_private_cnt;
+    delete [] this->_n;
+    delete [] this->_var_sites;
+    delete [] this->_sq_n;
+    delete [] this->_num_indv_mean;
+    delete [] this->_num_indv_acc_mean;
+    delete [] this->_num_indv_var;
+    delete [] this->_p_mean;
+    delete [] this->_p_acc_mean;
+    delete [] this->_p_var;
+    delete [] this->_obs_het_mean;
+    delete [] this->_obs_het_acc_mean;
+    delete [] this->_obs_het_var;
+    delete [] this->_obs_hom_mean;
+    delete [] this->_obs_hom_acc_mean;
+    delete [] this->_obs_hom_var;
+    delete [] this->_exp_het_mean;
+    delete [] this->_exp_het_acc_mean;
+    delete [] this->_exp_het_var;
+    delete [] this->_exp_hom_mean;
+    delete [] this->_exp_hom_acc_mean;
+    delete [] this->_exp_hom_var;
+    delete [] this->_pi_mean;
+    delete [] this->_pi_acc_mean;
+    delete [] this->_pi_var;
+    delete [] this->_fis_mean;
+    delete [] this->_fis_acc_mean;
+    delete [] this->_fis_var;
+
+    delete [] this->_n_all;
+    delete [] this->_sq_n_all;
+    delete [] this->_num_indv_mean_all;
+    delete [] this->_num_indv_acc_mean_all;
+    delete [] this->_num_indv_var_all;
+    delete [] this->_p_mean_all;
+    delete [] this->_p_acc_mean_all;
+    delete [] this->_p_var_all;
+    delete [] this->_obs_het_mean_all;
+    delete [] this->_obs_het_acc_mean_all;
+    delete [] this->_obs_het_var_all;
+    delete [] this->_obs_hom_mean_all;
+    delete [] this->_obs_hom_acc_mean_all;
+    delete [] this->_obs_hom_var_all;
+    delete [] this->_exp_het_mean_all;
+    delete [] this->_exp_het_acc_mean_all;
+    delete [] this->_exp_het_var_all;
+    delete [] this->_exp_hom_mean_all;
+    delete [] this->_exp_hom_acc_mean_all;
+    delete [] this->_exp_hom_var_all;
+    delete [] this->_pi_mean_all;
+    delete [] this->_pi_acc_mean_all;
+    delete [] this->_pi_var_all;
+    delete [] this->_fis_mean_all;
+    delete [] this->_fis_acc_mean_all;
+    delete [] this->_fis_var_all;
+}
+
 int
 calculate_summary_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum)
 {
@@ -5439,7 +5946,7 @@ open_log(ofstream &log_fh)
         throw exception();
     }
 
-    string log_path = out_path + out_prefix + ".populations.log";
+    string log_path = out_path + out_prefix + ".log";
     log_fh.open(log_path.c_str(), ofstream::out);
     if (log_fh.fail()) {
         cerr << "Error opening log file '" << log_path << "'\n";
