@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2012-2015, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2012-2017, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -81,6 +81,33 @@ struct LocBin {
         if (this->d    != NULL) delete [] d;
         if (this->s    != NULL) delete s;
     }
+};
+
+//
+// Class for accumulating summary statistics as we read each batch of data.
+// After all loci are processed, output the summary statistics summary.
+//
+class SumStatsSummary {
+    size_t  _pop_cnt;
+    int    *_private_cnt;
+    double *_num_indv_mean,         *_p_mean,         *_obs_het_mean,         *_obs_hom_mean,         *_exp_het_mean,         *_exp_hom_mean,         *_pi_mean,         *_fis_mean;
+    double *_num_indv_acc_mean,     *_p_acc_mean,     *_obs_het_acc_mean,     *_obs_hom_acc_mean,     *_exp_het_acc_mean,     *_exp_hom_acc_mean,     *_pi_acc_mean,     *_fis_acc_mean;
+    double *_num_indv_var,          *_p_var,          *_obs_het_var,          *_obs_hom_var,          *_exp_het_var,          *_exp_hom_var,          *_pi_var,          *_fis_var;
+    double *_num_indv_mean_all,     *_p_mean_all,     *_obs_het_mean_all,     *_obs_hom_mean_all,     *_exp_het_mean_all,     *_exp_hom_mean_all,     *_pi_mean_all,     *_fis_mean_all;
+    double *_num_indv_acc_mean_all, *_p_acc_mean_all, *_obs_het_acc_mean_all, *_obs_hom_acc_mean_all, *_exp_het_acc_mean_all, *_exp_hom_acc_mean_all, *_pi_acc_mean_all, *_fis_acc_mean_all;
+    double *_num_indv_var_all,      *_p_var_all,      *_obs_het_var_all,      *_obs_hom_var_all,      *_exp_het_var_all,      *_exp_hom_var_all,      *_pi_var_all,      *_fis_var_all;
+    double *_n, *_n_all, *_var_sites;
+    double *_sq_n, *_sq_n_all;
+
+public:
+    SumStatsSummary(size_t pop_cnt);
+    ~SumStatsSummary();
+    int accumulate(const vector<LocBin *> &);
+    int final_calculation();
+    int write_results();
+
+private:
+    double online_variance(double x, double &acc_mean, double n);
 };
 
 //

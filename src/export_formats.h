@@ -11,7 +11,7 @@
 #include "ordered.h" // for "snp"
 #include "populations.h" // for "merget", "InputMode", "uncalled_haplotype()", "count_haplotypes_at_locus()"
 
-enum class ExportType {markers, sumstats, sumstats_sum, haplotypes};
+enum class ExportType {markers, sumstats, haplotypes, structure, genepop, vcf};
 
 class Export {
  protected:
@@ -55,6 +55,9 @@ class GenPos {
 };
 
 class MarkersExport: public Export {
+    //
+    // Output a list of heterozygous loci and the associated haplotype frequencies.
+    //
     const MetaPopInfo *_mpopi;
     
  public:
