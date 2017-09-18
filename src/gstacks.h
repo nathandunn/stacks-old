@@ -95,7 +95,7 @@ class ProcessingStats {
 //
 class LocusProcessor {
 public:
-    LocusProcessor() : stats_(), loc_id_(-1), loc_pos_(), mpopi_(NULL), o_vcf_(), o_fa_() {}
+    LocusProcessor() : stats_(), loc_id_(-1), loc_pos_(), mpopi_(NULL), overlapped_(false), o_vcf_(), o_fa_() {}
 
     // Process a locus.
     void process(CLocReadSet&& loc);
@@ -112,6 +112,7 @@ private:
     PhyLoc loc_pos_;
     const MetaPopInfo* mpopi_;
 
+    bool overlapped_;
     string o_vcf_;
     string o_fa_;
     stringstream details_ss_;

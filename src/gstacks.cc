@@ -383,6 +383,7 @@ LocusProcessor::process(CLocReadSet&& loc)
     this->loc_id_  =  loc.id();
     this->loc_pos_ =  loc.pos();
     this->mpopi_   = &loc.mpopi();
+    this->overlapped_ = false;
 
     if (detailed_output) {
         details_ss_.clear();
@@ -446,6 +447,7 @@ LocusProcessor::process(CLocReadSet&& loc)
             //
             int overlap;
             if ( (overlap = this->find_locus_overlap(stree, aln_loc.ref())) > 0) {
+                this->overlapped_ = true;
                 this->stats_.n_se_pe_loc_overlaps++;
                 this->stats_.mean_se_pe_loc_overlap += overlap;
             }
@@ -1387,6 +1389,10 @@ void LocusProcessor::write_one_locus (
         o_fa_ += " n_discarded_samples=";
         o_fa_ += n_spls;
     }
+    if (overlapped_)
+        // Note: When `overlapped_` is not true, it is unknown if overlapping
+        // is relevant for this locus.
+        o_fa_ += " overlapped=true";
     o_fa_ += '\n';
     o_fa_ += ref.str();
     o_fa_ += '\n';
