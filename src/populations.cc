@@ -386,13 +386,14 @@ BatchLocusProcessor::init(int batch_id, string in_path, string pmap_path)
     //
     // Read the blacklist and whitelist to control which loci we load..
     //
+    int cnt;
     if (bl_file.length() > 0) {
-        load_marker_list(bl_file, this->_blacklist);
-        cerr << "Loaded " << this->_blacklist.size() << " blacklisted markers.\n";
+        cnt = this->_loc_filter.load_blacklist(bl_file);
+        cerr << "Loaded " << cnt << " blacklisted markers.\n";
     }
     if (wl_file.length() > 0) {
-        load_marker_column_list(wl_file, this->_whitelist);
-        cerr << "Loaded " << this->_whitelist.size() << " whitelisted markers.\n";
+        cnt = this->_loc_filter.load_whitelist(wl_file);
+        cerr << "Loaded " << cnt << " whitelisted markers.\n";
         //// check_whitelist_integrity(catalog, whitelist);
     }
     
@@ -479,6 +480,9 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
 
     this->_loci.clear();
 
+    const set<int>           &blacklist = this->_loc_filter.blacklist();
+    const map<int, set<int>> &whitelist = this->_loc_filter.whitelist();
+
     //
     // Check if we queued a LocBin object from the last round of reading.
     //
@@ -515,11 +519,11 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
         //
         // Check if this locus is filtered.
         //
-        if (this->_whitelist.size() > 0 && this->_whitelist.count(cloc_id) == 0) {
+        if (whitelist.size() > 0 && whitelist.count(cloc_id) == 0) {
             records.clear();
             continue;
         }
-        if (this->_blacklist.count(cloc_id)) {
+        if (blacklist.count(cloc_id)) {
             records.clear();
             continue;
         }
@@ -550,6 +554,18 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
         }
 
         //
+        // If write_single_snp or write_random_snp has been specified, mark sites to be pruned using the whitelist.
+        //
+        if (write_single_snp)
+            this->_loc_filter.keep_single_snp(loc->cloc, loc->s->meta_pop());
+        else if (write_random_snp)
+            this->_loc_filter.keep_random_snp(loc->cloc, loc->s->meta_pop());
+        //
+        // Prune the sites according to the whitelist.
+        //
+        this->_loc_filter.prune_sites_with_whitelist(this->_mpopi, loc->cloc, loc->d, loc->s);
+        
+        //
         // Create the PopSum object and compute the summary statistics for this locus.
         //
         loc->s = new LocPopSum(strlen(loc->cloc->con), (const MetaPopInfo &) *this->_mpopi);
@@ -566,14 +582,6 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
             continue;
         }
 
-        //
-        // If write_single_snp or write_random_snp has been specified, prune appropriate SNPs.
-        //
-        if (write_single_snp)
-            this->_loc_filter.keep_single_snp(this->_mpopi, loc->cloc, loc->d, loc->s);
-        else if (write_random_snp)
-            this->_loc_filter.keep_random_snp(this->_mpopi, loc->cloc, loc->d, loc->s);
-        
         //
         // Regenerate summary statistics after pruning SNPs.
         //
@@ -854,6 +862,83 @@ LocusFilter::reset()
 {
     memset(this->_samples,  0, this->_sample_cnt * sizeof(size_t));
     memset(this->_pop_cnts, 0, this->_pop_cnt * sizeof(size_t));
+}
+
+int
+LocusFilter::keep_single_snp(const CSLocus *cloc, const LocTally *t)
+{
+    set<int> new_wl;
+
+    //
+    // If no specific SNPs are specified in the whitelist for this locus,
+    // then all SNPs are included, choose the first variant.
+    //
+    if (this->_whitelist.count(cloc->id) > 0 && this->_whitelist[cloc->id].size() > 0) {
+        for (uint i = 0; i < cloc->snps.size(); i++)
+            if (t->nucs[cloc->snps[i]->col].fixed == false) {
+                new_wl.insert(cloc->snps[i]->col);
+                break;
+            }
+
+    } else {
+        //
+        // Otherwise, choose the first SNP that is already in the whitelist.
+        //
+        for (uint i = 0; i < cloc->snps.size(); i++) {
+            if (this->_whitelist[cloc->id].count(cloc->snps[i]->col) == 0 ||
+                t->nucs[cloc->snps[i]->col].fixed == true)
+                continue;
+            new_wl.insert(cloc->snps[i]->col);
+            break;
+        }
+    }
+
+    this->_whitelist[cloc->id] = new_wl;
+    
+    return 0;
+}
+
+int
+LocusFilter::keep_random_snp(const CSLocus *cloc, const LocTally *t)
+{
+    set<int> new_wl, seen;
+    int      index;
+    
+    //
+    // If no specific SNPs are specified in the whitelist for this locus,
+    // then all SNPs are included, choose a random variant.
+    //
+    if (this->_whitelist.count(cloc->id) > 0 && this->_whitelist[cloc->id].size() > 0) {
+        do {
+            index = rand() % cloc->snps.size();
+            seen.insert(index);
+        }  while (t->nucs[cloc->snps[index]->col].fixed == false && seen.size() <= cloc->snps.size());
+
+        if (t->nucs[cloc->snps[index]->col].fixed != false)
+            new_wl.insert(cloc->snps[index]->col);
+
+    } else {
+        //
+        // Otherwise, choose a random SNP that is already in the whitelist.
+        //
+        do {
+            index = rand() % cloc->snps.size();
+            seen.insert(index);
+        } while (this->_whitelist.count(cloc->snps[index]->col) == 0 && seen.size() <= cloc->snps.size());
+
+        if (t->nucs[cloc->snps[index]->col].fixed != false)
+            new_wl.insert(cloc->snps[index]->col);
+    }
+
+    this->_whitelist[cloc->id] = new_wl;
+
+    return 0;
+}
+
+int
+LocusFilter::prune_sites_with_whitelist(MetaPopInfo *mpopi, CSLocus *cloc, Datum **d, LocPopSum *s)
+{
+    return 0;
 }
 
 bool
@@ -5895,6 +5980,62 @@ write_generic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, bool write_gt
     return 0;
 }
 
+int
+LocusFilter::load_blacklist(string path)
+{
+    char     line[id_len];
+    ifstream fh(path.c_str(), ifstream::in);
+
+    if (fh.fail()) {
+        cerr << "Error opening white/black list file '" << path << "'\n";
+        exit(1);
+    }
+
+    size_t line_num = 0;
+    while (fh.getline(line, id_len)) {
+        ++line_num;
+
+        //
+        // Skip blank & commented lines ; correct windows-style line ends.
+        //
+        size_t len = strlen(line);
+        if (len == 0) {
+            continue;
+        } else if (line[len-1] == '\r') {
+            line[len-1] = '\0';
+            --len;
+            if (len == 0)
+                continue;
+        }
+        char* p = line;
+        while (isspace(*p) && *p != '\0')
+            ++p;
+        if (*p == '#')
+            continue;
+
+        //
+        // Parse the blacklist
+        //
+        char* e;
+        int marker = (int) strtol(line, &e, 10);
+        if (*e == '\0') {
+            this->_blacklist.insert(marker);
+        } else {
+            cerr << "Error: Unable to parse blacklist '" << path << "' at line " << line_num << ".\n";
+            throw exception();
+        }
+    }
+
+    fh.close();
+
+    if (this->_blacklist.size() == 0) {
+        cerr << "Unable to load any markers from '" << path << "'\n";
+        exit(1);
+    }
+
+    return (int) this->_blacklist.size();
+}
+
 int load_marker_list(string path, set<int> &list) {
     char     line[id_len];
     ifstream fh(path.c_str(), ifstream::in);
@@ -5947,6 +6088,87 @@ int load_marker_list(string path, set<int> &list) {
     }
 
     return 0;
+}
+
+int
+LocusFilter::load_whitelist(string path)
+{
+    char     line[id_len];
+    ifstream fh(path.c_str(), ifstream::in);
+
+    if (fh.fail()) {
+        cerr << "Error opening white/black list file '" << path << "'\n";
+        exit(1);
+    }
+
+    vector<string> parts;
+    uint col;
+    char *e;
+
+    uint line_num = 1;
+    while (fh.getline(line, id_len)) {
+
+        //
+        // Skip blank & commented lines ; correct windows-style line ends.
+        //
+        size_t len = strlen(line);
+        if (len == 0) {
+            continue;
+        } else if (line[len-1] == '\r') {
+            line[len-1] = '\0';
+            --len;
+            if (len == 0)
+                continue;
+        }
+        char* p = line;
+        while (isspace(*p) && *p != '\0')
+            ++p;
+        if (*p == '#')
+            continue;
+
+        //
+        // Parse the whitelist, we expect:
+        // <marker>[<tab><snp column>]
+        //
+        parse_tsv(line, parts);
+
+        if (parts.size() > 2) {
+            cerr << "Too many columns in whitelist " << path << "' at line " << line_num << "\n";
+            exit(1);
+
+        } else if (parts.size() == 2) {
+            int marker = (int) strtol(parts[0].c_str(), &e, 10);
+            if (*e != '\0') {
+                cerr << "Unable to parse whitelist, '" << path << "' at line " << line_num << "\n";
+                exit(1);
+            }
+            col = (int) strtol(parts[1].c_str(), &e, 10);
+            if (*e != '\0') {
+                cerr << "Unable to parse whitelist, '" << path << "' at line " << line_num << "\n";
+                exit(1);
+            }
+            this->_whitelist[marker].insert(col);
+
+        } else {
+            int marker = (int) strtol(parts[0].c_str(), &e, 10);
+            if (*e != '\0') {
+                cerr << "Unable to parse whitelist, '" << path << "' at line " << line_num << "\n";
+                exit(1);
+            }
+            this->_whitelist.insert(make_pair(marker, set<int>()));
+        }
+
+        line_num++;
+    }
+
+    fh.close();
+
+    if (this->_whitelist.size() == 0) {
+        cerr << "Unable to load any markers from '" << path << "'\n";
+        help();
+    }
+
+    return (int) this->_whitelist.size();
 }
 
 int load_marker_column_list(string path, map<int, set<int> > &list) {
