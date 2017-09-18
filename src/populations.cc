@@ -179,6 +179,8 @@ int main (int argc, char* argv[]) {
     exports.push_back(exp);
     exp = new SumstatsExport();
     exports.push_back(exp);
+    exp = new HapstatsExport();
+    exports.push_back(exp);
     
     //
     // Open the export files and write any headers.
@@ -202,12 +204,14 @@ int main (int argc, char* argv[]) {
         // - If data are reference aligned, load one chromosome.
         //
         loc_cnt  = bloc.next_batch(log_fh);
-
-        cerr << "Read " << loc_cnt << " loci; chr: " << bloc.loci().front()->cloc->loc.chr() << ".\n";
-        
         tot_cnt += loc_cnt;
         
         sumstats.accumulate(bloc.loci());
+
+        //
+        // Calculate haplotype and gene diversity per locus per population.
+        //
+        bloc.hapstats(log_fh);
 
         //
         // Export this subset of the loci.
@@ -215,7 +219,15 @@ int main (int argc, char* argv[]) {
         for (uint i = 0; i < exports.size(); i++)
             exports[i]->write_batch(bloc.loci());
 
+        if (loci_ordered && loc_cnt > 0)
+            cerr << "  Analyzed " << loc_cnt << " loci from " << bloc.loci().front()->cloc->loc.chr() << ".\n";
+
     } while (loc_cnt > 0);
+
+    const LocusFilter &filter = bloc.filter();
+    cerr << "Removed " << filter.filtered() << " loci that did not pass sample/population constraints from " << filter.total() << " loci.\n"
+         << "Kept "    << tot_cnt << " loci.\n";
+    cerr << "Total polymorphic sites examined: " << filter.total_sites() << "; filtered " << filter.filtered_sites() << " of those sites.\n";
 
     //
     // Do the final sumstats calculations and write the sumstats summary files.
@@ -223,11 +235,10 @@ int main (int argc, char* argv[]) {
     sumstats.final_calculation();
     sumstats.write_results();
 
-    const LocusFilter &filter = bloc.filter();
-    cerr << "Removed " << filter.filtered() << " loci that did not pass sample/population constraints from " << filter.total() << " loci.\n"
-         << "Kept "    << tot_cnt << " loci.\n";
-    cerr << "Total polymorphic sites examined: " << filter.total_sites() << "; filtered " << filter.filtered_sites() << " of those sites.\n";
-
+    //
+    // Write out the distributions of catalog loci.
+    //
+    bloc.write_distributions(log_fh);
     
     //
     // Read the bootstrap-whitelist.
@@ -236,15 +247,7 @@ int main (int argc, char* argv[]) {
         load_marker_list(bs_wl_file, bootstraplist);
         cerr << "Loaded " << bootstraplist.size() << " markers to include when bootstrapping.\n";
     }
-    set<int> blacklist(bloc.blacklist());
-    map<int, set<int>> whitelist(bloc.whitelist());
     
-    // log_fh << "# Distribution of population loci.\n";
-    // log_haplotype_cnts(catalog, log_fh);
-
-    // log_fh << "# Distribution of population loci after applying locus constraints.\n";
-    // log_haplotype_cnts(catalog, log_fh);
-
     // //
     // // Create an artificial whitelist if the user requested only the first or a random SNP per locus.
     // //
@@ -273,11 +276,6 @@ int main (int argc, char* argv[]) {
     //         cerr << "Notice: Smoothing was requested (-k), but will not be performed as the loci are not ordered.\n";
     //     }
     // }
-
-    // // //
-    // // // Log the SNPs per locus distribution.
-    // // //
-    // // log_snps_per_loc_distrib(log_fh, catalog);
 
     // calculate_haplotype_stats(catalog, pmap, psum);
 
@@ -541,6 +539,8 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
 
         records.clear();
 
+        this->_dists.accumulate_pre_filtering(loc->cloc);
+
         //
         // Apply locus constraints to remove entire loci below the -r/-p thresholds.
         //
@@ -569,7 +569,10 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
         //
         // If write_single_snp or write_random_snp has been specified, prune appropriate SNPs.
         //
-
+        if (write_single_snp)
+            this->_loc_filter.keep_single_snp(this->_mpopi, loc->cloc, loc->d, loc->s);
+        else if (write_random_snp)
+            this->_loc_filter.keep_random_snp(this->_mpopi, loc->cloc, loc->d, loc->s);
         
         //
         // Regenerate summary statistics after pruning SNPs.
@@ -606,6 +609,11 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
     } while (( loci_ordered && prev_chr == cur_chr) ||
              (!loci_ordered && loc_cnt   < this->_batch_size));
 
+    //
+    // Record the post-filtering distribution of catalog loci for this batch.
+    //
+    this->_dists.accumulate(this->_loci);
+    
     return loc_cnt;
 }
 
@@ -716,6 +724,18 @@ BatchLocusProcessor::next_batch_external_loci(ostream &log_fh)
     this->_catalog = create_catalog(this->ext_vcf_records());
 
     return loc_cnt;
+}
+
+int
+BatchLocusProcessor::hapstats(ostream &log_fh)
+{
+    for (uint i = 0; i < this->_loci.size(); i++) {
+        LocBin *loc = this->_loci[i];
+        
+        loc->s->calc_hapstats(loc->cloc, (const Datum **) loc->d, *this->_mpopi);
+    }
+
+    return 0;
 }
 
 bool
@@ -1508,6 +1528,122 @@ order_unordered_loci(map<int, CSLocus *> &catalog)
     }
 
     return false;
+}
+
+int
+CatalogDists::accumulate_pre_filtering(const CSLocus *loc)
+{
+    size_t missing;
+
+    if (this->_pre_valid.count(loc->hcnt) == 0)
+        this->_pre_valid[loc->hcnt] = 1;
+    else
+        this->_pre_valid[loc->hcnt]++;
+
+    if (this->_pre_confounded.count(loc->confounded_cnt) == 0)
+        this->_pre_confounded[loc->confounded_cnt] = 1;
+    else
+        this->_pre_confounded[loc->confounded_cnt]++;
+
+    missing = loc->cnt - loc->hcnt;
+
+    if (this->_pre_absent.count(missing) == 0)
+        this->_pre_absent[missing] = 1;
+    else
+        this->_pre_absent[missing]++;
+
+    if (this->_pre_snps_per_loc.count(loc->snps.size()) == 0)
+        this->_pre_snps_per_loc[loc->snps.size()] = 1;
+    else
+        this->_pre_snps_per_loc[loc->snps.size()]++;
+    
+    return 0;
+}
+
+int
+CatalogDists::accumulate(const vector<LocBin *> &loci)
+{
+    const CSLocus *loc;
+    size_t missing;
+
+    for (uint i = 0; i < loci.size(); i++) {
+        loc = loci[i]->cloc;
+
+        if (this->_post_valid.count(loc->hcnt) == 0)
+            this->_post_valid[loc->hcnt] = 1;
+        else
+            this->_post_valid[loc->hcnt]++;
+
+        if (this->_post_confounded.count(loc->confounded_cnt) == 0)
+            this->_post_confounded[loc->confounded_cnt] = 1;
+        else
+            this->_post_confounded[loc->confounded_cnt]++;
+
+        missing = loc->cnt - loc->hcnt;
+
+        if (this->_post_absent.count(missing) == 0)
+            this->_post_absent[missing] = 1;
+        else
+            this->_post_absent[missing]++;
+
+        if (this->_post_snps_per_loc.count(loc->snps.size()) == 0)
+            this->_post_snps_per_loc[loc->snps.size()] = 1;
+        else
+            this->_post_snps_per_loc[loc->snps.size()]++;
+
+    }
+    
+    return 0;
+}
+
+int
+CatalogDists::write_results(ostream &log_fh)
+{
+    map<size_t, size_t>::iterator cnt_it;
+
+    log_fh << "# Distribution of valid samples matched to a catalog locus prior to filtering.\n"
+           << "# Valid samples at locus\tCount\n";
+    for (cnt_it = this->_pre_valid.begin(); cnt_it != this->_pre_valid.end(); cnt_it++)
+        log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
+
+    log_fh << "\n# Distribution of confounded samples for each catalog locus prior to filtering.\n"
+           << "# Confounded samples at locus\tCount\n";
+    for (cnt_it = this->_pre_confounded.begin(); cnt_it != this->_pre_confounded.end(); cnt_it++)
+        log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
+
+    log_fh << "\n# Distribution of missing samples for each catalog locus prior to filtering.\n"
+           << "# Absent samples at locus\tCount\n";
+    for (cnt_it = this->_pre_absent.begin(); cnt_it != this->_pre_absent.end(); cnt_it++)
+        log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
+
+    log_fh << "\n# Distribution of the number of SNPs per catalog locus prior to filtering.\n"
+           << "# Number SNPs\tNumber loci\n";
+    for (cnt_it = this->_pre_snps_per_loc.begin(); cnt_it != this->_pre_snps_per_loc.end(); cnt_it++)
+        log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
+    log_fh << "\n";
+
+    log_fh << "# Distribution of valid samples matched to a catalog locus after filtering.\n"
+           << "# Valid samples at locus\tCount\n";
+    for (cnt_it = this->_post_valid.begin(); cnt_it != this->_post_valid.end(); cnt_it++)
+        log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
+
+    log_fh << "\n# Distribution of confounded samples for each catalog locus after filtering.\n"
+           << "# Confounded samples at locus\tCount\n";
+    for (cnt_it = this->_post_confounded.begin(); cnt_it != this->_post_confounded.end(); cnt_it++)
+        log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
+
+    log_fh << "\n# Distribution of missing samples for each catalog locus after filtering.\n"
+           << "# Absent samples at locus\tCount\n";
+    for (cnt_it = this->_post_absent.begin(); cnt_it != this->_post_absent.end(); cnt_it++)
+        log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
+
+    log_fh << "\n# Distribution of the number of SNPs per catalog locus after filtering.\n"
+           << "# Number SNPs\tNumber loci\n";
+    for (cnt_it = this->_post_snps_per_loc.begin(); cnt_it != this->_post_snps_per_loc.end(); cnt_it++)
+        log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
+    log_fh << "\n";
+
+    return 0;
 }
 
 int
@@ -2629,55 +2765,6 @@ calculate_haplotype_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, P
 }
 
 int
-nuc_substitution_dist(map<string, int> &hap_index, double **hdists)
-{
-    vector<string> haplotypes;
-    map<string, int>::iterator it;
-    uint i, j;
-
-    for (it = hap_index.begin(); it != hap_index.end(); it++)
-        haplotypes.push_back(it->first);
-
-    const char *p, *q;
-    double dist;
-
-    for (i = 0; i < haplotypes.size(); i++) {
-        for (j = i; j < haplotypes.size(); j++) {
-
-            dist = 0.0;
-            p    = haplotypes[i].c_str();
-            q    = haplotypes[j].c_str();
-
-            while (*p != '\0' && *q != '\0') {
-                if (*p != *q) dist++;
-                p++;
-                q++;
-            }
-
-            hdists[i][j] = dist;
-            hdists[j][i] = dist;
-        }
-    }
-
-    // //
-    // // Print the distance matrix.
-    // //
-    // cerr << "  ";
-    // for (hit = loc_hap_index.begin(); hit != loc_hap_index.end(); hit++)
-    //  cerr << "\t" << hit->first;
-    // cerr << "\n";
-    // for (hit = loc_hap_index.begin(); hit != loc_hap_index.end(); hit++) {
-    //  cerr << "  " << hit->first;
-    //  for (hit_2 = loc_hap_index.begin(); hit_2 != loc_hap_index.end(); hit_2++)
-    //      cerr << "\t" << hdists[hit->second][hit_2->second];
-    //  cerr << "\n";
-    // }
-    // cerr << "\n";
-
-    return 0;
-}
-
-int
 nuc_substitution_identity(map<string, int> &hap_index, double **hdists)
 {
     vector<string> haplotypes;
@@ -3267,7 +3354,7 @@ haplotype_diversity(int start, int end, Datum **d)
     //
     // Tabulate the haplotypes in this population.
     //
-    n = count_haplotypes_at_locus(start, end, d, hap_freq);
+    n = count_haplotypes_at_locus(start, end, (const Datum **) d, hap_freq);
 
     // cerr << "  " << n << " total haplotypes observed.\n";
 

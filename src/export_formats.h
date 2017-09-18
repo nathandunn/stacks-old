@@ -11,7 +11,7 @@
 #include "ordered.h" // for "snp"
 #include "populations.h" // for "merget", "InputMode", "uncalled_haplotype()", "count_haplotypes_at_locus()"
 
-enum class ExportType {markers, sumstats, haplotypes, structure, genepop, vcf};
+enum class ExportType {markers, sumstats, hapstats, structure, genepop, vcf};
 
 class Export {
  protected:
@@ -83,6 +83,26 @@ class SumstatsExport: public Export {
  public:
     SumstatsExport();
     ~SumstatsExport() {};
+    int  open(const MetaPopInfo *mpopi);
+    int  write_header();
+    int  write_batch(const vector<LocBin *> &);
+    int  post_processing() { return 0; }
+    void close() {
+        this->_fh.close();
+        return;
+    }
+};
+
+class HapstatsExport: public Export {
+    //
+    // Output the locus-level haplotype statistics.
+    //
+    const MetaPopInfo *_mpopi;
+    uint  _pop_cnt;
+
+ public:
+    HapstatsExport();
+    ~HapstatsExport() {};
     int  open(const MetaPopInfo *mpopi);
     int  write_header();
     int  write_batch(const vector<LocBin *> &);

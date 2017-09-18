@@ -161,6 +161,100 @@ SumstatsExport::write_batch(const vector<LocBin *> &loci)
     return 0;
 }
 
+HapstatsExport::HapstatsExport() : Export(ExportType::hapstats)
+{
+    this->_path = out_path + out_prefix + ".hapstats.tsv";
+}
+
+int
+HapstatsExport::open(const MetaPopInfo *mpopi)
+{
+    this->_mpopi   = mpopi;
+    this->_pop_cnt = this->_mpopi->pops().size();
+    
+    this->_fh.open(this->_path.c_str(), ofstream::out);
+    if (this->_fh.fail()) {
+        cerr << "Error opening sumstats file '" << this->_path << "'\n";
+        exit(1);
+    }
+    this->_fh.precision(fieldw);
+    this->_fh.setf(std::ios::fixed);
+
+    cerr << "Population-level haplotype summary statistics will be written to '" << this->_path << "'\n";
+
+    return 0;
+}
+
+int
+HapstatsExport::write_header()
+{
+    //
+    // Write the population members.
+    //
+    for (auto& pop : this->_mpopi->pops()) {
+        this->_fh << "# " << pop.name << "\t";
+        
+        for (size_t i = pop.first_sample; i <= pop.last_sample; i++) {
+            this->_fh << this->_mpopi->samples()[i].name;
+            if (i < pop.last_sample)
+                this->_fh << ",";
+        }
+        this->_fh << "\n";
+    }
+
+    this->_fh
+        << "# Locus ID"     << "\t"
+        << "Chr"            << "\t"
+        << "BP"             << "\t"
+        << "Pop ID"         << "\t"
+        << "N"              << "\t"
+        << "Haplotype Cnt"  << "\t"
+        << "Gene Diversity" << "\t"
+        << "Smoothed Gene Diversity"      << "\t"
+        << "Smoothed Gene Diversity P-value"      << "\t"
+        << "Haplotype Diversity"          << "\t"
+        << "Smoothed Haplotype Diversity" << "\t"
+        << "Smoothed Haplotype Diversity P-value" << "\t"
+        << "Haplotypes"                   << "\n";
+
+    return 0;
+}
+
+int
+HapstatsExport::write_batch(const vector<LocBin *> &loci)
+{
+    const LocStat *l;
+
+    for (uint i = 0; i < loci.size(); i++) {
+        const vector<Pop> &pops = this->_mpopi->pops();
+        
+        for (uint pop = 0; pop < this->_pop_cnt; pop++) {
+
+            l = loci[i]->s->hapstats_per_pop(pop);
+
+            if (l == NULL)
+                continue;
+
+            this->_fh 
+                << loci[i]->cloc->id        << "\t"
+                << loci[i]->cloc->loc.chr() << "\t"
+                << l->bp + 1        << "\t"
+                << pops[pop].name   << "\t"
+                << (int) l->alleles << "\t"
+                << l->hap_cnt       << "\t"
+                << l->stat[0]       << "\t"
+                << l->smoothed[0]   << "\t"
+                << l->bs[0]         << "\t"
+                << l->stat[1]       << "\t"
+                << l->smoothed[1]   << "\t"
+                << l->bs[1]         << "\t"
+                << l->hap_str       << "\n";
+        }
+    }
+
+    return 0;
+}
+
 MarkersExport::MarkersExport() : Export(ExportType::markers)
 {
     this->_path = out_path + out_prefix + ".markers.tsv";
@@ -745,7 +839,7 @@ write_vcf_haplotypes(map<int, CSLocus *> &catalog,
             d   = pmap->locus(loc->id);
 
             map<string, double> hap_freq;
-            const double n_alleles = count_haplotypes_at_locus(0, pmap->sample_cnt() - 1, d, hap_freq);
+            const double n_alleles = count_haplotypes_at_locus(0, pmap->sample_cnt() - 1, (const Datum **) d, hap_freq);
             if (hap_freq.size() <= 1)
                 // Monomorphic locus.
                 // XXX What does [hap_freq.size()==1] mean ? @Nick (July 2016)

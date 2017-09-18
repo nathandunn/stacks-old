@@ -229,6 +229,7 @@ class LocPopSum {
     size_t    _pop_cnt;
     LocSum  **_per_pop;
     LocTally *_meta_pop;
+    LocStat **_hapstats_per_pop;
 
 public:
     LocPopSum(size_t cloc_len, const MetaPopInfo& mpopi);
@@ -236,15 +237,18 @@ public:
 
     int             sum_pops(const CSLocus *, const Datum **, const MetaPopInfo&, bool, ostream &);
     int             tally_metapop(const CSLocus *);
-    const LocSum   *per_pop(size_t pop_index) { return this->_per_pop[pop_index]; }
-    const LocTally *meta_pop()                { return this->_meta_pop; }
-    size_t          pop_cnt()                 { return this->_pop_cnt; }
+    int             calc_hapstats(const CSLocus *, const Datum **, const MetaPopInfo&);
+    const LocSum   *per_pop(size_t pop_index)          { return this->_per_pop[pop_index]; }
+    const LocTally *meta_pop()                         { return this->_meta_pop; }
+    const LocStat  *hapstats_per_pop(size_t pop_index) { return this->_hapstats_per_pop[pop_index]; }
+    size_t          pop_cnt()                          { return this->_pop_cnt; }
 
 private:
-    int tally_heterozygous_pos(const CSLocus *, const Datum **, LocSum *, int, int, uint, uint);
-    int tally_fixed_pos(const CSLocus *, const Datum **, LocSum *, int, uint, uint);
-    int tally_ref_alleles(int, uint16_t &, char &, char &, uint16_t &, uint16_t &);
-    int tally_observed_haplotypes(const vector<char *> &, int);
+    int      tally_heterozygous_pos(const CSLocus *, const Datum **, LocSum *, int, int, uint, uint);
+    int      tally_fixed_pos(const CSLocus *, const Datum **, LocSum *, int, uint, uint);
+    int      tally_ref_alleles(int, uint16_t &, char &, char &, uint16_t &, uint16_t &);
+    int      tally_observed_haplotypes(const vector<char *> &, int);
+    LocStat *haplotype_diversity(int, int, const Datum **);
 };
 
 //
@@ -1359,5 +1363,13 @@ LocTally *PopSum<LocusT>::locus_tally(int locus_id)
 {
     return this->loc_tally[popmap.locus_index(locus_id)];
 }
+
+//
+// Utility functions for summary/haplotype statistics.
+//
+bool     uncalled_haplotype(const char *);
+double   count_haplotypes_at_locus(int, int, const Datum **, map<string, double> &);
+int      nuc_substitution_dist(map<string, int> &, double **);
+
 
 #endif // __POPSUM_H__
