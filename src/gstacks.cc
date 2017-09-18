@@ -145,36 +145,34 @@ try {
     size_t next_fa_to_write = 0; // locus index, in the input BAM file.
     size_t next_vcf_to_write = 0;
     size_t next_det_to_write = 0;
-    //TODO{
+
+    // For clocking.
     double clock_parallel_start = gettm();
     vector<Clocks> clocks_all (num_threads);
     size_t n_writes = 0;
     size_t max_size_before_write = 0;
     double actually_writing_vcf = 0;
-    //TODO}
+
     #pragma omp parallel
     {
         LocusProcessor loc_proc;
         CLocReadSet loc (bam_fh.mpopi());
-        Clocks& clocks = clocks_all[omp_get_thread_num()]; //TODO
+        Clocks& clocks = clocks_all[omp_get_thread_num()];
         #pragma omp for schedule(dynamic)
         for (size_t i=0; i<n_loci; ++i) {
             if (omp_return != 0)
                 continue;
             try {
-                //TODO{
-                double clock_loop_start0 = gettm();
                 double clock_loop_start = gettm();
-                double clocking = clock_loop_start - clock_loop_start0;
-                //TODO}
+                double clocking = gettm() - clock_loop_start;
 
                 #pragma omp critical(read)
                 bam_fh.read_one_locus(loc);
-                double clock_read = gettm();//TODO
+                double clock_read = gettm();
 
                 size_t loc_i = loc.bam_i();
                 loc_proc.process(move(loc));
-                double clock_process = gettm();//TODO
+                double clock_process = gettm();
 
                 #pragma omp critical(write_fa)
                 {
@@ -190,7 +188,7 @@ try {
                         ++next_fa_to_write;
                     }
                 }
-                double clock_write_fa = gettm();//TODO
+                double clock_write_fa = gettm();
 
                 #pragma omp critical(write_vcf)
                 {
@@ -199,22 +197,20 @@ try {
                     vcf_outputs[loc_i - next_vcf_to_write] = {true, move(loc_proc.vcf_out()) };
 
                     if (vcf_outputs.front().first) {
-                        //TODO{
                         ++n_writes;
                         if (vcf_outputs.size() > max_size_before_write)
                             max_size_before_write = vcf_outputs.size();
                         double start_writing = gettm();
-                        //TODO}
                         do {
                             o_vcf_f->file() << vcf_outputs.front().second;
                             vcf_outputs.pop_front();
                             ++next_vcf_to_write;
                             ++progress;
                         } while (!vcf_outputs.empty() && vcf_outputs.front().first);
-                        actually_writing_vcf += gettm() - start_writing - clocking; //TODO
+                        actually_writing_vcf += gettm() - start_writing - clocking;
                     }
                 }
-                double clock_write_vcf = gettm();//TODO
+                double clock_write_vcf = gettm();
 
                 if (detailed_output) {
                     #pragma omp critical(write_details)
@@ -232,14 +228,12 @@ try {
                 }
                 double clock_write_details = gettm();
 
-                //TODO{
-                clocks.clocking     += 6 * clocking;
-                clocks.reading     += clock_read       - clock_loop_start - clocking;
-                clocks.processing  += clock_process    - clock_read - clocking;
-                clocks.writing_fa  += clock_write_fa   - clock_process - clocking;
-                clocks.writing_vcf += clock_write_vcf  - clock_write_fa - clocking;
+                clocks.clocking        += 7 * clocking;
+                clocks.reading         += clock_read       - clock_loop_start - clocking;
+                clocks.processing      += clock_process    - clock_read - clocking;
+                clocks.writing_fa      += clock_write_fa   - clock_process - clocking;
+                clocks.writing_vcf     += clock_write_vcf  - clock_write_fa - clocking;
                 clocks.writing_details += clock_write_details  - clock_write_vcf - clocking;
-                //TODO}
 
             } catch (exception& e) {
                 #pragma omp critical
@@ -254,34 +248,6 @@ try {
     if (omp_return != 0)
         return omp_return;
     progress.done();
-
-    //TODO{
-    {
-        double clock_parallel_end = gettm();
-        Clocks totals = std::accumulate(clocks_all.begin(), clocks_all.end(), Clocks());
-        totals /= num_threads;
-        double total_time = clock_parallel_end - clock_parallel_start;
-        ostream os (cout.rdbuf());
-        os.exceptions(os.exceptions() | ios::badbit);
-        os << std::fixed << std::setprecision(2);
-        os << "\n"
-           << "BEGIN clockings\n"
-           << "Num. threads: " << num_threads << "\n"
-           << "Parallel time: " << total_time << "\n"
-           << "Average thread time spent...\n"
-           << std::setw(8) << totals.reading  << "  reading (" << as_percentage(totals.reading / total_time) << ")\n"
-           << std::setw(8) << totals.processing << "  processing (" << as_percentage(totals.processing / total_time) << ")\n"
-           << std::setw(8) << totals.writing_fa << "  writing_fa (" << as_percentage(totals.writing_fa / total_time) << ")\n"
-           << std::setw(8) << totals.writing_vcf << "  writing_vcf (" << as_percentage(totals.writing_vcf / total_time) << ")\n"
-           << std::setw(8) << totals.writing_details << "  writing_details (" << as_percentage(totals.writing_details / total_time) << ")\n"
-           << std::setw(8) << totals.clocking  << "  clocking (" << as_percentage(totals.clocking / total_time) << ")\n"
-           << std::setw(8) << totals.sum() << "  total (" << as_percentage(totals.sum() / total_time) << ")\n"
-           << "Time spent actually_writing_vcf: " << actually_writing_vcf << " (" << as_percentage(actually_writing_vcf / total_time) << ")\n"
-           << "VCFwrite block size: mean=" << (double) n_loci / n_writes << "(n=" << n_writes << "); max=" << max_size_before_write << "\n"
-           << "END clockings\n"
-           ;
-    }
-    //TODO}
 
     //
     // Report statistics on the analysis.
@@ -320,7 +286,38 @@ try {
         logger->l << "END badly_phased\n\n";
     }
 
+    //
+    // Report clockings.
+    //
+    {
+        double clock_parallel_end = gettm();
+        Clocks totals = std::accumulate(clocks_all.begin(), clocks_all.end(), Clocks());
+        totals /= num_threads;
+        double total_time = clock_parallel_end - clock_parallel_start;
+        ostream os (cout.rdbuf());
+        os.exceptions(os.exceptions() | ios::badbit);
+        os << std::fixed << std::setprecision(2);
+        os << "\n"
+           << "BEGIN clockings\n"
+           << "Num. threads: " << num_threads << "\n"
+           << "Parallel time: " << total_time << "\n"
+           << "Average thread time spent...\n"
+           << std::setw(8) << totals.reading  << "  reading (" << as_percentage(totals.reading / total_time) << ")\n"
+           << std::setw(8) << totals.processing << "  processing (" << as_percentage(totals.processing / total_time) << ")\n"
+           << std::setw(8) << totals.writing_fa << "  writing_fa (" << as_percentage(totals.writing_fa / total_time) << ")\n"
+           << std::setw(8) << totals.writing_vcf << "  writing_vcf (" << as_percentage(totals.writing_vcf / total_time) << ")\n"
+           << std::setw(8) << totals.writing_details << "  writing_details (" << as_percentage(totals.writing_details / total_time) << ")\n"
+           << std::setw(8) << totals.clocking  << "  clocking (" << as_percentage(totals.clocking / total_time) << ")\n"
+           << std::setw(8) << totals.sum() << "  total (" << as_percentage(totals.sum() / total_time) << ")\n"
+           << "Time spent actually_writing_vcf: " << actually_writing_vcf << " (" << as_percentage(actually_writing_vcf / total_time) << ")\n"
+           << "VCFwrite block size: mean=" << (double) n_loci / n_writes << "(n=" << n_writes << "); max=" << max_size_before_write << "\n"
+           << "END clockings\n"
+           ;
+    }
+
+    //
     // Cleanup & return.
+    //
     gzclose(o_gzfasta_f);
     model.reset();
     if (dbg_write_hapgraphs)
