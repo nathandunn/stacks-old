@@ -25,6 +25,7 @@ LocPopSum::LocPopSum(size_t cloc_len, const MetaPopInfo& mpopi)
     this->_pop_cnt  = mpopi.pops().size();
     this->_meta_pop = new LocTally(cloc_len);
     this->_per_pop  = new LocSum * [this->_pop_cnt];
+    this->_hapstats_per_pop = new LocStat * [this->_pop_cnt];
 
     for (size_t i = 0; i < mpopi.pops().size(); i++)
         this->_per_pop[i] = new LocSum(cloc_len);
@@ -33,6 +34,7 @@ LocPopSum::LocPopSum(size_t cloc_len, const MetaPopInfo& mpopi)
 LocPopSum::~LocPopSum()
 {
     delete [] this->_per_pop;
+    delete [] this->_hapstats_per_pop;
     delete this->_meta_pop;
 }
 
@@ -610,4 +612,210 @@ LocPopSum::tally_observed_haplotypes(const vector<char *> &obshap, int snp_index
         if (nucs[i] > 0) allele_cnt++;
 
     return allele_cnt;
+}
+
+int
+LocPopSum::calc_hapstats(const CSLocus *cloc, const Datum **d, const MetaPopInfo &mpopi)
+{
+    const vector<Pop> &pops = mpopi.pops();
+    
+    for (uint j = 0; j < pops.size(); j++) {
+
+        this->_hapstats_per_pop[j] = this->haplotype_diversity(pops[j].first_sample, pops[j].last_sample, d);
+
+        if (this->_hapstats_per_pop[j] != NULL) {
+            this->_hapstats_per_pop[j]->loc_id = cloc->id;
+            this->_hapstats_per_pop[j]->bp     = cloc->sort_bp();
+        }
+    }
+
+    return 0;
+}
+
+LocStat *
+LocPopSum::haplotype_diversity(int start, int end, const Datum **d)
+{
+    map<string, double>::iterator hit;
+    vector<string>      haplotypes;
+    map<string, double> hap_freq;
+    map<string, int>    hap_index;
+    double   n              = 0.0;
+    double   gene_diversity = 0.0;
+    double   hapl_diversity = 0.0;
+    LocStat *lstat;
+
+    //
+    // Tabulate the haplotypes in this population.
+    //
+    n = count_haplotypes_at_locus(start, end, d, hap_freq);
+
+    //
+    // If this haplotype is fixed, don't calculate any statistics.
+    //
+    if (n == 0)
+        return NULL;
+
+    lstat = new LocStat;
+
+    //
+    // Store a summary of the haplotype counts to output below.
+    //
+    stringstream sstr;
+    for (hit = hap_freq.begin(); hit != hap_freq.end(); hit++)
+        sstr << hit->first << ":" << hit->second  << ";";
+    lstat->hap_str = sstr.str().substr(0, sstr.str().length() - 1);
+
+    //
+    // Determine an ordering for the haplotypes. Convert haplotype counts into frequencies.
+    //
+    uint k = 0;
+    for (hit = hap_freq.begin(); hit != hap_freq.end(); hit++) {
+        hap_index[hit->first] = k;
+        haplotypes.push_back(hit->first);
+        k++;
+
+        // cerr << "  Haplotype '" << hit->first << "' occured " << hit->second  << " times; ";
+
+        hit->second = hit->second / n;
+
+        // cerr << " frequency of " << hit->second << "%\n";
+    }
+    //
+    // Initialize a two-dimensional array to hold distances between haplotyes.
+    //
+    double **hdists = new double *[hap_index.size()];
+    for (k = 0; k < hap_index.size(); k++) {
+        hdists[k] = new double[hap_index.size()];
+        memset(hdists[k], 0, hap_index.size());
+    }
+
+    //
+    // Calculate the distances between haplotypes.
+    //
+    nuc_substitution_dist(hap_index, hdists);
+
+    //
+    // Calculate haplotype diversity, Pi.
+    //
+    for (uint i = 0; i < haplotypes.size(); i++) {
+        for (uint j = 0; j < haplotypes.size(); j++) {
+            hapl_diversity +=
+                hap_freq[haplotypes[i]] *
+                hap_freq[haplotypes[j]] *
+                hdists[hap_index[haplotypes[i]]][hap_index[haplotypes[j]]];
+        }
+    }
+    hapl_diversity = (n / (n-1)) * hapl_diversity;
+
+    //
+    // Calculate gene diversity.
+    //
+    for (uint i = 0; i < haplotypes.size(); i++) {
+        gene_diversity += hap_freq[haplotypes[i]] * hap_freq[haplotypes[i]];
+    }
+    gene_diversity = (n / (n - 1)) * (1 - gene_diversity);
+
+    lstat->alleles = n;
+    lstat->stat[0] = gene_diversity;
+    lstat->stat[1] = hapl_diversity;
+    lstat->hap_cnt = haplotypes.size();
+
+    // cerr << "  Population " << pop_id << " has haplotype diversity (pi) of " << s[pop_index]->pi << "\n";
+
+    for (k = 0; k < hap_index.size(); k++)
+        delete hdists[k];
+    delete [] hdists;
+
+    return lstat;
+}
+
+int
+nuc_substitution_dist(map<string, int> &hap_index, double **hdists)
+{
+    vector<string> haplotypes;
+    map<string, int>::iterator it;
+    uint i, j;
+
+    for (it = hap_index.begin(); it != hap_index.end(); it++)
+        haplotypes.push_back(it->first);
+
+    const char *p, *q;
+    double dist;
+
+    for (i = 0; i < haplotypes.size(); i++) {
+        for (j = i; j < haplotypes.size(); j++) {
+
+            dist = 0.0;
+            p    = haplotypes[i].c_str();
+            q    = haplotypes[j].c_str();
+
+            while (*p != '\0' && *q != '\0') {
+                if (*p != *q) dist++;
+                p++;
+                q++;
+            }
+
+            hdists[i][j] = dist;
+            hdists[j][i] = dist;
+        }
+    }
+
+    // //
+    // // Print the distance matrix.
+    // //
+    // cerr << "  ";
+    // for (hit = loc_hap_index.begin(); hit != loc_hap_index.end(); hit++)
+    //  cerr << "\t" << hit->first;
+    // cerr << "\n";
+    // for (hit = loc_hap_index.begin(); hit != loc_hap_index.end(); hit++) {
+    //  cerr << "  " << hit->first;
+    //  for (hit_2 = loc_hap_index.begin(); hit_2 != loc_hap_index.end(); hit_2++)
+    //      cerr << "\t" << hdists[hit->second][hit_2->second];
+    //  cerr << "\n";
+    // }
+    // cerr << "\n";
+
+    return 0;
+}
+
+inline bool
+uncalled_haplotype(const char *haplotype)
+{
+    for (const char *p = haplotype; *p != '\0'; p++)
+        if (*p == 'N' || *p == 'n')
+            return true;
+    return false;
+}
+
+inline double
+count_haplotypes_at_locus(int start, int end, const Datum **d, map<string, double> &hap_cnts)
+{
+    double n = 0.0;
+
+    for (int i = start; i <= end; i++) {
+        if (d[i] == NULL)
+            // No data, ignore this sample.
+            continue;
+
+        const vector<char*>& haps = d[i]->obshap;
+        if (haps.size() > 2) {
+            // Too many haplotypes, ignore this sample.
+            continue;
+        } else if (haps.size() == 1) {
+            // Homozygote.
+            if(!uncalled_haplotype(d[i]->obshap[0])) {
+                n += 2;
+                hap_cnts[d[i]->obshap[0]] += 2;
+            }
+        } else {
+            // Heterozygote.
+            for (uint j = 0; j < d[i]->obshap.size(); j++) {
+                if(!uncalled_haplotype(d[i]->obshap[0])) {
+                    n++;
+                    hap_cnts[d[i]->obshap[j]]++;
+                }
+            }
+        }
+    }
+    return n;
 }

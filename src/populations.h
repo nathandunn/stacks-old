@@ -111,6 +111,20 @@ private:
 };
 
 //
+// Class for storing distributions of data related to catalog loci.
+//
+class CatalogDists {
+    map<size_t, size_t> _pre_valid,  _pre_absent,  _pre_confounded;  // Prior to any filtering. 
+    map<size_t, size_t> _post_valid, _post_absent, _post_confounded; // After filtering.
+    map<size_t, size_t> _pre_snps_per_loc, _post_snps_per_loc;
+    
+public:
+    int accumulate_pre_filtering(const CSLocus *);
+    int accumulate(const vector<LocBin *> &);
+    int write_results(ostream &log_fh);
+};
+
+//
 // Class for filtering whole loci based on the sample and population limits (-r, -p).
 //
 class LocusFilter {
@@ -148,6 +162,8 @@ public:
     void   init(MetaPopInfo *mpopi);
     bool   filter(MetaPopInfo *mpopi, Datum **d);
     bool   prune_sites(MetaPopInfo *mpopi, CSLocus *cloc, Datum **d, LocPopSum *s, ostream &log_fh);
+    void   keep_single_snp(MetaPopInfo *mpopi, CSLocus *cloc, Datum **d, LocPopSum *s, map<int, set<int>> &wl);
+    void   keep_random_snp(MetaPopInfo *mpopi, CSLocus *cloc, Datum **d, LocPopSum *s, map<int, set<int>> &wl);
 
     size_t filtered()       const { return this->_filtered_loci; }
     size_t total()          const { return this->_total_loci; }
@@ -202,7 +218,9 @@ public:
     
     int            init(int, string, string);
     size_t         next_batch(ostream &);
-
+    int            hapstats(ostream &);
+    int            write_distributions(ostream &log_fh) { return this->_dists.write_results(log_fh); }
+    
     MetaPopInfo*   pop_info()      { return this->_mpopi; }
     int            pop_info(MetaPopInfo *popi) { this->_mpopi = popi; return 0; }
     VcfParser&     vcf_reader()    { return this->_vcf_parser; }
@@ -219,6 +237,7 @@ public:
     const map<int, set<int>>&  whitelist()       { return this->_whitelist; }
     const LocusFilter&         filter()          { return this->_loc_filter; }
     const vector<LocBin *>&    loci()            { return this->_loci; }
+    const CatalogDists&        dists()           { return this->_dists; }
 
 private:
     InputMode    _input_mode;
@@ -234,13 +253,13 @@ private:
     VcfHeader        *_vcf_header;
     vector<LocBin *>  _loci;
     LocBin           *_next_loc;
+    CatalogDists      _dists;
 
     // Data stores for external VCF
     unordered_map<int, vector<VcfRecord>> *_cloc_vcf_rec;
     vector<VcfRecord>                     *_ext_vcf_rec;
     map<int, CSLocus *>                   *_catalog;
 
-    
     // Controls for which loci are loaded
     set<int>           _blacklist;
     map<int, set<int>> _whitelist;
@@ -288,7 +307,6 @@ int      calculate_haplotype_divergence(map<int, CSLocus *> &, PopMap<CSLocus> *
 int      calculate_haplotype_divergence_pairwise(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
 bool     fixed_locus(Datum **, vector<int> &);
 
-int      nuc_substitution_dist(map<string, int> &, double **);
 int      nuc_substitution_identity(map<string, int> &, double **);
 int      nuc_substitution_identity_max(map<string, int> &, double **);
 
@@ -300,7 +318,6 @@ double   amova_ssd_ag(vector<int> &, map<int, vector<int> > &, map<string, int> 
 
 double   haplotype_d_est(Datum **, LocSum **, vector<int> &);
 LocStat *haplotype_diversity(int, int, Datum **);
-double   count_haplotypes_at_locus(int, int, Datum**, map<string, double>&);
 
 void log_snps_per_loc_distrib(ostream&, map<int, CSLocus*>&);
 
@@ -311,47 +328,5 @@ void log_snps_per_loc_distrib(ostream&, map<int, CSLocus*>&);
 bool hap_compare(const pair<string,int>&, const pair<string,int>&);
 
 void vcfcomp_simplify_pmap (map<int, CSLocus*>& catalog, PopMap<CSLocus>* pmap);
-
-inline
-bool uncalled_haplotype(const char *haplotype)
-{
-    for (const char *p = haplotype; *p != '\0'; p++)
-        if (*p == 'N' || *p == 'n')
-            return true;
-    return false;
-}
-
-inline
-double count_haplotypes_at_locus(int start, int end, Datum **d, map<string, double> &hap_cnts)
-{
-    double n = 0.0;
-
-    for (int i = start; i <= end; i++) {
-        if (d[i] == NULL)
-            // No data, ignore this sample.
-            continue;
-
-        const vector<char*>& haps = d[i]->obshap;
-        if (haps.size() > 2) {
-            // Too many haplotypes, ignore this sample.
-            continue;
-        } else if (haps.size() == 1) {
-            // Homozygote.
-            if(!uncalled_haplotype(d[i]->obshap[0])) {
-                n += 2;
-                hap_cnts[d[i]->obshap[0]] += 2;
-            }
-        } else {
-            // Heterozygote.
-            for (uint j = 0; j < d[i]->obshap.size(); j++) {
-                if(!uncalled_haplotype(d[i]->obshap[0])) {
-                    n++;
-                    hap_cnts[d[i]->obshap[j]]++;
-                }
-            }
-        }
-    }
-    return n;
-}
 
 #endif // __POPULATIONS_H__
