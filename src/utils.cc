@@ -272,6 +272,30 @@ reduced_log_factorial(double n, double d)
     return f;
 }
 
+//
+// Tokenize a string.
+//
+int
+tokenize_string(const char *buf, vector<string> &tokens)
+{
+    const char *p, *q;
+
+    p = buf;
+
+    do {
+        q = p;
+
+        while (*q != '\0' && *q != ' ' && *q != '\t') q++;
+        tokens.push_back(string(p, q - p + 1));
+
+        p = q + 1;
+
+    } while (*q != '\0');
+
+    return 0;
+}
+
+
 bool compare_pair(pair<char, int> a, pair<char, int> b) {
     return (a.second > b.second);
 }
