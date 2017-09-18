@@ -91,6 +91,7 @@ Seq::Seq(const char *id, const char *seq) {
     this->id       = new char[strlen(id)   + 1];
     this->seq      = new char[strlen(seq)  + 1];
     this->qual     = NULL;
+    this->comment  = NULL;
     this->loc_str  = NULL;
 
     strcpy(this->id,   id);
@@ -105,6 +106,7 @@ Seq::Seq(const char *id, const char *seq, const char *qual)  {
     this->id       = new char[strlen(id)   + 1];
     this->seq      = new char[strlen(seq)  + 1];
     this->qual     = new char[strlen(qual) + 1];
+    this->comment  = NULL;
     this->loc_str  = NULL;
 
     strcpy(this->id,   id);
@@ -119,6 +121,7 @@ Seq::Seq(const char *id, const char *seq, const char *qual)  {
 Seq::Seq(const char *id, const char *seq, const char *qual, const char *chr, uint bp, strand_type strand)  {
     this->id      = new char[strlen(id)   + 1];
     this->qual    = new char[strlen(qual) + 1];
+    this->comment  = NULL;
     this->loc_str = new char[strlen(chr)  + 15];
 
     strcpy(this->id,   id);
@@ -146,7 +149,8 @@ Seq::Seq(const char *id, const char *seq, const char *qual, const char *chr, uin
     this->id      = new char[strlen(id)   + 1];
     this->qual    = new char[strlen(qual) + 1];
     this->loc_str = new char[strlen(chr)  + 15];
-
+    this->comment = NULL;
+    
     strcpy(this->id,   id);
     strcpy(this->qual, qual);
     this->loc.set(chr, bp, strand);

@@ -42,6 +42,7 @@ string rev_comp(const string&);
 void   reverse_string(char *);
 int    is_integer(const char *);
 double is_double(const char *);
+int    tokenize_string(const char *, vector<string> &);
 
 double factorial(double);
 double reduced_factorial(double, double);

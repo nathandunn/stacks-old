@@ -179,18 +179,18 @@ public:
     BatchLocusProcessor():
         _input_mode(InputMode::stacks2), _batch_size(0), _mpopi(NULL),
         _vcf_parser(), _cloc_reader(), _fasta_reader(),
-        _vcf_header(NULL), _cloc_vcf_rec(NULL), _ext_vcf_rec(NULL), _catalog(NULL),
-        _blacklist(), _whitelist(), _loc_filter() {}
+        _vcf_header(NULL), _next_loc(NULL), _cloc_vcf_rec(NULL), _ext_vcf_rec(NULL), _catalog(NULL),
+        _blacklist(), _whitelist(), _loc_filter(), _unordered_bp(1) {}
     BatchLocusProcessor(InputMode mode, size_t batch_size, MetaPopInfo *popi):
         _input_mode(mode), _batch_size(batch_size), _mpopi(popi),
         _vcf_parser(), _cloc_reader(), _fasta_reader(),
-        _vcf_header(NULL), _cloc_vcf_rec(NULL), _ext_vcf_rec(NULL), _catalog(NULL),
-        _blacklist(), _whitelist(), _loc_filter() {}
+        _vcf_header(NULL), _next_loc(NULL), _cloc_vcf_rec(NULL), _ext_vcf_rec(NULL), _catalog(NULL),
+        _blacklist(), _whitelist(), _loc_filter(), _unordered_bp(1) {}
     BatchLocusProcessor(InputMode mode, size_t batch_size): 
         _input_mode(mode), _batch_size(batch_size), _mpopi(NULL),
         _vcf_parser(), _cloc_reader(), _fasta_reader(),
-        _vcf_header(NULL), _cloc_vcf_rec(NULL), _ext_vcf_rec(NULL), _catalog(NULL),
-        _blacklist(), _whitelist(), _loc_filter() {}
+        _vcf_header(NULL), _next_loc(NULL), _cloc_vcf_rec(NULL), _ext_vcf_rec(NULL), _catalog(NULL),
+        _blacklist(), _whitelist(), _loc_filter(), _unordered_bp(1) {}
     ~BatchLocusProcessor() {
         if (this->_ext_vcf_rec != NULL)
             delete this->_ext_vcf_rec;
@@ -231,17 +231,22 @@ private:
     GzFasta       _fasta_reader;
 
     // Data stores
-    VcfHeader                             *_vcf_header;
+    VcfHeader        *_vcf_header;
+    vector<LocBin *>  _loci;
+    LocBin           *_next_loc;
+
+    // Data stores for external VCF
     unordered_map<int, vector<VcfRecord>> *_cloc_vcf_rec;
     vector<VcfRecord>                     *_ext_vcf_rec;
     map<int, CSLocus *>                   *_catalog;
-    vector<LocBin *>                       _loci;
+
     
     // Controls for which loci are loaded
     set<int>           _blacklist;
     map<int, set<int>> _whitelist;
-public:
     LocusFilter        _loc_filter;
+    size_t             _unordered_bp;
+    
 private:
     int    init_external_loci(string, string);
     int    init_stacks_loci(int, string, string);

@@ -61,7 +61,6 @@ bool      write_single_snp  = false;
 bool      write_random_snp  = false;
 bool      merge_sites       = false;
 bool      expand_id         = false;
-bool      sql_out           = false;
 bool      vcf_out           = false;
 bool      vcf_haplo_out     = false;
 bool      fasta_loci_out    = false;
@@ -98,8 +97,7 @@ set<string> debug_flags;
 string    out_prefix;
 
 MetaPopInfo mpopi;
-
-set<int> bootstraplist;
+set<int>    bootstraplist;
 
 //
 // Hold information about restriction enzymes
@@ -190,30 +188,44 @@ int main (int argc, char* argv[]) {
         exports[i]->write_header();
     }
 
+    //
+    // Initialize the summary statistics object which will accumulate the metapopulation summary statistics
+    // as the individual loci are read and processed.
+    //
     SumStatsSummary sumstats(mpopi.pops().size());
+    int loc_cnt, tot_cnt = 0;
     
-    //
-    // Read the next set of loci to process.
-    // - If data are denovo, load blim._batch_size loci.
-    // - If data are reference aligned, load one chromosome.
-    //
-    int loc_cnt = bloc.next_batch(log_fh);
+    do {
+        //
+        // Read the next set of loci to process.
+        // - If data are denovo, load blim._batch_size loci.
+        // - If data are reference aligned, load one chromosome.
+        //
+        loc_cnt  = bloc.next_batch(log_fh);
 
-    sumstats.accumulate(bloc.loci());
+        cerr << "Read " << loc_cnt << " loci; chr: " << bloc.loci().front()->cloc->loc.chr() << ".\n";
+        
+        tot_cnt += loc_cnt;
+        
+        sumstats.accumulate(bloc.loci());
 
+        //
+        // Export this subset of the loci.
+        //
+        for (uint i = 0; i < exports.size(); i++)
+            exports[i]->write_batch(bloc.loci());
+
+    } while (loc_cnt > 0);
+
+    //
+    // Do the final sumstats calculations and write the sumstats summary files.
+    //
     sumstats.final_calculation();
     sumstats.write_results();
-    
-    //
-    // Export this subset of the loci.
-    //
-    for (uint i = 0; i < exports.size(); i++)
-        exports[i]->write_batch(bloc.loci());
-
 
     const LocusFilter &filter = bloc.filter();
     cerr << "Removed " << filter.filtered() << " loci that did not pass sample/population constraints from " << filter.total() << " loci.\n"
-         << "Kept "    << loc_cnt << " loci.\n";
+         << "Kept "    << tot_cnt << " loci.\n";
     cerr << "Total polymorphic sites examined: " << filter.total_sites() << "; filtered " << filter.filtered_sites() << " of those sites.\n";
 
     
@@ -227,18 +239,8 @@ int main (int argc, char* argv[]) {
     set<int> blacklist(bloc.blacklist());
     map<int, set<int>> whitelist(bloc.whitelist());
     
-    // //
-    // // Retrieve the genomic order of loci.
-    // //
-    // loci_ordered = order_unordered_loci(catalog);
-    
     // log_fh << "# Distribution of population loci.\n";
     // log_haplotype_cnts(catalog, log_fh);
-
-    // if (pmap->loci_cnt() == 0) {
-    //     cerr << "Error: All loci have been filtered out.\n";
-    //     throw exception();
-    // }
 
     // log_fh << "# Distribution of population loci after applying locus constraints.\n";
     // log_haplotype_cnts(catalog, log_fh);
@@ -283,11 +285,6 @@ int main (int argc, char* argv[]) {
     //     calculate_haplotype_divergence(catalog, pmap, psum);
     //     calculate_haplotype_divergence_pairwise(catalog, pmap, psum);
     // }
-
-    // //
-    // // Calculate and output the locus-level summary statistics.
-    // //
-    // calculate_summary_stats(catalog, pmap, psum);
 
     // //
     // // Output the observed haplotypes.
@@ -471,14 +468,6 @@ BatchLocusProcessor::init_stacks_loci(int batch_id, string in_path, string pmap_
 size_t
 BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
 {
-    if (this->_catalog != NULL)
-        delete this->_catalog;
-    this->_catalog = new map<int, CSLocus *>();
-    if (this->_cloc_vcf_rec != NULL)
-        delete _cloc_vcf_rec;
-    this->_cloc_vcf_rec = new unordered_map<int, vector<VcfRecord>>();
-
-    // Read the files, create the loci.
     vector<VcfRecord> records;
     Seq seq;
     seq.id      = new char[id_len];
@@ -487,11 +476,24 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
 
     LocBin *loc;
     int     cloc_id, rv;
+    string  prev_chr, cur_chr;
     size_t  loc_cnt = 0;
 
     this->_loci.clear();
 
-    while (loc_cnt < this->_batch_size && this->_cloc_reader.read_one_locus(records)) {
+    //
+    // Check if we queued a LocBin object from the last round of reading.
+    //
+    if (this->_next_loc != NULL) {
+        this->_loci.push_back(this->_next_loc);
+        prev_chr        = this->_next_loc->cloc->loc.chr();
+        this->_next_loc = NULL;
+        loc_cnt++;
+    }
+    
+    do {
+        if (!this->_cloc_reader.read_one_locus(records)) break;
+        
         //
         // Get the current locus ID.
         //
@@ -576,14 +578,33 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
         loc->s->tally_metapop(loc->cloc);
 
         //
+        // If these data are unordered, provide an arbitrary ordering.
+        //
+        if (loc->cloc->loc.empty()) {
+            loc->cloc->loc.set("un", this->_unordered_bp, strand_plus);
+            this->_unordered_bp += strlen(loc->cloc->con);
+        } else {
+            loci_ordered = true;
+        }
+
+        cur_chr = loc->cloc->loc.chr();
+        if (prev_chr.length() == 0)
+            prev_chr = cur_chr;
+        
+        //
         // Tabulate haplotypes present and in what combinations.
         //
         tabulate_locus_haplotypes(loc->cloc, loc->d, this->_mpopi->samples().size());
 
-        this->_loci.push_back(loc);
-        
-        loc_cnt++;
-    }
+        if (cur_chr == prev_chr) {
+            this->_loci.push_back(loc);
+            loc_cnt++;
+        } else {
+            this->_next_loc = loc;
+        }
+
+    } while (( loci_ordered && prev_chr == cur_chr) ||
+             (!loci_ordered && loc_cnt   < this->_batch_size));
 
     return loc_cnt;
 }
@@ -6061,7 +6082,7 @@ parse_command_line(int argc, char* argv[])
         };
 
         // getopt_long stores the option index here.
-        int c = getopt_long(argc, argv, "ACDEFGHJKLNSTUV:YZ123456dghjklnsva:b:c:e:f:i:m:o:p:q:r:t:u:w:B:I:M:O:P:R:Q:W:", long_options, NULL);
+        int c = getopt_long(argc, argv, "ACDEFGHJKLNSTUV:YZ123456dghjklnva:b:c:e:f:i:m:o:p:q:r:t:u:w:B:I:M:O:P:R:Q:W:", long_options, NULL);
 
         // Detect the end of the options.
         if (c == -1)
@@ -6197,9 +6218,6 @@ parse_command_line(int argc, char* argv[])
             break;
         case 1002:
             ordered_export = true;
-            break;
-        case 's':
-            sql_out = true;
             break;
         case 1004:
             vcf_out = true;
