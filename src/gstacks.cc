@@ -369,6 +369,20 @@ ProcessingStats& ProcessingStats::operator+= (const ProcessingStats& other) {
 }
 
 //
+// LocData
+// =======
+//
+void LocData::clear() {
+    id = -1;
+    pos.clear();
+    mpopi = NULL;
+    overlapped = false;
+    o_vcf.clear();
+    o_fa.clear();
+    o_details.clear();
+}
+
+//
 // LocusProcessor
 // ==============
 //
@@ -380,21 +394,21 @@ LocusProcessor::process(CLocReadSet&& loc)
         return;
     ++stats_.n_nonempty_loci;
 
-    this->loc_id_  =  loc.id();
-    this->loc_pos_ =  loc.pos();
-    this->mpopi_   = &loc.mpopi();
-    this->overlapped_ = false;
+    this->loc_.clear();
+    this->loc_.id  =  loc.id();
+    this->loc_.pos =  loc.pos();
+    this->loc_.mpopi   = &loc.mpopi();
 
     if (detailed_output) {
         details_ss_.clear();
         details_ss_.str(string());
-        details_ss_ << "BEGIN " << loc_id_ << "\n";
+        details_ss_ << "BEGIN " << loc_.id << "\n";
     }
 
     //
     // Build the alignment matrix.
     //
-    CLocAlnSet aln_loc (loc_id_, loc_pos_, mpopi_);
+    CLocAlnSet aln_loc (loc_.id, loc_.pos, loc_.mpopi);
     if (dbg_true_alns) {
         from_true_alignments(aln_loc, move(loc));
     } else {
@@ -431,7 +445,7 @@ LocusProcessor::process(CLocReadSet&& loc)
                 break;
 
             // Align each read to the contig.
-            CLocAlnSet pe_aln_loc (loc_id_, loc_pos_, mpopi_);
+            CLocAlnSet pe_aln_loc (loc_.id, loc_.pos, loc_.mpopi);
             pe_aln_loc.ref(DNASeq4(ctg));
             this->stats_.n_tot_reads += loc.pe_reads().size();
 
@@ -447,7 +461,7 @@ LocusProcessor::process(CLocReadSet&& loc)
             //
             int overlap;
             if ( (overlap = this->find_locus_overlap(stree, aln_loc.ref())) > 0) {
-                this->overlapped_ = true;
+                this->loc_.overlapped = true;
                 this->stats_.n_se_pe_loc_overlaps++;
                 this->stats_.mean_se_pe_loc_overlap += overlap;
             }
@@ -482,7 +496,7 @@ LocusProcessor::process(CLocReadSet&& loc)
                 if (detailed_output)
                     details_ss_ << "pe_read"
                                 << '\t' << r.name
-                                << '\t' << mpopi_->samples()[r.sample].name
+                                << '\t' << loc_.mpopi->samples()[r.sample].name
                                 << '\t' << r.seq
                                 << '\n'
                                 << "pe_aln_local"
@@ -516,9 +530,9 @@ LocusProcessor::process(CLocReadSet&& loc)
 
     if (dbg_write_alns)
         #pragma omp critical
-        o_aln_f << "BEGIN " << loc_id_ << "\n"
+        o_aln_f << "BEGIN " << loc_.id << "\n"
                 << aln_loc
-                << "\nEND " << loc_id_ << "\n";
+                << "\nEND " << loc_.id << "\n";
 
     //
     // Call SNPs.
@@ -554,8 +568,8 @@ LocusProcessor::process(CLocReadSet&& loc)
     write_one_locus(aln_loc, depths, calls, phase_data);
 
     if (detailed_output) {
-        details_ss_ << "END " << loc_id_ << "\n";
-        o_details_ = details_ss_.str();
+        details_ss_ << "END " << loc_.id << "\n";
+        loc_.o_details = details_ss_.str();
     }
 }
 
@@ -808,8 +822,8 @@ LocusProcessor::assemble_contig(const vector<const DNASeq4*>& seqs)
     }
 
     if (dbg_write_gfa) {
-        graph.dump_gfa(in_dir + to_string(loc_id_) + ".spaths.gfa");
-        graph.dump_gfa(in_dir + to_string(loc_id_) + ".nodes.gfa", true);
+        graph.dump_gfa(in_dir + to_string(loc_.id) + ".spaths.gfa");
+        graph.dump_gfa(in_dir + to_string(loc_.id) + ".nodes.gfa", true);
     }
 
     vector<const SPath*> best_path;
@@ -830,7 +844,7 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
 ) const {
     inconsistent_samples.clear();
 
-    vector<map<size_t,PhasedHet>> phased_samples (mpopi_->samples().size());
+    vector<map<size_t,PhasedHet>> phased_samples (loc_.mpopi->samples().size());
     vector<size_t> snp_cols; // The SNPs of this locus.
     for (size_t i=0; i<aln_loc.ref().length(); ++i)
         if (calls[i].alleles().size() > 1)
@@ -842,15 +856,15 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
     stringstream o_hapgraph_ss;
     if (dbg_write_hapgraphs) {
         o_hapgraph_ss << "\n"
-                      << "subgraph cluster_loc" << loc_id_ << " {\n"
-                      << "\tlabel=\"locus " << loc_id_ << "\";\n"
+                      << "subgraph cluster_loc" << loc_.id << " {\n"
+                      << "\tlabel=\"locus " << loc_.id << "\";\n"
                       << "\t# snp columns: ";
         join(snp_cols, ',', o_hapgraph_ss);
         o_hapgraph_ss << "\n";
     }
 
     SnpAlleleCooccurrenceCounter cooccurrences (snp_cols.size());
-    for (size_t sample=0; sample<mpopi_->samples().size(); ++sample) {
+    for (size_t sample=0; sample<loc_.mpopi->samples().size(); ++sample) {
         if (aln_loc.sample_reads(sample).empty())
             continue;
 
@@ -1142,7 +1156,7 @@ void LocusProcessor::write_one_locus (
         const vector<map<size_t,PhasedHet>>& phase_data
 ) {
     char loc_id[16];
-    sprintf(loc_id, "%d", loc_id_);
+    sprintf(loc_id, "%d", loc_.id);
 
     const DNASeq4& ref = aln_loc.ref();
     const MetaPopInfo& mpopi = aln_loc.mpopi();
@@ -1347,7 +1361,7 @@ void LocusProcessor::write_one_locus (
 
         vcf_records << rec;
     }
-    o_vcf_ = vcf_records.str();
+    loc_.o_vcf = vcf_records.str();
 
     //
     // Fasta output.
@@ -1365,37 +1379,38 @@ void LocusProcessor::write_one_locus (
             ++n_remaining_samples;
 
     // Write the record.
-    o_fa_.clear();
-    o_fa_ += '>';
-    o_fa_ += loc_id;
+    string& fa = loc_.o_fa;
+    assert(fa.empty());
+    fa += '>';
+    fa += loc_id;
     if (!aln_loc.pos().empty()) {
         const PhyLoc& p = aln_loc.pos();
         char pos[16];
         sprintf(pos, "%u", p.bp+1);
-        o_fa_ += " pos=";
-        o_fa_ += p.chr();
-        o_fa_ += ':';
-        o_fa_ += pos;
-        o_fa_ += ':';
-        o_fa_ += (p.strand == strand_plus ? '+' : '-');
+        fa += " pos=";
+        fa += p.chr();
+        fa += ':';
+        fa += pos;
+        fa += ':';
+        fa += (p.strand == strand_plus ? '+' : '-');
     }
     char n_spls[32];
     sprintf(n_spls, "%zu", n_remaining_samples);
-    o_fa_ += " NS=";
-    o_fa_ += n_spls;
+    fa += " NS=";
+    fa += n_spls;
     if (n_remaining_samples != samples_w_reads.size()) {
         assert(n_remaining_samples < samples_w_reads.size());
         sprintf(n_spls, "%zu", samples_w_reads.size() - n_remaining_samples);
-        o_fa_ += " n_discarded_samples=";
-        o_fa_ += n_spls;
+        fa += " n_discarded_samples=";
+        fa += n_spls;
     }
-    if (overlapped_)
+    if (loc_.overlapped)
         // Note: When `overlapped_` is not true, it is unknown if overlapping
         // is relevant for this locus.
-        o_fa_ += " overlapped=true";
-    o_fa_ += '\n';
-    o_fa_ += ref.str();
-    o_fa_ += '\n';
+        fa += " overlapped=true";
+    fa += '\n';
+    fa += ref.str();
+    fa += '\n';
 }
 
 void LocusProcessor::write_sample_hapgraph(
@@ -1408,12 +1423,12 @@ void LocusProcessor::write_sample_hapgraph(
         ) const {
 
     auto nodeid = [this,&sample](size_t col, Nt2 allele)
-            {return string("l")+to_string(loc_id_)+"s"+to_string(sample)+"c"+to_string(col)+char(allele);};
+            {return string("l")+to_string(loc_.id)+"s"+to_string(sample)+"c"+to_string(col)+char(allele);};
 
     // Initialize the subgraph.
     os << "\tsubgraph cluster_sample" << sample << " {\n"
                   << "\t\tlabel=\""
-                  << "i" << sample << " '" << mpopi_->samples()[sample].name << "'\\n"
+                  << "i" << sample << " '" << loc_.mpopi->samples()[sample].name << "'\\n"
                   << "\";\n"
                   << "\t\tstyle=dashed;\n"
                   << "\t\t# heterozygous columns: ";
