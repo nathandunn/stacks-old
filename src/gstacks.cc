@@ -1063,7 +1063,10 @@ bool LocusProcessor::assemble_phase_sets(
                         // Merge `ps_j` into `ps_i`.
                         phase_sets[ps_i].merge_with(phase_sets[ps_j], het_i, nti, het_j, ntj);
                         phase_sets[ps_j].clear();
-                        ps_j = ps_i;
+                        size_t merged_ps = ps_j;
+                        for (size_t& allele_ps : allele_to_ps)
+                            if (allele_ps == merged_ps)
+                                allele_ps = ps_i;
                     } else {
                         assert(ps_i == ps_j);
                         // Check that the edge is consistent.
