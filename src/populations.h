@@ -159,17 +159,24 @@ public:
     LocusFilter(const LocusFilter &) = delete; 
     LocusFilter(LocusFilter &&) = delete;
 
+    int    load_whitelist(string);
+    int    load_blacklist(string);
+
     void   init(MetaPopInfo *mpopi);
     bool   filter(MetaPopInfo *mpopi, Datum **d);
     bool   prune_sites(MetaPopInfo *mpopi, CSLocus *cloc, Datum **d, LocPopSum *s, ostream &log_fh);
-    void   keep_single_snp(MetaPopInfo *mpopi, CSLocus *cloc, Datum **d, LocPopSum *s, map<int, set<int>> &wl);
-    void   keep_random_snp(MetaPopInfo *mpopi, CSLocus *cloc, Datum **d, LocPopSum *s, map<int, set<int>> &wl);
-
+    int    keep_single_snp(const CSLocus *cloc, const LocTally *t);
+    int    keep_random_snp(const CSLocus *cloc, const LocTally *t);
+    int    prune_sites_with_whitelist(MetaPopInfo *mpopi, CSLocus *cloc, Datum **d, LocPopSum *s);
+    
     size_t filtered()       const { return this->_filtered_loci; }
     size_t total()          const { return this->_total_loci; }
     size_t filtered_sites() const { return this->_filtered_sites; }
     size_t total_sites()    const { return this->_total_sites; }
-    
+
+    const set<int>&            blacklist()       { return this->_blacklist; }
+    const map<int, set<int>>&  whitelist()       { return this->_whitelist; }
+
 private:
     size_t  _pop_cnt;
     size_t  _sample_cnt;
@@ -181,7 +188,10 @@ private:
     size_t  _total_loci;
     size_t  _filtered_sites;
     size_t  _total_sites;
-    
+
+    set<int>           _blacklist;
+    map<int, set<int>> _whitelist;
+
     void reset();
 };
 
@@ -196,17 +206,17 @@ public:
         _input_mode(InputMode::stacks2), _batch_size(0), _mpopi(NULL),
         _vcf_parser(), _cloc_reader(), _fasta_reader(),
         _vcf_header(NULL), _next_loc(NULL), _cloc_vcf_rec(NULL), _ext_vcf_rec(NULL), _catalog(NULL),
-        _blacklist(), _whitelist(), _loc_filter(), _unordered_bp(1) {}
+        _loc_filter(), _unordered_bp(1) {}
     BatchLocusProcessor(InputMode mode, size_t batch_size, MetaPopInfo *popi):
         _input_mode(mode), _batch_size(batch_size), _mpopi(popi),
         _vcf_parser(), _cloc_reader(), _fasta_reader(),
         _vcf_header(NULL), _next_loc(NULL), _cloc_vcf_rec(NULL), _ext_vcf_rec(NULL), _catalog(NULL),
-        _blacklist(), _whitelist(), _loc_filter(), _unordered_bp(1) {}
+        _loc_filter(), _unordered_bp(1) {}
     BatchLocusProcessor(InputMode mode, size_t batch_size): 
         _input_mode(mode), _batch_size(batch_size), _mpopi(NULL),
         _vcf_parser(), _cloc_reader(), _fasta_reader(),
         _vcf_header(NULL), _next_loc(NULL), _cloc_vcf_rec(NULL), _ext_vcf_rec(NULL), _catalog(NULL),
-        _blacklist(), _whitelist(), _loc_filter(), _unordered_bp(1) {}
+        _loc_filter(), _unordered_bp(1) {}
     ~BatchLocusProcessor() {
         if (this->_ext_vcf_rec != NULL)
             delete this->_ext_vcf_rec;
@@ -233,8 +243,6 @@ public:
     const map<int, CSLocus *>& catalog()         { return *this->_catalog; }
     const unordered_map<int, vector<VcfRecord>>& cloc_vcf_records() { return *this->_cloc_vcf_rec; }
     const vector<VcfRecord>&   ext_vcf_records() { return *this->_ext_vcf_rec; }
-    const set<int>&            blacklist()       { return this->_blacklist; }
-    const map<int, set<int>>&  whitelist()       { return this->_whitelist; }
     const LocusFilter&         filter()          { return this->_loc_filter; }
     const vector<LocBin *>&    loci()            { return this->_loci; }
     const CatalogDists&        dists()           { return this->_dists; }
@@ -261,10 +269,9 @@ private:
     map<int, CSLocus *>                   *_catalog;
 
     // Controls for which loci are loaded
-    set<int>           _blacklist;
-    map<int, set<int>> _whitelist;
-    LocusFilter        _loc_filter;
-    size_t             _unordered_bp;
+    LocusFilter _loc_filter;
+
+    size_t _unordered_bp;
     
 private:
     int    init_external_loci(string, string);
