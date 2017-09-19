@@ -167,7 +167,7 @@ public:
     bool   prune_sites(MetaPopInfo *mpopi, CSLocus *cloc, Datum **d, LocPopSum *s, ostream &log_fh);
     int    keep_single_snp(const CSLocus *cloc, const LocTally *t);
     int    keep_random_snp(const CSLocus *cloc, const LocTally *t);
-    int    prune_sites_with_whitelist(MetaPopInfo *mpopi, CSLocus *cloc, Datum **d, LocPopSum *s);
+    int    prune_sites_with_whitelist(MetaPopInfo *mpopi, CSLocus *cloc, Datum **d, bool user_wl);
     
     size_t filtered()       const { return this->_filtered_loci; }
     size_t total()          const { return this->_total_loci; }
@@ -203,17 +203,17 @@ private:
 class BatchLocusProcessor {
 public:
     BatchLocusProcessor():
-        _input_mode(InputMode::stacks2), _batch_size(0), _mpopi(NULL),
+        _input_mode(InputMode::stacks2), _user_supplied_whitelist(false), _batch_size(0), _mpopi(NULL),
         _vcf_parser(), _cloc_reader(), _fasta_reader(),
         _vcf_header(NULL), _next_loc(NULL), _cloc_vcf_rec(NULL), _ext_vcf_rec(NULL), _catalog(NULL),
         _loc_filter(), _unordered_bp(1) {}
     BatchLocusProcessor(InputMode mode, size_t batch_size, MetaPopInfo *popi):
-        _input_mode(mode), _batch_size(batch_size), _mpopi(popi),
+        _input_mode(mode), _user_supplied_whitelist(false), _batch_size(batch_size), _mpopi(popi),
         _vcf_parser(), _cloc_reader(), _fasta_reader(),
         _vcf_header(NULL), _next_loc(NULL), _cloc_vcf_rec(NULL), _ext_vcf_rec(NULL), _catalog(NULL),
         _loc_filter(), _unordered_bp(1) {}
     BatchLocusProcessor(InputMode mode, size_t batch_size): 
-        _input_mode(mode), _batch_size(batch_size), _mpopi(NULL),
+        _input_mode(mode), _user_supplied_whitelist(false), _batch_size(batch_size), _mpopi(NULL),
         _vcf_parser(), _cloc_reader(), _fasta_reader(),
         _vcf_header(NULL), _next_loc(NULL), _cloc_vcf_rec(NULL), _ext_vcf_rec(NULL), _catalog(NULL),
         _loc_filter(), _unordered_bp(1) {}
@@ -249,6 +249,7 @@ public:
 
 private:
     InputMode    _input_mode;
+    bool         _user_supplied_whitelist;
     size_t       _batch_size; // Number of loci to process at a time.
     MetaPopInfo *_mpopi;      // Population Map
 
@@ -272,7 +273,7 @@ private:
     LocusFilter _loc_filter;
 
     size_t _unordered_bp;
-    
+
 private:
     int    init_external_loci(string, string);
     int    init_stacks_loci(int, string, string);
