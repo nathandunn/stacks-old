@@ -39,12 +39,12 @@ public:
         delete [] this->weights;
     }
 
-    int smooth(vector<StatT *> &popstats);
+    int smooth(vector<const StatT *> &popstats);
 };
 
 template<class StatT>
 int
-KSmooth<StatT>::smooth(vector<StatT *> &popstats)
+KSmooth<StatT>::smooth(vector<const StatT *> &popstats)
 {
     //
     // To generate smooth genome-wide distributions of Fst, we calculate a kernel-smoothing
@@ -65,7 +65,7 @@ KSmooth<StatT>::smooth(vector<StatT *> &popstats)
         int      dist;
         uint     pos_l, pos_u;
         double   *sum, final_weight;
-        PopStat *c, *p;
+        const PopStat *c, *p;
 
         sum   = new double[this->size];
         pos_l = 0;

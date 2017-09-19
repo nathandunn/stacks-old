@@ -181,6 +181,13 @@ int main (int argc, char* argv[]) {
     exports.push_back(exp);
     exp = new HapstatsExport();
     exports.push_back(exp);
+
+    //
+    // Setup the kernel smoothing apparatus.
+    //
+    LocusSmoothing *smooth = NULL;
+    if (kernel_smoothed)
+        smooth = new LocusSmoothing(&mpopi, log_fh);
     
     //
     // Open the export files and write any headers.
@@ -202,10 +209,14 @@ int main (int argc, char* argv[]) {
         // Read the next set of loci to process.
         // - If data are denovo, load blim._batch_size loci.
         // - If data are reference aligned, load one chromosome.
+        // - Filter the loci according to command line parameters (-r, -p, --maf, --write_single_snp, etc.)
+        // - Sort the loci by basepair if they are ordered.
         //
         loc_cnt  = bloc.next_batch(log_fh);
         tot_cnt += loc_cnt;
-        
+
+        if (loc_cnt == 0) break;
+
         sumstats.accumulate(bloc.loci());
 
         //
@@ -219,8 +230,28 @@ int main (int argc, char* argv[]) {
         for (uint i = 0; i < exports.size(); i++)
             exports[i]->write_batch(bloc.loci());
 
-        if (loci_ordered && loc_cnt > 0)
+        if (loci_ordered)
             cerr << "  Analyzed " << loc_cnt << " loci from " << bloc.loci().front()->cloc->loc.chr() << ".\n";
+
+        //
+        // Smooth population statistics across individual populations, and between populations.
+        //
+        if (kernel_smoothed && loci_ordered) {
+            cerr << "    Generating kernel-smoothed population statistics...\n";
+            smooth->snpstats(bloc.loci(), log_fh);
+            smooth->hapstats(bloc.loci(), log_fh);
+
+            //
+            // Calculate and write Fst.
+            //
+            // if (calc_fstats) {
+            //     calculate_haplotype_divergence(catalog, pmap, psum);
+            //     calculate_haplotype_divergence_pairwise(catalog, pmap, psum);
+            //     write_fst_stats(catalog, pmap, psum, log_fh);
+            // }
+        } else if (kernel_smoothed) {
+            cerr << "    Notice: Smoothing was requested (-k), but will not be performed as the loci are not ordered.\n";
+        }
 
     } while (loc_cnt > 0);
 
@@ -239,14 +270,9 @@ int main (int argc, char* argv[]) {
     // Write out the distributions of catalog loci.
     //
     bloc.write_distributions(log_fh);
-    
-    //
-    // Read the bootstrap-whitelist.
-    //
-    if (bs_wl_file.length() > 0) {
-        load_marker_list(bs_wl_file, bootstraplist);
-        cerr << "Loaded " << bootstraplist.size() << " markers to include when bootstrapping.\n";
-    }
+
+    if (kernel_smoothed)
+        delete smooth;
 
     // //
     // // Merge loci that overlap on a common restriction enzyme cut site.
@@ -257,24 +283,6 @@ int main (int argc, char* argv[]) {
 
     // if (debug_flags.count("VCFCOMP"))
     //     vcfcomp_simplify_pmap(catalog, pmap);
-
-    // if (kernel_smoothed) {
-    //     if (loci_ordered) {
-    //         for (size_t i=0; i<mpopi.pops().size(); ++i) {
-    //             cerr << "  Generating kernel-smoothed population statistics for population '" << mpopi.pops()[i].name << "'...\n";
-    //             kernel_smoothed_popstats(catalog, pmap, psum, i, log_fh);
-    //         }
-    //     } else {
-    //         cerr << "Notice: Smoothing was requested (-k), but will not be performed as the loci are not ordered.\n";
-    //     }
-    // }
-
-    // calculate_haplotype_stats(catalog, pmap, psum);
-
-    // if (calc_fstats) {
-    //     calculate_haplotype_divergence(catalog, pmap, psum);
-    //     calculate_haplotype_divergence_pairwise(catalog, pmap, psum);
-    // }
 
     // //
     // // Output the observed haplotypes.
@@ -339,12 +347,6 @@ int main (int argc, char* argv[]) {
     //     write_vcf(catalog, pmap, psum, merge_map);
 
     // //
-    // // Calculate and write Fst.
-    // //
-    // if (calc_fstats)
-    //     write_fst_stats(catalog, pmap, psum, log_fh);
-
-    // //
     // // Output nucleotide-level genotype calls for each individual.
     // //
     // if (genomic_out)
@@ -354,7 +356,6 @@ int main (int argc, char* argv[]) {
     //     delete cloc.second;
     // delete psum;
     // delete pmap;
-    log_fh.close();
 
     //
     // Close the export files and do any required post processing.
@@ -364,6 +365,16 @@ int main (int argc, char* argv[]) {
         exports[i]->post_processing();
         delete exports[i];
     }
+
+    // //
+    // // Read the bootstrap-whitelist.
+    // //
+    // if (bs_wl_file.length() > 0) {
+    //     load_marker_list(bs_wl_file, bootstraplist);
+    //     cerr << "Loaded " << bootstraplist.size() << " markers to include when bootstrapping.\n";
+    // }
+
+    log_fh.close();
 
     cerr << "Populations is done.\n";
 
@@ -2875,7 +2886,7 @@ calculate_haplotype_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, P
 
             vector<LocStat *> &locstats = genome_locstats[it->first];
             map<uint, uint>    locstats_key;
-            ord->order(locstats, locstats_key, it->second);
+            // ord->order(locstats, locstats_key, it->second);
 
             for (uint pos = 0; pos < it->second.size(); pos++) {
                 loc = it->second[pos];
@@ -2897,7 +2908,7 @@ calculate_haplotype_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, P
 
             if (kernel_smoothed && loci_ordered) {
                 cerr << "    Generating kernel-smoothed statistics on chromosome " << it->first << "\n";
-                ks->smooth(locstats);
+                //ks->smooth(locstats);
             }
 
             if (bootstrap_div)
@@ -3040,7 +3051,7 @@ calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pm
 
         map<uint, uint>    hapstats_key;
         vector<HapStat *> &hapstats = genome_hapstats[chr];
-        ord->order(hapstats, hapstats_key, it->second);
+        // ord->order(hapstats, hapstats_key, it->second);
 
         #pragma omp parallel
         {
@@ -3090,7 +3101,7 @@ calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pm
         //
         if (kernel_smoothed && loci_ordered) {
             cerr << "  Generating kernel-smoothed haplotype F statistics for " << it->first << "...";
-            ks->smooth(hapstats);
+            // ks->smooth(hapstats);
             cerr << "done.\n";
         }
     }
@@ -3292,7 +3303,7 @@ calculate_haplotype_divergence_pairwise(map<int, CSLocus *> &catalog, PopMap<CSL
 
                 map<uint, uint>    hapstats_key;
                 vector<HapStat *> &hapstats = genome_hapstats[chr];
-                ord->order(hapstats, hapstats_key, it->second);
+                // ord->order(hapstats, hapstats_key, it->second);
 
                 #pragma omp parallel
                 {
@@ -3342,7 +3353,7 @@ calculate_haplotype_divergence_pairwise(map<int, CSLocus *> &catalog, PopMap<CSL
                 //
                 if (kernel_smoothed && loci_ordered) {
                     cerr << "    Generating kernel-smoothed Phi_st for " << it->first << "...";
-                    ks->smooth(hapstats);
+                    //ks->smooth(hapstats);
                     cerr << "done.\n";
                 }
             }
@@ -5260,7 +5271,7 @@ write_fst_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLo
     //
     // Instantiate the kernel smoothing object if requested.
     //
-    OPopPair<PopPair>  *ord = new OPopPair<PopPair>(psum, log_fh);
+    OPopPair<PopPair>  *ord = new OPopPair<PopPair>(log_fh);
     KSmooth<PopPair>   *ks=NULL;
     Bootstrap<PopPair> *bs=NULL;
     if (kernel_smoothed && loci_ordered) {
@@ -5354,7 +5365,7 @@ write_fst_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLo
                 //
                 // Order loci between the two populations and calculate Fst
                 //
-                ord->order(pairs, pairs_key, it->second, pop_1, pop_2);
+                // ord->order(pairs, pairs_key, it->second, pop_1, pop_2);
 
                 //
                 // Apply user-selected correction to the Fst values.
@@ -5402,7 +5413,7 @@ write_fst_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLo
                 //
                 if (kernel_smoothed && loci_ordered) {
                     cerr << "  Generating kernel-smoothed Fst for " << it->first << ".\n";
-                    ks->smooth(pairs);
+                    //ks->smooth(pairs);
                 }
             }
 
@@ -5596,6 +5607,41 @@ correct_fst_bonferroni_win(vector<PopPair *> &pairs)
 }
 
 int
+LocusSmoothing::snpstats(const vector<LocBin *> &loci, ofstream &log_fh)
+{
+    for (uint i = 0; i < this->_mpopi->pops().size(); i++) {
+
+        vector<const SumStat *> sites;
+
+        for (size_t j = 0; j < loci.size(); j++)
+            sites.push_back(loci[j]->s->per_pop(i)->nucs);
+
+        this->_ord_ss->order(sites, loci, i);
+        this->_ks_ss->smooth(sites);
+    }
+
+    return 0;
+}
+
+int
+LocusSmoothing::hapstats(const vector<LocBin *> &loci, ofstream &log_fh)
+{
+    map<uint, uint> locstats_key;
+    
+    for (uint i = 0; i < this->_mpopi->pops().size(); i++) {
+        vector<const LocStat *> sites;
+
+        for (size_t j = 0; j < loci.size(); j++)
+            sites.push_back(loci[j]->s->hapstats_per_pop(i));
+
+        this->_ord_ls->order(sites, locstats_key, loci);
+        this->_ks_ls->smooth(sites);
+    }
+
+    return 0;
+}
+
+int
 kernel_smoothed_popstats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum, int pop_id, ofstream &log_fh)
 {
     // int snp_dist[max_snp_dist] = {0};
@@ -5608,17 +5654,17 @@ kernel_smoothed_popstats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Po
     // Instantiate the kernel smoothing object if requested.
     //
     KSmooth<SumStat>   *ks  = new KSmooth<SumStat>(2);
-    OSumStat<SumStat>  *ord = new OSumStat<SumStat>(psum, log_fh);
-    Bootstrap<SumStat> *bs = NULL;
+    OSumStat<SumStat>  *ord = new OSumStat<SumStat>(log_fh);
+    // Bootstrap<SumStat> *bs = NULL;
 
-    if (bootstrap_pifis)
-        bs = new Bootstrap<SumStat>(2);
+    // if (bootstrap_pifis)
+    //     bs = new Bootstrap<SumStat>(2);
 
     for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
         vector<SumStat *> &sites = genome_sites[it->first];
 
-        ord->order(sites, it->second, pop_id);
-        if (bootstrap_pifis) bs->add_data(sites);
+        //ord->order(sites, it->second, pop_id);
+        // if (bootstrap_pifis) bs->add_data(sites);
     }
 
     cerr << "    Population '" << mpopi.pops()[pop_id].name << "' contained " << ord->multiple_loci << " nucleotides covered by more than one RAD locus.\n";
@@ -5631,15 +5677,15 @@ kernel_smoothed_popstats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Po
 
         vector<SumStat *> &sites = genome_sites[it->first];
 
-        ks->smooth(sites);
+        // ks->smooth(sites);
 
-        if (bootstrap_pifis && bootstrap_type == bs_exact)
-            bs->execute_mixed(sites);
+        // if (bootstrap_pifis && bootstrap_type == bs_exact)
+        //     bs->execute_mixed(sites);
     }
 
     delete ks;
     delete ord;
-    if (bootstrap_pifis) delete bs;
+    // if (bootstrap_pifis) delete bs;
 
 //     //
 //     // If bootstrap resampling method is approximate, generate our single, empirical distribution.

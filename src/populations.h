@@ -70,19 +70,6 @@ enum class InputMode {stacks, stacks2, vcf};
 
 const int max_snp_dist = 500;
 
-struct LocBin {
-    CSLocus   *cloc;
-    Datum    **d;
-    LocPopSum *s;
-
-    LocBin(): cloc(NULL), d(NULL), s(NULL) {}
-    ~LocBin() {
-        if (this->cloc != NULL) delete cloc;
-        if (this->d    != NULL) delete [] d;
-        if (this->s    != NULL) delete s;
-    }
-};
-
 //
 // Class for accumulating summary statistics as we read each batch of data.
 // After all loci are processed, output the summary statistics summary.
@@ -122,6 +109,47 @@ public:
     int accumulate_pre_filtering(const CSLocus *);
     int accumulate(const vector<LocBin *> &);
     int write_results(ostream &log_fh);
+};
+
+//
+// Class for smoothing various calculated population statistics for each batch of loci.
+//
+class LocusSmoothing {
+    const MetaPopInfo    *_mpopi; // Population Map
+    KSmooth<SumStat>     *_ks_ss;
+    OSumStat<SumStat>    *_ord_ss;
+    KSmooth<LocStat>     *_ks_ls;
+    OHaplotypes<LocStat> *_ord_ls;
+    KSmooth<HapStat>     *_ks_hs;
+    OHaplotypes<HapStat> *_ord_hs;
+    KSmooth<PopPair>     *_ks_pp;
+    OPopPair<PopPair>    *_ord_pp;
+
+public:
+    LocusSmoothing(const MetaPopInfo *mpopi, ofstream &log_fh) {
+        this->_mpopi  = mpopi;
+        this->_ks_ss  = new KSmooth<SumStat>(2);
+        this->_ord_ss = new OSumStat<SumStat>(log_fh);
+        this->_ks_ls  = new KSmooth<LocStat>(2);
+        this->_ord_ls = new OHaplotypes<LocStat>();
+        this->_ks_hs  = new KSmooth<HapStat>(5);
+        this->_ord_hs = new OHaplotypes<HapStat>();
+        this->_ks_pp  = new KSmooth<PopPair>(2);
+        this->_ord_pp = new OPopPair<PopPair>(log_fh);
+    }
+    ~LocusSmoothing() {
+        delete this->_ks_ss;
+        delete this->_ord_ss;
+        delete this->_ks_ls;
+        delete this->_ord_ls;
+        delete this->_ks_hs;
+        delete this->_ord_hs;
+        delete this->_ks_pp;
+        delete this->_ord_pp;
+    }
+
+    int snpstats(const vector<LocBin *> &loci, ofstream &log_fh);
+    int hapstats(const vector<LocBin *> &loci, ofstream &log_fh);
 };
 
 //
