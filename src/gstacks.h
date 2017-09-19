@@ -11,15 +11,36 @@ void parse_command_line(int argc, char* argv[]);
 void report_options(ostream& os);
 
 //
-// PhasedHet
+// PhasedHet & PhaseSet
 // ----------
-// Phasing data in a phase-set-based format so that it is eaasy to write a
-// phased VCF.
 //
 struct PhasedHet {
-    size_t phase_set; // N.B. The convention in VCF is to use the column of the first phased SNP for this.
-    Nt2 left_allele;
-    Nt2 right_allele;
+    size_t phase_set;//TODO // N.B. The convention in VCF is to use the column of the first phased SNP for this.
+    Nt4 left_allele;
+    Nt4 right_allele;
+
+    bool operator== (const PhasedHet& other) const
+        {return phase_set == other.phase_set && left_allele == other.left_allele && right_allele == other.right_allele;}
+};
+class PhaseSet {
+    vector<PhasedHet> phased_hets_;
+public:
+    PhaseSet() : phased_hets_{} {}
+    void clear() {phased_hets_.clear();}
+    bool empty() const {return phased_hets_.empty();}
+
+    PhaseSet(size_t n_hets) : phased_hets_(n_hets, {SIZE_MAX, Nt4::n, Nt4::n}) {}
+    size_t size() const {return phased_hets_.size();}
+    const PhasedHet& het(size_t het_i) const {return phased_hets_[het_i];}
+
+    // Add the first node to the phase set.
+    void add_het(size_t het_i, array<Nt2,2> alleles);
+    // Add a singleton node to the phase set, according to the given edge.
+    void add_het(size_t het_i, array<Nt2,2> alleles, Nt2 nt_i, size_t het_j, Nt2 nt_j);
+    // Merge with another phase set, according to the given edge.
+    void merge_with(const PhaseSet& other, size_t het_i, Nt2 nt_i, size_t het_j, Nt2 nt_j);
+    // Check that a new edge between two nodes within the phase set is consistent.
+    bool is_edge_consistent(size_t het_i, Nt2 nt_i, size_t het_j, Nt2 nt_j) const;
 };
 
 //
@@ -117,12 +138,23 @@ private:
             const vector<const SampleCall*>& sample_het_calls
             ) const;
 
-    // Assemble haplotypes.
-    // This is based on the graph of cooccurrences, in which nodes are the SNP
-    // alleles. Subgraphs represent haplotypes. Haplotype assembly fails if a
-    // subgraph includes two (or more) nodes/alleles from the same SNP.
-    bool assemble_haplotypes(
-            vector<vector<Nt4>>& haps,
+    // Assemble phase sets.
+    // This is based on the graph of cooccurrences between the het alleles.
+    // We build a graph in which the nodes are phased pairs of hets alleles
+    // (`PhasedHet`s) and phase sets subgraphs of such nodes. The edges between
+    // pairs of alleles are based on those in the graph of cooccurrences, but
+    // in a phased context they appear as one of two types:
+    // * parallel (+): left-allele-to-right-allele (left-to-left) or right-to-right.
+    // * crossed (-): left-to-right, or right-to-left.
+    // Allele linkage is transitive (through composition of +/- edges).
+    // The assembly fails if there are inconsistent edges, i.e. edges that link
+    // (transitively) one allele of one het SNP to both alleles of another het
+    // SNP.
+    // In practice, we start with an empty graph and iterate on edges, adding
+    // nodes/PhasedHets when we first see them and checking that new edges are
+    // consistent with the growing graph.
+    bool assemble_phase_sets(
+            vector<PhaseSet>& phase_sets,
             const vector<size_t>& het_snps,
             const vector<const SampleCall*>& sample_het_calls,
             const SnpAlleleCooccurrenceCounter& cooccurrences
