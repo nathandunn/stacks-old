@@ -48,7 +48,7 @@ public:
     double alleles;    // Number of alleles sampled at this location.
     uint   snp_cnt;    // Number of SNPs in kernel-smoothed window centered on this SNP.
     double stat[PopStatSize];
-    double smoothed[PopStatSize];
+    mutable double smoothed[PopStatSize];
     double bs[PopStatSize];
 
     PopStat() {
@@ -292,6 +292,19 @@ private:
     int      tally_ref_alleles(int, uint16_t &, char &, char &, uint16_t &, uint16_t &);
     int      tally_observed_haplotypes(const vector<char *> &, int);
     LocStat *haplotype_diversity(int, int, const Datum **);
+};
+
+struct LocBin {
+    CSLocus   *cloc;
+    Datum    **d;
+    LocPopSum *s;
+
+    LocBin(): cloc(NULL), d(NULL), s(NULL) {}
+    ~LocBin() {
+        if (this->cloc != NULL) delete cloc;
+        if (this->d    != NULL) delete [] d;
+        if (this->s    != NULL) delete s;
+    }
 };
 
 //

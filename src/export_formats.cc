@@ -608,11 +608,11 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
     VcfWriter writer (path, move(header));
 
     // We need to order the SNPs taking into account overlapping loci.
-    OLocTally<NucTally> *ord = new OLocTally<NucTally>(psum, log_fh);
+    OLocTally<NucTally> *ord = new OLocTally<NucTally>(log_fh);
 
     for (auto it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
         vector<NucTally *> sites;
-        ord->order(sites, it->second);
+        // ord->order(sites, it->second);
 
         for (uint pos = 0; pos < sites.size(); pos++) {
             if (catalog.count(sites[pos]->loc_id) == 0) {
@@ -1123,7 +1123,7 @@ write_genepop_ordered(map<int, CSLocus *> &catalog,
     //
     // We need to order the SNPs to take into account overlapping loci.
     //
-    OLocTally<NucTally> *ord = new OLocTally<NucTally>(psum, log_fh);
+    OLocTally<NucTally> *ord = new OLocTally<NucTally>(log_fh);
 
     //
     // Output all the loci on the second line, comma-separated.
@@ -1132,7 +1132,7 @@ write_genepop_ordered(map<int, CSLocus *> &catalog,
     int cnt  = 0;
     for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
         vector<NucTally *> &sites = genome_sites[it->first];
-        ord->order(sites, it->second);
+        //ord->order(sites, it->second);
         cnt++;
 
         for (uint pos = 0; pos < sites.size(); pos++) {
@@ -1436,11 +1436,11 @@ write_structure_ordered(map<int, CSLocus *> &catalog,
     //
     // We need to order the SNPs to take into account overlapping loci.
     //
-    OLocTally<NucTally> *ord = new OLocTally<NucTally>(psum, log_fh);
+    OLocTally<NucTally> *ord = new OLocTally<NucTally>(log_fh);
 
     for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
         vector<NucTally *> &sites = genome_sites[it->first];
-        ord->order(sites, it->second);
+        //ord->order(sites, it->second);
 
         for (uint pos = 0; pos < sites.size(); pos++)
             fh << "\t" << sites[pos]->loc_id << "_" << sites[pos]->col;
