@@ -867,7 +867,7 @@ LocusFilter::keep_single_snp(const CSLocus *cloc, const LocTally *t)
     // SNPs are specified in the whitelist for this locus -- so all SNPs are included,
     // choose the first variant.
     //
-    if (this->_whitelist.count(cloc->id) == 0 || this->_whitelist[cloc->id].size() > 0) {
+    if (this->_whitelist.count(cloc->id) == 0 || this->_whitelist[cloc->id].size() == 0) {
         for (uint i = 0; i < cloc->snps.size(); i++)
             if (t->nucs[cloc->snps[i]->col].fixed == false) {
                 new_wl.insert(cloc->snps[i]->col);
@@ -949,6 +949,10 @@ LocusFilter::prune_sites_with_whitelist(MetaPopInfo *mpopi, CSLocus *cloc, Datum
     if (cloc->snps.size() == 0)
         return 0;
 
+    if (user_wl == true && this->_whitelist[cloc->id].size() == 0)
+        for (uint i = 0; i < cloc->snps.size(); i++)
+            this->_whitelist[cloc->id].insert(cloc->snps[i]->col);
+    
     //
     // We want to prune out SNP objects that are not in the whitelist.
     //
