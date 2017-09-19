@@ -145,36 +145,34 @@ try {
     size_t next_fa_to_write = 0; // locus index, in the input BAM file.
     size_t next_vcf_to_write = 0;
     size_t next_det_to_write = 0;
-    //TODO{
+
+    // For clocking.
     double clock_parallel_start = gettm();
     vector<Clocks> clocks_all (num_threads);
     size_t n_writes = 0;
     size_t max_size_before_write = 0;
     double actually_writing_vcf = 0;
-    //TODO}
+
     #pragma omp parallel
     {
         LocusProcessor loc_proc;
         CLocReadSet loc (bam_fh.mpopi());
-        Clocks& clocks = clocks_all[omp_get_thread_num()]; //TODO
+        Clocks& clocks = clocks_all[omp_get_thread_num()];
         #pragma omp for schedule(dynamic)
         for (size_t i=0; i<n_loci; ++i) {
             if (omp_return != 0)
                 continue;
             try {
-                //TODO{
-                double clock_loop_start0 = gettm();
                 double clock_loop_start = gettm();
-                double clocking = clock_loop_start - clock_loop_start0;
-                //TODO}
+                double clocking = gettm() - clock_loop_start;
 
                 #pragma omp critical(read)
                 bam_fh.read_one_locus(loc);
-                double clock_read = gettm();//TODO
+                double clock_read = gettm();
 
                 size_t loc_i = loc.bam_i();
                 loc_proc.process(move(loc));
-                double clock_process = gettm();//TODO
+                double clock_process = gettm();
 
                 #pragma omp critical(write_fa)
                 {
@@ -190,7 +188,7 @@ try {
                         ++next_fa_to_write;
                     }
                 }
-                double clock_write_fa = gettm();//TODO
+                double clock_write_fa = gettm();
 
                 #pragma omp critical(write_vcf)
                 {
@@ -199,22 +197,20 @@ try {
                     vcf_outputs[loc_i - next_vcf_to_write] = {true, move(loc_proc.vcf_out()) };
 
                     if (vcf_outputs.front().first) {
-                        //TODO{
                         ++n_writes;
                         if (vcf_outputs.size() > max_size_before_write)
                             max_size_before_write = vcf_outputs.size();
                         double start_writing = gettm();
-                        //TODO}
                         do {
                             o_vcf_f->file() << vcf_outputs.front().second;
                             vcf_outputs.pop_front();
                             ++next_vcf_to_write;
                             ++progress;
                         } while (!vcf_outputs.empty() && vcf_outputs.front().first);
-                        actually_writing_vcf += gettm() - start_writing - clocking; //TODO
+                        actually_writing_vcf += gettm() - start_writing - clocking;
                     }
                 }
-                double clock_write_vcf = gettm();//TODO
+                double clock_write_vcf = gettm();
 
                 if (detailed_output) {
                     #pragma omp critical(write_details)
@@ -232,14 +228,12 @@ try {
                 }
                 double clock_write_details = gettm();
 
-                //TODO{
-                clocks.clocking     += 6 * clocking;
-                clocks.reading     += clock_read       - clock_loop_start - clocking;
-                clocks.processing  += clock_process    - clock_read - clocking;
-                clocks.writing_fa  += clock_write_fa   - clock_process - clocking;
-                clocks.writing_vcf += clock_write_vcf  - clock_write_fa - clocking;
+                clocks.clocking        += 7 * clocking;
+                clocks.reading         += clock_read       - clock_loop_start - clocking;
+                clocks.processing      += clock_process    - clock_read - clocking;
+                clocks.writing_fa      += clock_write_fa   - clock_process - clocking;
+                clocks.writing_vcf     += clock_write_vcf  - clock_write_fa - clocking;
                 clocks.writing_details += clock_write_details  - clock_write_vcf - clocking;
-                //TODO}
 
             } catch (exception& e) {
                 #pragma omp critical
@@ -254,34 +248,6 @@ try {
     if (omp_return != 0)
         return omp_return;
     progress.done();
-
-    //TODO{
-    {
-        double clock_parallel_end = gettm();
-        Clocks totals = std::accumulate(clocks_all.begin(), clocks_all.end(), Clocks());
-        totals /= num_threads;
-        double total_time = clock_parallel_end - clock_parallel_start;
-        ostream os (cout.rdbuf());
-        os.exceptions(os.exceptions() | ios::badbit);
-        os << std::fixed << std::setprecision(2);
-        os << "\n"
-           << "BEGIN clockings\n"
-           << "Num. threads: " << num_threads << "\n"
-           << "Parallel time: " << total_time << "\n"
-           << "Average thread time spent...\n"
-           << std::setw(8) << totals.reading  << "  reading (" << as_percentage(totals.reading / total_time) << ")\n"
-           << std::setw(8) << totals.processing << "  processing (" << as_percentage(totals.processing / total_time) << ")\n"
-           << std::setw(8) << totals.writing_fa << "  writing_fa (" << as_percentage(totals.writing_fa / total_time) << ")\n"
-           << std::setw(8) << totals.writing_vcf << "  writing_vcf (" << as_percentage(totals.writing_vcf / total_time) << ")\n"
-           << std::setw(8) << totals.writing_details << "  writing_details (" << as_percentage(totals.writing_details / total_time) << ")\n"
-           << std::setw(8) << totals.clocking  << "  clocking (" << as_percentage(totals.clocking / total_time) << ")\n"
-           << std::setw(8) << totals.sum() << "  total (" << as_percentage(totals.sum() / total_time) << ")\n"
-           << "Time spent actually_writing_vcf: " << actually_writing_vcf << " (" << as_percentage(actually_writing_vcf / total_time) << ")\n"
-           << "VCFwrite block size: mean=" << (double) n_loci / n_writes << "(n=" << n_writes << "); max=" << max_size_before_write << "\n"
-           << "END clockings\n"
-           ;
-    }
-    //TODO}
 
     //
     // Report statistics on the analysis.
@@ -320,7 +286,38 @@ try {
         logger->l << "END badly_phased\n\n";
     }
 
+    //
+    // Report clockings.
+    //
+    {
+        double clock_parallel_end = gettm();
+        Clocks totals = std::accumulate(clocks_all.begin(), clocks_all.end(), Clocks());
+        totals /= num_threads;
+        double total_time = clock_parallel_end - clock_parallel_start;
+        ostream os (cout.rdbuf());
+        os.exceptions(os.exceptions() | ios::badbit);
+        os << std::fixed << std::setprecision(2);
+        os << "\n"
+           << "BEGIN clockings\n"
+           << "Num. threads: " << num_threads << "\n"
+           << "Parallel time: " << total_time << "\n"
+           << "Average thread time spent...\n"
+           << std::setw(8) << totals.reading  << "  reading (" << as_percentage(totals.reading / total_time) << ")\n"
+           << std::setw(8) << totals.processing << "  processing (" << as_percentage(totals.processing / total_time) << ")\n"
+           << std::setw(8) << totals.writing_fa << "  writing_fa (" << as_percentage(totals.writing_fa / total_time) << ")\n"
+           << std::setw(8) << totals.writing_vcf << "  writing_vcf (" << as_percentage(totals.writing_vcf / total_time) << ")\n"
+           << std::setw(8) << totals.writing_details << "  writing_details (" << as_percentage(totals.writing_details / total_time) << ")\n"
+           << std::setw(8) << totals.clocking  << "  clocking (" << as_percentage(totals.clocking / total_time) << ")\n"
+           << std::setw(8) << totals.sum() << "  total (" << as_percentage(totals.sum() / total_time) << ")\n"
+           << "Time spent actually_writing_vcf: " << actually_writing_vcf << " (" << as_percentage(actually_writing_vcf / total_time) << ")\n"
+           << "VCFwrite block size: mean=" << (double) n_loci / n_writes << "(n=" << n_writes << "); max=" << max_size_before_write << "\n"
+           << "END clockings\n"
+           ;
+    }
+
+    //
     // Cleanup & return.
+    //
     gzclose(o_gzfasta_f);
     model.reset();
     if (dbg_write_hapgraphs)
@@ -372,6 +369,20 @@ ProcessingStats& ProcessingStats::operator+= (const ProcessingStats& other) {
 }
 
 //
+// LocData
+// =======
+//
+void LocData::clear() {
+    id = -1;
+    pos.clear();
+    mpopi = NULL;
+    overlapped = false;
+    o_vcf.clear();
+    o_fa.clear();
+    o_details.clear();
+}
+
+//
 // LocusProcessor
 // ==============
 //
@@ -383,20 +394,21 @@ LocusProcessor::process(CLocReadSet&& loc)
         return;
     ++stats_.n_nonempty_loci;
 
-    this->loc_id_  =  loc.id();
-    this->loc_pos_ =  loc.pos();
-    this->mpopi_   = &loc.mpopi();
+    this->loc_.clear();
+    this->loc_.id  =  loc.id();
+    this->loc_.pos =  loc.pos();
+    this->loc_.mpopi   = &loc.mpopi();
 
     if (detailed_output) {
         details_ss_.clear();
         details_ss_.str(string());
-        details_ss_ << "BEGIN " << loc_id_ << "\n";
+        details_ss_ << "BEGIN " << loc_.id << "\n";
     }
 
     //
     // Build the alignment matrix.
     //
-    CLocAlnSet aln_loc (loc_id_, loc_pos_, mpopi_);
+    CLocAlnSet aln_loc (loc_.id, loc_.pos, loc_.mpopi);
     if (dbg_true_alns) {
         from_true_alignments(aln_loc, move(loc));
     } else {
@@ -433,7 +445,7 @@ LocusProcessor::process(CLocReadSet&& loc)
                 break;
 
             // Align each read to the contig.
-            CLocAlnSet pe_aln_loc (loc_id_, loc_pos_, mpopi_);
+            CLocAlnSet pe_aln_loc (loc_.id, loc_.pos, loc_.mpopi);
             pe_aln_loc.ref(DNASeq4(ctg));
             this->stats_.n_tot_reads += loc.pe_reads().size();
 
@@ -449,6 +461,7 @@ LocusProcessor::process(CLocReadSet&& loc)
             //
             int overlap;
             if ( (overlap = this->find_locus_overlap(stree, aln_loc.ref())) > 0) {
+                this->loc_.overlapped = true;
                 this->stats_.n_se_pe_loc_overlaps++;
                 this->stats_.mean_se_pe_loc_overlap += overlap;
             }
@@ -483,7 +496,7 @@ LocusProcessor::process(CLocReadSet&& loc)
                 if (detailed_output)
                     details_ss_ << "pe_read"
                                 << '\t' << r.name
-                                << '\t' << mpopi_->samples()[r.sample].name
+                                << '\t' << loc_.mpopi->samples()[r.sample].name
                                 << '\t' << r.seq
                                 << '\n'
                                 << "pe_aln_local"
@@ -517,9 +530,9 @@ LocusProcessor::process(CLocReadSet&& loc)
 
     if (dbg_write_alns)
         #pragma omp critical
-        o_aln_f << "BEGIN " << loc_id_ << "\n"
+        o_aln_f << "BEGIN " << loc_.id << "\n"
                 << aln_loc
-                << "\nEND " << loc_id_ << "\n";
+                << "\nEND " << loc_.id << "\n";
 
     //
     // Call SNPs.
@@ -555,8 +568,8 @@ LocusProcessor::process(CLocReadSet&& loc)
     write_one_locus(aln_loc, depths, calls, phase_data);
 
     if (detailed_output) {
-        details_ss_ << "END " << loc_id_ << "\n";
-        o_details_ = details_ss_.str();
+        details_ss_ << "END " << loc_.id << "\n";
+        loc_.o_details = details_ss_.str();
     }
 }
 
@@ -809,8 +822,8 @@ LocusProcessor::assemble_contig(const vector<const DNASeq4*>& seqs)
     }
 
     if (dbg_write_gfa) {
-        graph.dump_gfa(in_dir + to_string(loc_id_) + ".spaths.gfa");
-        graph.dump_gfa(in_dir + to_string(loc_id_) + ".nodes.gfa", true);
+        graph.dump_gfa(in_dir + to_string(loc_.id) + ".spaths.gfa");
+        graph.dump_gfa(in_dir + to_string(loc_.id) + ".nodes.gfa", true);
     }
 
     vector<const SPath*> best_path;
@@ -831,7 +844,7 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
 ) const {
     inconsistent_samples.clear();
 
-    vector<map<size_t,PhasedHet>> phased_samples (mpopi_->samples().size());
+    vector<map<size_t,PhasedHet>> phased_samples (loc_.mpopi->samples().size());
     vector<size_t> snp_cols; // The SNPs of this locus.
     for (size_t i=0; i<aln_loc.ref().length(); ++i)
         if (calls[i].alleles().size() > 1)
@@ -843,15 +856,15 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
     stringstream o_hapgraph_ss;
     if (dbg_write_hapgraphs) {
         o_hapgraph_ss << "\n"
-                      << "subgraph cluster_loc" << loc_id_ << " {\n"
-                      << "\tlabel=\"locus " << loc_id_ << "\";\n"
+                      << "subgraph cluster_loc" << loc_.id << " {\n"
+                      << "\tlabel=\"locus " << loc_.id << "\";\n"
                       << "\t# snp columns: ";
         join(snp_cols, ',', o_hapgraph_ss);
         o_hapgraph_ss << "\n";
     }
 
     SnpAlleleCooccurrenceCounter cooccurrences (snp_cols.size());
-    for (size_t sample=0; sample<mpopi_->samples().size(); ++sample) {
+    for (size_t sample=0; sample<loc_.mpopi->samples().size(); ++sample) {
         if (aln_loc.sample_reads(sample).empty())
             continue;
 
@@ -1050,7 +1063,10 @@ bool LocusProcessor::assemble_phase_sets(
                         // Merge `ps_j` into `ps_i`.
                         phase_sets[ps_i].merge_with(phase_sets[ps_j], het_i, nti, het_j, ntj);
                         phase_sets[ps_j].clear();
-                        ps_j = ps_i;
+                        size_t merged_ps = ps_j;
+                        for (size_t& allele_ps : allele_to_ps)
+                            if (allele_ps == merged_ps)
+                                allele_ps = ps_i;
                     } else {
                         assert(ps_i == ps_j);
                         // Check that the edge is consistent.
@@ -1143,7 +1159,7 @@ void LocusProcessor::write_one_locus (
         const vector<map<size_t,PhasedHet>>& phase_data
 ) {
     char loc_id[16];
-    sprintf(loc_id, "%d", loc_id_);
+    sprintf(loc_id, "%d", loc_.id);
 
     const DNASeq4& ref = aln_loc.ref();
     const MetaPopInfo& mpopi = aln_loc.mpopi();
@@ -1348,7 +1364,7 @@ void LocusProcessor::write_one_locus (
 
         vcf_records << rec;
     }
-    o_vcf_ = vcf_records.str();
+    loc_.o_vcf = vcf_records.str();
 
     //
     // Fasta output.
@@ -1366,33 +1382,38 @@ void LocusProcessor::write_one_locus (
             ++n_remaining_samples;
 
     // Write the record.
-    o_fa_.clear();
-    o_fa_ += '>';
-    o_fa_ += loc_id;
+    string& fa = loc_.o_fa;
+    assert(fa.empty());
+    fa += '>';
+    fa += loc_id;
     if (!aln_loc.pos().empty()) {
         const PhyLoc& p = aln_loc.pos();
         char pos[16];
         sprintf(pos, "%u", p.bp+1);
-        o_fa_ += " pos=";
-        o_fa_ += p.chr();
-        o_fa_ += ':';
-        o_fa_ += pos;
-        o_fa_ += ':';
-        o_fa_ += (p.strand == strand_plus ? '+' : '-');
+        fa += " pos=";
+        fa += p.chr();
+        fa += ':';
+        fa += pos;
+        fa += ':';
+        fa += (p.strand == strand_plus ? '+' : '-');
     }
     char n_spls[32];
     sprintf(n_spls, "%zu", n_remaining_samples);
-    o_fa_ += " NS=";
-    o_fa_ += n_spls;
+    fa += " NS=";
+    fa += n_spls;
     if (n_remaining_samples != samples_w_reads.size()) {
         assert(n_remaining_samples < samples_w_reads.size());
         sprintf(n_spls, "%zu", samples_w_reads.size() - n_remaining_samples);
-        o_fa_ += " n_discarded_samples=";
-        o_fa_ += n_spls;
+        fa += " n_discarded_samples=";
+        fa += n_spls;
     }
-    o_fa_ += '\n';
-    o_fa_ += ref.str();
-    o_fa_ += '\n';
+    if (loc_.overlapped)
+        // Note: When `overlapped_` is not true, it is unknown if overlapping
+        // is relevant for this locus.
+        fa += " overlapped=true";
+    fa += '\n';
+    fa += ref.str();
+    fa += '\n';
 }
 
 void LocusProcessor::write_sample_hapgraph(
@@ -1405,12 +1426,12 @@ void LocusProcessor::write_sample_hapgraph(
         ) const {
 
     auto nodeid = [this,&sample](size_t col, Nt2 allele)
-            {return string("l")+to_string(loc_id_)+"s"+to_string(sample)+"c"+to_string(col)+char(allele);};
+            {return string("l")+to_string(loc_.id)+"s"+to_string(sample)+"c"+to_string(col)+char(allele);};
 
     // Initialize the subgraph.
     os << "\tsubgraph cluster_sample" << sample << " {\n"
                   << "\t\tlabel=\""
-                  << "i" << sample << " '" << mpopi_->samples()[sample].name << "'\\n"
+                  << "i" << sample << " '" << loc_.mpopi->samples()[sample].name << "'\\n"
                   << "\";\n"
                   << "\t\tstyle=dashed;\n"
                   << "\t\t# heterozygous columns: ";
