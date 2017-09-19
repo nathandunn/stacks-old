@@ -63,9 +63,22 @@ public:
             this->smoothed[i] = 0.0;
             this->bs[i]       = 0.0;
         }
-     }
-    virtual ~PopStat() {
     }
+    int reset() {
+        this->loc_id  = 0;
+        this->bp      = 0;
+        this->fixed   = false;
+        this->alleles = 0.0;
+        this->snp_cnt = 0;
+
+        for (uint i = 0; i < PopStatSize; i++) {
+            this->stat[i]     = 0.0;
+            this->smoothed[i] = 0.0;
+            this->bs[i]       = 0.0;
+        }
+        return 0;
+    }
+    virtual ~PopStat() {}
 };
 
 class HapStat: public PopStat {
@@ -165,6 +178,21 @@ public:
         incompatible_site = false;
         filtered_site     = false;
     }
+    int reset() {
+        PopStat::reset();
+        num_indv  = 0.0;
+        p         = 0.0;
+        p_nuc     = 0;
+        q_nuc     = 0;
+        obs_het   = 0.0;
+        obs_hom   = 0.0;
+        exp_het   = 0.0;
+        exp_hom   = 0.0;
+        snp_cnt   = 0;
+        incompatible_site = false;
+        filtered_site     = false;
+        return 0;
+    }
 };
 
 class LocSum {
@@ -207,6 +235,21 @@ public:
         obs_het     = 0.0;
         priv_allele = -1;
         fixed       = true;
+    }
+    int reset() {
+        loc_id      = 0;
+        bp          = 0;
+        col         = 0;
+        num_indv    = 0;
+        pop_cnt     = 0;
+        allele_cnt  = 0;
+        p_allele    = 0;
+        q_allele    = 0;
+        p_freq      = 0.0;
+        obs_het     = 0.0;
+        priv_allele = -1;
+        fixed       = true;
+        return 0;
     }
 };
 

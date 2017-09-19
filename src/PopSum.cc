@@ -113,6 +113,8 @@ LocPopSum::tally_fixed_pos(const CSLocus *cloc, const Datum **d, LocSum *s,
     double num_indv = 0.0;
     char   p_nuc    = 0;
 
+    s->nucs[pos].reset();
+
     for (uint i = start; i <= end; i++) {
         if (d[i] == NULL || pos >= d[i]->len) continue;
         //
@@ -161,6 +163,7 @@ LocPopSum::tally_heterozygous_pos(const CSLocus *cloc, const Datum **d, LocSum *
     uint i;
     char nuc;
 
+    s->nucs[pos].reset();
     //cerr << "  Calculating summary stats at het locus " << cloc->id << " position " << pos << "; snp_index: " << snp_index << "\n";
 
     //
@@ -379,6 +382,8 @@ LocPopSum::tally_metapop(const CSLocus *cloc)
 
     for (col = 0; col < len; col++) {
 
+        mp->nucs[col].reset();
+        
         mp->nucs[col].col    = col;
         mp->nucs[col].bp     = cloc->sort_bp(col);
         mp->nucs[col].loc_id = cloc->id;
@@ -394,7 +399,7 @@ LocPopSum::tally_metapop(const CSLocus *cloc)
         //
         if (mp->nucs[col].allele_cnt > 1)
             mp->nucs[col].fixed = false;
-
+        
         for (uint j = 0; j < this->_pop_cnt; j++) {
             //
             // Sum the number of individuals examined at this locus across populations.

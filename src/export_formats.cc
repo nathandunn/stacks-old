@@ -101,7 +101,6 @@ SumstatsExport::write_batch(const vector<LocBin *> &loci)
         uint len = strlen(cloc->con);
 
         for (uint pos = 0; pos < len; pos++) {
-
             //
             // If this site is fixed in all populations, DON'T output it. If it is variable,
             // or fixed within populations but variable among, DO output it.
@@ -118,8 +117,8 @@ SumstatsExport::write_batch(const vector<LocBin *> &loci)
                     this->_fh 
                        << cloc->id << "\t"
                        << cloc->loc.chr() << "\t"
-                       << cloc->sort_bp(i) + 1 << "\t"
-                       << i << "\t"
+                       << cloc->sort_bp(pos) + 1 << "\t"
+                       << pos << "\t"
                        << this->_mpopi->pops()[pop].name << "\t";
 
                     //
