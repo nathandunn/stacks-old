@@ -69,7 +69,7 @@ public:
 // Statistics produced by `LocusProcessor::process()`.
 //
 class ProcessingStats {
- public:
+public:
     size_t n_nonempty_loci;
     size_t n_loci_w_pe_reads;
     size_t n_loci_almost_no_pe_reads;
@@ -89,33 +89,49 @@ class ProcessingStats {
 };
 
 //
+// LocData
+// ----------
+// Data regarding the locus LocusProcessor currently works on.
+//
+class LocData {
+public:
+    int id;
+    PhyLoc pos;
+    const MetaPopInfo* mpopi;
+
+    bool overlapped;
+
+    string o_vcf;
+    string o_fa;
+    string o_details;
+
+    void clear();
+};
+
+//
 // LocusProcessor
 // ----------
 // Functor for processing loci. Thread-specific.
 //
 class LocusProcessor {
 public:
-    LocusProcessor() : stats_(), loc_id_(-1), loc_pos_(), mpopi_(NULL), o_vcf_(), o_fa_() {}
+    LocusProcessor() : stats_(), loc_(), details_ss_() {}
 
     // Process a locus.
     void process(CLocReadSet&& loc);
 
     // Access the output. Statistics & movable fasta/vcf per-locus text outputs.
     const ProcessingStats& stats() const {return stats_;}
-    string& vcf_out() {return o_vcf_;}
-    string& fasta_out() {return o_fa_;}
-    string& details_out() {return o_details_;}
+    string& vcf_out() {return loc_.o_vcf;}
+    string& fasta_out() {return loc_.o_fa;}
+    string& details_out() {return loc_.o_details;}
 
 private:
     ProcessingStats stats_;
-    int loc_id_;
-    PhyLoc loc_pos_;
-    const MetaPopInfo* mpopi_;
+    mutable LocData loc_;
+    mutable stringstream details_ss_;
 
-    string o_vcf_;
     string o_fa_;
-    stringstream details_ss_;
-    string o_details_;
 
     string assemble_contig(const vector<const DNASeq4*>& seqs);
 
