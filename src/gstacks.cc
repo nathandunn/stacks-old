@@ -413,16 +413,11 @@ LocusProcessor::process(CLocReadSet&& loc)
         from_true_alignments(aln_loc, move(loc));
     } else {
         //
-        // Transfer the already aligned foward-reads. xxx Are they actually aligned to the catalog consensus?
+        // Transfer the already aligned foward-reads.
         //
         aln_loc.ref(DNASeq4(loc.reads().at(0).seq));
-        for (SRead& r : loc.reads()) {
-            if (r.seq.length() != aln_loc.ref().length()) {
-                cerr << "DEBUG: Error: Can't handle reads of different legnths.\n"; //xxx
-                throw exception();
-            }
+        for (SRead& r : loc.reads())
             aln_loc.add(SAlnRead(move((Read&)r), {{'M',r.seq.length()}}, r.sample));
-        }
 
         //
         // Process the paired-end reads, if any.
