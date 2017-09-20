@@ -424,10 +424,11 @@ void run(const vector<int>& cloc_ids, const string& header_sq_lines, size_t samp
 
 void cigar_apply_to_locus(Locus* l, const Cigar& c) {
     // Align the consensus & model.
-    // (@Nick Sep2017: This is for consistency, I don't think these variables
-    // are actually used later.)
+    // (@Nick Sep2017: Changing `con` & `model` is for consistency, I don't
+    // think these variables are actually used later.)
     string new_con = apply_cigar_to_seq(l->con, c);
     string new_model = apply_cigar_to_model_seq(l->model, c);
+    assert(new_con.length() == l->len); //TODO @Nick Sep2017: I think this fails when samples have reads of unequal lengths.
     strncpy(l->con, new_con.c_str(), l->len);
     strncpy(l->model, new_model.c_str(), l->len);
     
