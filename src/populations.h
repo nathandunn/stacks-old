@@ -62,7 +62,6 @@ using std::unique_ptr;
 #include "gzFasta.h"
 #include "locus_readers.h"
 
-enum corr_type {p_value, bonferroni_win, bonferroni_gen, no_correction};
 enum bs_type   {bs_exact, bs_approx, bs_none};
 enum merget    {merge_sink, merge_src};
 enum phaset    {merge_failure, simple_merge, complex_phase, nomapping_fail, multimapping_fail, multiple_fails};

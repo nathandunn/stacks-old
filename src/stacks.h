@@ -45,6 +45,7 @@ typedef string allele_type;
 enum snp_type    {snp_type_het, snp_type_hom, snp_type_unk};
 enum read_type   {primary, secondary};
 enum searcht     {sequence, genomic_loc};
+enum corr_type   {p_value, bonferroni_win, bonferroni_gen, no_correction};
 
 class SNP {
  public:

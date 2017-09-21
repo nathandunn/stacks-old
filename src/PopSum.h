@@ -36,9 +36,11 @@
 #include "PopMap.h"
 #include "MetaPopInfo.h"
 
-extern bool   log_fst_comp;
-extern double minor_allele_freq;
-const  uint   PopStatSize = 5;
+extern bool      log_fst_comp;
+extern double    minor_allele_freq;
+extern corr_type fst_correction;
+extern double    p_value_cutoff;
+const uint PopStatSize = 5;
 
 class PopStat {
 public:
@@ -281,10 +283,13 @@ public:
     int             sum_pops(const CSLocus *, const Datum **, const MetaPopInfo&, bool, ostream &);
     int             tally_metapop(const CSLocus *);
     int             calc_hapstats(const CSLocus *, const Datum **, const MetaPopInfo&);
-    const LocSum   *per_pop(size_t pop_index)          { return this->_per_pop[pop_index]; }
+    const LocSum  **all_pops() const                   { return (const LocSum **) this->_per_pop; }
+    const LocSum   *per_pop(size_t pop_index) const    { return this->_per_pop[pop_index]; }
     const LocTally *meta_pop()                         { return this->_meta_pop; }
     const LocStat  *hapstats_per_pop(size_t pop_index) { return this->_hapstats_per_pop[pop_index]; }
     size_t          pop_cnt()                          { return this->_pop_cnt; }
+    static double   pi(double, double, double);
+    static double   binomial_coeff(double, double);
 
 private:
     int      tally_heterozygous_pos(const CSLocus *, const Datum **, LocSum *, int, int, uint, uint);
@@ -292,9 +297,6 @@ private:
     int      tally_ref_alleles(int, uint16_t &, char &, char &, uint16_t &, uint16_t &);
     int      tally_observed_haplotypes(const vector<char *> &, int);
     LocStat *haplotype_diversity(int, int, const Datum **);
-
-    double   pi(double, double, double);
-    double   binomial_coeff(double, double);
 };
 
 struct LocBin {
@@ -308,6 +310,46 @@ struct LocBin {
         if (this->d    != NULL) delete [] d;
         if (this->s    != NULL) delete s;
     }
+};
+
+//
+// per-Locus class for calculating divergence values sucha s Fst.
+//
+class LocDivergence {
+    const MetaPopInfo         *_mpopi;
+    vector<vector<PopPair **>> _snps;
+    vector<vector<HapStat *>>  _haplotypes;
+
+public:
+    LocDivergence(const MetaPopInfo *mpopi);
+    ~LocDivergence();
+    int snp_divergence(const vector<LocBin *> &loci);
+    int haplotype_divergence_pairwise(const vector<LocBin *> &loci);
+    int haplotype_divergence(const vector<LocBin *> &loci) { return 0; }
+    
+    vector<PopPair **>& snp_values(uint pop_id) { return this->_snps.at(pop_id); }
+    vector<HapStat *>&  haplotpye_values(uint pop_id) { return this->_haplotypes.at(pop_id); }
+
+private:
+    //
+    // SNP-level F statistics.
+    //
+    PopPair *Fst(const CSLocus *, const LocPopSum *, int, int, int);
+    int      fishers_exact_test(PopPair *, double, double, double, double);
+
+    //
+    // Haplotype-level F statistics
+    //
+    double   haplotype_d_est(const Datum **, const LocSum **, vector<int> &);
+    HapStat *haplotype_amova(const Datum **, const LocSum **, vector<int> &);
+    double   amova_ssd_total(vector<string> &, map<string, int> &, double **);
+    double   amova_ssd_wp(vector<int> &, map<int, vector<int>> &, map<string, int> &, map<int, vector<string>> &, double **);
+    double   amova_ssd_ap_wg(vector<int> &, map<int, vector<int>> &, map<string, int> &, map<int, vector<string>> &, double **, double **);
+    double   amova_ssd_ag(vector<int> &, map<int, vector<int>> &, map<string, int> &, map<int, vector<string>> &, double **, double);
+
+    bool     fixed_locus(const Datum **, vector<int> &);
+    int      nuc_substitution_identity(map<string, int> &, double **);
+    int      nuc_substitution_identity_max(map<string, int> &, double **);
 };
 
 //
