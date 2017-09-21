@@ -38,6 +38,7 @@ bool   dbg_write_gfa       = false;
 bool   dbg_write_alns      = false;
 bool   dbg_write_hapgraphs = false;
 bool   dbg_write_nt_depths = false;
+bool   dbg_true_reference  = false;
 bool   dbg_true_alns       = false;
 
 //
@@ -410,14 +411,16 @@ LocusProcessor::process(CLocReadSet&& loc)
     //
     CLocAlnSet aln_loc (loc_.id, loc_.pos, loc_.mpopi);
     if (dbg_true_alns) {
-        from_true_alignments(aln_loc, move(loc));
+        from_true_alignments(aln_loc, move(loc), true);
+    } else if (dbg_true_reference) {
+        using_true_reference(aln_loc, move(loc));
     } else {
         //
         // Transfer the already aligned foward-reads.
         //
         aln_loc.ref(DNASeq4(loc.reads().at(0).seq.length())); // Just N's.
         for (SRead& r : loc.reads())
-            aln_loc.add(SAlnRead(move((Read&)r), {{'M',r.seq.length()}}, r.sample));
+            aln_loc.add(SAlnRead(Read(move(r.seq), move(r.name)), {{'M',r.seq.length()}}, r.sample));
 
         //
         // Process the paired-end reads, if any.
@@ -483,36 +486,20 @@ LocusProcessor::process(CLocReadSet&& loc)
             GappedAln  *aligner = new GappedAln(loc.pe_reads().front().seq.length(), pe_aln_loc.ref().length(), true);
             AlignRes    aln_res;
             for (SRead& r : loc.pe_reads()) {
-                string seq = r.seq.str();
-
-                if (!this->align_reads_to_contig(stree, aligner, r.seq, aln_res))
-                    continue;
-
-                if (aln_res.pct_id < min_aln_cov)
-                    continue;
-
-                this->stats_.n_aln_reads++;
-
-                Cigar cigar;
-                parse_cigar(aln_res.cigar.c_str(), cigar);
-                simplify_cigar_to_MDI(cigar);
-                cigar_extend_left(cigar, aln_res.subj_pos);
-                assert(cigar_length_ref(cigar) <= pe_aln_loc.ref().length());
-                cigar_extend_right(cigar, pe_aln_loc.ref().length() - cigar_length_ref(cigar));
-
                 if (detailed_output)
                     details_ss_ << "pe_read"
                                 << '\t' << r.name
                                 << '\t' << loc_.mpopi->samples()[r.sample].name
-                                << '\t' << r.seq
-                                << '\n'
-                                << "pe_aln_local"
-                                << '\t' << r.name
-                                << '\t' << aln_res.subj_pos + 1
-                                << '\t' << aln_res.cigar
-                                << '\n';
-
-                pe_aln_loc.add(SAlnRead(move((Read&)r), move(cigar), r.sample));
+                                << '\t' << r.seq << '\n';
+                if (add_read_to_aln(pe_aln_loc, aln_res, move(r), aligner, stree)) {
+                    this->stats_.n_aln_reads++;
+                    if (detailed_output)
+                        details_ss_ << "pe_aln_local"
+                                    << '\t' << pe_aln_loc.reads().back().name
+                                    << '\t' << aln_res.subj_pos + 1
+                                    << '\t' << aln_res.cigar
+                                    << '\n';
+                }
             }
             delete aligner;
             delete stree;
@@ -523,7 +510,7 @@ LocusProcessor::process(CLocReadSet&& loc)
             aln_loc = CLocAlnSet::juxtapose(move(aln_loc), move(pe_aln_loc), (overlap > 0 ? -long(overlap) : +10));
             if (detailed_output)
                 for (auto& r : aln_loc.reads())
-                    if (r.name.length() >= 2 && strncmp(r.name.c_str()+r.name.length()-2, "/2", 2) == 0)
+                    if (r.is_read2())
                         details_ss_ << "pe_aln_global"
                                     << '\t' << r.name
                                     << '\t' << r.cigar
@@ -587,7 +574,7 @@ LocusProcessor::process(CLocReadSet&& loc)
 }
 
 int
-LocusProcessor::align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 enc_query, AlignRes &aln_res)
+LocusProcessor::align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 enc_query, AlignRes &aln_res) const
 {
     vector<STAln> alns;
     vector<pair<size_t, size_t> > step_alns;
@@ -751,7 +738,7 @@ LocusProcessor::align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 
 }
 
 int
-LocusProcessor::find_locus_overlap(SuffixTree *stree, DNASeq4 se_consensus)
+LocusProcessor::find_locus_overlap(SuffixTree *stree, DNASeq4 se_consensus) const
 {
     vector<STAln> alns;
     vector<pair<size_t, size_t> > step_alns;
@@ -849,6 +836,30 @@ LocusProcessor::assemble_contig(const vector<const DNASeq4*>& seqs)
     return SPath::contig_str(best_path.begin(), best_path.end(), km_length);
 }
 
+bool LocusProcessor::add_read_to_aln(
+        CLocAlnSet& aln_loc,
+        AlignRes& aln_res,
+        SRead&& r,
+        GappedAln* aligner,
+        SuffixTree* stree
+) const {
+
+    if (!this->align_reads_to_contig(stree, aligner, r.seq, aln_res))
+        return false;
+
+    if (aln_res.pct_id < min_aln_cov)
+        return false;
+
+    Cigar cigar;
+    parse_cigar(aln_res.cigar.c_str(), cigar);
+    simplify_cigar_to_MDI(cigar);
+    cigar_extend_left(cigar, aln_res.subj_pos);
+    assert(cigar_length_ref(cigar) <= aln_loc.ref().length());
+    cigar_extend_right(cigar, aln_loc.ref().length() - cigar_length_ref(cigar));
+
+    aln_loc.add(SAlnRead(move((Read&)r), move(cigar), r.sample));
+    return true;
+}
 
 vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
         const vector<SiteCall>& calls,
@@ -1536,7 +1547,7 @@ Cigar dbg_extract_cigar(const string& read_id) {
     return cigar;
 }
 
-void from_true_alignments(CLocAlnSet& aln_loc, CLocReadSet&& loc) {
+void from_true_alignments(CLocAlnSet& aln_loc, CLocReadSet&& loc, bool merge_reads) {
     //
     // Add forward reads.
     //
@@ -1570,6 +1581,51 @@ void from_true_alignments(CLocAlnSet& aln_loc, CLocReadSet&& loc) {
             }
             aln_loc.add(SAlnRead(move((Read&)r), move(cigar), r.sample));
         }
+        if (merge_reads)
+            aln_loc.merge_paired_reads();
+    }
+}
+
+void LocusProcessor::using_true_reference(CLocAlnSet& aln_loc, CLocReadSet&& loc) {
+    // Reconstruct the reference sequence, based on true alignments.
+    from_true_alignments(aln_loc, move(loc), false);
+    DNASeq4 true_ref (aln_loc.ref().length());
+    size_t i = 0;
+    Counts<Nt4> cnts;
+    for (CLocAlnSet::site_iterator site (aln_loc); bool(site); ++site, ++i) {
+        site.counts(cnts);
+        pair<size_t,Nt4> best_nt = cnts.sorted()[0];
+        true_ref.set(i, best_nt.first > 0 ? best_nt.second : Nt4::n);
+    }
+    aln_loc.ref(move(true_ref));
+
+    // Undo the paired-end read (true) alignments.
+    // N.B. `from_true_alignments()` adds the paired-end reads at the end.
+    vector<SRead> pe_reads;
+    while(!aln_loc.reads().empty() && aln_loc.reads().back().name.back() == '2') {
+        SAlnRead& r = aln_loc.reads().back();
+        pe_reads.push_back(SRead(Read(move(r.seq), move(r.name)), r.sample));
+        aln_loc.reads().pop_back();
+    }
+
+    if (!pe_reads.empty()) {
+        // Compute the paired-end reads alignments.
+        SuffixTree stree (aln_loc.ref());
+        stree.build_tree();
+        GappedAln aligner (pe_reads.front().seq.length(), aln_loc.ref().length(), true);
+        AlignRes aln_res;
+        for (SRead& r : pe_reads)
+            if(add_read_to_aln(aln_loc, aln_res, move(r), &aligner, &stree))
+                ++stats_.n_aln_reads;
+        if (detailed_output)
+            for (auto& r : aln_loc.reads())
+                if (r.is_read2())
+                    details_ss_ << "pe_aln_global"
+                                << '\t' << r.name
+                                << '\t' << r.cigar
+                                << '\n';
+
+        // Merge forward & paired-end reads.
         aln_loc.merge_paired_reads();
     }
 }
@@ -1623,7 +1679,6 @@ const string help_string = string() +
         "\n"
 #ifdef DEBUG
         "Debug options:\n"
-        "  --dbg-max-loci: process the first N loci\n"
         "  --dbg-no-overlaps: disable overlapping\n"
         "  --dbg-no-haps: disable phasing\n"
         "  --dbg-gfa: output a GFA file for each locus\n"
@@ -1632,6 +1687,7 @@ const string help_string = string() +
         "  --dbg-depths: write detailed depth data in the output VCF\n"
         "  --dbg-true-alns: use true alignments (for simulated data; read IDs must\n"
         "               include 'cig1=...' and 'cig2=...' fields.\n"
+        "  --dbg-true-reference: align paired-end reads to the true reference\n"
         "\n"
 #endif
         ;
@@ -1664,6 +1720,7 @@ try {
         {"dbg-alns",     no_argument,       NULL,  2004}, {"alns", no_argument, NULL, 3004},
         {"dbg-depths",   no_argument,       NULL,  2007},
         {"dbg-hap-graphs", no_argument,     NULL,  2010},
+        {"dbg-true-reference", no_argument, NULL,  2012},
         {"dbg-true-alns", no_argument,      NULL,  2011}, {"true-alns", no_argument, NULL, 3011},
         {"dbg-no-overlaps", no_argument,    NULL,  2008},
         {"dbg-no-haps",  no_argument,       NULL,  2009},
@@ -1732,6 +1789,9 @@ try {
         //
         // Debug options
         //
+        case 2012://dbg-true-alns
+            dbg_true_reference = true;
+            break;
         case 3011:
         case 2011://dbg-true-alns
             dbg_true_alns = true;

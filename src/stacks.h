@@ -252,6 +252,8 @@ struct Read {
         {}
     Read(Read&&) = default;
     Read& operator= (Read&&) = default;
+
+    bool is_read2() const;
 };
 
 //
@@ -418,6 +420,13 @@ ostream& operator<< (ostream& os, const Counts<Nt>& cnts) {
         os << nt << ":" << cnts[nt];
     }
     return os;
+}
+
+inline
+bool Read::is_read2() const {
+    return name.length() >= 2
+            && name.back() == '2'
+            && name[name.length()-2] == '/';
 }
 
 #endif // __STACKS_H__
