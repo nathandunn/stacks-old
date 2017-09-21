@@ -149,6 +149,8 @@ public:
 
     int snpstats(const vector<LocBin *> &loci, ofstream &log_fh);
     int hapstats(const vector<LocBin *> &loci, ofstream &log_fh);
+    int snp_divergence(const vector<LocBin *> &loci, const vector<vector<PopPair **>> &div, ofstream &log_fh);
+    int hap_divergence(const vector<LocBin *> &loci, const vector<vector<HapStat *>>  &div, ofstream &log_fh);
 };
 
 //
