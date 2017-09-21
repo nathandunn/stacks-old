@@ -21,7 +21,11 @@
 void parse_command_line(int argc, char* argv[]);
 void report_options(ostream& os);
 int  run();
-void run(const vector<int>& cloc_ids, const string& header_sq_lines, size_t sample_i, ostream& os);
+void run(const vector<int>& cloc_ids,
+         const string& header_sq_lines,
+         const unordered_map<int,size_t>& cloc_lengths,
+         size_t sample_i, ostream& os
+         );
 void cigar_apply_to_locus(Locus* l, const Cigar& c);
 
 //
@@ -97,10 +101,11 @@ int run() {
     //
     stringstream header_sq_lines;
     vector<int> cloc_ids;
+    unordered_map<int,size_t> cloc_lengths;
     cloc_ids.reserve(catalog.size());
     for (auto& cloc : catalog) {
-        // Add the @SQ line. Length is mandatory; all loci declare to be 10000bp.
-        header_sq_lines << "@SQ\tSN:" << cloc.first << "\tLN:10000";
+        // Add the @SQ line.
+        header_sq_lines << "@SQ\tSN:" << cloc.first << "\tLN:" << cloc.second->len;
         if (!cloc.second->loc.empty()) {
             const PhyLoc& pos = cloc.second->loc;
             header_sq_lines << "\tpos:" << pos.chr()
@@ -109,6 +114,7 @@ int run() {
         }
         header_sq_lines << "\n";
         cloc_ids.push_back(cloc.first);
+        cloc_lengths[cloc.first] = cloc.second->len;
         delete cloc.second;
         cloc.second = NULL;
     }
@@ -130,7 +136,7 @@ int run() {
                 cout << "Processing sample '" << samples[i] << "'...\n" << flush;
 
                 stringstream ss;
-                run(cloc_ids, header_sq_lines.str(), i, ss);
+                run(cloc_ids, header_sq_lines.str(), cloc_lengths, i, ss);
                 outputs[i] = ss.str();
 
             } catch (exception& e) {
@@ -151,7 +157,12 @@ int run() {
     return 0;
 }
 
-void run(const vector<int>& cloc_ids, const string& header_sq_lines, size_t sample_i, ostream& os) {
+void run(const vector<int>& cloc_ids,
+    const string& header_sq_lines,
+    const unordered_map<int,size_t>& cloc_lengths,
+    size_t sample_i,
+    ostream& os
+) {
     ostream& cout = os;
     cout << "\nSample '" << samples.at(sample_i) << "':\n";
 
@@ -227,22 +238,31 @@ void run(const vector<int>& cloc_ids, const string& header_sq_lines, size_t samp
         if (m->tag_id == prev_sloc)
             // We have already aligned this sample locus.
             continue;
-        
-        if (m->cigar != NULL && m->cigar[0] != '\0') {
-            auto itr = sloci.find(m->tag_id);
-            if (itr == sloci.end())
-                // Loci that aren't bijective with the catalog have been removed.
-                continue;
-            Locus* l = itr->second;
-            parse_cigar(m->cigar, c);
-            cigar_apply_to_locus(l, c);
+        prev_sloc = m->tag_id;
             
+        auto itr = sloci.find(m->tag_id);
+        if (itr == sloci.end())
+            // Loci that aren't bijective with the catalog have been removed.
+            continue;
+        Locus* l = itr->second;
+
+        if (cloc_lengths.at(m->cat_id) == l->len)
+            // No alignment to do.
+            continue;        
+        if (m->cigar == NULL || m->cigar[0] == '\0') {
+            c.clear();
+            c.push_back({'M', l->len});
+        } else {
+            parse_cigar(m->cigar, c);
             // `apply_cigar_to_seq` returns a padded sequence, so insertions would be
             // a problem. However, "match" CIGARs should in principle not contain them.
             assert(cigar_is_MDI(c) && strchr(m->cigar, 'I') == NULL);
-            assert(strlen(l->con) == l->len);
         }
-        prev_sloc = m->tag_id;
+        size_t cig_len = cigar_length_ref(c);
+        if (cig_len < cloc_lengths.at(m->cat_id))
+            cigar_extend_right(c, cloc_lengths.at(m->cat_id) - cig_len);
+        cigar_apply_to_locus(l, c);
+        assert(l->len == cloc_lengths.at(m->cat_id));
     }
 
     //
@@ -426,17 +446,33 @@ void cigar_apply_to_locus(Locus* l, const Cigar& c) {
     // Align the consensus & model.
     // (@Nick Sep2017: Changing `con` & `model` is for consistency, I don't
     // think these variables are actually used later.)
+    size_t cloc_len = cigar_length_ref(c);
     string new_con = apply_cigar_to_seq(l->con, c);
     string new_model = apply_cigar_to_model_seq(l->model, c);
-    assert(new_con.length() == l->len); //TODO @Nick Sep2017: I think this fails when samples have reads of unequal lengths.
-    strncpy(l->con, new_con.c_str(), l->len);
-    strncpy(l->model, new_model.c_str(), l->len);
-    
-    // Align the reads.
-    for (char* r : l->reads) {
-        string new_r = apply_cigar_to_seq(r, c);
-        strncpy(r, new_r.c_str(), l->len);                
+    assert(new_con.length() == cloc_len);
+    assert(new_model.length() == cloc_len);
+
+    if (l->len != cloc_len) {
+        assert(cloc_len > l->len); // As matches files don't contain I operations.
+        delete l->con;
+        delete l->model;
+        l->con = new char[cloc_len+1];
+        l->model = new char[cloc_len+1];
     }
+    strncpy(l->con, new_con.c_str(), cloc_len+1);
+    strncpy(l->model, new_model.c_str(), cloc_len+1);
+
+    // Align the reads.
+    for (char*& r : l->reads) {
+        string new_r = apply_cigar_to_seq(r, c);
+        assert(new_r.length() == cloc_len);
+        if (l->len != cloc_len) {
+            delete r;
+            r = new char[cloc_len+1];
+        }
+        strncpy(r, new_r.c_str(), cloc_len+1);
+    }
+    l->len = cloc_len;
 }
 
 void parse_command_line(int argc, char* argv[]) {
