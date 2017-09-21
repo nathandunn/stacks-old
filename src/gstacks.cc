@@ -32,6 +32,7 @@ unique_ptr<const Model> model;
 size_t km_length    = 31;
 size_t min_km_count = 2;
 
+bool   dbg_no_overlaps     = false;
 bool   dbg_no_haplotypes   = false;
 bool   dbg_write_gfa       = false;
 bool   dbg_write_alns      = false;
@@ -463,12 +464,15 @@ LocusProcessor::process(CLocReadSet&& loc)
             }
             assert(i == fw_consensus.length());
             int overlap;
-            if ( (overlap = this->find_locus_overlap(stree, fw_consensus)) > 0) {
+            if (dbg_no_overlaps)
+                overlap = 0;
+            else
+                overlap = this->find_locus_overlap(stree, fw_consensus);
+            if (overlap > 0) {
                 this->loc_.overlapped = true;
                 this->stats_.n_se_pe_loc_overlaps++;
                 this->stats_.mean_se_pe_loc_overlap += overlap;
             }
-            assert(overlap >= 0);
 
             if (detailed_output)
                 details_ss_ << "pe_ctg"
@@ -1620,6 +1624,7 @@ const string help_string = string() +
 #ifdef DEBUG
         "Debug options:\n"
         "  --dbg-max-loci: process the first N loci\n"
+        "  --dbg-no-overlaps: disable overlapping\n"
         "  --dbg-no-haps: disable phasing\n"
         "  --dbg-gfa: output a GFA file for each locus\n"
         "  --dbg-alns: output a file showing the contigs & alignments\n"
@@ -1660,6 +1665,7 @@ try {
         {"dbg-depths",   no_argument,       NULL,  2007},
         {"dbg-hap-graphs", no_argument,     NULL,  2010},
         {"dbg-true-alns", no_argument,      NULL,  2011}, {"true-alns", no_argument, NULL, 3011},
+        {"dbg-no-overlaps", no_argument,    NULL,  2008},
         {"dbg-no-haps",  no_argument,       NULL,  2009},
         {0, 0, 0, 0}
     };
@@ -1742,6 +1748,9 @@ try {
             break;
         case 2007://dbg-depths
             dbg_write_nt_depths = true;
+            break;
+        case 2008://dbg-no-haps
+            dbg_no_overlaps = true;
             break;
         case 2009://dbg-no-haps
             dbg_no_haplotypes = true;
