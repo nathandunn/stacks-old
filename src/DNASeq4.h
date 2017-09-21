@@ -81,6 +81,7 @@ public:
     DNASeq4(const char* s, size_t len);
     DNASeq4(const uchar* arr, size_t len) : l_(len), v_(arr, arr+len/2+len%2) {} // `len` is the length of the sequence (not of the array)
     DNASeq4(const string& s) : DNASeq4(s.c_str(), s.size()) {}
+    DNASeq4(size_t len) : l_(len), v_(l_/2+l_%2, DiNuc(Nt4::n, Nt4::n)) {if(l_%2) v_.back().second(Nt4::$);}
     DNASeq4& operator= (const DNASeq4& other) {l_ = other.l_; v_ = other.v_; return *this;}
     DNASeq4& operator= (DNASeq4&& other) {l_ = other.l_; v_ = move(other.v_); other.clear(); return *this;}
 

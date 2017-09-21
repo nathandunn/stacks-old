@@ -415,7 +415,7 @@ LocusProcessor::process(CLocReadSet&& loc)
         //
         // Transfer the already aligned foward-reads.
         //
-        aln_loc.ref(DNASeq4(loc.reads().at(0).seq));
+        aln_loc.ref(DNASeq4(loc.reads().at(0).seq.length())); // Just N's.
         for (SRead& r : loc.reads())
             aln_loc.add(SAlnRead(move((Read&)r), {{'M',r.seq.length()}}, r.sample));
 
@@ -454,8 +454,17 @@ LocusProcessor::process(CLocReadSet&& loc)
             // Determine if there is overlap -- and how much -- between the SE and PE contigs.
             //   We will query the PE contig suffix tree using the SE consensus sequence.
             //
+            DNASeq4 fw_consensus (aln_loc.ref().length());
+            size_t i = 0;
+            Counts<Nt4> cnts;
+            for (CLocAlnSet::site_iterator site (aln_loc); bool(site); ++site, ++i) {
+                site.counts(cnts);
+                pair<size_t,Nt4> best_nt = cnts.sorted()[0];
+                fw_consensus.set(i, best_nt.first > 0 ? best_nt.second : Nt4::n);
+            }
+            assert(i == fw_consensus.length());
             int overlap;
-            if ( (overlap = this->find_locus_overlap(stree, aln_loc.ref())) > 0) {
+            if ( (overlap = this->find_locus_overlap(stree, fw_consensus)) > 0) {
                 this->loc_.overlapped = true;
                 this->stats_.n_se_pe_loc_overlaps++;
                 this->stats_.mean_se_pe_loc_overlap += overlap;
@@ -530,26 +539,32 @@ LocusProcessor::process(CLocReadSet&& loc)
                 << "\nEND " << loc_.id << "\n";
 
     //
-    // Call SNPs.
+    // Call SNPs. Determine the consensus sequence.
     //
     vector<SiteCounts> depths;
     vector<SiteCall> calls;
+    DNASeq4 consensus (aln_loc.ref().length());
     calls.reserve(aln_loc.ref().length());
-    for (CLocAlnSet::site_iterator site (aln_loc); bool(site); ++site) {
+    size_t i = 0;
+    for (CLocAlnSet::site_iterator site (aln_loc); bool(site); ++site, ++i) {
         depths.push_back(site.counts());
         calls.push_back(model->call(depths.back()));
-    }
 
-    // Update the consensus sequence.
-    DNASeq4 new_ref = aln_loc.ref();
-    assert(calls.size() == new_ref.length());
-    for (size_t i=0; i<calls.size(); ++i) {
-        if (calls[i].alleles().empty())
-            new_ref.set(i, Nt4::n);
-        else
-            new_ref.set(i, calls[i].most_frequent_allele());
+        if (!calls.back().alleles().empty()) {
+            consensus.set(i, calls.back().most_frequent_allele());
+        } else {
+            // The model returned a null call.
+            // (For the high/low Maruki" models this actually only happens when
+            // there is no coverage; for the Hohenlohe model it may also happen
+            // when there isn't a single significant call.)
+            pair<size_t,Nt2> best_nt = depths.back().tot.sorted()[0];
+            if (best_nt.first > 0)
+                consensus.set(i, Nt4(best_nt.second));
+            else
+                consensus.set(i, Nt4::n);
+        }
     }
-    aln_loc.ref(move(new_ref));
+    aln_loc.ref(move(consensus));
 
     // Call haplotypes.
     vector<map<size_t,PhasedHet>> phase_data;
