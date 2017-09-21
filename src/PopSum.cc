@@ -891,6 +891,21 @@ LocDivergence::snp_divergence(const vector<LocBin *> &loci)
                 
                 for (uint pos = 0; pos < cloc_len; pos++) {
                     pp[pos] = this->Fst(loci[k]->cloc, loci[k]->s, pop_1, pop_2, pos);
+
+                    //
+                    // Locus is fixed in both populations, or was only found in one population.
+                    //
+                    if (pp[pos]->pi == 0) {
+                        delete pp[pos];
+                        pp[pos] = NULL;
+                        continue;
+                    }
+                    
+                    pp[pos]->loc_id = loci[k]->cloc->id;
+                    pp[pos]->bp     = loci[k]->cloc->sort_bp(pos);
+                    pp[pos]->col    = pos;
+                    pp[pos]->pop_1  = pop_1;
+                    pp[pos]->pop_2  = pop_2;
             
                     //
                     // Apply user-selected correction to the Fst values.
@@ -1305,19 +1320,25 @@ LocDivergence::haplotype_divergence_pairwise(const vector<LocBin *> &loci)
                 s   = loci[k]->s->all_pops();
                 d   = (const Datum **) loci[k]->d;
 
-                if (loc->snps.size() == 0)
+                if (loc->snps.size() == 0) {
+                    haps.push_back(NULL);
                     continue;
+                }
 
                 //
                 // If this locus only appears in one population or there is only a single haplotype,
                 // do not calculate haplotype F stats.
                 //
-                if (fixed_locus(d, subpop_ids))
+                if (fixed_locus(d, subpop_ids)) {
+                    haps.push_back(NULL);
                     continue;
+                }
 
                 h = this->haplotype_amova(d, s, subpop_ids);
 
                 if (h != NULL) {
+                    h->pop_1   = pop_1;
+                    h->pop_2   = pop_2;
                     h->stat[4] = haplotype_d_est(d, s, subpop_ids);
 
                     h->loc_id = loc->id;
