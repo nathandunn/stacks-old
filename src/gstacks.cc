@@ -1620,12 +1620,12 @@ const string help_string = string() +
 #ifdef DEBUG
         "Debug options:\n"
         "  --dbg-max-loci: process the first N loci\n"
-        "  --no-haps: disable phasing\n"
-        "  --gfa: output a GFA file for each locus\n"
-        "  --alns: output a file showing the contigs & alignments\n"
+        "  --dbg-no-haps: disable phasing\n"
+        "  --dbg-gfa: output a GFA file for each locus\n"
+        "  --dbg-alns: output a file showing the contigs & alignments\n"
         "  --hap-graphs: output a dot graph file showing phasing information\n"
-        "  --depths: write detailed depth data in the output VCF\n"
-        "  --true-alns: use true alignments (for simulated data; read IDs must\n"
+        "  --dbg-depths: write detailed depth data in the output VCF\n"
+        "  --dbg-true-alns: use true alignments (for simulated data; read IDs must\n"
         "               include 'cig1=...' and 'cig2=...' fields.\n"
         "\n"
 #endif
@@ -1652,7 +1652,6 @@ try {
         {"var-alpha",    required_argument, NULL,  1008},
         {"kmer-length",  required_argument, NULL,  1001},
         {"min-kmer-cov", required_argument, NULL,  1002},
-        {"no-haps",      no_argument,       NULL,  1009},
         {"ignore-pe-reads", no_argument,    NULL,  1012},
         {"details",      no_argument,       NULL,  1013},
         //debug options
@@ -1661,6 +1660,7 @@ try {
         {"dbg-depths",   no_argument,       NULL,  2007},
         {"dbg-hap-graphs", no_argument,     NULL,  2010},
         {"dbg-true-alns", no_argument,      NULL,  2011}, {"true-alns", no_argument, NULL, 3011},
+        {"dbg-no-haps",  no_argument,       NULL,  2009},
         {0, 0, 0, 0}
     };
 
@@ -1719,9 +1719,6 @@ try {
         case 1002://min-cov
             min_km_count = atoi(optarg);
             break;
-            case 1009://no-haps
-            dbg_no_haplotypes = true;
-            break;
         case 1013://details
             detailed_output = true;
             break;
@@ -1745,6 +1742,9 @@ try {
             break;
         case 2007://dbg-depths
             dbg_write_nt_depths = true;
+            break;
+        case 2009://dbg-no-haps
+            dbg_no_haplotypes = true;
             break;
         case '?':
             bad_args();
