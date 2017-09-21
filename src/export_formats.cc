@@ -254,6 +254,352 @@ HapstatsExport::write_batch(const vector<LocBin *> &loci)
     return 0;
 }
 
+SnpDivergenceExport::SnpDivergenceExport() : Export(ExportType::snpdivergence)
+{
+    return;
+}
+
+int
+SnpDivergenceExport::open(const MetaPopInfo *mpopi)
+{
+    this->_mpopi = mpopi;
+    
+    //
+    // Open an SNP Divergence output file for each pair of populations.
+    //
+    string    path;
+    ofstream *fh;
+
+    for (uint pop_1 = 0; pop_1 < this->_mpopi->pops().size(); pop_1++) {
+        const Pop& pop_1p = this->_mpopi->pops()[pop_1];
+        
+        for (uint pop_2 = pop_1 + 1; pop_2 < this->_mpopi->pops().size(); pop_2++) {
+            const Pop& pop_2p = this->_mpopi->pops()[pop_2];
+
+            path = out_path + out_prefix + ".fst_" + pop_1p.name + "-" + pop_2p.name + ".tsv";
+            fh = new ofstream(path.c_str(), ofstream::out);
+            if (fh->fail()) {
+                cerr << "Error opening Fst output file '" << path << "'\n";
+                exit(1);
+            }
+            fh->precision(fieldw);
+            fh->setf(std::ios::fixed);
+
+            this->_fhs.push_back(fh);
+        }
+    }
+
+    return 0;
+}
+
+int
+SnpDivergenceExport::write_header()
+{
+    //
+    // Write a header into each SNP Divergence output file (one for each pair of populations).
+    //
+    ofstream *fh;
+
+    uint i = 0;
+    for (uint pop_1 = 0; pop_1 < this->_mpopi->pops().size(); pop_1++) {
+        const Pop& pop_1p = this->_mpopi->pops()[pop_1];
+        
+        for (uint pop_2 = pop_1 + 1; pop_2 < this->_mpopi->pops().size(); pop_2++) {
+            const Pop& pop_2p = this->_mpopi->pops()[pop_2];
+
+            fh = this->_fhs[i];
+
+            *fh << "# Locus ID" << "\t"
+                << "Pop 1 ID"   << "\t"
+                << "Pop 2 ID"   << "\t"
+                << "Chr"        << "\t"
+                << "BP"         << "\t"
+                << "Column"     << "\t"
+                << "Overall Pi" << "\t"
+                << "AMOVA Fst"  << "\t"
+                << "Fisher's P" << "\t"
+                << "Odds Ratio" << "\t"
+                << "CI Low"     << "\t"
+                << "CI High"    << "\t"
+                << "LOD"        << "\t"
+                << "Corrected AMOVA Fst"        << "\t"
+                << "Smoothed AMOVA Fst"         << "\t"
+                << "Smoothed AMOVA Fst P-value" << "\t"
+                << "Window SNP Count";
+
+            //
+            // If requested, log Fst component calculations to a file.
+            //
+            if (log_fst_comp) {
+                *fh << "\t"
+                    << "n_1" << "\t"
+                    << "n_2" << "\t"
+                    << "tot_alleles" << "\t"
+                    << "p_1" << "\t"
+                    << "q_1" << "\t"
+                    << "p_2" << "\t"
+                    << "q_2" << "\t"
+                    << "pi_1" << "\t"
+                    << "pi_2" << "\t"
+                    << "pi_all" << "\t"
+                    << "bcoeff_1" << "\t"
+                    << "bcoeff_2" << "\t"
+                    << "binomial_fst" << "\t"
+                    << "p_1_freq" << "\t"
+                    << "q_1_freq" << "\t"
+                    << "p_2_freq" << "\t"
+                    << "q_2_freq" << "\t"
+                    << "p_avg_cor" << "\t"
+                    << "n_avg_cor" << "\t"
+                    << "amova_fst" << "\n";
+            } else {
+                *fh << "\n";
+            }
+
+            i++;
+        }
+    }
+    return 0;
+}
+
+int
+SnpDivergenceExport::write_batch_pairwise(const vector<LocBin *> &loci, const vector<vector<PopPair **>> &div)
+{
+    ofstream *fh;
+    PopPair **pp;
+    LocBin   *loc;
+    size_t    cloc_len;
+
+    for (uint i = 0; i < div.size(); i++) {
+
+        fh = this->_fhs[i];
+        assert(div[i].size() == loci.size());
+
+        for (uint j = 0; j < div[i].size(); j++) {
+
+            loc      = loci[j];
+            cloc_len = strlen(loc->cloc->con);
+            pp       = div[i][j];
+            
+            for (uint pos = 0; pos < cloc_len; pos++) {
+
+                if (pp[pos] == NULL)
+                        continue;
+
+                *fh << pp[pos]->loc_id      << "\t"
+                    << this->_mpopi->pops()[pp[pos]->pop_1].name << "\t"
+                    << this->_mpopi->pops()[pp[pos]->pop_2].name << "\t"
+                    << loc->cloc->loc.chr() << "\t"
+                    << pp[pos]->bp +1       << "\t"
+                    << pp[pos]->col         << "\t"
+                    << pp[pos]->pi          << "\t"
+                    << pp[pos]->amova_fst   << "\t"
+                    << std::setprecision(9)      << pp[pos]->fet_p  << "\t"
+                    << std::setprecision(fieldw) << pp[pos]->fet_or << "\t"
+                    << pp[pos]->ci_low      << "\t"
+                    << pp[pos]->ci_high     << "\t"
+                    << pp[pos]->lod         << "\t"
+                    << pp[pos]->stat[1]     << "\t"
+                    << pp[pos]->smoothed[1] << "\t"
+                    << pp[pos]->bs[1]       << "\t"
+                    << pp[pos]->snp_cnt;
+
+                if (log_fst_comp) {
+                    *fh << "\t"
+                        << pp[pos]->comp[0]   << "\t"
+                        << pp[pos]->comp[1]   << "\t"
+                        << pp[pos]->comp[2]   << "\t"
+                        << pp[pos]->comp[3]   << "\t"
+                        << pp[pos]->comp[4]   << "\t"
+                        << pp[pos]->comp[5]   << "\t"
+                        << pp[pos]->comp[6]   << "\t"
+                        << pp[pos]->comp[7]   << "\t"
+                        << pp[pos]->comp[8]   << "\t"
+                        << pp[pos]->comp[9]   << "\t"
+                        << pp[pos]->comp[10]  << "\t"
+                        << pp[pos]->comp[11]  << "\t"
+                        << pp[pos]->fst       << "\t"
+                        << pp[pos]->comp[12]  << "\t"
+                        << pp[pos]->comp[13]  << "\t"
+                        << pp[pos]->comp[14]  << "\t"
+                        << pp[pos]->comp[15]  << "\t"
+                        << pp[pos]->comp[16]  << "\t"
+                        << pp[pos]->comp[17]  << "\t"
+                        << pp[pos]->amova_fst << "\n";
+                } else {
+                    *fh << "\n";
+                }
+            }
+        }
+    }
+    return 0;
+}
+
+HapDivergenceExport::HapDivergenceExport() : Export(ExportType::hapdivergence)
+{
+    return;
+}
+
+int
+HapDivergenceExport::open(const MetaPopInfo *mpopi)
+{
+    this->_mpopi = mpopi;
+
+    //
+    // Open an Haplotype Divergence output file for each pair of populations.
+    //
+    string    path;
+    ofstream *fh;
+
+    for (uint pop_1 = 0; pop_1 < this->_mpopi->pops().size(); pop_1++) {
+        const Pop& pop_1p = this->_mpopi->pops()[pop_1];
+        
+        for (uint pop_2 = pop_1 + 1; pop_2 < this->_mpopi->pops().size(); pop_2++) {
+            const Pop& pop_2p = this->_mpopi->pops()[pop_2];
+
+            path = out_path + out_prefix + ".phistats_" + pop_1p.name + "-" + pop_2p.name + ".tsv";
+            fh = new ofstream(path.c_str(), ofstream::out);
+            if (fh->fail()) {
+                cerr << "Error opening Fst output file '" << path << "'\n";
+                exit(1);
+            }
+            fh->precision(fieldw);
+            fh->setf(std::ios::fixed);
+
+            this->_fhs.push_back(fh);
+        }
+    }
+
+    return 0;
+}
+
+int
+HapDivergenceExport::write_header()
+{
+    //
+    // Write a header into each SNP Divergence output file (one for each pair of populations).
+    //
+    ofstream *fh;
+
+    uint i = 0;
+    for (uint pop_1 = 0; pop_1 < this->_mpopi->pops().size(); pop_1++) {
+        const Pop& pop_1p = this->_mpopi->pops()[pop_1];
+        
+        for (uint pop_2 = pop_1 + 1; pop_2 < this->_mpopi->pops().size(); pop_2++) {
+            const Pop& pop_2p = this->_mpopi->pops()[pop_2];
+
+            vector<int> subpop_ids;
+            subpop_ids.push_back(pop_1);
+            subpop_ids.push_back(pop_2);
+            fh = this->_fhs[i];
+
+            //
+            // Write the population members.
+            //
+            for (int k : subpop_ids) {
+                const Pop& pop_k = this->_mpopi->pops()[k]; // This is [pop_i], then [pop_j].
+                *fh << "# Population " << pop_k.name << "\t";
+                for (size_t n = pop_k.first_sample; n <= pop_k.last_sample; n++) {
+                    *fh << this->_mpopi->samples()[n].name;
+                    if (n < pop_k.last_sample)
+                        *fh << ",";
+                }
+                *fh << "\n";
+            }
+
+            *fh << "# Locus ID" << "\t"
+                << "Pop 1 ID"   << "\t"
+                << "Pop 2 ID"   << "\t"
+                << "Chr"        << "\t"
+                << "BP"         << "\t";
+            if (log_fst_comp)
+                *fh << "SSD(WP)"     << "\t"
+                    << "SSD(AP/WG)"  << "\t"
+                    << "SSD(AG)"     << "\t"
+                    << "SSD(TOTAL)"  << "\t"
+                    << "MSD(WP)"     << "\t"
+                    << "MSD(AP/WG)"  << "\t"
+                    << "MSD(AG)"     << "\t"
+                    << "MSD(TOTAL)"  << "\t"
+                    << "n"           << "\t"
+                    << "n'"          << "\t"
+                    << "n''"         << "\t"
+                    << "Sigma2_a"    << "\t"
+                    << "Sigma2_b"    << "\t"
+                    << "Sigma2_c"    << "\t"
+                    << "Sigma_Total" << "\t";
+            *fh << "phi_st"          << "\t"
+                << "Smoothed Phi_st" << "\t"
+                << "Smoothed Phi_st P-value" << "\t"
+                << "Fst'"            << "\t"
+                << "Smoothed Fst'"   << "\t"
+                << "Smoothed Fst' P-value"   << "\t"
+                << "D_est"          << "\t"
+                << "Smoothed D_est" << "\t"
+                << "Smoothed D_est P-value" << "\n";
+
+            i++;
+        }
+    }
+
+    return 0;
+}
+
+int
+HapDivergenceExport::write_batch_pairwise(const vector<LocBin *> &loci, const vector<vector<HapStat *>> &div)
+{
+    ofstream *fh;
+    HapStat  *h;
+    LocBin   *loc;
+    
+    for (uint i = 0; i < div.size(); i++) {
+
+        fh = this->_fhs[i];
+
+        assert(div[i].size() == loci.size());
+
+        for (uint j = 0; j < div[i].size(); j++) {
+            loc = loci[j];
+            h   = div[i][j];
+
+            if (h == NULL) continue;
+
+            *fh << h->loc_id    << "\t"
+                << this->_mpopi->pops()[h->pop_1].name << "\t"
+                << this->_mpopi->pops()[h->pop_2].name << "\t"
+                << loc->cloc->loc.chr() << "\t"
+                << h->bp +1     << "\t";
+            if (log_fst_comp)
+                *fh << h->comp[0]  << "\t"
+                    << h->comp[1]  << "\t"
+                    << h->comp[2]  << "\t"
+                    << h->comp[3]  << "\t"
+                    << h->comp[4]  << "\t"
+                    << h->comp[5]  << "\t"
+                    << h->comp[6]  << "\t"
+                    << h->comp[7]  << "\t"
+                    << h->comp[8]  << "\t"
+                    << h->comp[9]  << "\t"
+                    << h->comp[10] << "\t"
+                    << h->comp[11] << "\t"
+                    << h->comp[12] << "\t"
+                    << h->comp[13] << "\t"
+                    << h->comp[14] << "\t";
+            *fh << h->stat[0]     << "\t"
+                << h->smoothed[0] << "\t"
+                << h->bs[0]       << "\t"
+                << h->stat[3]     << "\t"
+                << h->smoothed[3] << "\t"
+                << h->bs[3]       << "\t"
+                << h->stat[4]     << "\t"
+                << h->smoothed[4] << "\t"
+                << h->bs[4]       << "\n";
+        }
+    }
+
+    return 0;
+}
+
 MarkersExport::MarkersExport() : Export(ExportType::markers)
 {
     this->_path = out_path + out_prefix + ".markers.tsv";

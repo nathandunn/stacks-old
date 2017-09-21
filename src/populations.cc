@@ -182,6 +182,15 @@ int main (int argc, char* argv[]) {
     exp = new HapstatsExport();
     exports.push_back(exp);
 
+    SnpDivergenceExport *sdiv_exp;
+    HapDivergenceExport *hdiv_exp;
+    if (calc_fstats) {
+        sdiv_exp = new SnpDivergenceExport();
+        exports.push_back(sdiv_exp);
+        hdiv_exp = new HapDivergenceExport();
+        exports.push_back(hdiv_exp);
+    }
+    
     //
     // Setup the kernel smoothing apparatus.
     //
@@ -242,6 +251,9 @@ int main (int argc, char* argv[]) {
             ldiv.snp_divergence(bloc.loci());
             ldiv.haplotype_divergence_pairwise(bloc.loci());
             // ldiv.haplotype_divergence(bloc.loci());
+
+            sdiv_exp->write_batch_pairwise(bloc.loci(), ldiv.snp_values());
+            hdiv_exp->write_batch_pairwise(bloc.loci(), ldiv.haplotype_values());
         }
 
         //

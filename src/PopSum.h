@@ -90,6 +90,8 @@ class HapStat: public PopStat {
     // PopStat[3]: Fst'
     // PopStat[4]: D_est
 public:
+    uint    pop_1;
+    uint    pop_2;
     double *comp;
     uint    popcnt;
 
@@ -120,7 +122,9 @@ class PopPair: public PopStat {
     // PopStat[0]: corrected Fst, (by p-value or Bonferroni p-value).
     // PopStat[1]: corrected AMOVA Fst
 public:
-    int     col;
+    uint    pop_1;
+    uint    pop_2;
+    uint    col;
     double  pi;
     double  fst;
     double  fet_p;      // Fisher's Exact Test p-value.
@@ -327,8 +331,8 @@ public:
     int haplotype_divergence_pairwise(const vector<LocBin *> &loci);
     int haplotype_divergence(const vector<LocBin *> &loci) { return 0; }
     
-    vector<PopPair **>& snp_values(uint pop_id) { return this->_snps.at(pop_id); }
-    vector<HapStat *>&  haplotpye_values(uint pop_id) { return this->_haplotypes.at(pop_id); }
+    vector<vector<PopPair **>>& snp_values()       { return this->_snps; }
+    vector<vector<HapStat *>>&  haplotype_values() { return this->_haplotypes; }
 
 private:
     //

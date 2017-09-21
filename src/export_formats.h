@@ -11,7 +11,7 @@
 #include "ordered.h" // for "snp"
 #include "populations.h" // for "merget", "InputMode", "uncalled_haplotype()", "count_haplotypes_at_locus()"
 
-enum class ExportType {markers, sumstats, hapstats, structure, genepop, vcf};
+enum class ExportType {markers, sumstats, hapstats, snpdivergence, hapdivergence, structure, genepop, vcf};
 
 class Export {
  protected:
@@ -109,6 +109,56 @@ class HapstatsExport: public Export {
     int  post_processing() { return 0; }
     void close() {
         this->_fh.close();
+        return;
+    }
+};
+
+class SnpDivergenceExport: public Export {
+    //
+    // Output the SNP-level divergence statistics.
+    //
+    const MetaPopInfo *_mpopi;
+    vector<ofstream *> _fhs;
+    
+ public:
+    SnpDivergenceExport();
+    ~SnpDivergenceExport() {
+        for (uint i = 0; i < this->_fhs.size(); i++)
+            delete this->_fhs[i];
+    };
+    int  open(const MetaPopInfo *mpopi);
+    int  write_header();
+    int  write_batch(const vector<LocBin *> &) { return 0; }
+    int  write_batch_pairwise(const vector<LocBin *> &, const vector<vector<PopPair **>> &);
+    int  post_processing() { return 0; }
+    void close() {
+        for (uint i = 0; i < this->_fhs.size(); i++)
+            this->_fhs[i]->close();
+        return;
+    }
+};
+
+class HapDivergenceExport: public Export {
+    //
+    // Output the SNP-level divergence statistics.
+    //
+    const MetaPopInfo *_mpopi;
+    vector<ofstream *> _fhs;
+    
+ public:
+    HapDivergenceExport();
+    ~HapDivergenceExport() {
+        for (uint i = 0; i < this->_fhs.size(); i++)
+            delete this->_fhs[i];
+    };
+    int  open(const MetaPopInfo *mpopi);
+    int  write_header();
+    int  write_batch(const vector<LocBin *> &) { return 0; }
+    int  write_batch_pairwise(const vector<LocBin *> &, const vector<vector<HapStat *>> &);
+    int  post_processing() { return 0; }
+    void close() {
+        for (uint i = 0; i < this->_fhs.size(); i++)
+            this->_fhs[i]->close();
         return;
     }
 };
