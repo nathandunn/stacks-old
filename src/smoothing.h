@@ -106,7 +106,7 @@ KSmooth<StatT>::smooth(vector<const StatT *> &popstats)
                         for (uint j = pos_l; j < pos_u; j++) {
                             p = popstats[j];
                             if (p == NULL) continue;
-                            cerr << "    Position: " << j << "; " << p->bp +1 << "bp\n";
+                            cerr << "    Position: " << j << "; " << p->bp + 1 << "bp\n";
                         }
                     }
                     continue;

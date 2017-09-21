@@ -296,7 +296,7 @@ LocPopSum::tally_heterozygous_pos(const CSLocus *cloc, const Datum **d, LocSum *
     //
     // Calculate Pi, equivalent to expected heterozygosity (exp_het)
     //
-    ////s->nucs[pos].stat[0] = this->pi(tot_alleles, allele_p, allele_q);
+    s->nucs[pos].stat[0] = this->pi(tot_alleles, allele_p, allele_q);
 
     if (s->nucs[pos].stat[0] == 0.0)
         s->nucs[pos].fixed = true;
@@ -369,6 +369,40 @@ LocPopSum::tally_heterozygous_pos(const CSLocus *cloc, const Datum **d, LocSum *
     s->nucs[pos].stat[1] = fis;
 
     return 0;
+}
+
+double
+LocPopSum::pi(double tot_alleles, double p, double q)
+{
+    //
+    // Calculate Pi, equivalent to expected heterozygosity:
+    //  pi = 1 - Sum_i( (n_i choose 2) ) / (n choose 2)
+    //
+    double pi =
+        this->binomial_coeff(p, 2) +
+        this->binomial_coeff(q, 2);
+    pi = pi / binomial_coeff(tot_alleles, 2);
+    pi = 1 - pi;
+
+    return pi;
+}
+
+double
+LocPopSum::binomial_coeff(double n, double k)
+{
+    if (n < k) return 0.0;
+    //
+    // Compute the binomial coefficient using the method of:
+    // Y. Manolopoulos, "Binomial coefficient computation: recursion or iteration?",
+    // ACM SIGCSE Bulletin, 34(4):65-67, 2002.
+    //
+    double r = 1.0;
+    double s = (k < n - k) ? n - k + 1 : k + 1;
+
+    for (double i = n; i >= s; i--)
+        r = r * i / (n - i + 1);
+
+    return r;
 }
 
 int
