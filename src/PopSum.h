@@ -292,6 +292,9 @@ private:
     int      tally_ref_alleles(int, uint16_t &, char &, char &, uint16_t &, uint16_t &);
     int      tally_observed_haplotypes(const vector<char *> &, int);
     LocStat *haplotype_diversity(int, int, const Datum **);
+
+    double   pi(double, double, double);
+    double   binomial_coeff(double, double);
 };
 
 struct LocBin {

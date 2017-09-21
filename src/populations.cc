@@ -234,10 +234,17 @@ int main (int argc, char* argv[]) {
             cerr << "  Analyzed " << loc_cnt << " loci from " << bloc.loci().front()->cloc->loc.chr() << ".\n";
 
         //
+        // Calculate divergence statistics (Fst).
+        //
+        if (calc_fstats) {
+            ;
+        }
+
+        //
         // Smooth population statistics across individual populations, and between populations.
         //
         if (kernel_smoothed && loci_ordered) {
-            cerr << "    Generating kernel-smoothed population statistics...\n";
+            cerr << "    Generating kernel-smoothed population statistics...";
             smooth->snpstats(bloc.loci(), log_fh);
             smooth->hapstats(bloc.loci(), log_fh);
 
@@ -249,6 +256,7 @@ int main (int argc, char* argv[]) {
             //     calculate_haplotype_divergence_pairwise(catalog, pmap, psum);
             //     write_fst_stats(catalog, pmap, psum, log_fh);
             // }
+            cerr << "done.\n";
         } else if (kernel_smoothed) {
             cerr << "    Notice: Smoothing was requested (-k), but will not be performed as the loci are not ordered.\n";
         }
@@ -625,7 +633,16 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
     // Record the post-filtering distribution of catalog loci for this batch.
     //
     this->_dists.accumulate(this->_loci);
-    
+
+    //
+    // Sort the catalog loci, if possible.
+    //
+    if (loci_ordered)
+        sort(this->_loci.begin(), this->_loci.end(),
+             [] (const LocBin *a, const LocBin *b) -> bool {
+                 return a->cloc->loc.bp < b->cloc->loc.bp;
+             });
+
     return loc_cnt;
 }
 
@@ -5613,9 +5630,6 @@ LocusSmoothing::snpstats(const vector<LocBin *> &loci, ofstream &log_fh)
 
         vector<const SumStat *> sites;
 
-        for (size_t j = 0; j < loci.size(); j++)
-            sites.push_back(loci[j]->s->per_pop(i)->nucs);
-
         this->_ord_ss->order(sites, loci, i);
         this->_ks_ss->smooth(sites);
     }
@@ -5630,9 +5644,6 @@ LocusSmoothing::hapstats(const vector<LocBin *> &loci, ofstream &log_fh)
     
     for (uint i = 0; i < this->_mpopi->pops().size(); i++) {
         vector<const LocStat *> sites;
-
-        for (size_t j = 0; j < loci.size(); j++)
-            sites.push_back(loci[j]->s->hapstats_per_pop(i));
 
         this->_ord_ls->order(sites, locstats_key, loci);
         this->_ks_ls->smooth(sites);
