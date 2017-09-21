@@ -237,7 +237,11 @@ int main (int argc, char* argv[]) {
         // Calculate divergence statistics (Fst).
         //
         if (calc_fstats) {
-            ;
+            LocDivergence ldiv(&mpopi);
+
+            ldiv.snp_divergence(bloc.loci());
+            ldiv.haplotype_divergence_pairwise(bloc.loci());
+            // ldiv.haplotype_divergence(bloc.loci());
         }
 
         //
@@ -248,14 +252,10 @@ int main (int argc, char* argv[]) {
             smooth->snpstats(bloc.loci(), log_fh);
             smooth->hapstats(bloc.loci(), log_fh);
 
-            //
-            // Calculate and write Fst.
-            //
-            // if (calc_fstats) {
-            //     calculate_haplotype_divergence(catalog, pmap, psum);
-            //     calculate_haplotype_divergence_pairwise(catalog, pmap, psum);
-            //     write_fst_stats(catalog, pmap, psum, log_fh);
-            // }
+            if (calc_fstats) {
+                // smooth->snp_divergence(ldiv);
+                // smooth->haplotype_divergence(ldiv);
+            }
             cerr << "done.\n";
         } else if (kernel_smoothed) {
             cerr << "    Notice: Smoothing was requested (-k), but will not be performed as the loci are not ordered.\n";
@@ -3073,14 +3073,14 @@ calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pm
         #pragma omp parallel
         {
             const CSLocus  *loc;
-            LocSum  **s;
+            //LocSum  **s;
             Datum   **d;
-            HapStat  *h;
+            HapStat  *h = NULL;
 
             #pragma omp for schedule(dynamic, 1) reduction(+:cnt)
             for (uint pos = 0; pos < it->second.size(); pos++) {
                 loc = it->second[pos];
-                s   = psum->locus(loc->id);
+                //s   = psum->locus(loc->id);
                 d   = pmap->locus(loc->id);
 
                 if (loc->snps.size() == 0)
@@ -3096,10 +3096,10 @@ calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pm
                 cnt++;
                 // cerr << "Processing locus " << loc->id << "\n";
 
-                h = haplotype_amova(d, s, pop_ids);
+                // h = haplotype_amova(d, s, pop_ids);
 
                 if (h != NULL) {
-                    h->stat[4] = haplotype_d_est(d, s, pop_ids);
+                    //h->stat[4] = haplotype_d_est(d, s, pop_ids);
 
                     h->loc_id = loc->id;
                     h->bp     = loc->sort_bp();
@@ -3325,14 +3325,14 @@ calculate_haplotype_divergence_pairwise(map<int, CSLocus *> &catalog, PopMap<CSL
                 #pragma omp parallel
                 {
                     const CSLocus  *loc;
-                    LocSum  **s;
+                    // LocSum  **s;
                     Datum   **d;
-                    HapStat  *h;
+                    HapStat  *h = NULL;
 
                     #pragma omp for schedule(dynamic, 1) reduction(+:cnt)
                     for (uint pos = 0; pos < it->second.size(); pos++) {
                         loc = it->second[pos];
-                        s   = psum->locus(loc->id);
+                        //s   = psum->locus(loc->id);
                         d   = pmap->locus(loc->id);
 
                         if (loc->snps.size() == 0)
@@ -3348,10 +3348,10 @@ calculate_haplotype_divergence_pairwise(map<int, CSLocus *> &catalog, PopMap<CSL
                         cnt++;
                         // cerr << "Processing locus " << loc->id << "\n";
 
-                        h = haplotype_amova(d, s, subpop_ids);
+                        //h = haplotype_amova(d, s, subpop_ids);
 
                         if (h != NULL) {
-                            h->stat[4] = haplotype_d_est(d, s, subpop_ids);
+                            //h->stat[4] = haplotype_d_est(d, s, subpop_ids);
 
                             h->loc_id = loc->id;
                             h->bp     = loc->sort_bp();
@@ -3651,556 +3651,6 @@ haplotype_diversity(int start, int end, Datum **d)
     delete [] hdists;
 
     return lstat;
-}
-
-HapStat *
-haplotype_amova(Datum **d, LocSum **s, vector<int> &pop_ids)
-{
-    map<string, int>          loc_hap_index;
-    vector<string>            loc_haplotypes;
-    map<int, vector<string> > pop_haplotypes;
-    map<int, vector<int> >    grp_members;
-    vector<int>               grps;
-
-    map<string, int>::iterator hit, hit_2;
-
-    HapStat  *h;
-
-    //
-    // Tabulate the occurences of haplotypes at this locus.
-    //
-    for (int pop_id : pop_ids) {
-        const Pop& pop = mpopi.pops()[pop_id];
-        for (size_t i = pop.first_sample; i <= pop.last_sample; i++) {
-            if (d[i] == NULL) continue;
-
-            if (d[i]->obshap.size() > 2) {
-                continue;
-
-            } else if (d[i]->obshap.size() == 1) {
-                if(!uncalled_haplotype(d[i]->obshap[0])) {
-                    loc_hap_index[d[i]->obshap[0]]++;
-                    loc_haplotypes.push_back(d[i]->obshap[0]);
-                    loc_haplotypes.push_back(d[i]->obshap[0]);
-                    pop_haplotypes[pop_id].push_back(d[i]->obshap[0]);
-                    pop_haplotypes[pop_id].push_back(d[i]->obshap[0]);
-                }
-            } else {
-                for (uint j = 0; j < d[i]->obshap.size(); j++) {
-                    if(!uncalled_haplotype(d[i]->obshap[0])) {
-                        loc_hap_index[d[i]->obshap[j]]++;
-                        loc_haplotypes.push_back(d[i]->obshap[j]);
-                        pop_haplotypes[pop_id].push_back(d[i]->obshap[j]);
-                    }
-                }
-            }
-        }
-    }
-
-    //
-    // What is the total number of populations that had valid haplotypes.
-    //
-    double valid_pop_cnt = 0.0;
-    for (int pop_id : pop_ids) {
-        if (pop_haplotypes[pop_id].size() > 0)
-            valid_pop_cnt++;
-    }
-
-    //
-    // If we filtered a population out at this locus make sure that we still have at least one
-    // representative present in each group.
-    //
-    set<int> uniq_grps;
-    for (size_t pop_id=0; pop_id<mpopi.pops().size(); ++pop_id) {
-        const Pop& pop = mpopi.pops()[pop_id];
-        if (pop_haplotypes.count(pop_id) > 0) {
-            uniq_grps.insert(pop.group);
-            grp_members[pop.group].push_back(pop_id);
-        }
-    }
-    set<int>::iterator uit;
-    for (uit = uniq_grps.begin(); uit != uniq_grps.end(); uit++)
-        grps.push_back(*uit);
-
-    if (grps.size() == 0)
-        return NULL;
-
-    // cerr << "Groups: ";
-    // for (uint i = 0; i < grps.size(); i++)
-    //     cerr << grps[i] << ", ";
-    // cerr << "\n";
-    // for (git = grp_members.begin(); git != grp_members.end(); git++) {
-    //     cerr << "Group " << git->first << ": ";
-    //     for (uint i = 0; i < git->second.size(); i++)
-    //  cerr << git->second[i] << ", ";
-    //     cerr << "\n";
-    // }
-
-    //
-    // Determine an ordering for the haplotypes.
-    //
-    uint m = 0;
-    for (hit = loc_hap_index.begin(); hit != loc_hap_index.end(); hit++) {
-        loc_hap_index[hit->first] = m;
-        m++;
-    }
-
-    //
-    // Initialize a two-dimensional array to hold distances between haplotyes.
-    //
-    double **hdists     = new double *[loc_hap_index.size()];
-    double **hdists_max = new double *[loc_hap_index.size()];
-    for (uint k = 0; k < loc_hap_index.size(); k++) {
-        hdists[k] = new double[loc_hap_index.size()];
-        memset(hdists[k], 0, loc_hap_index.size());
-        hdists_max[k] = new double[loc_hap_index.size()];
-        memset(hdists_max[k], 0, loc_hap_index.size());
-    }
-
-    //
-    // Calculate the distances between haplotypes.
-    //
-    nuc_substitution_dist(loc_hap_index, hdists);
-
-    //
-    // Calculate the sum of squared distances in each subset: total, within populations, across populations
-    // and withing groups, and across groups.
-    //
-    double ssd_total = amova_ssd_total(loc_haplotypes, loc_hap_index, hdists);
-    double ssd_wp    = amova_ssd_wp(grps, grp_members, loc_hap_index, pop_haplotypes, hdists);
-    double ssd_ap_wg = amova_ssd_ap_wg(grps, grp_members, loc_hap_index, pop_haplotypes, hdists, hdists);
-    double ssd_ag    = grps.size() > 1 ? amova_ssd_ag(grps, grp_members, loc_hap_index, pop_haplotypes, hdists, ssd_total) : 0.0;
-
-    //
-    // Calculate n
-    //
-    double n        = 0.0;
-    double n_1      = 0.0;
-    double n_2      = 0.0;
-    double s_g      = 0.0;
-    double tot_cnt  = 0.0;
-    double grp_cnt  = 0.0;
-    double num_grps = grps.size();
-    double a        = 0.0;
-    double b        = 0.0;
-
-    for (uint g = 0; g < num_grps; g++) {
-        for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
-            int pop_id_1 = grp_members[grps[g]][r];
-            tot_cnt += (double) pop_haplotypes[pop_id_1].size();
-        }
-    }
-    for (uint g = 0; g < num_grps; g++) {
-        grp_cnt = 0.0;
-        for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
-            int pop_id_1 = grp_members[grps[g]][r];
-            grp_cnt += (double) pop_haplotypes[pop_id_1].size();
-        }
-
-        a = 0.0;
-        for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
-            int pop_id_1 = grp_members[grps[g]][r];
-            a += (double) (pop_haplotypes[pop_id_1].size() * pop_haplotypes[pop_id_1].size()) / grp_cnt;
-        }
-        s_g += a;
-    }
-    n = (tot_cnt - s_g) / (double) (valid_pop_cnt - num_grps);
-
-    // cerr << "  n: "<< n << "\n";
-
-    if (num_grps > 1) {
-        //
-        // Calculate n'
-        //
-        a = 0.0;
-        for (uint g = 0; g < num_grps; g++) {
-            for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
-                int pop_id_1 = grp_members[grps[g]][r];
-                a += ((double) (pop_haplotypes[pop_id_1].size() * pop_haplotypes[pop_id_1].size()) / tot_cnt);
-            }
-        }
-        n_1 = (s_g - a) / (double) (num_grps - 1.0);
-
-        // cerr << "  n': "<< n_1 << "\n";
-
-        //
-        // Calculate n''
-        //
-        for (uint g = 0; g < num_grps; g++) {
-            a = 0.0;
-            for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
-                int pop_id_1 = grp_members[grps[g]][r];
-                a += pop_haplotypes[pop_id_1].size();
-            }
-            b += ((a * a) / tot_cnt);
-        }
-        n_2 = (tot_cnt - b) / (double) (num_grps - 1);
-
-        // cerr << "  n'': "<< n_2 << "\n";
-    }
-
-    //
-    // Calculate the mean square deviations, equal to SSD divided by degrees of freedom.
-    //
-    double msd_ag    = num_grps > 1 ? ssd_ag / (double) (num_grps - 1) : 0.0;
-    double msd_ap_wg = ssd_ap_wg / ((double) (valid_pop_cnt - num_grps));
-    double msd_wp    = ssd_wp    / ((double) (loc_haplotypes.size() - valid_pop_cnt));
-    double msd_total = ssd_total / ((double) (loc_haplotypes.size() - 1));
-
-    double sigma_c     = msd_wp;
-    double sigma_b     = n > 0 ? (msd_ap_wg - sigma_c) / n : 0.0;
-    double sigma_a     = 0.0;
-
-    if (grps.size() > 1)
-        sigma_a = (msd_ag - sigma_c - (n_1 * sigma_b)) / n_2;
-
-    // Arlequin seems to sum the variance components instead of independently calculating sigma_total: MSD(total) = SSD(total)/degrees.of.freedom
-    double sigma_total = sigma_a + sigma_b + sigma_c; // msd_total;
-
-    double phi_st = 0.0;
-    double phi_ct = 0.0;
-    double phi_sc = 0.0;
-
-    if (grps.size() > 1) {
-        phi_st = sigma_total > 0.0 ? (sigma_a + sigma_b) / sigma_total : 0.0;
-        phi_ct = sigma_total > 0.0 ?  sigma_a / sigma_total : 0.0;
-        phi_sc = (sigma_a + sigma_b) > 0.0 ?  sigma_b / (sigma_b + sigma_c) : 0.0;
-    } else {
-        phi_st = sigma_total > 0.0 ? sigma_b / sigma_total : 0.0;
-    }
-
-    // cerr << "  MSD(AG): " << msd_ag  << "; MSD(AP/WG): " << msd_ap_wg << "; MSD(WP): " << msd_wp  << "; MSD(TOTAL): "  << msd_total   << "\n"
-    //      << "  Sigma_a: " << sigma_a << "; Sigma_b: "    << sigma_b   << "; Sigma_c: " << sigma_c << "; Sigma_Total: " << sigma_total << "\n"
-    //      << "  Phi_st: "  << phi_st  << "; Phi_ct: "     << phi_ct    << "; Phi_sc: "  << phi_sc  << "\n";
-
-    //
-    // Calculate Fst' = Fst / Fst_max
-    //
-    // First calculate Fst.
-    //
-    // To calculate Fst instead of Phi_st, we need to reset our distance matrix to return 1 if haplotypes are different, 0 otherwise.
-    //
-    nuc_substitution_identity(loc_hap_index, hdists);
-    ssd_wp    = amova_ssd_wp(grps, grp_members, loc_hap_index, pop_haplotypes, hdists);
-    ssd_ap_wg = amova_ssd_ap_wg(grps, grp_members, loc_hap_index, pop_haplotypes, hdists, hdists);
-    //
-    // Calculate the mean square deviations, equal to SSD divided by degrees of freedom.
-    //
-    msd_ap_wg   = ssd_ap_wg / ((double) (valid_pop_cnt - num_grps));
-    msd_wp      = ssd_wp    / ((double) (loc_haplotypes.size() - valid_pop_cnt));
-    sigma_c     = msd_wp;
-    sigma_b     = n > 0 ? (msd_ap_wg - sigma_c) / n : 0.0;
-    sigma_total = sigma_b + sigma_c;
-
-    double fst = sigma_total > 0.0 ? sigma_b / sigma_total : 0.0;
-
-    //
-    // Now calculate Fst_max.
-    //
-    // Reset our distance matrix to give maximum possible distance between haplotypes
-    // and recalculate sum of squared deviations across groups.
-    //
-    nuc_substitution_identity_max(loc_hap_index, hdists_max);
-    ssd_ap_wg = amova_ssd_ap_wg(grps, grp_members, loc_hap_index, pop_haplotypes, hdists, hdists_max);
-
-    //
-    // Recalculate the mean square deviations, given maximum divergence between populations.
-    //
-    msd_ap_wg = ssd_ap_wg / ((double) (valid_pop_cnt - num_grps));
-    sigma_b   = n > 0 ? (msd_ap_wg - sigma_c) / n : 0.0;
-
-    double fst_max = sigma_total > 0.0 ? sigma_b / sigma_total : 0.0;
-    double fst_1   = fst_max > 0.0     ? fst / fst_max         : 0.0;
-
-    //
-    // Cache the results so we can print them in order below, once the parallel code has executed.
-    //
-    h = new HapStat;
-    h->alleles = tot_cnt;
-    h->popcnt  = valid_pop_cnt;
-
-    if (log_fst_comp) {
-        h->comp = new double[15];
-        h->comp[0]  = ssd_wp;
-        h->comp[1]  = ssd_ap_wg;
-        h->comp[2]  = ssd_ag;
-        h->comp[3]  = ssd_total;
-        h->comp[4]  = msd_wp;
-        h->comp[5]  = msd_ap_wg;
-        h->comp[6]  = msd_ag;
-        h->comp[7]  = msd_total;
-        h->comp[8]  = n;
-        h->comp[9]  = n_1;
-        h->comp[10] = n_2;
-        h->comp[11] = sigma_a;
-        h->comp[12] = sigma_b;
-        h->comp[13] = sigma_c;
-        h->comp[14] = sigma_total;
-    }
-
-    h->stat[0] = phi_st;
-    h->stat[1] = phi_ct;
-    h->stat[2] = phi_sc;
-    h->stat[3] = fst_1;
-
-    for (uint k = 0; k < loc_hap_index.size(); k++) {
-        delete [] hdists[k];
-        delete [] hdists_max[k];
-    }
-    delete [] hdists;
-    delete [] hdists_max;
-
-    return h;
-}
-
-double
-amova_ssd_total(vector<string> &loc_haplotypes, map<string, int> &loc_hap_index, double **hdists)
-{
-    //
-    // Calculate sum of squared deviations for the total sample, SSD(Total)
-    //
-    double ssd_total = 0.0;
-
-    for (uint j = 0; j < loc_haplotypes.size(); j++) {
-        for (uint k = 0; k < loc_haplotypes.size(); k++) {
-            ssd_total += hdists[loc_hap_index[loc_haplotypes[j]]][loc_hap_index[loc_haplotypes[k]]];
-            // cerr << j << "\t"
-            //   << k << "\t"
-            //   << loc_haplotypes[j] << "\t"
-            //   << loc_haplotypes[k] << "\t"
-            //   << hdists[loc_hap_index[loc_haplotypes[j]]][loc_hap_index[loc_haplotypes[k]]] << "\n";
-        }
-    }
-    ssd_total = (1.0 / (double) (2*loc_haplotypes.size())) * ssd_total;
-    // cerr << "  ssd_total: "<< ssd_total << "\n";
-
-    return ssd_total;
-}
-
-double
-amova_ssd_wp(vector<int> &grps, map<int, vector<int> > &grp_members,
-             map<string, int> &loc_hap_index, map<int, vector<string> > &pop_haplotypes,
-             double **hdists)
-{
-    //
-    // Calculate the sum of squared deviations within populations, SSD(WP)
-    //
-    double ssd_wp = 0.0;
-    double ssd    = 0.0;
-    int    pop_id;
-
-    for (uint g = 0; g < grps.size(); g++) {
-        for (uint i = 0; i < grp_members[grps[g]].size(); i++) {
-            pop_id = grp_members[grps[g]][i];
-            ssd = 0.0;
-
-            for (uint j = 0; j < pop_haplotypes[pop_id].size(); j++) {
-                for (uint k = 0; k < pop_haplotypes[pop_id].size(); k++) {
-                    ssd += hdists[loc_hap_index[pop_haplotypes[pop_id][j]]][loc_hap_index[pop_haplotypes[pop_id][k]]];
-                    // cerr << pop_id << "\t"
-                    //   << j << "\t"
-                    //   << k << "\t"
-                    //   << loc_haplotypes[j] << "\t"
-                    //   << loc_haplotypes[k] << "\t"
-                    //   << hdists[loc_hap_index[loc_haplotypes[j]]][loc_hap_index[loc_haplotypes[k]]] << "\n";
-                }
-            }
-
-            if (pop_haplotypes[pop_id].size() > 0)
-                ssd_wp += (1.0 / (double) (2*pop_haplotypes[pop_id].size())) * ssd;
-        }
-    }
-    // cerr << "  ssd_wp: "<< ssd_wp << "\n";
-
-    return ssd_wp;
-}
-
-double
-amova_ssd_ap_wg(vector<int> &grps, map<int, vector<int> > &grp_members,
-                map<string, int> &loc_hap_index, map<int, vector<string> > &pop_haplotypes,
-                double **hdists_1, double **hdists_2)
-{
-    //
-    // Calculate the sum of squared deviations across populations and within groups, SSD(AP/WG)
-    //
-    double ssd_ap_wg = 0.0;
-    double ssd       = 0.0;
-    double ssd_1     = 0.0;
-    double ssd_2     = 0.0;
-    double den       = 0.0;
-    int    pop_id, pop_id_1, pop_id_2;
-
-    for (uint g = 0; g < grps.size(); g++) {
-
-        ssd_1 = 0.0;
-        for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
-            pop_id_1 = grp_members[grps[g]][r];
-
-            for (uint j = 0; j < pop_haplotypes[pop_id_1].size(); j++) {
-
-                for (uint s = 0; s < grp_members[grps[g]].size(); s++) {
-                    pop_id_2 = grp_members[grps[g]][s];
-
-                    for (uint k = 0; k < pop_haplotypes[pop_id_2].size(); k++) {
-                        if (pop_id_1 == pop_id_2)
-                            ssd_1 += hdists_1[loc_hap_index[pop_haplotypes[pop_id_1][j]]][loc_hap_index[pop_haplotypes[pop_id_2][k]]];
-                        else
-                            ssd_1 += hdists_2[loc_hap_index[pop_haplotypes[pop_id_1][j]]][loc_hap_index[pop_haplotypes[pop_id_2][k]]];
-                    }
-                }
-            }
-        }
-
-        den = 0.0;
-        for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
-            pop_id_1 = grp_members[grps[g]][r];
-            den += 2 * pop_haplotypes[pop_id_1].size();
-        }
-
-        ssd_1 = ssd_1 / den;
-
-        ssd_2 = 0.0;
-        for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
-            pop_id = grp_members[grps[g]][r];
-            ssd = 0.0;
-
-            for (uint j = 0; j < pop_haplotypes[pop_id].size(); j++) {
-                for (uint k = 0; k < pop_haplotypes[pop_id].size(); k++) {
-                    ssd += hdists_1[loc_hap_index[pop_haplotypes[pop_id][j]]][loc_hap_index[pop_haplotypes[pop_id][k]]];
-                }
-            }
-
-            if (pop_haplotypes[pop_id].size() > 0)
-                ssd_2 += (1.0 / (double) (2*pop_haplotypes[pop_id].size())) * ssd;
-        }
-
-        ssd_ap_wg += ssd_1 - ssd_2;
-    }
-    // cerr << "  ssd_ap_wg: "<< ssd_ap_wg << "\n";
-
-    return ssd_ap_wg;
-}
-
-double
-amova_ssd_ag(vector<int> &grps, map<int, vector<int> > &grp_members,
-             map<string, int> &loc_hap_index, map<int, vector<string> > &pop_haplotypes,
-             double **hdists, double ssd_total)
-{
-    //
-    // Calculate the sum of squared deviations across groups, SSD(AG)
-    //
-    int    pop_id_1, pop_id_2;
-    double ssd_ag = 0.0;
-    double ssd    = 0.0;
-    double ssd_1  = 0.0;
-    double den    = 0.0;
-
-    for (uint g = 0; g < grps.size(); g++) {
-        ssd_1 = 0.0;
-
-        for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
-            pop_id_1 = grp_members[grps[g]][r];
-
-            for (uint j = 0; j < pop_haplotypes[pop_id_1].size(); j++) {
-
-                for (uint s = 0; s < grp_members[grps[g]].size(); s++) {
-                    pop_id_2 = grp_members[grps[g]][s];
-
-                    for (uint k = 0; k < pop_haplotypes[pop_id_2].size(); k++) {
-                        ssd_1 += hdists[loc_hap_index[pop_haplotypes[pop_id_1][j]]][loc_hap_index[pop_haplotypes[pop_id_2][k]]];
-                    }
-                }
-            }
-        }
-
-        den = 0.0;
-        for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
-            pop_id_1 = grp_members[grps[g]][r];
-            den += 2 * pop_haplotypes[pop_id_1].size();
-        }
-
-        ssd += ssd_1 / den;
-    }
-
-    ssd_ag = ssd_total - ssd;
-
-    // cerr << "  ssd_ag: "<< ssd_ag << "\n";
-
-    return ssd_ag;
-}
-
-double
-haplotype_d_est(Datum **d, LocSum **s, vector<int> &pop_ids)
-{
-    //
-    // Calculate D_est, fixation index, as described by
-    //   Bird, et al., 2011, Detecting and measuring genetic differentiation
-    //     +-Equation 11
-    // and
-    //   Jost, 2008, GST and its relatives do not measure differentiation, Molecular Ecology
-    //     +- Equation 13, D_est_chao
-    //
-    map<string, double>            loc_haplotypes;
-    map<int, map<string, double> > pop_haplotypes;
-    map<int, double>               pop_totals;
-
-    map<string, double>::iterator it;
-
-    uint pop_cnt = pop_ids.size();
-
-    //
-    // Tabulate the occurences of haplotypes at this locus.
-    //
-    for (int pop_id : pop_ids) {
-        const Pop& pop = mpopi.pops()[pop_id];
-        for (size_t i = pop.first_sample; i <= pop.last_sample; i++) {
-            if (d[i] == NULL) {
-                continue;
-            } else if (d[i]->obshap.size() > 2) {
-                continue;
-            } else if (d[i]->obshap.size() == 1) {
-                loc_haplotypes[d[i]->obshap[0]]         += 2;
-                pop_haplotypes[pop_id][d[i]->obshap[0]] += 2;
-
-            } else {
-                for (uint j = 0; j < d[i]->obshap.size(); j++) {
-                    loc_haplotypes[d[i]->obshap[j]]++;
-                    pop_haplotypes[pop_id][d[i]->obshap[j]]++;
-                }
-            }
-        }
-
-        for (it = pop_haplotypes[pop_id].begin(); it != pop_haplotypes[pop_id].end(); it++)
-            pop_totals[pop_id] += it->second;
-    }
-
-    double x = 0.0;
-
-    for (it = loc_haplotypes.begin(); it != loc_haplotypes.end(); it++) {
-
-        double freq_sum_sq = 0.0;
-        double freq_sq_sum = 0.0;
-        for (int pop_id : pop_ids) {
-            freq_sum_sq += (pop_haplotypes[pop_id][it->first] / pop_totals[pop_id]);
-            freq_sq_sum += pow((pop_haplotypes[pop_id][it->first] / pop_totals[pop_id]), 2);
-        }
-        freq_sum_sq = pow(freq_sum_sq, 2);
-
-        x += (freq_sum_sq - freq_sq_sum) / (pop_cnt - 1);
-    }
-
-    double y = 0.0;
-
-    for (it = loc_haplotypes.begin(); it != loc_haplotypes.end(); it++) {
-        for (int pop_id : pop_ids) {
-            y += (pop_haplotypes[pop_id][it->first] * (pop_haplotypes[pop_id][it->first] - 1)) /
-                (pop_totals[pop_id] * (pop_totals[pop_id] - 1));
-        }
-    }
-
-    double d_est = 1.0 - (x / y);
-
-    return d_est;
 }
 
 void log_snps_per_loc_distrib(ostream& log_fh, map<int, CSLocus*>& catalog)
