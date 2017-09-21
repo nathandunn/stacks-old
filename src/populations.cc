@@ -265,8 +265,8 @@ int main (int argc, char* argv[]) {
             smooth->hapstats(bloc.loci(), log_fh);
 
             if (calc_fstats) {
-                // smooth->snp_divergence(ldiv);
-                // smooth->haplotype_divergence(ldiv);
+                smooth->snp_divergence(ldiv);
+                smooth->haplotype_divergence(ldiv);
             }
             cerr << "done.\n";
         } else if (kernel_smoothed) {
@@ -371,11 +371,6 @@ int main (int argc, char* argv[]) {
     // //
     // if (genomic_out)
     //     write_genomic(catalog, pmap);
-
-    // for (auto& cloc : catalog)
-    //     delete cloc.second;
-    // delete psum;
-    // delete pmap;
 
     //
     // Close the export files and do any required post processing.
@@ -5110,6 +5105,38 @@ LocusSmoothing::hapstats(const vector<LocBin *> &loci, ofstream &log_fh)
         this->_ord_ls->order(sites, locstats_key, loci);
         this->_ks_ls->smooth(sites);
     }
+
+    return 0;
+}
+
+int
+LocusSmoothing::snp_divergence(const vector<LocBin *> &loci, const vector<vector<PopPair **>> &div, ofstream &log_fh)
+{
+    for (uint i = 0; i < div.size(); i++) {
+        map<uint, uint> sites_key;
+
+        assert(div[i].size() == loci.size());
+
+        vector<const PopPair **> sites;
+        
+        this->_ord_pp->order(sites, sites_key, loci, div);
+        this->_ks_pp->smooth(sites);
+    }
+
+    return 0;
+}
+
+int
+LocusSmoothing::hap_divergence(const vector<LocBin *> &loci, const vector<vector<HapStat *>> &div, ofstream &log_fh)
+{
+    map<uint, uint> sites_key;
+    
+    // for (uint i = 0; i < this->_mpopi->pops().size(); i++) {
+    //     vector<const LocStat *> sites;
+
+    //     this->_ord_ls->order(sites, locstats_key, loci);
+    //     this->_ks_ls->smooth(sites);
+    // }
 
     return 0;
 }

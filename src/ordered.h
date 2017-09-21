@@ -229,72 +229,42 @@ public:
 
 template<class StatT>
 int
-OPopPair<StatT>::order(const vector<StatT *> &sites, map<uint, uint> &sites_key, const vector<LocBin *> &sorted_loci, uint pop_1, uint pop_2)
+OPopPair<StatT>::order(const vector<StatT *> &sites, map<uint, uint> &sites_key, const vector<LocBin *> &sorted_loci, const vector<StatT **> &div)
 {
     CSLocus *loc;
-    StatT   *pair;
+    StatT  **pair;
     int      len;
 
     this->incompatible_loci = 0;
     this->multiple_loci     = 0;
 
-    this->init_sites(sites, sites_key, sorted_loci, pop_1, pop_2);
+    this->init_sites(sites, sites_key, sorted_loci);
 
-    for (uint pos = 0; pos < sorted_loci.size(); pos++) {
-        loc = sorted_loci[pos]->cloc;
-        len = strlen(loc->con);
 
-        for (int k = 0; k < len; k++) {
+    for (uint i = 0; pos < div.size(); pos++) {
+        loc  = sorted_loci[i]->cloc;
+        len  = strlen(loc->con);
+        pair = div[i];
 
-            // pair = this->psum->Fst(loc->id, pop_1, pop_2, k);
+        for (uint pos = 0; pos < len; pos++) {
+            
+            //
+            // Check if this basepair position is already covered by a RAD site.
+            //
+            if (sites[sites_key[pair[pos]->bp]] != NULL) {
+                this->multiple_loci++;
+                *(this->log_fh) << "between_population\t"
+                                << "multiple_locus\t"
+                                << loc->id << "\t"
+                                << loc->loc.chr() << "\t"
+                                << pair[pos]->bp + 1   << "\t"
+                                << pos << "\t"
+                                << mpopi.pops()[pair[pos]->pop_1].name << "\t"
+                                << mpopi.pops()[pair[pos]->pop_2].name << "\n";
+                continue;
+            }
 
-            // //
-            // // Locus is incompatible, log this position.
-            // //
-            // if (pair == NULL) {
-            //     this->incompatible_loci++;
-            //     *(this->log_fh) << "between_population\t"
-            //                     << "incompatible_locus\t"
-            //                     << loc->id << "\t"
-            //                     << loc->loc.chr() << "\t"
-            //                     << loc->sort_bp(k) +1 << "\t"
-            //                     << k << "\t"
-            //                     << mpopi.pops()[pop_1].name << "\t"
-            //                     << mpopi.pops()[pop_2].name << "\n";
-            //     delete pair;
-            //     continue;
-            // }
-
-            // pair->loc_id = loc->id;
-            // pair->bp     = loc->sort_bp(k);
-            // pair->col    = k;
-
-            // //
-            // // Locus is fixed in both populations, or was only found in one population.
-            // //
-            // if (pair->pi == 0) {
-            //     delete pair;
-            //     continue;
-            // }
-
-            // //
-            // // Check if this basepair position is already covered by a RAD site.
-            // //
-            // if (sites[sites_key[pair->bp]] != NULL) {
-            //     this->multiple_loci++;
-            //     *(this->log_fh) << "between_population\t"
-            //                     << "multiple_locus\t"
-            //                     << loc->id << "\t"
-            //                     << loc->loc.chr() << "\t"
-            //                     << pair->bp +1 << "\t"
-            //                     << k << "\t"
-            //                     << mpopi.pops()[pop_1].name << "\t"
-            //                     << mpopi.pops()[pop_2].name << "\n";
-            //     delete pair;
-            //     continue;
-            // }
-
-            // sites[sites_key[pair->bp]] = pair;
+            sites[sites_key[pair[pos]->bp]] = pair[pos];
         }
     }
 
