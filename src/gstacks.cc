@@ -32,7 +32,6 @@ unique_ptr<const Model> model;
 size_t km_length    = 31;
 size_t min_km_count = 2;
 
-size_t dbg_max_loci        = SIZE_MAX;
 bool   dbg_no_haplotypes   = false;
 bool   dbg_write_gfa       = false;
 bool   dbg_write_alns      = false;
@@ -134,7 +133,7 @@ try {
     //
     ProcessingStats stats {};
     cout << "Processing all loci...\n" << flush;
-    const size_t n_loci = std::min(bam_fh.n_loci(), dbg_max_loci);
+    const size_t n_loci = bam_fh.n_loci();
     ProgressMeter progress (cout, n_loci);
 
     // For parallelization.
@@ -1657,7 +1656,6 @@ try {
         {"ignore-pe-reads", no_argument,    NULL,  1012},
         {"details",      no_argument,       NULL,  1013},
         //debug options
-        {"dbg-max-loci", required_argument, NULL,  2000},
         {"dbg-gfa",      no_argument,       NULL,  2003},
         {"dbg-alns",     no_argument,       NULL,  2004}, {"alns", no_argument, NULL, 3004},
         {"dbg-depths",   no_argument,       NULL,  2007},
@@ -1731,9 +1729,6 @@ try {
         //
         // Debug options
         //
-        case 2000://dbg-max-loci
-            dbg_max_loci = is_integer(optarg);
-            break;
         case 3011:
         case 2011://dbg-true-alns
             dbg_true_alns = true;
@@ -1812,7 +1807,4 @@ void report_options(ostream& os) {
         os << "  Kmer length: " << km_length << "\n";
     if (min_km_count != 2)
         os << "  Min coverage: " << min_km_count << "\n";
-
-    if (dbg_max_loci != SIZE_MAX)
-        os << "  DEBUG: Processing max. " << dbg_max_loci << "loci\n";
 }
