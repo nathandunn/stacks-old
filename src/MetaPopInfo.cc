@@ -322,6 +322,29 @@ void MetaPopInfo::intersect_with(const vector<string>& samples) {
     delete_samples(rm_samples);
 }
 
+void
+MetaPopInfo::status(ostream &fh)
+{
+    fh << "Working on " << this->samples().size() << " samples.\n";
+    fh << "Working on " << this->pops().size() << " population(s):\n";
+    for (vector<Pop>::const_iterator p = this->pops().begin(); p != this->pops().end(); p++) {
+        fh << "    " << p->name << ": ";
+        for (size_t s = p->first_sample; s < p->last_sample; ++s) {
+            fh << this->samples()[s].name << ", ";
+        }
+        fh << this->samples()[p->last_sample].name << "\n";
+    }
+    fh << "Working on " << this->groups().size() << " group(s) of populations:\n";
+    for (vector<Group>::const_iterator g = this->groups().begin(); g != this->groups().end(); g++) {
+        fh << "    " << g->name << ": ";
+        for (vector<size_t>::const_iterator p = g->pops.begin(); p != g->pops.end() -1; ++p) {
+            //rem. end()-1 and back() are safe, there's always at least one pop
+            fh << this->pops()[*p].name << ", ";
+        }
+        fh << this->pops()[g->pops.back()].name << "\n";
+    }
+}
+
 void MetaPopInfo::reset_sample_id_map() {
     sample_indexes_by_id_.clear();
     for (size_t i = 0; i < samples_.size(); ++i)

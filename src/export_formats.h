@@ -11,27 +11,106 @@
 #include "ordered.h" // for "snp"
 #include "populations.h" // for "merget", "InputMode", "uncalled_haplotype()", "count_haplotypes_at_locus()"
 
+enum class ExportType {markers, sumstats, hapstats, structure, genepop, vcf};
+
+class Export {
+ protected:
+    ExportType _type;
+    string     _path;
+    ofstream   _fh;
+
+ public:
+    Export(ExportType t): _type(t) {};
+    virtual ~Export() {};
+    virtual int  open(const MetaPopInfo *) = 0;
+    virtual int  write_header()    = 0;
+    virtual int  write_batch(const vector<LocBin *> &) = 0;
+    virtual int  post_processing() = 0;
+    virtual void close()           = 0;
+
+    ExportType type() { return this->_type; }
+};
+
 class GenPos {
-public:
+ public:
     uint     id;
     uint     bp;
     uint     snp_index;
     loc_type type;
 
     GenPos(int id, int snp_index, int bp) {
-    this->id        = id;
-    this->snp_index = snp_index;
-    this->bp        = bp;
-    this->type      = snp;
+        this->id        = id;
+        this->snp_index = snp_index;
+        this->bp        = bp;
+        this->type      = snp;
     }
     GenPos(int id, int snp_index, int bp, loc_type type) {
-    this->id        = id;
-    this->snp_index = snp_index;
-    this->bp        = bp;
-    this->type      = type;
+        this->id        = id;
+        this->snp_index = snp_index;
+        this->bp        = bp;
+        this->type      = type;
     }
 
     bool operator<(const GenPos& other) const {return bp < other.bp;}
+};
+
+class MarkersExport: public Export {
+    //
+    // Output a list of heterozygous loci and the associated haplotype frequencies.
+    //
+    const MetaPopInfo *_mpopi;
+    
+ public:
+    MarkersExport();
+    ~MarkersExport() {};
+    int  open(const MetaPopInfo *mpopi);
+    int  write_header();
+    int  write_batch(const vector<LocBin *> &);
+    int  post_processing() { return 0; }
+    void close() {
+        this->_fh.close();
+        return;
+    }
+};
+
+class SumstatsExport: public Export {
+    //
+    // Output the locus-level summary statistics.
+    //
+    const MetaPopInfo *_mpopi;
+    uint  _pop_cnt;
+
+ public:
+    SumstatsExport();
+    ~SumstatsExport() {};
+    int  open(const MetaPopInfo *mpopi);
+    int  write_header();
+    int  write_batch(const vector<LocBin *> &);
+    int  post_processing() { return 0; }
+    void close() {
+        this->_fh.close();
+        return;
+    }
+};
+
+class HapstatsExport: public Export {
+    //
+    // Output the locus-level haplotype statistics.
+    //
+    const MetaPopInfo *_mpopi;
+    uint  _pop_cnt;
+
+ public:
+    HapstatsExport();
+    ~HapstatsExport() {};
+    int  open(const MetaPopInfo *mpopi);
+    int  write_header();
+    int  write_batch(const vector<LocBin *> &);
+    int  post_processing() { return 0; }
+    void close() {
+        this->_fh.close();
+        return;
+    }
 };
 
 int write_sql(map<int, CSLocus *> &, PopMap<CSLocus> *);
@@ -60,6 +139,6 @@ int write_fullseq_phylip(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocu
 
 int find_datum_allele_depths(Datum *, int, char, char, int &, int &);
 int tally_observed_haplotypes(vector<char *> &, int, char &, char &);
-int tally_haplotype_freq(CSLocus *, PopMap<CSLocus> *, int &, double &, string &);
+int tally_haplotype_freq(CSLocus *, Datum **, uint, int &, double &, string &);
 
 #endif // EXPORT_FORMATS_H

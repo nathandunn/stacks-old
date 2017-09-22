@@ -329,7 +329,7 @@ sub execute_stacks {
         printf(STDERR "Calculating population-level summary statistics\n");
         print $log_fh "\npopulations\n==========\n";
 
-        $cmd = $exe_path . "populations" . ($v1 ? " --v1" : "") . " -b $batch_id -P $out_path -s " . join(" ", @_populations) . " 2>&1";
+        $cmd = $exe_path . "populations" . ($v1 ? " --v1" : "") . " -b $batch_id -P $out_path " . join(" ", @_populations) . " 2>&1";
         print STDERR  "  $cmd\n";
         print $log_fh "$cmd\n";
 

@@ -112,7 +112,7 @@ sub check_return_value {
     # terminated by a signal, and by `$? >> 8` if it exited normally.
     my ($rv, $log_fh) = @_;
     if ($rv != 0) {
-        my $msg = "\nref_map.pl: Aborted because the last command failed. (" . ($rv & 255 ? $rv : $rv >> 8) . ")\n";
+        my $msg = "\ndenovo_map.pl: Aborted because the last command failed. (" . ($rv & 255 ? $rv : $rv >> 8) . ")\n";
         print $log_fh $msg;
         print STDERR $msg;
         exit 1;
@@ -342,7 +342,7 @@ sub execute_stacks {
         printf(STDERR "Calculating population-level summary statistics\n");
         print $log_fh "\npopulations\n==========\n";
 
-        $cmd = $exe_path . "populations" . ($v1 ? " --v1" : "") . " -b $batch_id -P $out_path -s " . join(" ", @_populations) . " 2>&1";
+        $cmd = $exe_path . "populations" . ($v1 ? " --v1" : "") . " -b $batch_id -P $out_path " . join(" ", @_populations) . " 2>&1";
         print STDERR  "  $cmd\n";
         print $log_fh "$cmd\n";
 
