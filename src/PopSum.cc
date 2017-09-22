@@ -817,7 +817,7 @@ nuc_substitution_dist(map<string, int> &hap_index, double **hdists)
     return 0;
 }
 
-inline bool
+bool
 uncalled_haplotype(const char *haplotype)
 {
     for (const char *p = haplotype; *p != '\0'; p++)
@@ -826,7 +826,7 @@ uncalled_haplotype(const char *haplotype)
     return false;
 }
 
-inline double
+double
 count_haplotypes_at_locus(int start, int end, const Datum **d, map<string, double> &hap_cnts)
 {
     double n = 0.0;
