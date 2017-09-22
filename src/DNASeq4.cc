@@ -35,6 +35,20 @@ DNASeq4 DNASeq4::rev_compl() const {
     return rev;
 }
 
+void DNASeq4::resize(size_t len) {
+    if (l_ < len) {
+        while (l_ != len) {
+            push_back(Nt4::n);
+            ++l_;
+        }
+    } else if (l_ > len) {
+        l_ = len;
+        v_.resize(l_/2 + l_%2);
+        if (l_%2)
+            v_.back().second(Nt4::$);
+    }
+}
+
 void DNASeq4::append(iterator first, iterator past) {
 
     if (!(first != past))
@@ -98,21 +112,6 @@ void DNASeq4::shift_Ns_towards_the_end() {
         *v_itr = DiNuc(Nt4::n, Nt4::n);
         ++v_itr;
     }
-    if (l_%2)
-        v_.back().second(Nt4::$);
-}
-
-void DNASeq4::strip_terminal_Ns() {
-    size_t n_Ns = 0;
-    for (iterator nt=end(); nt!=begin();) {
-        --nt;
-        if (*nt != Nt4::n)
-            break;
-        ++n_Ns;
-    }
-
-    l_ -= n_Ns;
-    v_.resize(l_/2+l_%2);
     if (l_%2)
         v_.back().second(Nt4::$);
 }
