@@ -325,14 +325,14 @@ struct LocBin {
 //
 // per-Locus class for calculating divergence values sucha s Fst.
 //
-class LocDivergence {
+class LocusDivergence {
     const MetaPopInfo         *_mpopi;
     vector<vector<PopPair **>> _snps;
     vector<vector<HapStat *>>  _haplotypes;
 
 public:
-    LocDivergence(const MetaPopInfo *mpopi);
-    ~LocDivergence();
+    LocusDivergence(const MetaPopInfo *mpopi);
+    ~LocusDivergence();
     int snp_divergence(const vector<LocBin *> &loci);
     int haplotype_divergence_pairwise(const vector<LocBin *> &loci);
     int haplotype_divergence(const vector<LocBin *> &loci) { return 0; }
