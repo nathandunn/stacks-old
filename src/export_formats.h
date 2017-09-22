@@ -163,8 +163,7 @@ class HapDivergenceExport: public Export {
     }
 };
 
-int write_sql(map<int, CSLocus *> &, PopMap<CSLocus> *);
-int write_fst_stats(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, ofstream &);
+/*
 int write_generic(map<int, CSLocus *> &, PopMap<CSLocus> *, bool);
 int write_genomic(map<int, CSLocus *> &, PopMap<CSLocus> *);
 int write_fasta_loci(map<int, CSLocus *> &, PopMap<CSLocus> *);
@@ -186,6 +185,7 @@ int write_hzar(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
 int write_treemix(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
 int write_phylip(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
 int write_fullseq_phylip(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
+*/
 
 int find_datum_allele_depths(Datum *, int, char, char, int &, int &);
 int tally_observed_haplotypes(vector<char *> &, int, char &, char &);

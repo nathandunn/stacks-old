@@ -233,19 +233,13 @@ class BatchLocusProcessor {
 public:
     BatchLocusProcessor():
         _input_mode(InputMode::stacks2), _user_supplied_whitelist(false), _batch_size(0), _mpopi(NULL),
-        _vcf_parser(), _cloc_reader(), _fasta_reader(),
-        _vcf_header(NULL), _next_loc(NULL), _cloc_vcf_rec(NULL), _ext_vcf_rec(NULL), _catalog(NULL),
-        _loc_filter(), _unordered_bp(1) {}
+        _vcf_header(NULL), _next_loc(NULL), _unordered_bp(1) {}
     BatchLocusProcessor(InputMode mode, size_t batch_size, MetaPopInfo *popi):
         _input_mode(mode), _user_supplied_whitelist(false), _batch_size(batch_size), _mpopi(popi),
-        _vcf_parser(), _cloc_reader(), _fasta_reader(),
-        _vcf_header(NULL), _next_loc(NULL), _cloc_vcf_rec(NULL), _ext_vcf_rec(NULL), _catalog(NULL),
-        _loc_filter(), _unordered_bp(1) {}
+        _vcf_header(NULL), _next_loc(NULL), _unordered_bp(1) {}
     BatchLocusProcessor(InputMode mode, size_t batch_size): 
         _input_mode(mode), _user_supplied_whitelist(false), _batch_size(batch_size), _mpopi(NULL),
-        _vcf_parser(), _cloc_reader(), _fasta_reader(),
-        _vcf_header(NULL), _next_loc(NULL), _cloc_vcf_rec(NULL), _ext_vcf_rec(NULL), _catalog(NULL),
-        _loc_filter(), _unordered_bp(1) {}
+        _vcf_header(NULL), _next_loc(NULL), _unordered_bp(1) {}
     ~BatchLocusProcessor() {
         for (uint i = 0; i < this->_loci.size(); i++)
             delete this->_loci[i];
@@ -266,12 +260,9 @@ public:
     size_t         batch_size()    { return this->_batch_size; }
     size_t         batch_size(size_t bsize) { this->_batch_size = bsize; return bsize; }
     
-    const map<int, CSLocus *>& catalog()         { return *this->_catalog; }
-    const unordered_map<int, vector<VcfRecord>>& cloc_vcf_records() { return *this->_cloc_vcf_rec; }
-    const vector<VcfRecord>&   ext_vcf_records() { return *this->_ext_vcf_rec; }
-    const LocusFilter&         filter()          { return this->_loc_filter; }
-    const vector<LocBin *>&    loci()            { return this->_loci; }
-    const CatalogDists&        dists()           { return this->_dists; }
+    const LocusFilter&      filter() { return this->_loc_filter; }
+    const vector<LocBin *>& loci()   { return this->_loci; }
+    const CatalogDists&     dists()  { return this->_dists; }
 
 private:
     InputMode    _input_mode;
@@ -290,13 +281,10 @@ private:
     LocBin           *_next_loc;
     CatalogDists      _dists;
 
-    // Data stores for external VCF
-    unordered_map<int, vector<VcfRecord>> *_cloc_vcf_rec;
-    vector<VcfRecord>                     *_ext_vcf_rec;
-    map<int, CSLocus *>                   *_catalog;
-    size_t                                 _total_ext_vcf;
-    vector<size_t>                         _skipped_notsnp;
-    vector<size_t>                         _skipped_filter;
+    // Counters for external VCF
+    size_t            _total_ext_vcf;
+    vector<size_t>    _skipped_notsnp;
+    vector<size_t>    _skipped_filter;
 
     // Controls for which loci are loaded
     LocusFilter _loc_filter;
@@ -319,10 +307,9 @@ int     build_file_list();
 int     load_marker_list(string, set<int> &);
 int     load_marker_column_list(string, map<int, set<int> > &);
 int     apply_locus_constraints(map<int, CSLocus *> &, PopMap<CSLocus> *, ofstream &);
-int     prune_polymorphic_sites(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, set<int> > &, set<int> &, ofstream &);
 int     log_haplotype_cnts(map<int, CSLocus *> &, ofstream &);
 bool    order_unordered_loci(map<int, CSLocus *> &);
-int     merge_shared_cutsite_loci(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<merget, int> > &, ofstream &);
+//int     merge_shared_cutsite_loci(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<merget, int> > &, ofstream &);
 phaset  merge_and_phase_loci(PopMap<CSLocus> *, CSLocus *, CSLocus *, set<int> &, ofstream &);
 int     merge_datums(int, int, Datum **, Datum **, set<string> &, int);
 int     merge_csloci(CSLocus *, CSLocus *, set<string> &);
@@ -333,35 +320,9 @@ int     call_population_genotypes(CSLocus *, Datum **, int);
 int     translate_genotypes(map<string, string> &, map<string, map<string, string> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, map<int, string> &, set<int> &); // This function doesn't exist (March 24, 2016)
 int     correct_fst_bonferroni_win(vector<PopPair *> &);
 int     bootstrap_fst_approximate_dist(vector<double> &, vector<int>  &, double *, int *, map<int, vector<double> > &); // not used (March 23, 2016)
-int     kernel_smoothed_popstats(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, int, ofstream &);
 int     bootstrap_popstats_approximate_dist(vector<double> &, vector<double> &, vector<int>  &, double *, int *, int, map<int, vector<double> > &, map<int, vector<double> > &); // not used (March 23, 2016)
 double  bootstrap_approximate_pval(int, double, map<int, vector<double> > &);
 
-int      calculate_summary_stats(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
-int      calculate_haplotype_stats(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
-int      kernel_smoothed_hapstats(vector<CSLocus *> &, PopSum<CSLocus> *, int, double *);
-int      calculate_haplotype_divergence(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
-int      calculate_haplotype_divergence_pairwise(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
-bool     fixed_locus(Datum **, vector<int> &);
-
-int      nuc_substitution_identity(map<string, int> &, double **);
-int      nuc_substitution_identity_max(map<string, int> &, double **);
-
-HapStat *haplotype_amova(Datum **, LocSum **, vector<int> &);
-double   amova_ssd_total(vector<string> &, map<string, int> &, double **);
-double   amova_ssd_wp(vector<int> &, map<int, vector<int> > &, map<string, int> &, map<int, vector<string> > &, double **);
-double   amova_ssd_ap_wg(vector<int> &, map<int, vector<int> > &, map<string, int> &, map<int, vector<string> > &, double **, double **);
-double   amova_ssd_ag(vector<int> &, map<int, vector<int> > &, map<string, int> &, map<int, vector<string> > &, double **, double);
-
-double   haplotype_d_est(Datum **, LocSum **, vector<int> &);
-LocStat *haplotype_diversity(int, int, Datum **);
-
-void log_snps_per_loc_distrib(ostream&, map<int, CSLocus*>&);
-
-//int  tally_ref_alleles(LocSum **, int, int, char &, char &); //unused; also commented out in the .cc
-//int  load_snp_calls(string,  PopMap<CSLocus> *); //no implementation
-
-//bool compare_pop_map(pair<int, string>, pair<int, string>); //no implementation; the function is in [sql_utilities.h]
 bool hap_compare(const pair<string,int>&, const pair<string,int>&);
 
 void vcfcomp_simplify_pmap (map<int, CSLocus*>& catalog, PopMap<CSLocus>* pmap);
