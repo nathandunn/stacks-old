@@ -675,74 +675,7 @@ MarkersExport::write_batch(const vector<LocBin *> &loci)
     return 0;
 }
 
-int
-write_sql(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
-{
-    string file = out_path + out_prefix + ".markers.tsv";
-
-    cerr << "Writing SQL markers file to '" << file << "'\n";
-
-    ofstream fh(file.c_str(), ofstream::out);
-    if (fh.fail()) {
-        cerr << "Error opening markers SQL file '" << file << "'\n";
-        exit(1);
-    }
-    fh.precision(fieldw);
-    fh.setf(std::ios::fixed);
-
-    fh << "# SQL ID"            << "\t"
-       << "Batch ID"            << "\t"
-       << "Catalog Locus ID"    << "\t"
-       << "\t"
-       << "Total Genotypes"     << "\t"
-       << "Max"                 << "\t"
-       << "Genotype Freqs"      << "\t"
-       << "F"                   << "\t"
-       << "Mean Log Likelihood" << "\t"
-       << "Genotype Map"        << "\t"
-       << "\n";
-
-    map<int, CSLocus *>::iterator it;
-    CSLocus *loc;
-    stringstream gtype_map;
-
-    for (it = catalog.begin(); it != catalog.end(); it++) {
-        loc = it->second;
-
-        string freq  = "";
-        double max   = 0.0;
-        int    total = 0;
-        gtype_map.str("");
-
-        if (loc->marker.length() > 0) {
-            tally_haplotype_freq(loc, pmap->locus(loc->id), pmap->sample_cnt(), total, max, freq);
-
-            //
-            // Record the haplotype to genotype map.
-            //
-            map<string, string>::iterator j;
-            for (j = loc->gmap.begin(); j != loc->gmap.end(); j++)
-                gtype_map << j->first << ":" << j->second << ";";
-        }
-
-        fh << 0 << "\t"
-           << batch_id << "\t"
-           << loc->id  << "\t"
-           << "\t"              // Marker
-           << total    << "\t"
-           << max      << "\t"
-           << freq     << "\t"
-           << loc->f   << "\t"
-           << loc->lnl << "\t"
-           << gtype_map.str() << "\t"
-           << "\n";
-    }
-
-    fh.close();
-
-    return 0;
-}
-
+/*
 int
 write_fasta_loci(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
 {
@@ -3634,6 +3567,7 @@ write_fullseq_phylip(map<int, CSLocus *> &catalog,
 
     return 0;
 }
+*/
 
 /*
  * Calculate the SNP-wise allelic depths by adding up the haplotype depths.
