@@ -927,9 +927,9 @@ LocDivergence::snp_divergence(const vector<LocBin *> &loci)
                         break;
                     }
                 }
-                
+
                 pairs.push_back(pp);
-            }            
+            }
         }
     }
 
