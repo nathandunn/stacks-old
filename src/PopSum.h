@@ -332,7 +332,7 @@ class LocusDivergence {
 
 public:
     LocusDivergence(const MetaPopInfo *mpopi);
-    ~LocusDivergence();
+    int clear(const vector<LocBin *> &loci);
     int snp_divergence(const vector<LocBin *> &loci);
     int haplotype_divergence_pairwise(const vector<LocBin *> &loci);
     int haplotype_divergence(const vector<LocBin *> &loci) { return 0; }
