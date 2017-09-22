@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2012-2016, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2012-2017, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -28,11 +28,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include "MetaPopInfo.h"
 #include "export_formats.h"
-#include "locus_readers.h"
-#include "gzFasta.h"
-
 #include "populations.h"
 
 using namespace std;
@@ -65,7 +61,6 @@ bool      write_single_snp  = false;
 bool      write_random_snp  = false;
 bool      merge_sites       = false;
 bool      expand_id         = false;
-bool      sql_out           = false;
 bool      vcf_out           = false;
 bool      vcf_haplo_out     = false;
 bool      fasta_loci_out    = false;
@@ -102,9 +97,7 @@ set<string> debug_flags;
 string    out_prefix;
 
 MetaPopInfo mpopi;
-
-set<int> blacklist, bootstraplist;
-map<int, set<int> > whitelist;
+set<int>    bootstraplist;
 
 //
 // Hold information about restriction enzymes
@@ -132,87 +125,25 @@ int main (int argc, char* argv[]) {
     // Parse the command line.
     //
     parse_command_line(argc, argv);
-
-    cerr << "populations parameters selected:\n";
-    if (input_mode == InputMode::vcf)
-        cerr << "  Input mode: VCF\n";
-    else if (input_mode == InputMode::stacks)
-        cerr << "  Input mode: v1\n";
-    cerr << "  Fst kernel smoothing: " << (kernel_smoothed == true ? "on" : "off") << "\n"
-         << "  Bootstrap resampling: ";
-    if (bootstrap)
-        cerr << "on, " << (bootstrap_type == bs_exact ? "exact; " : "approximate; ") << bootstrap_reps << " reptitions\n";
-    else
-        cerr << "off\n";
-    cerr
-        << "  Percent samples limit per population: " << sample_limit << "\n"
-        << "  Locus Population limit: " << population_limit << "\n"
-        << "  Minimum stack depth: " << min_stack_depth << "\n"
-        << "  Log liklihood filtering: " << (filter_lnl == true ? "on"  : "off") << "; threshold: " << lnl_limit << "\n"
-        << "  Minor allele frequency cutoff: " << minor_allele_freq << "\n"
-        << "  Maximum observed heterozygosity cutoff: " << max_obs_het << "\n"
-        << "  Applying Fst correction: ";
-    switch(fst_correction) {
-    case p_value:
-        cerr << "P-value correction.\n";
-        break;
-    case bonferroni_win:
-        cerr << "Bonferroni correction within sliding window.\n";
-        break;
-    case bonferroni_gen:
-        cerr << "Bonferroni correction across genome wide sites.\n";
-        break;
-    case no_correction:
-        cerr << "none.\n";
-        break;
-    }
-    cerr << "\n";
+    output_parameters(cerr);
 
     //
     // Open and initialize the log file.
     //
-    struct stat out_path_stat;
-    if (stat(out_path.substr(0, out_path.length()-1).c_str(), &out_path_stat) == 0) {
-        // Path exists, check that it is a directory
-        if (!S_ISDIR(out_path_stat.st_mode)) {
-            cerr << "Error: '" << out_path.substr(0, out_path.length()-1) << "' is not a directory.\n";
-            throw exception();
-        }
-    } else if (mkdir(out_path.c_str(), ACCESSPERMS) != 0) {
-        // Failed to create the directory.
-        cerr << "Error: Failed to create directory '" << out_path << "'.\n";
-        throw exception();
-    }
-    string log_path = out_path + out_prefix + ".populations.log";
-    ofstream log_fh(log_path.c_str(), ofstream::out);
-    if (log_fh.fail()) {
-        cerr << "Error opening log file '" << log_path << "'\n";
-        throw exception();
-    }
+    ofstream log_fh;
+    open_log(log_fh);
     init_log(log_fh, argc, argv);
-    log_fh << flush;
 
     //
     // Set the number of OpenMP parallel threads to execute.
     //
-
     #ifdef _OPENMP
     omp_set_num_threads(num_threads);
     #endif
 
     //
-    // Initialize the catalog and the MetaPopInfo
-    //
-
-    map<int, CSLocus *> catalog;
-
-    // We need some objects in the main scope for each mode.
-    vector<vector<CatMatch *> > catalog_matches;
-    unique_ptr<unordered_map<int,vector<VcfRecord>>> cloci_vcf_records;
-    unique_ptr<VcfHeader> vcf_header;
-    unique_ptr<vector<VcfRecord>> vcf_records;
-
     // Read the population map file, if any.
+    //
     if (not pmap_path.empty()) {
         cerr << "Parsing population map...\n";
         mpopi.init_popmap(pmap_path);
@@ -220,280 +151,17 @@ int main (int argc, char* argv[]) {
              << mpopi.pops().size() << " population(s), " << mpopi.groups().size() << " group(s).\n";
     }
 
-    if (input_mode == InputMode::stacks) {
-        //
-        // Stacks mode
-        //
-        if (pmap_path.empty()) {
-            cerr << "No population map specified, building file list...\n";
-            mpopi.init_directory(in_path);
-        }
+    //
+    // Locate and open input files, read VCF headers, parse population map, load black/white lists.
+    //
+    BatchLocusProcessor bloc(input_mode, 100, &mpopi);
 
-        // Check that at least one sample file exists in the directory.
-        bool dir_good = false;
-        for (vector<Sample>::const_iterator s=mpopi.samples().begin(); s!=mpopi.samples().end(); ++s) {
-            ifstream f;
-            string path = in_path + s->name + ".matches.tsv";
-            f.open(path);
-            if (f.is_open()) {
-                dir_good = true;
-                break;
-            }
-#if HAVE_LIBZ
-            path += ".gz";
-            gzFile g = gzopen(path.c_str(), "rb");
-            if (g != NULL) {
-                dir_good = true;
-                gzclose(g);
-                break;
-            }
-#endif
-        }
-        if (!dir_good) {
-            cerr << "Error: Unable to locate any file in input directory '" << in_path << "'.\n";
-            throw exception();
-        }
-
-        //
-        // Load the catalog
-        //
-        cerr << "Reading the catalog...\n";
-        string catalog_prefix = in_path + "batch_" + to_string(batch_id) + ".catalog";
-        bool   compressed     = false;
-        int    res = load_loci(catalog_prefix, catalog, 0, false, compressed);
-        if (res == 0) {
-            cerr << "Unable to load the catalog '" << catalog_prefix << "'\n";
-            throw exception();
-        }
-
-        //
-        // Load the matches
-        //
-        cerr << "Reading matches to the catalog...\n";
-        vector<size_t> samples_to_remove;
-        set<size_t>    seen_samples;
-        for (size_t i = 0; i < mpopi.samples().size(); ++i) {
-            catalog_matches.push_back(vector<CatMatch*>());
-            vector<CatMatch *>& m = catalog_matches.back();
-            load_catalog_matches(in_path + mpopi.samples().at(i).name, m);
-
-            if (m.size() == 0 || m[0]->batch_id != batch_id) {
-                cerr << "Warning: File '" << mpopi.samples()[i].name << ".matches.tsv(.gz)'"
-                        " is absent, malformed, or does not match the catalog batch ID. Excluding"
-                        " this sample from population analysis.\n";
-                samples_to_remove.push_back(i);
-                catalog_matches.pop_back(); // This introduces an index shift between catalog_matches and [i]/[mpopi],
-                                            // which will be resolved by a call to MetaPopInfo::delete_samples().
-                continue;
-            }
-
-            size_t sample_id = m[0]->sample_id;
-            if (seen_samples.count(sample_id) > 0) {
-                cerr << "Error: sample ID " << sample_id << " occurs twice in this data set, likely the pipeline was run incorrectly.\n";
-                exit(1);
-            }
-            seen_samples.insert(sample_id);
-            mpopi.set_sample_id(i, sample_id);
-        }
-
-        mpopi.delete_samples(samples_to_remove);
-        if (mpopi.samples().size() == 0) {
-            cerr << "Error: Couln't find any matches files.\n";
-            throw exception();
-        }
-        // [mpopi] is definitive.
-
-    } else if (input_mode == InputMode::stacks2) {
-        //
-        // Stacks v2 mode
-        //
-        cloci_vcf_records.reset(new unordered_map<int,vector<VcfRecord>>());
-
-        // Open the files.
-        string catalog_fa_path = in_path + "batch_" + to_string(batch_id) + ".gstacks.fa.gz";
-        string catalog_vcf_path = in_path + "batch_" + to_string(batch_id) + ".gstacks.vcf.gz";
-        GzFasta fasta_f (catalog_fa_path);
-        VcfCLocReader reader (catalog_vcf_path);
-
-        // Create the population map or check that all samples have data.
-        if (pmap_path.empty()) {
-            cerr << "No population map specified, using all samples...\n";
-            mpopi.init_names(reader.header().samples());
-        } else {
-            size_t n_samples_before = mpopi.samples().size();
-            mpopi.intersect_with(reader.header().samples());
-            size_t n_rm_samples = n_samples_before - mpopi.samples().size();
-            if (n_rm_samples > 0) {
-                cerr << "Warning: No genotype data exists for " << n_rm_samples
-                     << " of the samples listed in the population map.\n";
-                if (mpopi.samples().empty()) {
-                    cerr << "Error: No more samples.\n";
-                    throw exception();
-                }
-            }
-        }
-        reader.set_sample_ids(mpopi);
-
-        // Read the files, create the loci.
-        vector<VcfRecord> records;
-        Seq seq;
-        seq.id   = new char[id_len];
-        seq.seq  = new char[max_len];
-        seq.qual = new char[max_len];
-        while (reader.read_one_locus(records)) {
-            // Get the current locus ID.
-            assert(!records.empty());
-            int cloc_id = is_integer(records[0].chrom());
-            assert(cloc_id >= 0);
-
-            // Find the corresponding fasta record. (Note: c-loci with very low
-            // coverage might be entirely missing from the VCF; in this case
-            // ignore them.)
-            int rv = fasta_f.next_seq(seq);
-            while(rv != 0 && atoi(seq.id) != cloc_id)
-                rv = fasta_f.next_seq(seq);
-            if (rv == 0) {
-                cerr << "Error: files are discordant, maybe trucated: '"
-                     << catalog_fa_path << "' and '" << catalog_vcf_path << "'.\n";
-                throw exception();
-            }
-
-            // Create the CSLocus.
-            catalog.insert({cloc_id, new_cslocus(seq, records, cloc_id)});
-
-            // Save the records (they are needed for the PopMap object).
-            (*cloci_vcf_records)[cloc_id] = move(records);
-        }
-
-        vcf_header.reset(new VcfHeader(reader.header()));
-
-    } else if (input_mode == InputMode::vcf) {
-
-        //
-        // VCF mode
-        //
-
-        // Open the VCF file
-        cerr << "Opening the VCF file...\n";
-        VcfParser parser (in_vcf_path);
-
-        if (parser.header().samples().empty()) {
-            cerr << "Error: No samples in VCF file '" << in_vcf_path << "'.\n";
-            throw exception();
-        }
-
-        // Reconsider the MetaPopInfo in light of the VCF header.
-        if (pmap_path.empty()) {
-            cerr << "No population map specified, creating one from the VCF header...\n";
-            mpopi.init_names(parser.header().samples());
-        } else {
-            // Intersect the samples present in the population map and the VCF.
-            size_t n_samples_before = mpopi.samples().size();
-            mpopi.intersect_with(parser.header().samples());
-            size_t n_rm_samples = n_samples_before - mpopi.samples().size();
-            if (n_rm_samples > 0) {
-                cerr << "Warning: Of the samples listed in the population map, "
-                     << n_rm_samples << " could not be found in the VCF :";
-                if (mpopi.samples().empty()) {
-                    cerr << "Error: No more samples.\n";
-                    throw exception();
-                }
-            }
-        }
-
-        // Create arbitrary sample IDs.
-        for (size_t i = 0; i < mpopi.samples().size(); ++i)
-            mpopi.set_sample_id(i, i+1); //id=i+1
-
-        // [mpopi] is definitive.
-
-        // Read the SNP records
-        cerr << "Reading the VCF records...\n";
-        vcf_records.reset(new vector<VcfRecord>());
-        vector<size_t> skipped_notsnp;
-        vector<size_t> skipped_filter;
-
-        vcf_records->push_back(VcfRecord());
-        VcfRecord* rec = & vcf_records->back();
-        while (parser.next_record(*rec)) {
-            // Check for a SNP.
-            if (not rec->is_snp()) {
-                skipped_notsnp.push_back(parser.line_number());
-                continue;
-            }
-
-            // Check for a filtered-out SNP
-            if (strncmp(rec->filters(), ".", 2) != 0 && strncmp(rec->filters(), "PASS", 5) != 0) {
-                skipped_filter.push_back(parser.line_number());
-                continue;
-            }
-
-            // Save the SNP.
-            vcf_records->push_back(VcfRecord());
-            rec = & vcf_records->back();
-        }
-        vcf_records->pop_back();
-
-        cerr << "Found " << vcf_records->size() << " SNP records in file '" << in_vcf_path
-             << "'. (Skipped " << skipped_filter.size() << " already filtered-out SNPs and "
-             << skipped_notsnp.size() << " non-SNP records ; more with --verbose.)\n";
-        if (verbose && not skipped_notsnp.empty()) {
-            log_fh << "The following VCF record lines were determined not to be SNPs and skipped :";
-            for (vector<size_t>::const_iterator l=skipped_notsnp.begin(); l!=skipped_notsnp.end(); ++l)
-                log_fh << " " << *l;
-            log_fh << "\n";
-        }
-        if (vcf_records->size() == 0) {
-            cerr << "Error: No records.\n";
-            throw exception();
-        }
-
-        catalog = create_catalog(*vcf_records);
-        vcf_header.reset(new VcfHeader(parser.header()));
-    }
+    bloc.init(batch_id, in_path, pmap_path);
 
     //
-    // Read the blacklist, the whitelist, and the bootstrap-whitelist.
+    // Report information on the structure of the populations specified.
     //
-    if (bl_file.length() > 0) {
-        load_marker_list(bl_file, blacklist);
-        cerr << "Loaded " << blacklist.size() << " blacklisted markers.\n";
-    }
-    if (wl_file.length() > 0) {
-        load_marker_column_list(wl_file, whitelist);
-        cerr << "Loaded " << whitelist.size() << " whitelisted markers.\n";
-        check_whitelist_integrity(catalog, whitelist);
-    }
-    if (bs_wl_file.length() > 0) {
-        load_marker_list(bs_wl_file, bootstraplist);
-        cerr << "Loaded " << bootstraplist.size() << " markers to include when bootstrapping.\n";
-    }
-
-    //
-    // Reduce the catalog accordingly, and retrieve the genomic order of loci.
-    //
-    reduce_catalog(catalog, whitelist, blacklist);
-    loci_ordered = order_unordered_loci(catalog);
-
-    // Report information on the MetaPopInfo.
-    cerr << "Working on " << mpopi.samples().size() << " samples.\n";
-    cerr << "Working on " << mpopi.pops().size() << " population(s):\n";
-    for (vector<Pop>::const_iterator p = mpopi.pops().begin(); p != mpopi.pops().end(); p++) {
-        cerr << "    " << p->name << ": ";
-        for (size_t s = p->first_sample; s < p->last_sample; ++s) {
-            cerr << mpopi.samples()[s].name << ", ";
-        }
-        cerr << mpopi.samples()[p->last_sample].name << "\n";
-    }
-    cerr << "Working on " << mpopi.groups().size() << " group(s) of populations:\n";
-    for (vector<Group>::const_iterator g = mpopi.groups().begin(); g != mpopi.groups().end(); g++) {
-        cerr << "    " << g->name << ": ";
-        for (vector<size_t>::const_iterator p = g->pops.begin(); p != g->pops.end() -1; ++p) {
-            //rem. end()-1 and back() are safe, there's always at least one pop
-            cerr << mpopi.pops()[*p].name << ", ";
-        }
-        cerr << mpopi.pops()[g->pops.back()].name << "\n";
-    }
+    mpopi.status();
 
     if (size_t(population_limit) > mpopi.pops().size()) {
         cerr << "Notice: Population limit (" << population_limit << ")"
@@ -503,280 +171,1001 @@ int main (int argc, char* argv[]) {
     }
 
     //
-    // Initialize the PopMap
+    // Setup the default data exports.
     //
-
-    cerr << "Populating observed haplotypes for " << mpopi.samples().size() << " samples, " << catalog.size() << " loci.\n";
-    PopMap<CSLocus> *pmap = new PopMap<CSLocus>(mpopi, catalog.size());
-
-    if (input_mode == InputMode::stacks) {
-        // Using SStacks matches files...
-        pmap->populate(catalog, catalog_matches);
-
-        for(vector<vector<CatMatch *> >::iterator sample = catalog_matches.begin(); sample != catalog_matches.end(); ++sample)
-            for(vector<CatMatch*>::iterator match = sample->begin(); match != sample->end(); ++match)
-                delete *match;
-        catalog_matches.clear();
-
-    } else if (input_mode == InputMode::stacks2) {
-        // Using Stacks v2 files.
-        pmap->populate(catalog, *cloci_vcf_records, *vcf_header);
-        cloci_vcf_records.reset();
-    } else if (input_mode == InputMode::vcf) {
-        // ...or using VCF records.
-        pmap->populate(catalog, *vcf_records, *vcf_header);
-        vcf_records.reset();
+    vector<Export *> exports;
+    Export *exp;
+    exp = new MarkersExport();
+    exports.push_back(exp);
+    exp = new SumstatsExport();
+    exports.push_back(exp);
+    exp = new HapstatsExport();
+    exports.push_back(exp);
+    
+    //
+    // Open the export files and write any headers.
+    //
+    for (uint i = 0; i < exports.size(); i++) {
+        exports[i]->open((const MetaPopInfo *) &mpopi);
+        exports[i]->write_header();
     }
 
     //
-    // Tabulate haplotypes present and in what combinations.
+    // Initialize the summary statistics object which will accumulate the metapopulation summary statistics
+    // as the individual loci are read and processed.
     //
-    tabulate_haplotypes(catalog, pmap);
-
-    //
-    // Output a list of heterozygous loci and the associate haplotype frequencies.
-    //
-    if (sql_out)
-        write_sql(catalog, pmap);
-
-    log_fh << "# Distribution of population loci.\n";
-    log_haplotype_cnts(catalog, log_fh);
-
-    apply_locus_constraints(catalog, pmap, log_fh);
-    if (pmap->loci_cnt() == 0) {
-        cerr << "Error: All loci have been filtered out.\n";
-        throw exception();
-    }
-
-    log_fh << "# Distribution of population loci after applying locus constraints.\n";
-    log_haplotype_cnts(catalog, log_fh);
-
-    if (input_mode == InputMode::stacks) {
+    SumStatsSummary sumstats(mpopi.pops().size());
+    int loc_cnt, tot_cnt = 0;
+    
+    do {
         //
-        // Load the output from the SNP calling model (hOm/hEt/Unk) for
-        // each individual at each locus.
+        // Read the next set of loci to process.
+        // - If data are denovo, load blim._batch_size loci.
+        // - If data are reference aligned, load one chromosome.
         //
+        loc_cnt  = bloc.next_batch(log_fh);
+        tot_cnt += loc_cnt;
+        
+        sumstats.accumulate(bloc.loci());
 
-        cerr << "Loading model outputs for " << mpopi.samples().size() << " samples, " << catalog.size() << " loci.\n";
+        //
+        // Calculate haplotype and gene diversity per locus per population.
+        //
+        bloc.hapstats(log_fh);
 
-        map<int, CSLocus *>::iterator it;
-        map<int, ModRes *>::iterator mit;
-        Datum   *d;
-        CSLocus *loc;
+        //
+        // Export this subset of the loci.
+        //
+        for (uint i = 0; i < exports.size(); i++)
+            exports[i]->write_batch(bloc.loci());
 
-        for (uint i = 0; i < mpopi.samples().size(); i++) {
-            map<int, ModRes *> modres;
-            load_model_results(in_path + mpopi.samples()[i].name, modres);
+        if (loci_ordered && loc_cnt > 0)
+            cerr << "  Analyzed " << loc_cnt << " loci from " << bloc.loci().front()->cloc->loc.chr() << ".\n";
 
-            if (modres.size() == 0) {
-                cerr << "    Warning: unable to find any model results in file '" << mpopi.samples()[i].name << ".models.tsv(.gz)', excluding this sample from population analysis.\n";
-                continue;
-            }
+    } while (loc_cnt > 0);
 
-            for (it = catalog.begin(); it != catalog.end(); it++) {
-                loc = it->second;
-                d = pmap->datum(loc->id, mpopi.samples()[i].id);
+    const LocusFilter &filter = bloc.filter();
+    cerr << "Removed " << filter.filtered() << " loci that did not pass sample/population constraints from " << filter.total() << " loci.\n"
+         << "Kept "    << tot_cnt << " loci.\n";
+    cerr << "Total polymorphic sites examined: " << filter.total_sites() << "; filtered " << filter.filtered_sites() << " of those sites.\n";
 
-                if (d != NULL) {
-                    if (modres.count(d->id) == 0) {
-                        cerr << "Fatal error: Unable to find model data for catalog locus " << loc->id
-                             << ", sample ID " << mpopi.samples()[i].id << ", sample locus " << d->id
-                             << "; likely IDs were mismatched when running pipeline.\n";
-                        exit(1);
-                    }
-                    d->add_model(modres[d->id]->model);
-                }
-            }
-            for (mit = modres.begin(); mit != modres.end(); mit++)
-                delete mit->second;
-            modres.clear();
-        }
+    //
+    // Do the final sumstats calculations and write the sumstats summary files.
+    //
+    sumstats.final_calculation();
+    sumstats.write_results();
+
+    //
+    // Write out the distributions of catalog loci.
+    //
+    bloc.write_distributions(log_fh);
+    
+    //
+    // Read the bootstrap-whitelist.
+    //
+    if (bs_wl_file.length() > 0) {
+        load_marker_list(bs_wl_file, bootstraplist);
+        cerr << "Loaded " << bootstraplist.size() << " markers to include when bootstrapping.\n";
     }
 
-    //
-    // Create the PopSum object and compute the summary statistics.
-    //
+    // //
+    // // Merge loci that overlap on a common restriction enzyme cut site.
+    // //
+    // map<int, pair<merget, int> > merge_map;
+    // if (merge_sites && loci_ordered)
+    //     merge_shared_cutsite_loci(catalog, pmap, psum, merge_map, log_fh);
 
-    PopSum<CSLocus> *psum = new PopSum<CSLocus>(*pmap, mpopi);
-    for (size_t i=0; i<mpopi.pops().size(); ++i) {
-        cerr << "Generating nucleotide-level summary statistics for population '" << mpopi.pops()[i].name << "'\n";
-        psum->add_population(catalog, pmap, i, verbose, log_fh);
-    }
+    // if (debug_flags.count("VCFCOMP"))
+    //     vcfcomp_simplify_pmap(catalog, pmap);
 
-    cerr << "Tallying loci across populations...";
-    psum->tally(catalog);
-    cerr << "done.\n";
+    // if (kernel_smoothed) {
+    //     if (loci_ordered) {
+    //         for (size_t i=0; i<mpopi.pops().size(); ++i) {
+    //             cerr << "  Generating kernel-smoothed population statistics for population '" << mpopi.pops()[i].name << "'...\n";
+    //             kernel_smoothed_popstats(catalog, pmap, psum, i, log_fh);
+    //         }
+    //     } else {
+    //         cerr << "Notice: Smoothing was requested (-k), but will not be performed as the loci are not ordered.\n";
+    //     }
+    // }
 
-    //
-    // We have removed loci that were below the -r and -p thresholds. Now we need to
-    // identify individual SNPs that are below the -r threshold or the minor allele
-    // frequency threshold (-a). In these cases we will remove the SNP, but keep the locus.
-    //
-    blacklist.clear();
-    int pruned_snps = prune_polymorphic_sites(catalog, pmap, psum, whitelist, blacklist, log_fh);
-    cerr << "Pruned " << pruned_snps << " variant sites due to filter constraints (more with --verbose).\n";
+    // calculate_haplotype_stats(catalog, pmap, psum);
 
-    //
-    // Create an artificial whitelist if the user requested only the first or a random SNP per locus.
-    //
-    if (write_single_snp)
-        implement_single_snp_whitelist(catalog, psum, whitelist);
-    else if (write_random_snp)
-        implement_random_snp_whitelist(catalog, psum, whitelist);
+    // if (calc_fstats) {
+    //     calculate_haplotype_divergence(catalog, pmap, psum);
+    //     calculate_haplotype_divergence_pairwise(catalog, pmap, psum);
+    // }
 
-    //
-    // Remove the accumulated SNPs
-    //
-    cerr << "Removing " << blacklist.size() << " additional loci for which all variant sites were filtered...";
-    set<int> empty_list;
-    reduce_catalog(catalog, empty_list, blacklist);
-    reduce_catalog_snps(catalog, whitelist, pmap);
-    int retained = pmap->prune(blacklist);
-    cerr << " retained " << retained << " loci.\n";
-    if (pmap->loci_cnt() == 0) {
-        cerr << "Error: All loci have been filtered out.\n";
-        throw exception();
-    }
+    // //
+    // // Output the observed haplotypes.
+    // //
+    // write_generic(catalog, pmap, false);
 
-    //
-    // Merge loci that overlap on a common restriction enzyme cut site.
-    //
-    map<int, pair<merget, int> > merge_map;
-    if (merge_sites && loci_ordered)
-        merge_shared_cutsite_loci(catalog, pmap, psum, merge_map, log_fh);
+    // //
+    // // Output data in requested formats
+    // //
+    // if (fasta_loci_out)
+    //     write_fasta_loci(catalog, pmap);
 
-    //
-    // Regenerate summary statistics after pruning SNPs and  merging loci.
-    //
+    // if (fasta_samples_out)
+    //     write_fasta_samples(catalog, pmap);
 
-    if (debug_flags.count("VCFCOMP"))
-        vcfcomp_simplify_pmap(catalog, pmap);
+    // if (fasta_samples_raw_out)
+    //     write_fasta_samples_raw(catalog, pmap);
 
-    delete psum;
-    psum = new PopSum<CSLocus>(*pmap, mpopi);
-    for (size_t i=0; i<mpopi.pops().size(); ++i) {
-        cerr << "Regenerating nucleotide-level summary statistics for population '" << mpopi.pops()[i].name << "'\n";
-        psum->add_population(catalog, pmap, i, verbose, log_fh);
-    }
-    cerr << "Re-tallying loci across populations...";
-    psum->tally(catalog);
-    cerr << "done.\n";
+    // if (genepop_out && ordered_export)
+    //     write_genepop_ordered(catalog, pmap, psum, log_fh);
+    // else if (genepop_out)
+    //     write_genepop(catalog, pmap, psum);
 
-    if (kernel_smoothed) {
-        if (loci_ordered) {
-            for (size_t i=0; i<mpopi.pops().size(); ++i) {
-                cerr << "  Generating kernel-smoothed population statistics for population '" << mpopi.pops()[i].name << "'...\n";
-                kernel_smoothed_popstats(catalog, pmap, psum, i, log_fh);
-            }
-        } else {
-            cerr << "Notice: Smoothing was requested (-k), but will not be performed as the loci are not ordered.\n";
-        }
-    }
+    // if (structure_out && ordered_export)
+    //     write_structure_ordered(catalog, pmap, psum, log_fh);
+    // else if (structure_out)
+    //     write_structure(catalog, pmap, psum);
 
-    //
-    // Log the SNPs per locus distribution.
-    //
-    log_snps_per_loc_distrib(log_fh, catalog);
+    // if (fastphase_out)
+    //     write_fastphase(catalog, pmap, psum);
 
-    calculate_haplotype_stats(catalog, pmap, psum);
+    // if (phase_out)
+    //     write_phase(catalog, pmap, psum);
 
-    if (calc_fstats) {
-        calculate_haplotype_divergence(catalog, pmap, psum);
-        calculate_haplotype_divergence_pairwise(catalog, pmap, psum);
-    }
+    // if (beagle_out)
+    //     write_beagle(catalog, pmap, psum);
 
-    //
-    // Calculate and output the locus-level summary statistics.
-    //
-    calculate_summary_stats(catalog, pmap, psum);
+    // if (beagle_phased_out)
+    //     write_beagle_phased(catalog, pmap, psum);
 
-    //
-    // Output the observed haplotypes.
-    //
-    write_generic(catalog, pmap, false);
+    // if (plink_out)
+    //     write_plink(catalog, pmap, psum);
 
-    //
-    // Output data in requested formats
-    //
-    if (fasta_loci_out)
-        write_fasta_loci(catalog, pmap);
+    // if (hzar_out)
+    //     write_hzar(catalog, pmap, psum);
 
-    if (fasta_samples_out)
-        write_fasta_samples(catalog, pmap);
+    // if (treemix_out)
+    //     write_treemix(catalog, pmap, psum);
 
-    if (fasta_samples_raw_out)
-        write_fasta_samples_raw(catalog, pmap);
+    // if (phylip_out || phylip_var)
+    //     write_phylip(catalog, pmap, psum);
 
-    if (genepop_out && ordered_export)
-        write_genepop_ordered(catalog, pmap, psum, log_fh);
-    else if (genepop_out)
-        write_genepop(catalog, pmap, psum);
+    // if (phylip_var_all)
+    //     write_fullseq_phylip(catalog, pmap, psum);
 
-    if (structure_out && ordered_export)
-        write_structure_ordered(catalog, pmap, psum, log_fh);
-    else if (structure_out)
-        write_structure(catalog, pmap, psum);
+    // if (vcf_haplo_out)
+    //     write_vcf_haplotypes(catalog, pmap, psum);
 
-    if (fastphase_out)
-        write_fastphase(catalog, pmap, psum);
+    // if (vcf_out && ordered_export)
+    //     write_vcf_ordered(catalog, pmap, psum, merge_map, log_fh);
+    // else if (vcf_out)
+    //     write_vcf(catalog, pmap, psum, merge_map);
 
-    if (phase_out)
-        write_phase(catalog, pmap, psum);
+    // //
+    // // Calculate and write Fst.
+    // //
+    // if (calc_fstats)
+    //     write_fst_stats(catalog, pmap, psum, log_fh);
 
-    if (beagle_out)
-        write_beagle(catalog, pmap, psum);
+    // //
+    // // Output nucleotide-level genotype calls for each individual.
+    // //
+    // if (genomic_out)
+    //     write_genomic(catalog, pmap);
 
-    if (beagle_phased_out)
-        write_beagle_phased(catalog, pmap, psum);
-
-    if (plink_out)
-        write_plink(catalog, pmap, psum);
-
-    if (hzar_out)
-        write_hzar(catalog, pmap, psum);
-
-    if (treemix_out)
-        write_treemix(catalog, pmap, psum);
-
-    if (phylip_out || phylip_var)
-        write_phylip(catalog, pmap, psum);
-
-    if (phylip_var_all)
-        write_fullseq_phylip(catalog, pmap, psum);
-
-    if (vcf_haplo_out)
-        write_vcf_haplotypes(catalog, pmap, psum);
-
-    if (vcf_out && ordered_export)
-        write_vcf_ordered(catalog, pmap, psum, merge_map, log_fh);
-    else if (vcf_out)
-        write_vcf(catalog, pmap, psum, merge_map);
-
-    //
-    // Calculate and write Fst.
-    //
-    if (calc_fstats)
-        write_fst_stats(catalog, pmap, psum, log_fh);
-
-    //
-    // Output nucleotide-level genotype calls for each individual.
-    //
-    if (genomic_out)
-        write_genomic(catalog, pmap);
-
-    for (auto& cloc : catalog)
-        delete cloc.second;
-    delete psum;
-    delete pmap;
+    // for (auto& cloc : catalog)
+    //     delete cloc.second;
+    // delete psum;
+    // delete pmap;
     log_fh.close();
 
+    //
+    // Close the export files and do any required post processing.
+    //
+    for (uint i = 0; i < exports.size(); i++) {
+        exports[i]->close();
+        exports[i]->post_processing();
+        delete exports[i];
+    }
+
     cerr << "Populations is done.\n";
+
     return 0;
+
     IF_NDEBUG_CATCH_ALL_EXCEPTIONS
 }
 
-void vcfcomp_simplify_pmap (map<int, CSLocus*>& catalog, PopMap<CSLocus>* pmap) {
+int
+BatchLocusProcessor::init(int batch_id, string in_path, string pmap_path)
+{
+    //
+    // Read the blacklist and whitelist to control which loci we load..
+    //
+    int cnt;
+    if (bl_file.length() > 0) {
+        cnt = this->_loc_filter.load_blacklist(bl_file);
+        cerr << "Loaded " << cnt << " blacklisted markers.\n";
+    }
+    if (wl_file.length() > 0) {
+        cnt = this->_loc_filter.load_whitelist(wl_file);
+        cerr << "Loaded " << cnt << " whitelisted markers.\n";
+        //// check_whitelist_integrity(catalog, whitelist);
+        this->_user_supplied_whitelist = true;
+    }
+    
+    if (this->_input_mode == InputMode::vcf)
+        this->init_external_loci(in_path, pmap_path);
+    else
+        this->init_stacks_loci(batch_id, in_path, pmap_path);
 
+    return 0;
+}
+
+size_t
+BatchLocusProcessor::next_batch(ostream &log_fh)
+{
+    size_t loc_cnt;
+    
+    if (this->_input_mode == InputMode::vcf)
+        loc_cnt = this->next_batch_external_loci(log_fh);
+    else
+        loc_cnt = this->next_batch_stacks_loci(log_fh);
+
+    return loc_cnt;
+}
+
+int
+BatchLocusProcessor::init_stacks_loci(int batch_id, string in_path, string pmap_path)
+{
+    //
+    // Open the files.
+    //
+    string catalog_fa_path  = in_path + "batch_" + to_string(batch_id) + ".gstacks.fa.gz";
+    string catalog_vcf_path = in_path + "batch_" + to_string(batch_id) + ".gstacks.vcf.gz";
+
+    this->_fasta_reader.open(catalog_fa_path);
+    this->_cloc_reader.open(catalog_vcf_path);
+
+    // Create the population map or check that all samples have data.
+    if (pmap_path.empty()) {
+        cerr << "No population map specified, using all samples...\n";
+        this->_mpopi->init_names(this->cloc_reader().header().samples());
+    } else {
+        size_t n_samples_before = this->_mpopi->samples().size();
+        this->_mpopi->intersect_with(this->cloc_reader().header().samples());
+        size_t n_rm_samples = n_samples_before - this->_mpopi->samples().size();
+
+        if (n_rm_samples > 0) {
+            cerr << "Warning: No genotype data exists for " << n_rm_samples
+                 << " of the samples listed in the population map.\n";
+            if (this->_mpopi->samples().empty()) {
+                cerr << "Error: No more samples.\n";
+                throw exception();
+            }
+        }
+    }
+
+    this->cloc_reader().set_sample_ids(*this->_mpopi);
+
+    //
+    // Initialize the locus filter after we have constructed the population map.
+    //
+    this->_loc_filter.init(this->pop_info());
+
+    //
+    // Store the VCF header data.
+    //
+    this->_vcf_header = new VcfHeader(this->cloc_reader().header());
+
+    return 0;
+}
+
+size_t
+BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
+{
+    vector<VcfRecord> records;
+    Seq seq;
+    seq.id      = new char[id_len];
+    seq.comment = new char[id_len];
+    seq.seq     = new char[max_len];
+
+    LocBin *loc;
+    int     cloc_id, rv;
+    string  prev_chr, cur_chr;
+    size_t  loc_cnt = 0;
+
+    this->_loci.clear();
+
+    const set<int>           &blacklist = this->_loc_filter.blacklist();
+    const map<int, set<int>> &whitelist = this->_loc_filter.whitelist();
+
+    //
+    // Check if we queued a LocBin object from the last round of reading.
+    //
+    if (this->_next_loc != NULL) {
+        this->_loci.push_back(this->_next_loc);
+        prev_chr        = this->_next_loc->cloc->loc.chr();
+        this->_next_loc = NULL;
+        loc_cnt++;
+    }
+    
+    do {
+        if (!this->_cloc_reader.read_one_locus(records)) break;
+        
+        //
+        // Get the current locus ID.
+        //
+        assert(!records.empty());
+        cloc_id = is_integer(records[0].chrom());
+        assert(cloc_id >= 0);
+
+        //
+        // Find the corresponding fasta record. (Note: c-loci with very low coverage
+        // might be entirely missing from the VCF; in this case ignore them.)
+        //
+        do {
+            rv = this->_fasta_reader.next_seq(seq);
+        } while (rv != 0 && is_integer(seq.id) != cloc_id);
+
+        if (rv == 0) {
+            cerr << "Error: catalog VCF and FASTA files are discordant, maybe trucated. rv: " << rv << "; cloc_id: " << cloc_id << "\n";
+            throw exception();
+        }
+
+        //
+        // Check if this locus is filtered.
+        //
+        if (this->_user_supplied_whitelist && whitelist.count(cloc_id) == 0) {
+            records.clear();
+            continue;
+        }
+        if (blacklist.count(cloc_id)) {
+            records.clear();
+            continue;
+        }
+
+        //
+        // Create and populate a new catalog locus.
+        //
+        loc = new LocBin();
+        loc->cloc = new_cslocus(seq, records, cloc_id);
+
+        //
+        // Create and populate a map of the population genotypes.
+        //
+        loc->d = new Datum *[this->_mpopi->samples().size()];
+        for (size_t i = 0; i < this->_mpopi->samples().size(); i++) loc->d[i] = NULL;
+        PopMap<CSLocus>::populate_locus(loc->d, *loc->cloc, records, (const VcfHeader &) *this->_vcf_header, (const MetaPopInfo &) *this->_mpopi);
+
+        records.clear();
+
+        this->_dists.accumulate_pre_filtering(loc->cloc);
+
+        //
+        // Apply locus constraints to remove entire loci below the -r/-p thresholds.
+        //
+        if (this->_loc_filter.filter(this->_mpopi, loc->d)) {
+            delete loc;
+            continue;
+        }
+
+        //
+        // Create the PopSum object and compute the summary statistics for this locus.
+        //
+        loc->s = new LocPopSum(strlen(loc->cloc->con), (const MetaPopInfo &) *this->_mpopi);
+        loc->s->sum_pops(loc->cloc, (const Datum **) loc->d, (const MetaPopInfo &) *this->_mpopi, verbose, cerr);
+        loc->s->tally_metapop(loc->cloc);
+
+        //
+        // If write_single_snp or write_random_snp has been specified, mark sites to be pruned using the whitelist.
+        //
+        if (write_single_snp)
+            this->_loc_filter.keep_single_snp(loc->cloc, loc->s->meta_pop());
+        else if (write_random_snp)
+            this->_loc_filter.keep_random_snp(loc->cloc, loc->s->meta_pop());
+        //
+        // Prune the sites according to the whitelist.
+        //
+        this->_loc_filter.prune_sites_with_whitelist(this->_mpopi, loc->cloc, loc->d, this->_user_supplied_whitelist);
+
+        //
+        // Identify individual SNPs that are below the -r threshold or the minor allele
+        // frequency threshold (-a). In these cases we will remove the SNP, but keep the locus.
+        // If all SNPs are filtered, delete the locus.
+        //
+        if (this->_loc_filter.prune_sites(this->_mpopi, loc->cloc, loc->d, loc->s, log_fh)) {
+            delete loc;
+            continue;
+        }
+
+        //
+        // Regenerate summary statistics after pruning SNPs.
+        //
+        loc->s->sum_pops(loc->cloc, (const Datum **) loc->d, (const MetaPopInfo &) *this->_mpopi, verbose, cerr);
+        loc->s->tally_metapop(loc->cloc);
+
+        //
+        // If these data are unordered, provide an arbitrary ordering.
+        //
+        if (loc->cloc->loc.empty()) {
+            loc->cloc->loc.set("un", this->_unordered_bp, strand_plus);
+            this->_unordered_bp += strlen(loc->cloc->con);
+        } else {
+            loci_ordered = true;
+        }
+
+        cur_chr = loc->cloc->loc.chr();
+        if (prev_chr.length() == 0)
+            prev_chr = cur_chr;
+        
+        //
+        // Tabulate haplotypes present and in what combinations.
+        //
+        tabulate_locus_haplotypes(loc->cloc, loc->d, this->_mpopi->samples().size());
+
+        if (cur_chr == prev_chr) {
+            this->_loci.push_back(loc);
+            loc_cnt++;
+        } else {
+            this->_next_loc = loc;
+        }
+
+    } while (( loci_ordered && prev_chr == cur_chr) ||
+             (!loci_ordered && loc_cnt   < this->_batch_size));
+
+    //
+    // Record the post-filtering distribution of catalog loci for this batch.
+    //
+    this->_dists.accumulate(this->_loci);
+    
+    return loc_cnt;
+}
+
+int
+BatchLocusProcessor::init_external_loci(string in_path, string pmap_path)
+{
+    //
+    // Open the VCF file
+    //
+    cerr << "Opening the VCF file...\n";
+    this->_vcf_parser.open(in_path);
+
+    if (this->_vcf_parser.header().samples().empty()) {
+        cerr << "Error: No samples in VCF file '" << in_path << "'.\n";
+        throw exception();
+    }
+
+    // Reconsider the MetaPopInfo in light of the VCF header.
+    if (pmap_path.empty()) {
+        cerr << "No population map specified, creating one from the VCF header...\n";
+        this->_mpopi->init_names(this->_vcf_parser.header().samples());
+
+    } else {
+        // Intersect the samples present in the population map and the VCF.
+        size_t n_samples_before = this->_mpopi->samples().size();
+
+        this->_mpopi->intersect_with(this->_vcf_parser.header().samples());
+        
+        size_t n_rm_samples = n_samples_before - this->_mpopi->samples().size();
+        if (n_rm_samples > 0) {
+            cerr << "Warning: Of the samples listed in the population map, "
+                 << n_rm_samples << " could not be found in the VCF :";
+            if (this->_mpopi->samples().empty()) {
+                cerr << "Error: No more samples.\n";
+                throw exception();
+            }
+        }
+    }
+
+    // Create arbitrary sample IDs.
+    for (size_t i = 0; i < this->_mpopi->samples().size(); ++i)
+        this->_mpopi->set_sample_id(i, i+1); //id=i+1
+
+    //
+    // Store the VCF header data.
+    //
+    this->_vcf_header = new VcfHeader(this->vcf_reader().header());
+
+    return 0;
+}
+
+size_t
+BatchLocusProcessor::next_batch_external_loci(ostream &log_fh)
+{
+    //
+    // VCF mode
+    //
+    
+    if (this->_ext_vcf_rec != NULL)
+        delete this->_ext_vcf_rec;
+    this->_ext_vcf_rec = new vector<VcfRecord>();
+
+    vector<size_t> skipped_notsnp;
+    vector<size_t> skipped_filter;
+    size_t loc_cnt = 0;
+
+    this->_ext_vcf_rec->push_back(VcfRecord());
+    VcfRecord* rec = & this->_ext_vcf_rec->back();
+
+    while (loc_cnt < this->_batch_size && this->_vcf_parser.next_record(*rec)) {
+        // Check for a SNP.
+        if (not rec->is_snp()) {
+            skipped_notsnp.push_back(this->_vcf_parser.line_number());
+            continue;
+        }
+
+        // Check for a filtered-out SNP
+        if (strncmp(rec->filters(), ".", 2) != 0 && strncmp(rec->filters(), "PASS", 5) != 0) {
+            skipped_filter.push_back(this->_vcf_parser.line_number());
+            continue;
+        }
+
+        // Save the SNP.
+        this->_ext_vcf_rec->push_back(VcfRecord());
+        rec = & this->_ext_vcf_rec->back();
+
+        loc_cnt++;
+    }
+
+    this->_ext_vcf_rec->pop_back();
+
+    cerr << "Found " << this->_ext_vcf_rec->size() << " SNP records in file '" << in_vcf_path
+         << "'. (Skipped " << skipped_filter.size() << " already filtered-out SNPs and "
+         << skipped_notsnp.size() << " non-SNP records ; more with --verbose.)\n";
+    if (verbose && not skipped_notsnp.empty()) {
+        log_fh << "The following VCF record lines were determined not to be SNPs and skipped :";
+        for (vector<size_t>::const_iterator l=skipped_notsnp.begin(); l!=skipped_notsnp.end(); ++l)
+            log_fh << " " << *l;
+        log_fh << "\n";
+    }
+    if (this->_ext_vcf_rec->size() == 0) {
+        cerr << "Error: No records.\n";
+        throw exception();
+    }
+
+    if (this->_catalog != NULL)
+        delete this->_catalog;
+    this->_catalog = create_catalog(this->ext_vcf_records());
+
+    return loc_cnt;
+}
+
+int
+BatchLocusProcessor::hapstats(ostream &log_fh)
+{
+    for (uint i = 0; i < this->_loci.size(); i++) {
+        LocBin *loc = this->_loci[i];
+        
+        loc->s->calc_hapstats(loc->cloc, (const Datum **) loc->d, *this->_mpopi);
+    }
+
+    return 0;
+}
+
+bool
+LocusFilter::filter(MetaPopInfo *mpopi, Datum **d)
+{
+    this->reset();
+    this->_total_loci++;
+
+    for (size_t i = 0; i < this->_sample_cnt; i++) {
+        //
+        // Check that each sample is over the log likelihood threshold.
+        //
+        if (d[i] != NULL &&
+            filter_lnl   &&
+            d[i]->lnl < lnl_limit) {
+            // below_lnl_thresh++;
+            delete d[i];
+            d[i] = NULL;
+            // loc->hcnt--;
+        }
+    }
+
+    //
+    // Tally up the count of samples in this population.
+    //
+    for (size_t i = 0; i < this->_sample_cnt; i++) {
+        if (d[i] != NULL)
+            this->_pop_cnts[this->_samples[i]]++;
+    }
+
+    //
+    // Check that the counts for each population are over sample_limit. If not, zero out
+    // the members of that population.
+    //
+    double pct = 0.0;
+
+    for (uint i = 0; i < this->_pop_cnt; i++) {
+        const Pop& pop = mpopi->pops()[this->_pop_order[i]];
+
+        pct = (double) this->_pop_cnts[i] / (double) this->_pop_tot[i];
+
+        if (this->_pop_cnts[i] > 0 && pct < sample_limit) {
+            for (uint j = pop.first_sample; j <= pop.last_sample; j++) {
+                if (d[j] != NULL) {
+                    delete d[j];
+                    d[j] = NULL;
+                    // loc->hcnt--;
+                }
+            }
+            this->_pop_cnts[i] = 0;
+        }
+    }
+
+    //
+    // Check that this locus is present in enough populations.
+    //
+    bool pop_limit = false;
+    int  pops      = 0;
+
+    for (uint i = 0; i < this->_pop_cnt; i++)
+        if (this->_pop_cnts[i] > 0) pops++;
+    if (pops < population_limit)
+        pop_limit = true;
+
+    if (pop_limit)
+        this->_filtered_loci++;
+
+    return pop_limit;
+}
+
+void
+LocusFilter::init(MetaPopInfo *mpopi)
+{
+    this->_pop_cnt    = mpopi->pops().size();
+    this->_sample_cnt = mpopi->samples().size();
+
+    assert(this->_pop_cnt > 0);
+    assert(this->_sample_cnt > 0);
+    
+    if (this->_pop_order != NULL)
+        delete [] this->_pop_order;
+    if (this->_samples != NULL)
+        delete [] this->_samples;
+    if (this->_pop_cnts != NULL)
+        delete [] this->_pop_cnts;
+    if (this->_pop_tot != NULL)
+        delete [] this->_pop_tot;
+
+    this->_pop_order  = new size_t [this->_pop_cnt];
+    this->_samples    = new size_t [this->_sample_cnt];
+    this->_pop_cnts   = new size_t [this->_pop_cnt];
+    this->_pop_tot    = new size_t [this->_pop_cnt];
+
+    this->_filtered_loci  = 0;
+    this->_total_loci     = 0;
+    this->_filtered_sites = 0;
+    this->_total_sites    = 0;
+
+    size_t pop_sthg = 0;
+
+    for (size_t i_pop = 0; i_pop < mpopi->pops().size(); ++i_pop) {
+        const Pop& pop = mpopi->pops()[i_pop];
+        this->_pop_tot[pop_sthg]  = 0;
+
+        for (uint i = pop.first_sample; i <= pop.last_sample; i++) {
+            this->_samples[i] = pop_sthg;
+            this->_pop_tot[pop_sthg]++;
+        }
+        this->_pop_order[pop_sthg] = i_pop;
+        pop_sthg++;
+    }
+}
+
+void
+LocusFilter::reset()
+{
+    memset(this->_samples,  0, this->_sample_cnt * sizeof(size_t));
+    memset(this->_pop_cnts, 0, this->_pop_cnt * sizeof(size_t));
+}
+
+int
+LocusFilter::keep_single_snp(const CSLocus *cloc, const LocTally *t)
+{
+    set<int> new_wl;
+
+    //
+    // If this locus is not in the whitelist, or it is in the whitelist but no specific
+    // SNPs are specified in the whitelist for this locus -- so all SNPs are included,
+    // choose the first variant.
+    //
+    if (this->_whitelist.count(cloc->id) == 0 || this->_whitelist[cloc->id].size() > 0) {
+        for (uint i = 0; i < cloc->snps.size(); i++)
+            if (t->nucs[cloc->snps[i]->col].fixed == false) {
+                new_wl.insert(cloc->snps[i]->col);
+                break;
+            }
+
+    } else {
+        //
+        // Otherwise, choose the first SNP that is already in the whitelist.
+        //
+        for (uint i = 0; i < cloc->snps.size(); i++) {
+            if (this->_whitelist[cloc->id].count(cloc->snps[i]->col) == 0 ||
+                t->nucs[cloc->snps[i]->col].fixed == true)
+                continue;
+            new_wl.insert(cloc->snps[i]->col);
+            break;
+        }
+    }
+
+    this->_whitelist[cloc->id] = new_wl;
+    
+    return 0;
+}
+
+int
+LocusFilter::keep_random_snp(const CSLocus *cloc, const LocTally *t)
+{
+    set<int> new_wl, seen;
+    int      index;
+
+    if (this->_whitelist.count(cloc->id) == 0 && cloc->snps.size() == 0) {
+        this->_whitelist[cloc->id] = new_wl;
+        return 0;
+    }
+
+    //
+    // If no specific SNPs are specified in the whitelist for this locus,
+    // then all SNPs are included, choose a random variant.
+    //
+    if (this->_whitelist.count(cloc->id) == 0  || this->_whitelist[cloc->id].size() == 0) {
+        do {
+            index = rand() % cloc->snps.size();
+            seen.insert(index);
+        }  while (t->nucs[cloc->snps[index]->col].fixed == true && seen.size() < cloc->snps.size());
+
+        if (t->nucs[cloc->snps[index]->col].fixed == false)
+            new_wl.insert(cloc->snps[index]->col);
+
+    } else {
+        //
+        // Otherwise, choose a SNP that is already in the whitelist randomly.
+        //
+        do {
+            index = rand() % cloc->snps.size();
+            seen.insert(index);
+        } while (this->_whitelist.count(cloc->snps[index]->col) == 0 && seen.size() < cloc->snps.size());
+
+        if (t->nucs[cloc->snps[index]->col].fixed == false)
+            new_wl.insert(cloc->snps[index]->col);
+    }
+
+    this->_whitelist[cloc->id] = new_wl;
+
+    return 0;
+}
+
+int
+LocusFilter::prune_sites_with_whitelist(MetaPopInfo *mpopi, CSLocus *cloc, Datum **d, bool user_wl)
+{
+    if (user_wl == false && write_single_snp == false && write_random_snp == false)
+        return 0;
+
+    assert(this->_whitelist.count(cloc->id));
+
+    //
+    // When a user whitelist is not supplied but write_single_snp or write_random_snp is,
+    // there can be homozygous loci that end up in the whitelist.
+    //
+    if (cloc->snps.size() == 0)
+        return 0;
+
+    //
+    // We want to prune out SNP objects that are not in the whitelist.
+    //
+    int              pos;
+    vector<SNP *>    tmp;
+    vector<uint>     cols;
+    map<string, int> obshaps;
+    map<string, int>::iterator sit;
+
+    for (uint i = 0; i < cloc->snps.size(); i++) {
+        if (this->_whitelist[cloc->id].count(cloc->snps[i]->col) > 0) {
+            tmp.push_back(cloc->snps[i]);
+            cols.push_back(i);
+        } else {
+            //
+            // Change the model calls in the samples to no longer contain this SNP.
+            //
+            pos = cloc->snps[i]->col;
+            for (uint j = 0; j < this->_sample_cnt; j++) {
+                if (d[j] == NULL || pos >= d[j]->len)
+                    continue;
+                if (d[j]->model != NULL) {
+                    d[j]->model[pos] = 'U';
+                }
+            }
+
+            delete cloc->snps[i];
+        }
+    }
+    cloc->snps.clear();
+    for (uint i = 0; i < tmp.size(); i++)
+        cloc->snps.push_back(tmp[i]);
+
+    map<string, int>::iterator it;
+    char allele_old[id_len], allele_new[id_len];
+    //
+    // We need to adjust the catalog's list of haplotypes/alleles
+    // for this locus to account for the pruned SNPs.
+    //
+    for (it = cloc->alleles.begin(); it != cloc->alleles.end(); it++) {
+        strncpy(allele_old, it->first.c_str(), id_len - 1);
+        allele_old[id_len - 1] = '\0';
+
+        for (uint k = 0; k < cols.size(); k++)
+            allele_new[k] = allele_old[cols[k]];
+        allele_new[cols.size()] = '\0';
+        obshaps[string(allele_new)] += it->second;
+    }
+    cloc->alleles.clear();
+    for (sit = obshaps.begin(); sit != obshaps.end(); sit++) {
+        cloc->alleles[sit->first] = sit->second;
+    }
+    obshaps.clear();
+
+    cloc->populate_alleles();
+
+    //
+    // Now we need to adjust the matched haplotypes to sync to
+    // the SNPs left in the catalog.
+    //
+    // Reducing the lengths of the haplotypes  may create
+    // redundant (shorter) haplotypes, we need to remove these.
+    //
+    for (uint i = 0; i < this->_sample_cnt; i++) {
+        if (d[i] == NULL) continue;
+
+        for (uint j = 0; j < d[i]->obshap.size(); j++) {
+            for (uint k = 0; k < cols.size(); k++)
+                d[i]->obshap[j][k] = d[i]->obshap[j][cols[k]];
+            d[i]->obshap[j][cols.size()] = '\0';
+            obshaps[d[i]->obshap[j]] += d[i]->depth[j];
+        }
+        uint j = 0;
+        for (sit = obshaps.begin(); sit != obshaps.end(); sit++) {
+            strcpy(d[i]->obshap[j], sit->first.c_str());
+            d[i]->depth[j] = sit->second;
+            j++;
+        }
+        while (j < d[i]->obshap.size()) {
+            delete [] d[i]->obshap[j];
+            j++;
+        }
+        d[i]->obshap.resize(obshaps.size());
+        d[i]->depth.resize(obshaps.size());
+        obshaps.clear();
+    }
+
+    return 0;
+}
+
+bool
+LocusFilter::prune_sites(MetaPopInfo *mpopi, CSLocus *cloc, Datum **d, LocPopSum *s, ostream &log_fh)
+{
+    set<int>    site_list;
+    vector<int> pop_prune_list;
+    bool        sample_prune, maf_prune, het_prune, inc_prune;
+
+    //
+    // If this locus is fixed, ignore it.
+    //
+    if (cloc->snps.size() == 0)
+        return false;
+
+    const LocSum   *sum;
+    const LocTally *t;
+    int  pruned = 0;
+
+    for (uint i = 0; i < cloc->snps.size(); i++) {
+        t = s->meta_pop();
+
+        //
+        // If the site is fixed, ignore it.
+        //
+        if (t->nucs[cloc->snps[i]->col].fixed == true)
+            continue;
+
+        this->_total_sites++;
+        
+        sample_prune = false;
+        maf_prune    = false;
+        het_prune    = false;
+        inc_prune    = false;
+        pop_prune_list.clear();
+
+        for (size_t p = 0; p < s->pop_cnt(); ++p) {
+            sum = s->per_pop(p);
+            
+            if (sum->nucs[cloc->snps[i]->col].incompatible_site)
+                inc_prune = true;
+
+            else if (sum->nucs[cloc->snps[i]->col].num_indv == 0 ||
+                     (double) sum->nucs[cloc->snps[i]->col].num_indv / (double) this->_pop_tot[p] < sample_limit)
+                pop_prune_list.push_back(p);
+        }
+
+        //
+        // Check how many populations have to be pruned out due to sample limit. If less than
+        // population limit, prune them; if more than population limit, mark locus for deletion.
+        //
+        if ((mpopi->pops().size() - pop_prune_list.size()) < (uint) population_limit) {
+            sample_prune = true;
+        } else {
+            for (size_t p : pop_prune_list) {
+                if (s->per_pop(p)->nucs[cloc->snps[i]->col].num_indv == 0)
+                    continue;
+
+                const Pop& pop = mpopi->pops()[p];
+                for (uint k = pop.first_sample; k <= pop.last_sample; k++) {
+                    if (d[k] == NULL || cloc->snps[i]->col >= (uint) d[k]->len)
+                        continue;
+                    if (d[k]->model != NULL) {
+                        d[k]->model[cloc->snps[i]->col] = 'U';
+                    }
+                }
+            }
+        }
+
+        if (t->nucs[cloc->snps[i]->col].allele_cnt > 1) {
+            //
+            // Test for minor allele frequency.
+            //
+            if ((1 - t->nucs[cloc->snps[i]->col].p_freq) < minor_allele_freq)
+                maf_prune = true;
+            //
+            // Test for observed heterozygosity.
+            //
+            if (t->nucs[cloc->snps[i]->col].obs_het > max_obs_het)
+                het_prune = true;
+        }
+
+        if (maf_prune == false && het_prune == false && sample_prune == false && inc_prune == false) {
+            site_list.insert(cloc->snps[i]->col);
+        } else {
+            pruned++;
+            this->_filtered_sites++;
+            sum->nucs[cloc->snps[i]->col].filtered_site = true;
+
+            if (verbose) {
+                log_fh << "pruned_polymorphic_site\t"
+                       << cloc->id << "\t"
+                       << cloc->loc.chr() << "\t"
+                       << cloc->sort_bp(cloc->snps[i]->col) +1 << "\t"
+                       << cloc->snps[i]->col << "\t";
+                if (inc_prune)
+                    log_fh << "incompatible_site\n";
+                else if (sample_prune)
+                    log_fh << "sample_limit\n";
+                else if (maf_prune)
+                    log_fh << "maf_limit\n";
+                else if (het_prune)
+                    log_fh << "obshet_limit\n";
+                else
+                    log_fh << "unknown_reason\n";
+            }
+        }
+    }
+
+    //
+    // If no SNPs were retained for this locus, then mark it to be removed entirely.
+    //
+    if (site_list.size() == 0) {
+        if (verbose)
+            log_fh << "removed_locus\t"
+                   << cloc->id << "\t"
+                   << cloc->loc.chr() << "\t"
+                   << cloc->sort_bp() +1 << "\t"
+                   << 0 << "\tno_snps_remaining\n";
+        this->_filtered_loci++;
+        return true;
+    }
+    
+    return false;
+}
+
+void
+vcfcomp_simplify_pmap (map<int, CSLocus*>& catalog, PopMap<CSLocus>* pmap)
+{
     cerr << "DEBUG Deleting information from the pmap & catalog so that they resemble what can be retrieved from a VCF.\n";
     // n.b. In this configuration we only have one SNP per locus so we don't have
     // to worry about what U's imply regarding haplotypes.
@@ -1325,6 +1714,122 @@ order_unordered_loci(map<int, CSLocus *> &catalog)
 }
 
 int
+CatalogDists::accumulate_pre_filtering(const CSLocus *loc)
+{
+    size_t missing;
+
+    if (this->_pre_valid.count(loc->hcnt) == 0)
+        this->_pre_valid[loc->hcnt] = 1;
+    else
+        this->_pre_valid[loc->hcnt]++;
+
+    if (this->_pre_confounded.count(loc->confounded_cnt) == 0)
+        this->_pre_confounded[loc->confounded_cnt] = 1;
+    else
+        this->_pre_confounded[loc->confounded_cnt]++;
+
+    missing = loc->cnt - loc->hcnt;
+
+    if (this->_pre_absent.count(missing) == 0)
+        this->_pre_absent[missing] = 1;
+    else
+        this->_pre_absent[missing]++;
+
+    if (this->_pre_snps_per_loc.count(loc->snps.size()) == 0)
+        this->_pre_snps_per_loc[loc->snps.size()] = 1;
+    else
+        this->_pre_snps_per_loc[loc->snps.size()]++;
+    
+    return 0;
+}
+
+int
+CatalogDists::accumulate(const vector<LocBin *> &loci)
+{
+    const CSLocus *loc;
+    size_t missing;
+
+    for (uint i = 0; i < loci.size(); i++) {
+        loc = loci[i]->cloc;
+
+        if (this->_post_valid.count(loc->hcnt) == 0)
+            this->_post_valid[loc->hcnt] = 1;
+        else
+            this->_post_valid[loc->hcnt]++;
+
+        if (this->_post_confounded.count(loc->confounded_cnt) == 0)
+            this->_post_confounded[loc->confounded_cnt] = 1;
+        else
+            this->_post_confounded[loc->confounded_cnt]++;
+
+        missing = loc->cnt - loc->hcnt;
+
+        if (this->_post_absent.count(missing) == 0)
+            this->_post_absent[missing] = 1;
+        else
+            this->_post_absent[missing]++;
+
+        if (this->_post_snps_per_loc.count(loc->snps.size()) == 0)
+            this->_post_snps_per_loc[loc->snps.size()] = 1;
+        else
+            this->_post_snps_per_loc[loc->snps.size()]++;
+
+    }
+    
+    return 0;
+}
+
+int
+CatalogDists::write_results(ostream &log_fh)
+{
+    map<size_t, size_t>::iterator cnt_it;
+
+    log_fh << "# Distribution of valid samples matched to a catalog locus prior to filtering.\n"
+           << "# Valid samples at locus\tCount\n";
+    for (cnt_it = this->_pre_valid.begin(); cnt_it != this->_pre_valid.end(); cnt_it++)
+        log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
+
+    log_fh << "\n# Distribution of confounded samples for each catalog locus prior to filtering.\n"
+           << "# Confounded samples at locus\tCount\n";
+    for (cnt_it = this->_pre_confounded.begin(); cnt_it != this->_pre_confounded.end(); cnt_it++)
+        log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
+
+    log_fh << "\n# Distribution of missing samples for each catalog locus prior to filtering.\n"
+           << "# Absent samples at locus\tCount\n";
+    for (cnt_it = this->_pre_absent.begin(); cnt_it != this->_pre_absent.end(); cnt_it++)
+        log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
+
+    log_fh << "\n# Distribution of the number of SNPs per catalog locus prior to filtering.\n"
+           << "# Number SNPs\tNumber loci\n";
+    for (cnt_it = this->_pre_snps_per_loc.begin(); cnt_it != this->_pre_snps_per_loc.end(); cnt_it++)
+        log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
+    log_fh << "\n";
+
+    log_fh << "# Distribution of valid samples matched to a catalog locus after filtering.\n"
+           << "# Valid samples at locus\tCount\n";
+    for (cnt_it = this->_post_valid.begin(); cnt_it != this->_post_valid.end(); cnt_it++)
+        log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
+
+    log_fh << "\n# Distribution of confounded samples for each catalog locus after filtering.\n"
+           << "# Confounded samples at locus\tCount\n";
+    for (cnt_it = this->_post_confounded.begin(); cnt_it != this->_post_confounded.end(); cnt_it++)
+        log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
+
+    log_fh << "\n# Distribution of missing samples for each catalog locus after filtering.\n"
+           << "# Absent samples at locus\tCount\n";
+    for (cnt_it = this->_post_absent.begin(); cnt_it != this->_post_absent.end(); cnt_it++)
+        log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
+
+    log_fh << "\n# Distribution of the number of SNPs per catalog locus after filtering.\n"
+           << "# Number SNPs\tNumber loci\n";
+    for (cnt_it = this->_post_snps_per_loc.begin(); cnt_it != this->_post_snps_per_loc.end(); cnt_it++)
+        log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
+    log_fh << "\n";
+
+    return 0;
+}
+
+int
 log_haplotype_cnts(map<int, CSLocus *> &catalog, ofstream &log_fh)
 {
     map<int, CSLocus *>::iterator it;
@@ -1375,6 +1880,33 @@ log_haplotype_cnts(map<int, CSLocus *> &catalog, ofstream &log_fh)
 }
 
 int
+tabulate_locus_haplotypes(CSLocus *cloc, Datum **d, int sample_cnt)
+{
+    double mean = 0.0;
+    double cnt  = 0.0;
+
+    for (int i = 0; i < sample_cnt; i++) {
+        if (d[i] == NULL)
+            continue;
+
+        if (d[i]->obshap.size() > 1)
+            cloc->marker = "heterozygous";
+
+        mean += d[i]->lnl;
+        cnt++;
+    }
+
+    if (cloc->marker.length() > 0) {
+        create_genotype_map(cloc, d, sample_cnt);
+        call_population_genotypes(cloc, d, sample_cnt);
+    }
+
+    cloc->lnl = mean / cnt;
+
+    return 0;
+}
+
+int
 tabulate_haplotypes(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
 {
     map<int, CSLocus *>::iterator it;
@@ -1402,8 +1934,8 @@ tabulate_haplotypes(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
         }
 
         if (loc->marker.length() > 0) {
-            create_genotype_map(loc, pmap);
-            call_population_genotypes(loc, pmap);
+            create_genotype_map(loc, d, pmap->sample_cnt());
+            call_population_genotypes(loc, d, pmap->sample_cnt());
         }
 
         loc->lnl = mean / cnt;
@@ -2056,7 +2588,7 @@ merge_datums(int sample_cnt,
 }
 
 int
-create_genotype_map(CSLocus *locus, PopMap<CSLocus> *pmap)
+create_genotype_map(CSLocus *locus, Datum **d, int sample_cnt)
 {
     //
     // Create a genotype map. For any set of haplotypes, this routine will
@@ -2071,14 +2603,11 @@ create_genotype_map(CSLocus *locus, PopMap<CSLocus> *pmap)
                       'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
                       'u', 'v', 'w', 'x', 'y', 'z'};
 
-    Datum **d;
     map<string, int> haplotypes;
     map<string, int>::iterator k;
     vector<pair<string, int> > sorted_haplotypes;
 
-    d = pmap->locus(locus->id);
-
-    for (int i = 0; i < pmap->sample_cnt(); i++) {
+    for (int i = 0; i < sample_cnt; i++) {
 
         if (d[i] != NULL)
             for (uint n = 0; n < d[i]->obshap.size(); n++)
@@ -2105,14 +2634,13 @@ create_genotype_map(CSLocus *locus, PopMap<CSLocus> *pmap)
     return 0;
 }
 
-int call_population_genotypes(CSLocus *locus,
-                              PopMap<CSLocus> *pmap) {
+int
+call_population_genotypes(CSLocus *locus, Datum **d, int sample_cnt)
+{
     //
     // Fetch the array of observed haplotypes from the population
     //
-    Datum **d = pmap->locus(locus->id);
-
-    for (int i = 0; i < pmap->sample_cnt(); i++) {
+    for (int i = 0; i < sample_cnt; i++) {
         if (d[i] == NULL)
             continue;
 
@@ -2415,55 +2943,6 @@ calculate_haplotype_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, P
     }
 
     fh.close();
-
-    return 0;
-}
-
-int
-nuc_substitution_dist(map<string, int> &hap_index, double **hdists)
-{
-    vector<string> haplotypes;
-    map<string, int>::iterator it;
-    uint i, j;
-
-    for (it = hap_index.begin(); it != hap_index.end(); it++)
-        haplotypes.push_back(it->first);
-
-    const char *p, *q;
-    double dist;
-
-    for (i = 0; i < haplotypes.size(); i++) {
-        for (j = i; j < haplotypes.size(); j++) {
-
-            dist = 0.0;
-            p    = haplotypes[i].c_str();
-            q    = haplotypes[j].c_str();
-
-            while (*p != '\0' && *q != '\0') {
-                if (*p != *q) dist++;
-                p++;
-                q++;
-            }
-
-            hdists[i][j] = dist;
-            hdists[j][i] = dist;
-        }
-    }
-
-    // //
-    // // Print the distance matrix.
-    // //
-    // cerr << "  ";
-    // for (hit = loc_hap_index.begin(); hit != loc_hap_index.end(); hit++)
-    //  cerr << "\t" << hit->first;
-    // cerr << "\n";
-    // for (hit = loc_hap_index.begin(); hit != loc_hap_index.end(); hit++) {
-    //  cerr << "  " << hit->first;
-    //  for (hit_2 = loc_hap_index.begin(); hit_2 != loc_hap_index.end(); hit_2++)
-    //      cerr << "\t" << hdists[hit->second][hit_2->second];
-    //  cerr << "\n";
-    // }
-    // cerr << "\n";
 
     return 0;
 }
@@ -3058,7 +3537,7 @@ haplotype_diversity(int start, int end, Datum **d)
     //
     // Tabulate the haplotypes in this population.
     //
-    n = count_haplotypes_at_locus(start, end, d, hap_freq);
+    n = count_haplotypes_at_locus(start, end, (const Datum **) d, hap_freq);
 
     // cerr << "  " << n << " total haplotypes observed.\n";
 
@@ -3715,6 +4194,512 @@ void log_snps_per_loc_distrib(ostream& log_fh, map<int, CSLocus*>& catalog)
               "#n_snps\tn_loci\n";
     for(const auto& n_snps : snps_per_loc_distrib)
         log_fh << n_snps.first << "\t" << n_snps.second << "\n";
+}
+
+SumStatsSummary::SumStatsSummary(size_t pop_cnt)
+{
+    this->_pop_cnt           = pop_cnt;
+    this->_private_cnt       = new int[this->_pop_cnt];
+    this->_n                 = new double[this->_pop_cnt];
+    this->_var_sites         = new double[this->_pop_cnt];
+
+    this->_num_indv_mean     = new double[this->_pop_cnt];
+    this->_num_indv_acc_mean = new double[this->_pop_cnt];    
+    this->_num_indv_var      = new double[this->_pop_cnt];
+    this->_p_mean            = new double[this->_pop_cnt];
+    this->_p_acc_mean        = new double[this->_pop_cnt];    
+    this->_p_var             = new double[this->_pop_cnt];
+    this->_obs_het_mean      = new double[this->_pop_cnt];
+    this->_obs_het_acc_mean  = new double[this->_pop_cnt];    
+    this->_obs_het_var       = new double[this->_pop_cnt];
+    this->_obs_hom_mean      = new double[this->_pop_cnt];
+    this->_obs_hom_acc_mean  = new double[this->_pop_cnt];    
+    this->_obs_hom_var       = new double[this->_pop_cnt];
+    this->_exp_het_mean      = new double[this->_pop_cnt];
+    this->_exp_het_acc_mean  = new double[this->_pop_cnt];    
+    this->_exp_het_var       = new double[this->_pop_cnt];
+    this->_exp_hom_mean      = new double[this->_pop_cnt];
+    this->_exp_hom_acc_mean  = new double[this->_pop_cnt];    
+    this->_exp_hom_var       = new double[this->_pop_cnt];
+    this->_pi_mean           = new double[this->_pop_cnt];
+    this->_pi_acc_mean       = new double[this->_pop_cnt];    
+    this->_pi_var            = new double[this->_pop_cnt];
+    this->_fis_mean          = new double[this->_pop_cnt];
+    this->_fis_acc_mean      = new double[this->_pop_cnt];
+    this->_fis_var           = new double[this->_pop_cnt];
+
+    this->_n_all                 = new double[this->_pop_cnt];
+    this->_num_indv_mean_all     = new double[this->_pop_cnt];
+    this->_num_indv_acc_mean_all = new double[this->_pop_cnt];    
+    this->_num_indv_var_all      = new double[this->_pop_cnt];
+    this->_p_mean_all            = new double[this->_pop_cnt];
+    this->_p_acc_mean_all        = new double[this->_pop_cnt];    
+    this->_p_var_all             = new double[this->_pop_cnt];
+    this->_obs_het_mean_all      = new double[this->_pop_cnt];
+    this->_obs_het_acc_mean_all  = new double[this->_pop_cnt];    
+    this->_obs_het_var_all       = new double[this->_pop_cnt];
+    this->_obs_hom_mean_all      = new double[this->_pop_cnt];
+    this->_obs_hom_acc_mean_all  = new double[this->_pop_cnt];    
+    this->_obs_hom_var_all       = new double[this->_pop_cnt];
+    this->_exp_het_mean_all      = new double[this->_pop_cnt];
+    this->_exp_het_acc_mean_all  = new double[this->_pop_cnt];    
+    this->_exp_het_var_all       = new double[this->_pop_cnt];
+    this->_exp_hom_mean_all      = new double[this->_pop_cnt];
+    this->_exp_hom_acc_mean_all  = new double[this->_pop_cnt];    
+    this->_exp_hom_var_all       = new double[this->_pop_cnt];
+    this->_pi_mean_all           = new double[this->_pop_cnt];
+    this->_pi_acc_mean_all       = new double[this->_pop_cnt];    
+    this->_pi_var_all            = new double[this->_pop_cnt];
+    this->_fis_mean_all          = new double[this->_pop_cnt];
+    this->_fis_acc_mean_all      = new double[this->_pop_cnt];    
+    this->_fis_var_all           = new double[this->_pop_cnt];
+
+    this->_sq_n     = new double[this->_pop_cnt];
+    this->_sq_n_all = new double[this->_pop_cnt];
+
+    for (uint j = 0; j < this->_pop_cnt; j++) {
+        this->_private_cnt[j]       = 0;
+        this->_n[j]                 = 0.0;
+        this->_var_sites[j]         = 0.0;
+        this->_num_indv_mean[j]     = 0.0;
+        this->_num_indv_acc_mean[j] = 0.0;        
+        this->_num_indv_var[j]      = 0.0;
+        this->_p_mean[j]            = 0.0;
+        this->_p_acc_mean[j]        = 0.0;        
+        this->_p_var[j]             = 0.0;
+        this->_obs_het_mean[j]      = 0.0;
+        this->_obs_het_acc_mean[j]  = 0.0;        
+        this->_obs_het_var[j]       = 0.0;
+        this->_obs_hom_mean[j]      = 0.0;
+        this->_obs_hom_acc_mean[j]  = 0.0;        
+        this->_obs_hom_var[j]       = 0.0;
+        this->_exp_het_mean[j]      = 0.0;
+        this->_exp_het_acc_mean[j]  = 0.0;        
+        this->_exp_het_var[j]       = 0.0;
+        this->_exp_hom_mean[j]      = 0.0;
+        this->_exp_hom_acc_mean[j]  = 0.0;        
+        this->_exp_hom_var[j]       = 0.0;
+        this->_pi_mean[j]           = 0.0;
+        this->_pi_acc_mean[j]       = 0.0;        
+        this->_pi_var[j]            = 0.0;
+        this->_fis_mean[j]          = 0.0;
+        this->_fis_acc_mean[j]      = 0.0;        
+        this->_fis_var[j]           = 0.0;
+
+        this->_n_all[j]                 = 0.0;
+        this->_num_indv_mean_all[j]     = 0.0;
+        this->_num_indv_acc_mean_all[j] = 0.0;
+        this->_num_indv_var_all[j]      = 0.0;
+        this->_p_mean_all[j]            = 0.0;
+        this->_p_acc_mean_all[j]        = 0.0;
+        this->_p_var_all[j]             = 0.0;
+        this->_obs_het_mean_all[j]      = 0.0;
+        this->_obs_het_acc_mean_all[j]  = 0.0;
+        this->_obs_het_var_all[j]       = 0.0;
+        this->_obs_hom_mean_all[j]      = 0.0;
+        this->_obs_hom_acc_mean_all[j]  = 0.0;
+        this->_obs_hom_var_all[j]       = 0.0;
+        this->_exp_het_mean_all[j]      = 0.0;
+        this->_exp_het_acc_mean_all[j]  = 0.0;
+        this->_exp_het_var_all[j]       = 0.0;
+        this->_exp_hom_mean_all[j]      = 0.0;
+        this->_exp_hom_acc_mean_all[j]  = 0.0;
+        this->_exp_hom_var_all[j]       = 0.0;
+        this->_pi_mean_all[j]           = 0.0;
+        this->_pi_acc_mean_all[j]       = 0.0;
+        this->_pi_var_all[j]            = 0.0;
+        this->_fis_mean_all[j]          = 0.0;
+        this->_fis_acc_mean_all[j]      = 0.0;
+        this->_fis_var_all[j]           = 0.0;
+    }
+}
+
+int
+SumStatsSummary::accumulate(const vector<LocBin *> &loci)
+{
+    //
+    // We are calculating the mean, variance, and standard deviation for several variables.
+    //   We will calculate them partially, for each set of loci input to the program using
+    //   the algorithm described in:
+    //     B. P. Welford. (1962) Note on a Method for Calculating Corrected Sums of Squares and
+    //     Products. Technometrics: 4(3), pp. 419-420.
+    //
+    CSLocus        *cloc;
+    const LocSum   *s;
+    const LocTally *t;
+
+    for (uint i = 0; i < loci.size(); i++) {
+        cloc = loci[i]->cloc;
+        t    = loci[i]->s->meta_pop();
+        uint len = strlen(cloc->con);
+
+        for (uint pos = 0; pos < len; pos++) {
+            //
+            // Compile private alleles
+            //
+            if (t->nucs[pos].priv_allele >= 0)
+                _private_cnt[t->nucs[pos].priv_allele]++;
+
+            if (t->nucs[pos].allele_cnt == 2) {
+
+                for (uint pop = 0; pop < this->_pop_cnt; pop++) {
+
+                    s = loci[i]->s->per_pop(pop);
+
+                    if (s->nucs[pos].num_indv == 0) continue;
+
+                    _n[pop]++;
+
+                    if (s->nucs[pos].pi > 0) _var_sites[pop]++;
+
+                    //
+                    // Accumulate sums for each variable to calculate the means.
+                    // 
+                    _num_indv_mean[pop] += s->nucs[pos].num_indv;
+                    _p_mean[pop]        += s->nucs[pos].p;
+                    _obs_het_mean[pop]  += s->nucs[pos].obs_het;
+                    _obs_hom_mean[pop]  += s->nucs[pos].obs_hom;
+                    _exp_het_mean[pop]  += s->nucs[pos].exp_het;
+                    _exp_hom_mean[pop]  += s->nucs[pos].exp_hom;
+                    _pi_mean[pop]       += s->nucs[pos].stat[0];
+                    _fis_mean[pop]      += s->nucs[pos].stat[1] != -7.0 ? s->nucs[pos].stat[1] : 0.0;
+
+                    _n_all[pop]++;
+                    _num_indv_mean_all[pop] += s->nucs[pos].num_indv;
+                    _p_mean_all[pop]        += s->nucs[pos].p;
+                    _obs_het_mean_all[pop]  += s->nucs[pos].obs_het;
+                    _obs_hom_mean_all[pop]  += s->nucs[pos].obs_hom;
+                    _exp_het_mean_all[pop]  += s->nucs[pos].exp_het;
+                    _exp_hom_mean_all[pop]  += s->nucs[pos].exp_hom;
+                    _pi_mean_all[pop]       += s->nucs[pos].stat[0];
+                    _fis_mean_all[pop]      += s->nucs[pos].stat[1] != -7.0 ? s->nucs[pos].stat[1] : 0.0;
+
+                    //
+                    // Accumulate a partial sum of squares to calculate the variance.
+                    //
+                    _num_indv_var[pop] += this->online_variance(s->nucs[pos].num_indv, _num_indv_acc_mean[pop], _n[pop]);
+                    _p_var[pop]        += this->online_variance(s->nucs[pos].p,        _p_acc_mean[pop],        _n[pop]);
+                    _obs_het_var[pop]  += this->online_variance(s->nucs[pos].obs_het,  _obs_het_acc_mean[pop],  _n[pop]);
+                    _obs_hom_var[pop]  += this->online_variance(s->nucs[pos].obs_hom,  _obs_hom_acc_mean[pop],  _n[pop]);
+                    _exp_het_var[pop]  += this->online_variance(s->nucs[pos].exp_het,  _exp_het_acc_mean[pop],  _n[pop]);
+                    _exp_hom_var[pop]  += this->online_variance(s->nucs[pos].exp_hom,  _exp_hom_acc_mean[pop],  _n[pop]);
+                    _pi_var[pop]       += this->online_variance(s->nucs[pos].stat[0],  _pi_acc_mean[pop],       _n[pop]);
+                    _fis_var[pop]      += this->online_variance(s->nucs[pos].stat[1] != -7.0 ? s->nucs[pos].stat[1] : 0.0, _fis_acc_mean[pop], _n[pop]);
+
+                    _num_indv_var_all[pop] += this->online_variance(s->nucs[pos].num_indv, _num_indv_acc_mean_all[pop], _n_all[pop]);
+                    _p_var_all[pop]        += this->online_variance(s->nucs[pos].p,        _p_acc_mean_all[pop],        _n_all[pop]);
+                    _obs_het_var_all[pop]  += this->online_variance(s->nucs[pos].obs_het,  _obs_het_acc_mean_all[pop],  _n_all[pop]);
+                    _obs_hom_var_all[pop]  += this->online_variance(s->nucs[pos].obs_hom,  _obs_hom_acc_mean_all[pop],  _n_all[pop]);
+                    _exp_het_var_all[pop]  += this->online_variance(s->nucs[pos].exp_het,  _exp_het_acc_mean_all[pop],  _n_all[pop]);
+                    _exp_hom_var_all[pop]  += this->online_variance(s->nucs[pos].exp_hom,  _exp_hom_acc_mean_all[pop],  _n_all[pop]);
+                    _pi_var_all[pop]       += this->online_variance(s->nucs[pos].stat[0],  _pi_acc_mean_all[pop],       _n_all[pop]);
+                    _fis_var_all[pop]      += this->online_variance(s->nucs[pos].stat[1] != -7.0 ? s->nucs[pos].stat[1] : 0.0, _fis_acc_mean_all[pop], _n_all[pop]);
+                }
+
+            } else if (t->nucs[pos].allele_cnt == 1) {
+                
+                for (uint pop = 0; pop < this->_pop_cnt; pop++) {
+                    s = loci[i]->s->per_pop(pop);
+
+                    if (s->nucs[pos].num_indv == 0) continue;
+
+                    _n_all[pop]++;
+                    _num_indv_mean_all[pop] += s->nucs[pos].num_indv;
+                    _p_mean_all[pop]        += s->nucs[pos].p;
+                    _obs_het_mean_all[pop]  += s->nucs[pos].obs_het;
+                    _obs_hom_mean_all[pop]  += s->nucs[pos].obs_hom;
+                    _exp_het_mean_all[pop]  += s->nucs[pos].exp_het;
+                    _exp_hom_mean_all[pop]  += s->nucs[pos].exp_hom;
+                    _pi_mean_all[pop]       += s->nucs[pos].stat[0];
+                    _fis_mean_all[pop]      += s->nucs[pos].stat[1] != -7.0 ? s->nucs[pos].stat[1] : 0.0;
+
+                    _num_indv_var_all[pop] += this->online_variance(s->nucs[pos].num_indv, _num_indv_acc_mean_all[pop], _n_all[pop]);
+                    _p_var_all[pop]        += this->online_variance(s->nucs[pos].p,        _p_acc_mean_all[pop],        _n_all[pop]);
+                    _obs_het_var_all[pop]  += this->online_variance(s->nucs[pos].obs_het,  _obs_het_acc_mean_all[pop],  _n_all[pop]);
+                    _obs_hom_var_all[pop]  += this->online_variance(s->nucs[pos].obs_hom,  _obs_hom_acc_mean_all[pop],  _n_all[pop]);
+                    _exp_het_var_all[pop]  += this->online_variance(s->nucs[pos].exp_het,  _exp_het_acc_mean_all[pop],  _n_all[pop]);
+                    _exp_hom_var_all[pop]  += this->online_variance(s->nucs[pos].exp_hom,  _exp_hom_acc_mean_all[pop],  _n_all[pop]);
+                    _pi_var_all[pop]       += this->online_variance(s->nucs[pos].stat[0],  _pi_acc_mean_all[pop],       _n_all[pop]);
+                    _fis_var_all[pop]      += this->online_variance(s->nucs[pos].stat[1] != -7.0 ? s->nucs[pos].stat[1] : 0.0, _fis_acc_mean_all[pop], _n_all[pop]);
+                }
+            }
+        }
+    }
+    
+    return 0;
+}
+
+inline double
+SumStatsSummary::online_variance(double x, double &acc_mean, double n)
+{
+    double delta1, delta2;
+
+    delta1    = x - acc_mean;
+    acc_mean += delta1 / n;
+    delta2    = x - acc_mean;
+    return delta1 * delta2;    
+}
+
+int
+SumStatsSummary::final_calculation()
+{
+    //
+    // Finish the mean calculation.
+    //
+    for (uint j = 0; j < this->_pop_cnt; j++) {
+        _num_indv_mean[j] = _num_indv_mean[j] / _n[j];
+        _p_mean[j]        = _p_mean[j]        / _n[j];
+        _obs_het_mean[j]  = _obs_het_mean[j]  / _n[j];
+        _obs_hom_mean[j]  = _obs_hom_mean[j]  / _n[j];
+        _exp_het_mean[j]  = _exp_het_mean[j]  / _n[j];
+        _exp_hom_mean[j]  = _exp_hom_mean[j]  / _n[j];
+        _pi_mean[j]       = _pi_mean[j]       / _n[j];
+        _fis_mean[j]      = _fis_mean[j]      / _n[j];
+
+        _num_indv_mean_all[j] = _num_indv_mean_all[j] / _n_all[j];
+        _p_mean_all[j]        = _p_mean_all[j]        / _n_all[j];
+        _obs_het_mean_all[j]  = _obs_het_mean_all[j]  / _n_all[j];
+        _obs_hom_mean_all[j]  = _obs_hom_mean_all[j]  / _n_all[j];
+        _exp_het_mean_all[j]  = _exp_het_mean_all[j]  / _n_all[j];
+        _exp_hom_mean_all[j]  = _exp_hom_mean_all[j]  / _n_all[j];
+        _pi_mean_all[j]       = _pi_mean_all[j]       / _n_all[j];
+        _fis_mean_all[j]      = _fis_mean_all[j]      / _n_all[j];
+    }    
+
+    //
+    // Finish the online variance calculation.
+    //
+    for (uint j = 0; j < this->_pop_cnt; j++) {
+        _num_indv_var[j] = _num_indv_var[j] / (_n[j] - 1);
+        _p_var[j]        = _p_var[j]        / (_n[j] - 1);
+        _obs_het_var[j]  = _obs_het_var[j]  / (_n[j] - 1);
+        _obs_hom_var[j]  = _obs_hom_var[j]  / (_n[j] - 1);
+        _exp_het_var[j]  = _exp_het_var[j]  / (_n[j] - 1);
+        _exp_hom_var[j]  = _exp_hom_var[j]  / (_n[j] - 1);
+        _pi_var[j]       = _pi_var[j]       / (_n[j] - 1);
+        _fis_var[j]      = _fis_var[j]      / (_n[j] - 1);
+
+        _num_indv_var_all[j] = _num_indv_var_all[j] / (_n_all[j] - 1);
+        _p_var_all[j]        = _p_var_all[j]        / (_n_all[j] - 1);
+        _obs_het_var_all[j]  = _obs_het_var_all[j]  / (_n_all[j] - 1);
+        _obs_hom_var_all[j]  = _obs_hom_var_all[j]  / (_n_all[j] - 1);
+        _exp_het_var_all[j]  = _exp_het_var_all[j]  / (_n_all[j] - 1);
+        _exp_hom_var_all[j]  = _exp_hom_var_all[j]  / (_n_all[j] - 1);
+        _pi_var_all[j]       = _pi_var_all[j]       / (_n_all[j] - 1);
+        _fis_var_all[j]      = _fis_var_all[j]      / (_n_all[j] - 1);
+    }
+
+    //
+    // Calculate the first half of the standard deviation.
+    //
+    for (uint j = 0; j < this->_pop_cnt; j++) {
+        _sq_n[j]     = sqrt(_n[j]);
+        _sq_n_all[j] = sqrt(_n_all[j]);
+    }
+
+    return 0;
+}
+
+int
+SumStatsSummary::write_results()
+{
+    string   path = out_path + out_prefix + ".sumstats_summary.tsv";
+    ofstream fh(path.c_str(), ofstream::out);
+    if (fh.fail()) {
+        cerr << "Error opening sumstats summary file '" << path << "'\n";
+        exit(1);
+    }
+    fh.precision(fieldw);
+    fh.setf(std::ios::fixed);
+
+    cerr << "Summaries of statistics describing the metapopulation will be written to '" << path << "'\n";
+
+    //
+    // Write out summary statistics of the summary statistics.
+    //
+    fh << "# Variant positions\n"
+       << "# Pop ID\t"
+       << "Private\t"
+       << "Num Indv\t"
+       << "Var\t"
+       << "StdErr\t"
+       << "P\t"
+       << "Var\t"
+       << "StdErr\t"
+       << "Obs Het\t"
+       << "Var\t"
+       << "StdErr\t"
+       << "Obs Hom\t"
+       << "Var\t"
+       << "StdErr\t"
+       << "Exp Het\t"
+       << "Var\t"
+       << "StdErr\t"
+       << "Exp Hom\t"
+       << "Var\t"
+       << "StdErr\t"
+       << "Pi\t"
+       << "Var\t"
+       << "StdErr\t"
+       << "Fis\t"
+       << "Var\t"
+       << "StdErr\n";
+
+    for (uint j = 0; j < this->_pop_cnt; j++)
+        fh << mpopi.pops()[j].name << "\t"
+           << _private_cnt[j]         << "\t"
+           << _num_indv_mean[j]       << "\t"
+           << _num_indv_var[j]        << "\t"
+           << sqrt(_num_indv_var[j]) / _sq_n[j] << "\t"
+           << _p_mean[j]              << "\t"
+           << _p_var[j]               << "\t"
+           << sqrt(_p_var[j])         / _sq_n[j] << "\t"
+           << _obs_het_mean[j]        << "\t"
+           << _obs_het_var[j]         << "\t"
+           << sqrt(_obs_het_var[j])   / _sq_n[j] << "\t"
+           << _obs_hom_mean[j]        << "\t"
+           << _obs_hom_var[j]         << "\t"
+           << sqrt(_obs_hom_var[j])   / _sq_n[j] << "\t"
+           << _exp_het_mean[j]        << "\t"
+           << _exp_het_var[j]         << "\t"
+           << sqrt(_exp_het_var[j])   / _sq_n[j] << "\t"
+           << _exp_hom_mean[j]        << "\t"
+           << _exp_hom_var[j]         << "\t"
+           << sqrt(_exp_hom_var[j])   / _sq_n[j] << "\t"
+           << _pi_mean[j]             << "\t"
+           << _pi_var[j]              << "\t"
+           << sqrt(_pi_var[j])        / _sq_n[j] << "\t"
+           << _fis_mean[j]            << "\t"
+           << _fis_var[j]             << "\t"
+           << sqrt(_num_indv_var[j])  / _sq_n[j] << "\n";
+
+    fh << "# All positions (variant and fixed)\n"
+       << "# Pop ID\t"
+       << "Private\t"
+       << "Sites\t"
+       << "Variant Sites\t"
+       << "Polymorphic Sites\t"
+       << "% Polymorphic Loci\t"
+       << "Num Indv\t"
+       << "Var\t"
+       << "StdErr\t"
+       << "P\t"
+       << "Var\t"
+       << "StdErr\t"
+       << "Obs Het\t"
+       << "Var\t"
+       << "StdErr\t"
+       << "Obs Hom\t"
+       << "Var\t"
+       << "StdErr\t"
+       << "Exp Het\t"
+       << "Var\t"
+       << "StdErr\t"
+       << "Exp Hom\t"
+       << "Var\t"
+       << "StdErr\t"
+       << "Pi\t"
+       << "Var\t"
+       << "StdErr\t"
+       << "Fis\t"
+       << "Var\t"
+       << "StdErr\n";
+
+    for (uint j = 0; j < this->_pop_cnt; j++) {
+        fh << mpopi.pops()[j].name << "\t"
+           << _private_cnt[j]             << "\t"
+           << _n_all[j]                   << "\t"
+           << _n[j]                       << "\t"
+           << _var_sites[j]               << "\t"
+           << _var_sites[j]             / _n_all[j] * 100 << "\t"
+           << _num_indv_mean_all[j]       << "\t"
+           << _num_indv_var_all[j]        << "\t"
+           << sqrt(_num_indv_var_all[j]) / _sq_n_all[j] << "\t"
+           << _p_mean_all[j]              << "\t"
+           << _p_var_all[j]               << "\t"
+           << sqrt(_p_var_all[j])        / _sq_n_all[j] << "\t"
+           << _obs_het_mean_all[j]        << "\t"
+           << _obs_het_var_all[j]         << "\t"
+           << sqrt(_obs_het_var_all[j])  / _sq_n_all[j] << "\t"
+           << _obs_hom_mean_all[j]        << "\t"
+           << _obs_hom_var_all[j]         << "\t"
+           << sqrt(_obs_hom_var_all[j])  / _sq_n_all[j] << "\t"
+           << _exp_het_mean_all[j]        << "\t"
+           << _exp_het_var_all[j]         << "\t"
+           << sqrt(_exp_het_var_all[j])  / _sq_n_all[j] << "\t"
+           << _exp_hom_mean_all[j]        << "\t"
+           << _exp_hom_var_all[j]         << "\t"
+           << sqrt(_exp_hom_var_all[j])  / _sq_n_all[j] << "\t"
+           << _pi_mean_all[j]             << "\t"
+           << _pi_var_all[j]              << "\t"
+           << sqrt(_pi_var_all[j])       / _sq_n_all[j] << "\t"
+           << _fis_mean_all[j]            << "\t"
+           << _fis_var_all[j]             << "\t"
+           << sqrt(_num_indv_var_all[j]) / _sq_n_all[j] << "\n";
+    }
+
+    fh.close();
+    
+    return 0;
+}
+
+SumStatsSummary::~SumStatsSummary()
+{
+    delete [] this->_private_cnt;
+    delete [] this->_n;
+    delete [] this->_var_sites;
+    delete [] this->_sq_n;
+    delete [] this->_num_indv_mean;
+    delete [] this->_num_indv_acc_mean;
+    delete [] this->_num_indv_var;
+    delete [] this->_p_mean;
+    delete [] this->_p_acc_mean;
+    delete [] this->_p_var;
+    delete [] this->_obs_het_mean;
+    delete [] this->_obs_het_acc_mean;
+    delete [] this->_obs_het_var;
+    delete [] this->_obs_hom_mean;
+    delete [] this->_obs_hom_acc_mean;
+    delete [] this->_obs_hom_var;
+    delete [] this->_exp_het_mean;
+    delete [] this->_exp_het_acc_mean;
+    delete [] this->_exp_het_var;
+    delete [] this->_exp_hom_mean;
+    delete [] this->_exp_hom_acc_mean;
+    delete [] this->_exp_hom_var;
+    delete [] this->_pi_mean;
+    delete [] this->_pi_acc_mean;
+    delete [] this->_pi_var;
+    delete [] this->_fis_mean;
+    delete [] this->_fis_acc_mean;
+    delete [] this->_fis_var;
+
+    delete [] this->_n_all;
+    delete [] this->_sq_n_all;
+    delete [] this->_num_indv_mean_all;
+    delete [] this->_num_indv_acc_mean_all;
+    delete [] this->_num_indv_var_all;
+    delete [] this->_p_mean_all;
+    delete [] this->_p_acc_mean_all;
+    delete [] this->_p_var_all;
+    delete [] this->_obs_het_mean_all;
+    delete [] this->_obs_het_acc_mean_all;
+    delete [] this->_obs_het_var_all;
+    delete [] this->_obs_hom_mean_all;
+    delete [] this->_obs_hom_acc_mean_all;
+    delete [] this->_obs_hom_var_all;
+    delete [] this->_exp_het_mean_all;
+    delete [] this->_exp_het_acc_mean_all;
+    delete [] this->_exp_het_var_all;
+    delete [] this->_exp_hom_mean_all;
+    delete [] this->_exp_hom_acc_mean_all;
+    delete [] this->_exp_hom_var_all;
+    delete [] this->_pi_mean_all;
+    delete [] this->_pi_acc_mean_all;
+    delete [] this->_pi_var_all;
+    delete [] this->_fis_mean_all;
+    delete [] this->_fis_acc_mean_all;
+    delete [] this->_fis_var_all;
 }
 
 int
@@ -5093,6 +6078,62 @@ write_generic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, bool write_gt
     return 0;
 }
 
+int
+LocusFilter::load_blacklist(string path)
+{
+    char     line[id_len];
+    ifstream fh(path.c_str(), ifstream::in);
+
+    if (fh.fail()) {
+        cerr << "Error opening white/black list file '" << path << "'\n";
+        exit(1);
+    }
+
+    size_t line_num = 0;
+    while (fh.getline(line, id_len)) {
+        ++line_num;
+
+        //
+        // Skip blank & commented lines ; correct windows-style line ends.
+        //
+        size_t len = strlen(line);
+        if (len == 0) {
+            continue;
+        } else if (line[len-1] == '\r') {
+            line[len-1] = '\0';
+            --len;
+            if (len == 0)
+                continue;
+        }
+        char* p = line;
+        while (isspace(*p) && *p != '\0')
+            ++p;
+        if (*p == '#')
+            continue;
+
+        //
+        // Parse the blacklist
+        //
+        char* e;
+        int marker = (int) strtol(line, &e, 10);
+        if (*e == '\0') {
+            this->_blacklist.insert(marker);
+        } else {
+            cerr << "Error: Unable to parse blacklist '" << path << "' at line " << line_num << ".\n";
+            throw exception();
+        }
+    }
+
+    fh.close();
+
+    if (this->_blacklist.size() == 0) {
+        cerr << "Unable to load any markers from '" << path << "'\n";
+        exit(1);
+    }
+
+    return (int) this->_blacklist.size();
+}
+
 int load_marker_list(string path, set<int> &list) {
     char     line[id_len];
     ifstream fh(path.c_str(), ifstream::in);
@@ -5145,6 +6186,87 @@ int load_marker_list(string path, set<int> &list) {
     }
 
     return 0;
+}
+
+int
+LocusFilter::load_whitelist(string path)
+{
+    char     line[id_len];
+    ifstream fh(path.c_str(), ifstream::in);
+
+    if (fh.fail()) {
+        cerr << "Error opening white/black list file '" << path << "'\n";
+        exit(1);
+    }
+
+    vector<string> parts;
+    uint col;
+    char *e;
+
+    uint line_num = 1;
+    while (fh.getline(line, id_len)) {
+
+        //
+        // Skip blank & commented lines ; correct windows-style line ends.
+        //
+        size_t len = strlen(line);
+        if (len == 0) {
+            continue;
+        } else if (line[len-1] == '\r') {
+            line[len-1] = '\0';
+            --len;
+            if (len == 0)
+                continue;
+        }
+        char* p = line;
+        while (isspace(*p) && *p != '\0')
+            ++p;
+        if (*p == '#')
+            continue;
+
+        //
+        // Parse the whitelist, we expect:
+        // <marker>[<tab><snp column>]
+        //
+        parse_tsv(line, parts);
+
+        if (parts.size() > 2) {
+            cerr << "Too many columns in whitelist " << path << "' at line " << line_num << "\n";
+            exit(1);
+
+        } else if (parts.size() == 2) {
+            int marker = (int) strtol(parts[0].c_str(), &e, 10);
+            if (*e != '\0') {
+                cerr << "Unable to parse whitelist, '" << path << "' at line " << line_num << "\n";
+                exit(1);
+            }
+            col = (int) strtol(parts[1].c_str(), &e, 10);
+            if (*e != '\0') {
+                cerr << "Unable to parse whitelist, '" << path << "' at line " << line_num << "\n";
+                exit(1);
+            }
+            this->_whitelist[marker].insert(col);
+
+        } else {
+            int marker = (int) strtol(parts[0].c_str(), &e, 10);
+            if (*e != '\0') {
+                cerr << "Unable to parse whitelist, '" << path << "' at line " << line_num << "\n";
+                exit(1);
+            }
+            this->_whitelist.insert(make_pair(marker, set<int>()));
+        }
+
+        line_num++;
+    }
+
+    fh.close();
+
+    if (this->_whitelist.size() == 0) {
+        cerr << "Unable to load any markers from '" << path << "'\n";
+        help();
+    }
+
+    return (int) this->_whitelist.size();
 }
 
 int load_marker_column_list(string path, map<int, set<int> > &list) {
@@ -5226,11 +6348,82 @@ int load_marker_column_list(string path, map<int, set<int> > &list) {
     return 0;
 }
 
-bool hap_compare(const pair<string, int>& a, const pair<string, int>& b) {
+bool
+hap_compare(const pair<string, int>& a, const pair<string, int>& b)
+{
     return (a.second > b.second);
 }
 
-int parse_command_line(int argc, char* argv[]) {
+void
+open_log(ofstream &log_fh)
+{
+    struct stat out_path_stat;
+
+    if (stat(out_path.substr(0, out_path.length()-1).c_str(), &out_path_stat) == 0) {
+        //
+        // Path exists, check that it is a directory
+        //
+        if (!S_ISDIR(out_path_stat.st_mode)) {
+            cerr << "Error: '" << out_path.substr(0, out_path.length()-1) << "' is not a directory.\n";
+            throw exception();
+        }
+
+    } else if (mkdir(out_path.c_str(), ACCESSPERMS) != 0) {
+        //
+        // Failed to create the directory.
+        //
+        cerr << "Error: Failed to create directory '" << out_path << "'.\n";
+        throw exception();
+    }
+
+    string log_path = out_path + out_prefix + ".log";
+    log_fh.open(log_path.c_str(), ofstream::out);
+    if (log_fh.fail()) {
+        cerr << "Error opening log file '" << log_path << "'\n";
+        throw exception();
+    }
+}
+
+void
+output_parameters(ostream &fh)
+{
+    fh << "populations parameters selected:\n";
+    if (input_mode == InputMode::vcf)
+        fh << "  Input mode: VCF\n";
+    fh << "  Fst kernel smoothing: " << (kernel_smoothed == true ? "on" : "off") << "\n"
+         << "  Bootstrap resampling: ";
+    if (bootstrap)
+        fh << "on, " << (bootstrap_type == bs_exact ? "exact; " : "approximate; ") << bootstrap_reps << " reptitions\n";
+    else
+        fh << "off\n";
+    fh
+        << "  Percent samples limit per population: " << sample_limit << "\n"
+        << "  Locus Population limit: " << population_limit << "\n"
+        << "  Minimum stack depth: " << min_stack_depth << "\n"
+        << "  Log liklihood filtering: " << (filter_lnl == true ? "on"  : "off") << "; threshold: " << lnl_limit << "\n"
+        << "  Minor allele frequency cutoff: " << minor_allele_freq << "\n"
+        << "  Maximum observed heterozygosity cutoff: " << max_obs_het << "\n"
+        << "  Applying Fst correction: ";
+    switch(fst_correction) {
+    case p_value:
+        fh << "P-value correction.\n";
+        break;
+    case bonferroni_win:
+        fh << "Bonferroni correction within sliding window.\n";
+        break;
+    case bonferroni_gen:
+        fh << "Bonferroni correction across genome wide sites.\n";
+        break;
+    case no_correction:
+        fh << "none.\n";
+        break;
+    }
+    fh << "\n";
+}
+
+int
+parse_command_line(int argc, char* argv[])
+{
 
     while (1) {
         static struct option long_options[] = {
@@ -5296,7 +6489,7 @@ int parse_command_line(int argc, char* argv[]) {
         };
 
         // getopt_long stores the option index here.
-        int c = getopt_long(argc, argv, "ACDEFGHJKLNSTUV:YZ123456dghjklnsva:b:c:e:f:i:m:o:p:q:r:t:u:w:B:I:M:O:P:R:Q:W:", long_options, NULL);
+        int c = getopt_long(argc, argv, "ACDEFGHJKLNSTUV:YZ123456dghjklnva:b:c:e:f:i:m:o:p:q:r:t:u:w:B:I:M:O:P:R:Q:W:", long_options, NULL);
 
         // Detect the end of the options.
         if (c == -1)
@@ -5432,9 +6625,6 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 1002:
             ordered_export = true;
-            break;
-        case 's':
-            sql_out = true;
             break;
         case 1004:
             vcf_out = true;
@@ -5614,7 +6804,7 @@ int parse_command_line(int argc, char* argv[]) {
         if (out_path.empty())
             out_path = in_path;
 
-        out_prefix = string("batch_") + to_string(batch_id);
+        out_prefix = "populations";
 
     } else if (input_mode == InputMode::vcf) {
 

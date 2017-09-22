@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010-2013, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2013-2017, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -18,38 +18,47 @@
 // along with Stacks.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef __FASTAI_H__
-#define __FASTAI_H__
+#include "gzFasta.h"
 
-#include "input.h"
+#ifdef HAVE_LIBZ
 
-class Fasta: public Input {
-    string buf;
+GzFasta::GzFasta(const char *path) : Input()
+{
+    this->open(path);
+}
 
- public:
-    Fasta(const char *path) : Input(path) {
-        if (fh.peek() != '>') {
-            cerr << "Error: '" << path << "': not in fasta format (expected '>').\n";
-            throw exception();
-        }
-    };
-    Fasta(string path) : Fasta(path.c_str()) { };
-    ~Fasta() {};
-    Seq *next_seq();
-    int  next_seq(Seq &);
-};
+void
+GzFasta::open(const char *path)
+{
+    this->gz_fh = gzopen(path, "rb");
+    if (!this->gz_fh) {
+        cerr << "Failed to open gzipped file '" << path << "': " << strerror(errno) << ".\n";
+        exit(EXIT_FAILURE);
+    }
+    #if ZLIB_VERNUM >= 0x1240
+    gzbuffer(this->gz_fh, libz_buffer_size);
+    #endif
+    char first = gzgetc(gz_fh);
+    if (first != '>') {
+        cerr << "Error: '" << path << "': not in fasta format (expected '>').\n";
+        exit(EXIT_FAILURE);
+    }
+    gzrewind(gz_fh);
+}
 
-Seq *Fasta::next_seq() {
+Seq *
+GzFasta::next_seq()
+{
     //
     // Check the contents of the line buffer. When we finish reading a FASTA record
     // the buffer will either contain whitespace or the header of the next FAST
     // record.
     //
-    while (this->line[0] != '>' && this->fh.good() ) {
-        this->fh.getline(this->line, max_len);
+    while (this->line[0] != '>' && !gzeof(this->gz_fh)) {
+        gzgets(this->gz_fh, this->line, max_len);
     }
 
-    if (!this->fh.good()) {
+    if (gzeof(this->gz_fh)) {
         return NULL;
     }
 
@@ -57,7 +66,8 @@ Seq *Fasta::next_seq() {
     // Check if there is a carraige return in the buffer
     //
     uint len = strlen(this->line);
-    if (this->line[len - 1] == '\r') this->line[len - 1] = '\0';
+    if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
+    if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
 
     //
     // Initialize the Seq structure and store the FASTA ID
@@ -98,22 +108,25 @@ Seq *Fasta::next_seq() {
     // Read the sequence from the file -- keep reading lines until we reach the next
     // record or the end of file.
     //
-    this->fh.getline(this->line, max_len);
+    gzgets(this->gz_fh, this->line, max_len);
 
-    while (this->line[0] != '>' && this->fh.good()) {
+    while (this->line[0] != '>' && !gzeof(this->gz_fh)) {
         len = strlen(this->line);
-        if (this->line[len - 1] == '\r') this->line[len - 1] = '\0';
+        if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
+        if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
 
         this->buf    += this->line;
         this->line[0] = '\0';
-        this->fh.getline(this->line, max_len);
+        gzgets(this->gz_fh, this->line, max_len);
     }
 
-    if (this->fh.eof()) {
+    if (gzeof(this->gz_fh)) {
         len = strlen(this->line);
-        if (this->line[len - 1] == '\r') this->line[len - 1] = '\0';
+        if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
+        if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
 
         this->buf += this->line;
+        this->line[0] = '\0';
     }
 
     s->seq = new char[this->buf.length() + 1];
@@ -123,17 +136,19 @@ Seq *Fasta::next_seq() {
     return s;
 }
 
-int Fasta::next_seq(Seq &s) {
+int
+GzFasta::next_seq(Seq &s)
+{
     //
     // Check the contents of the line buffer. When we finish reading a FASTA record
     // the buffer will either contain whitespace or the header of the next FAST
     // record.
     //
-    while (this->line[0] != '>' && this->fh.good() ) {
-        this->fh.getline(this->line, max_len);
+    while (this->line[0] != '>' && !gzeof(this->gz_fh)) {
+        gzgets(this->gz_fh, this->line, max_len);
     }
 
-    if (!this->fh.good()) {
+    if (gzeof(this->gz_fh)) {
         return 0;
     }
 
@@ -141,7 +156,8 @@ int Fasta::next_seq(Seq &s) {
     // Check if there is a carraige return in the buffer
     //
     uint len = strlen(this->line);
-    if (this->line[len - 1] == '\r') this->line[len - 1] = '\0';
+    if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
+    if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
 
     //
     // Check if the ID line of the FASTA file has a comment after the ID.
@@ -175,22 +191,25 @@ int Fasta::next_seq(Seq &s) {
     // Read the sequence from the file -- keep reading lines until we reach the next
     // record or the end of file.
     //
-    this->fh.getline(this->line, max_len);
+    gzgets(this->gz_fh, this->line, max_len);
 
-    while (this->line[0] != '>' && this->fh.good()) {
+    while (this->line[0] != '>' && !gzeof(this->gz_fh)) {
         len = strlen(this->line);
-        if (len > 0 && this->line[len - 1] == '\r') this->line[len - 1] = '\0';
+        if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
+        if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
 
         this->buf    += this->line;
         this->line[0] = '\0';
-        this->fh.getline(this->line, max_len);
+        gzgets(this->gz_fh, this->line, max_len);
     }
 
-    if (this->fh.eof()) {
+    if (gzeof(this->gz_fh)) {
         len = strlen(this->line);
-        if (len > 0 && this->line[len - 1] == '\r') this->line[len - 1] = '\0';
+        if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
+        if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
 
         this->buf += this->line;
+        this->line[0] = '\0';
     }
 
     strcpy(s.seq, this->buf.c_str());
@@ -199,4 +218,4 @@ int Fasta::next_seq(Seq &s) {
     return 1;
 }
 
-#endif // __FASTAI_H__
+#endif // HAVE_LIBZ

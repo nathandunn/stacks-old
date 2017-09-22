@@ -362,14 +362,14 @@ reduce_catalog_snps(map<int, CSLocus *> &catalog, map<int, set<int> > &whitelist
     return 0;
 }
 
-map<int, CSLocus*> create_catalog(const vector<VcfRecord>& records) {
-    map<int, CSLocus*> catalog;
+map<int, CSLocus*>* create_catalog(const vector<VcfRecord>& records) {
+    map<int, CSLocus*> *catalog = new map<int, CSLocus *>();
 
     for (size_t i = 0; i < records.size(); ++i) {
         const VcfRecord& rec = records[i];
 
         CSLocus* loc = new CSLocus();
-        catalog.insert(make_pair(i, loc));
+        catalog->insert(make_pair(i, loc));
         loc->sample_id = 0;
         loc->id = i;
         loc->len = 1;
@@ -406,7 +406,7 @@ map<int, CSLocus*> create_catalog(const vector<VcfRecord>& records) {
             delete loc->snps[0];
             delete loc->con;
             delete loc;
-            catalog.erase(i);
+            catalog->erase(i);
             continue;
         }
 
@@ -431,20 +431,27 @@ CSLocus* new_cslocus(const Seq& consensus, const vector<VcfRecord>& records, int
 
     // loc
     // If the analysis is reference-based, there will be a ' pos=...' field on
-    // the fasta ID line.
+    // the fasta ID line, placed as a comment adjacent to the locus ID..
     assert(loc->loc.empty());
-    const char* p = consensus.id;
-    while ((p = strchr(p, ' ')) != NULL) {
-        ++p;
+    
+    const char *p, *q;
+    p = consensus.comment;
+    q = p;
+
+    do {
         if (strncmp(p, "pos=", 4) == 0) {
             p += 4;
-            const char* q = p;
-            while (*q && *q != ' ')
+            q  = p;
+            while (*q != '\0' && *q != ' ' && *q != '\t')
                 ++q;
             loc->loc = PhyLoc(string(p, q));
             break;
         }
-    }
+
+        p = *q == '\0' ? q : q + 1;
+        
+    } while ((p = strchr(p, ' ')) != NULL);
+    
     if (loc->loc.empty())
         loc->loc = PhyLoc("", 0, strand_plus); // n.b. Not the same as PhyLoc(); with this `PhyLoc::chr != NULL`.
 

@@ -32,9 +32,11 @@ class VcfCLocReader {
     VcfParser vcf_f_;
     VcfRecord next_rec_;
     bool eof_;
-public:
+ public:
+    VcfCLocReader(): vcf_f_(), next_rec_(), eof_(false) {};
     VcfCLocReader(const string& vcf_path);
 
+    int  open(string &vcf_path);
     const VcfHeader& header() const {return vcf_f_.header();}
     void set_sample_ids(MetaPopInfo& mpopi) const;
 
@@ -251,6 +253,18 @@ VcfCLocReader::VcfCLocReader(const string& vcf_path)
     // Read the very first record.
     if(!vcf_f_.next_record(next_rec_))
         eof_ = true;
+}
+
+inline int
+VcfCLocReader::open(string &vcf_path)
+{
+    this->vcf_f_.open(vcf_path);
+    
+    // Read the very first record.
+    if(!this->vcf_f_.next_record(next_rec_))
+        eof_ = true;
+
+    return 0;
 }
 
 inline

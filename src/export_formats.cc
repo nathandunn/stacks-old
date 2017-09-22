@@ -24,6 +24,311 @@ extern set<string> debug_flags;
 extern MetaPopInfo mpopi;
 extern map<string, int> renz_olap;
 
+SumstatsExport::SumstatsExport() : Export(ExportType::sumstats)
+{
+    this->_path = out_path + out_prefix + ".sumstats.tsv";
+}
+
+int
+SumstatsExport::open(const MetaPopInfo *mpopi)
+{
+    this->_mpopi   = mpopi;
+    this->_pop_cnt = this->_mpopi->pops().size();
+    
+    this->_fh.open(this->_path.c_str(), ofstream::out);
+    if (this->_fh.fail()) {
+        cerr << "Error opening sumstats file '" << this->_path << "'\n";
+        exit(1);
+    }
+    this->_fh.precision(fieldw);
+    this->_fh.setf(std::ios::fixed);
+
+    cerr << "Population-level summary statistics will be written to '" << this->_path << "'\n";
+
+    return 0;
+}
+
+int
+SumstatsExport::write_header()
+{
+    //
+    // Write the population members.
+    //
+    for (auto& pop : mpopi.pops()) {
+        this->_fh << "# " << pop.name << "\t";
+        for (size_t i = pop.first_sample; i <= pop.last_sample; i++) {
+            this->_fh << mpopi.samples()[i].name;
+            if (i < pop.last_sample)
+                this->_fh << ",";
+        }
+        this->_fh << "\n";
+    }
+
+    this->_fh << "# Locus ID" << "\t"
+              << "Chr"      << "\t"
+              << "BP"       << "\t"
+              << "Col"      << "\t"
+              << "Pop ID"   << "\t"
+              << "P Nuc"    << "\t"
+              << "Q Nuc"    << "\t"
+              << "N"        << "\t"
+              << "P"        << "\t"
+              << "Obs Het"  << "\t"
+              << "Obs Hom"  << "\t"
+              << "Exp Het"  << "\t"
+              << "Exp Hom"  << "\t"
+              << "Pi"       << "\t"
+              << "Smoothed Pi"  << "\t"
+              << "Smoothed Pi P-value"  << "\t"
+              << "Fis"          << "\t"
+              << "Smoothed Fis" << "\t"
+              << "Smoothed Fis P-value" << "\t"
+              << "Private"      << "\n";
+    return 0;
+}
+
+int
+SumstatsExport::write_batch(const vector<LocBin *> &loci)
+{
+    CSLocus        *cloc;
+    const LocSum   *s;
+    const LocTally *t;
+    double          p_freq;
+
+    for (uint i = 0; i < loci.size(); i++) {
+        cloc = loci[i]->cloc;
+        t    = loci[i]->s->meta_pop();
+        uint len = strlen(cloc->con);
+
+        for (uint pos = 0; pos < len; pos++) {
+            //
+            // If this site is fixed in all populations, DON'T output it. If it is variable,
+            // or fixed within populations but variable among, DO output it.
+            //
+            if (t->nucs[pos].allele_cnt == 2) {
+
+                for (uint pop = 0; pop < this->_pop_cnt; pop++) {
+
+                    s = loci[i]->s->per_pop(pop);
+
+                    if (s->nucs[pos].num_indv == 0)
+                        continue;
+
+                    this->_fh 
+                       << cloc->id << "\t"
+                       << cloc->loc.chr() << "\t"
+                       << cloc->sort_bp(pos) + 1 << "\t"
+                       << pos << "\t"
+                       << this->_mpopi->pops()[pop].name << "\t";
+
+                    //
+                    // Output the p and q alleles in the same order in each population.
+                    //
+                    if (t->nucs[pos].p_allele == s->nucs[pos].p_nuc) {
+                        if (s->nucs[pos].q_nuc == 0)
+                            this->_fh << s->nucs[pos].p_nuc << "\t" << "-";
+                        else
+                            this->_fh << s->nucs[pos].p_nuc << "\t" << s->nucs[pos].q_nuc;
+                        p_freq = s->nucs[pos].p;
+
+                    } else {
+                        if (s->nucs[pos].q_nuc == 0)
+                            this->_fh << "-\t" << s->nucs[pos].p_nuc;
+                        else
+                            this->_fh << s->nucs[pos].q_nuc << "\t" << s->nucs[pos].p_nuc;
+                        p_freq = 1 - s->nucs[pos].p;
+                    }
+
+                    this->_fh << "\t" << (int) s->nucs[pos].num_indv << "\t"
+                              << std::setprecision(8)      << p_freq << "\t"
+                              << std::setprecision(fieldw) << s->nucs[pos].obs_het << "\t"
+                              << s->nucs[pos].obs_hom   << "\t"
+                              << s->nucs[pos].exp_het   << "\t"
+                              << s->nucs[pos].exp_hom   << "\t"
+                              << s->nucs[pos].stat[0]   << "\t" // Pi
+                              << s->nucs[pos].smoothed[0] << "\t"  // Smoothed Pi
+                              << s->nucs[pos].bs[0]       << "\t"  // Pi bootstrapped p-value
+                              << (s->nucs[pos].stat[1] == -7.0 ? 0.0 : s->nucs[pos].stat[1]) << "\t"  // Fis
+                              << s->nucs[pos].smoothed[1] << "\t"  // Smoothed Fis
+                              << s->nucs[pos].bs[1]       << "\t"; // Fis bootstrapped p-value.
+                    (t->nucs[pos].priv_allele == (int) pop) ? this->_fh << "1\n" : this->_fh << "0\n";
+                }
+            }
+        }
+    }
+    
+    return 0;
+}
+
+HapstatsExport::HapstatsExport() : Export(ExportType::hapstats)
+{
+    this->_path = out_path + out_prefix + ".hapstats.tsv";
+}
+
+int
+HapstatsExport::open(const MetaPopInfo *mpopi)
+{
+    this->_mpopi   = mpopi;
+    this->_pop_cnt = this->_mpopi->pops().size();
+    
+    this->_fh.open(this->_path.c_str(), ofstream::out);
+    if (this->_fh.fail()) {
+        cerr << "Error opening sumstats file '" << this->_path << "'\n";
+        exit(1);
+    }
+    this->_fh.precision(fieldw);
+    this->_fh.setf(std::ios::fixed);
+
+    cerr << "Population-level haplotype summary statistics will be written to '" << this->_path << "'\n";
+
+    return 0;
+}
+
+int
+HapstatsExport::write_header()
+{
+    //
+    // Write the population members.
+    //
+    for (auto& pop : this->_mpopi->pops()) {
+        this->_fh << "# " << pop.name << "\t";
+        
+        for (size_t i = pop.first_sample; i <= pop.last_sample; i++) {
+            this->_fh << this->_mpopi->samples()[i].name;
+            if (i < pop.last_sample)
+                this->_fh << ",";
+        }
+        this->_fh << "\n";
+    }
+
+    this->_fh
+        << "# Locus ID"     << "\t"
+        << "Chr"            << "\t"
+        << "BP"             << "\t"
+        << "Pop ID"         << "\t"
+        << "N"              << "\t"
+        << "Haplotype Cnt"  << "\t"
+        << "Gene Diversity" << "\t"
+        << "Smoothed Gene Diversity"      << "\t"
+        << "Smoothed Gene Diversity P-value"      << "\t"
+        << "Haplotype Diversity"          << "\t"
+        << "Smoothed Haplotype Diversity" << "\t"
+        << "Smoothed Haplotype Diversity P-value" << "\t"
+        << "Haplotypes"                   << "\n";
+
+    return 0;
+}
+
+int
+HapstatsExport::write_batch(const vector<LocBin *> &loci)
+{
+    const LocStat *l;
+
+    for (uint i = 0; i < loci.size(); i++) {
+        const vector<Pop> &pops = this->_mpopi->pops();
+        
+        for (uint pop = 0; pop < this->_pop_cnt; pop++) {
+
+            l = loci[i]->s->hapstats_per_pop(pop);
+
+            if (l == NULL)
+                continue;
+
+            this->_fh 
+                << loci[i]->cloc->id        << "\t"
+                << loci[i]->cloc->loc.chr() << "\t"
+                << l->bp + 1        << "\t"
+                << pops[pop].name   << "\t"
+                << (int) l->alleles << "\t"
+                << l->hap_cnt       << "\t"
+                << l->stat[0]       << "\t"
+                << l->smoothed[0]   << "\t"
+                << l->bs[0]         << "\t"
+                << l->stat[1]       << "\t"
+                << l->smoothed[1]   << "\t"
+                << l->bs[1]         << "\t"
+                << l->hap_str       << "\n";
+        }
+    }
+
+    return 0;
+}
+
+MarkersExport::MarkersExport() : Export(ExportType::markers)
+{
+    this->_path = out_path + out_prefix + ".markers.tsv";
+}
+
+int
+MarkersExport::open(const MetaPopInfo *mpopi)
+{
+    this->_mpopi = mpopi;
+
+    this->_fh.open(this->_path.c_str(), ofstream::out);
+    if (this->_fh.fail()) {
+        cerr << "Error opening markers file '" << this->_path << "'\n";
+        exit(1);
+    }
+    this->_fh.precision(fieldw);
+    this->_fh.setf(std::ios::fixed);
+
+    cerr << "Genotyping markers will be written to '" << this->_path << "'\n";
+
+    return 0;
+}
+
+int
+MarkersExport::write_header()
+{
+    this->_fh << "# Catalog Locus ID"    << "\t"
+              << "\t"
+              << "Total Genotypes"     << "\t"
+              << "Max"                 << "\t"
+              << "Genotype Freqs"      << "\t"
+              << "F"                   << "\t"
+              << "Mean Log Likelihood" << "\t"
+              << "Genotype Map"        << "\t"
+              << "\n";
+    return 0;
+}
+
+int
+MarkersExport::write_batch(const vector<LocBin *> &loci)
+{
+    stringstream gtype_map;
+
+    for (uint i = 0; i < loci.size(); i++) {
+        string freq  = "";
+        double max   = 0.0;
+        int    total = 0;
+        gtype_map.str("");
+
+        if (loci[i]->cloc->marker.length() > 0) {
+            tally_haplotype_freq(loci[i]->cloc, loci[i]->d, this->_mpopi->samples().size(), total, max, freq);
+
+            //
+            // Record the haplotype to genotype map.
+            //
+            map<string, string>::iterator j;
+            for (j = loci[i]->cloc->gmap.begin(); j != loci[i]->cloc->gmap.end(); j++)
+                gtype_map << j->first << ":" << j->second << ";";
+        }
+
+        this->_fh
+            << loci[i]->cloc->id  << "\t"
+            << "\t"                       // Marker
+            << total              << "\t"
+            << max                << "\t"
+            << freq               << "\t"
+            << loci[i]->cloc->f   << "\t"
+            << loci[i]->cloc->lnl << "\t"
+            << gtype_map.str()    << "\t"
+            << "\n";
+    }
+
+    return 0;
+}
+
 int
 write_sql(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
 {
@@ -64,7 +369,7 @@ write_sql(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
         gtype_map.str("");
 
         if (loc->marker.length() > 0) {
-            tally_haplotype_freq(loc, pmap, total, max, freq);
+            tally_haplotype_freq(loc, pmap->locus(loc->id), pmap->sample_cnt(), total, max, freq);
 
             //
             // Record the haplotype to genotype map.
@@ -533,7 +838,7 @@ write_vcf_haplotypes(map<int, CSLocus *> &catalog,
             d   = pmap->locus(loc->id);
 
             map<string, double> hap_freq;
-            const double n_alleles = count_haplotypes_at_locus(0, pmap->sample_cnt() - 1, d, hap_freq);
+            const double n_alleles = count_haplotypes_at_locus(0, pmap->sample_cnt() - 1, (const Datum **) d, hap_freq);
             if (hap_freq.size() <= 1)
                 // Monomorphic locus.
                 // XXX What does [hap_freq.size()==1] mean ? @Nick (July 2016)
@@ -3102,16 +3407,16 @@ tally_observed_haplotypes(vector<char *> &obshap, int snp_index, char &p_allele,
     return 0;
 }
 
-int tally_haplotype_freq(CSLocus *locus, PopMap<CSLocus> *pmap,
-                         int &total, double &max, string &freq_str) {
-
+int
+tally_haplotype_freq(CSLocus *locus, Datum **d, uint sample_cnt,
+                     int &total, double &max, string &freq_str)
+{
     map<string, double> freq;
-    Datum **d = pmap->locus(locus->id);
 
     total = 0;
     max   = 0;
 
-    for (int i = 0; i < pmap->sample_cnt(); i++) {
+    for (uint i = 0; i < sample_cnt; i++) {
         if (d[i] == NULL)
             continue;
 

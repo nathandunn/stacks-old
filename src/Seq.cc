@@ -40,6 +40,7 @@ PhyLoc::PhyLoc(const string& s) : PhyLoc() {
 
 Seq::Seq() {
     this->id       = NULL;
+    this->comment  = NULL;
     this->seq      = NULL;
     this->qual     = NULL;
     this->loc_str  = NULL;
@@ -55,6 +56,12 @@ Seq::Seq(const Seq& other)
         strcpy(id, other.id);
     } else {
         id = NULL;
+    }
+    if (other.comment != NULL) {
+        comment = new char[strlen(other.comment)+1];
+        strcpy(comment, other.comment);
+    } else {
+        comment = NULL;
     }
     if (other.seq != NULL) {
         seq = new char[strlen(other.seq)+1];
@@ -84,6 +91,7 @@ Seq::Seq(const char *id, const char *seq) {
     this->id       = new char[strlen(id)   + 1];
     this->seq      = new char[strlen(seq)  + 1];
     this->qual     = NULL;
+    this->comment  = NULL;
     this->loc_str  = NULL;
 
     strcpy(this->id,   id);
@@ -98,6 +106,7 @@ Seq::Seq(const char *id, const char *seq, const char *qual)  {
     this->id       = new char[strlen(id)   + 1];
     this->seq      = new char[strlen(seq)  + 1];
     this->qual     = new char[strlen(qual) + 1];
+    this->comment  = NULL;
     this->loc_str  = NULL;
 
     strcpy(this->id,   id);
@@ -112,6 +121,7 @@ Seq::Seq(const char *id, const char *seq, const char *qual)  {
 Seq::Seq(const char *id, const char *seq, const char *qual, const char *chr, uint bp, strand_type strand)  {
     this->id      = new char[strlen(id)   + 1];
     this->qual    = new char[strlen(qual) + 1];
+    this->comment  = NULL;
     this->loc_str = new char[strlen(chr)  + 15];
 
     strcpy(this->id,   id);
@@ -139,7 +149,8 @@ Seq::Seq(const char *id, const char *seq, const char *qual, const char *chr, uin
     this->id      = new char[strlen(id)   + 1];
     this->qual    = new char[strlen(qual) + 1];
     this->loc_str = new char[strlen(chr)  + 15];
-
+    this->comment = NULL;
+    
     strcpy(this->id,   id);
     strcpy(this->qual, qual);
     this->loc.set(chr, bp, strand);
