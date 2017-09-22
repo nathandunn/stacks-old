@@ -864,15 +864,28 @@ LocusDivergence::LocusDivergence(const MetaPopInfo *mpopi)
     this->_mpopi = mpopi;
 }
 
-LocusDivergence::~LocusDivergence()
+int
+LocusDivergence::clear(const vector<LocBin *> &loci)
 {
-    for (uint i = 0; i < this->_snps.size(); i++)
-        for (uint j = i + 1; j < this->_snps[i].size(); j++)
+    for (uint i = 0; i < this->_snps.size(); i++) {
+        assert (this->_snps[i].size() == loci.size());
+        for (uint j = i + 1; j < this->_snps[i].size(); j++) {
+            for (uint k = 0; k < loci[i]->cloc->len; k++)
+                delete this->_snps[i][j][k];
             delete [] this->_snps[i][j];
+        }
+        this->_snps[i].clear();
+    }
+    this->_snps.clear();
 
-    for (uint i = 0; i < this->_haplotypes.size(); i++)
+    for (uint i = 0; i < this->_haplotypes.size(); i++) {
         for (uint j = i + 1; j < this->_haplotypes[i].size(); j++)
             delete this->_haplotypes[i][j];
+        this->_haplotypes[i].clear();
+    }
+    this->_haplotypes.clear();
+            
+    return 0;
 }
 
 int

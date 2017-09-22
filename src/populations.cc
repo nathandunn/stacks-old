@@ -202,7 +202,7 @@ int main (int argc, char* argv[]) {
     //
     // Setup the divergence statistics calculator, if requested.
     //
-    LocusDivergence *ldiv;
+    LocusDivergence *ldiv = NULL;
     if (calc_fstats)
         ldiv = new LocusDivergence(&mpopi);
 
@@ -279,7 +279,7 @@ int main (int argc, char* argv[]) {
         if (calc_fstats) {
             sdiv_exp->write_batch_pairwise(bloc.loci(), ldiv->snp_values());
             hdiv_exp->write_batch_pairwise(bloc.loci(), ldiv->haplotype_values());
-            delete ldiv;
+            ldiv->clear(bloc.loci());
         }
 
     } while (loc_cnt > 0);
