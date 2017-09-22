@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2013-2015, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2013-2017, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -112,6 +112,11 @@ map<int, CSLocus*>* create_catalog(const vector<VcfRecord>& vcf_records);
  *
  * Other members need not be set, c.f. `create_catalog(vector<VcfRecord>&)`.
  */
-CSLocus* new_cslocus(const Seq& consensus, const vector<VcfRecord>& records, int id);
+CSLocus *new_cslocus(const Seq& consensus, const vector<VcfRecord>& records, int id);
+
+//
+// Create a single catalog locus based on an external VCF file.
+//
+CSLocus *new_cslocus(const VcfRecord rec, int id);
 
 #endif // __CATALOG_UTILS_H__

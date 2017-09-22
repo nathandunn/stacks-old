@@ -247,16 +247,13 @@ public:
         _vcf_header(NULL), _next_loc(NULL), _cloc_vcf_rec(NULL), _ext_vcf_rec(NULL), _catalog(NULL),
         _loc_filter(), _unordered_bp(1) {}
     ~BatchLocusProcessor() {
-        if (this->_ext_vcf_rec != NULL)
-            delete this->_ext_vcf_rec;
-        if (this->_cloc_vcf_rec != NULL)
-            delete this->_cloc_vcf_rec;
-        if (this->_catalog != NULL)
-            delete this->_catalog;
+        for (uint i = 0; i < this->_loci.size(); i++)
+            delete this->_loci[i];
     };
-    
+
     int            init(int, string, string);
     size_t         next_batch(ostream &);
+    int            summarize(ostream &);
     int            hapstats(ostream &);
     int            write_distributions(ostream &log_fh) { return this->_dists.write_results(log_fh); }
     
@@ -297,6 +294,9 @@ private:
     unordered_map<int, vector<VcfRecord>> *_cloc_vcf_rec;
     vector<VcfRecord>                     *_ext_vcf_rec;
     map<int, CSLocus *>                   *_catalog;
+    size_t                                 _total_ext_vcf;
+    vector<size_t>                         _skipped_notsnp;
+    vector<size_t>                         _skipped_filter;
 
     // Controls for which loci are loaded
     LocusFilter _loc_filter;

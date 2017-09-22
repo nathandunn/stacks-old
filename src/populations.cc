@@ -280,6 +280,11 @@ int main (int argc, char* argv[]) {
 
     } while (loc_cnt > 0);
 
+    //
+    // Report what we read from the input files.
+    //
+    bloc.summarize(cerr);
+
     const LocusFilter &filter = bloc.filter();
     cerr << "Removed " << filter.filtered() << " loci that did not pass sample/population constraints from " << filter.total() << " loci.\n"
          << "Kept "    << tot_cnt << " loci.\n";
@@ -422,7 +427,7 @@ BatchLocusProcessor::init(int batch_id, string in_path, string pmap_path)
     }
     
     if (this->_input_mode == InputMode::vcf)
-        this->init_external_loci(in_path, pmap_path);
+        this->init_external_loci(in_vcf_path, pmap_path);
     else
         this->init_stacks_loci(batch_id, in_path, pmap_path);
 
@@ -433,7 +438,14 @@ size_t
 BatchLocusProcessor::next_batch(ostream &log_fh)
 {
     size_t loc_cnt;
-    
+
+    //
+    // Clear out any loci from the previous batch.
+    //
+    for (uint i = 0; i < this->_loci.size(); i++)
+        delete this->_loci[i];
+    this->_loci.clear();
+
     if (this->_input_mode == InputMode::vcf)
         loc_cnt = this->next_batch_external_loci(log_fh);
     else
@@ -555,13 +567,13 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
         //
         // Create and populate a new catalog locus.
         //
-        loc = new LocBin();
+        loc = new LocBin(this->_mpopi->samples().size());
         loc->cloc = new_cslocus(seq, records, cloc_id);
 
         //
         // Create and populate a map of the population genotypes.
         //
-        loc->d = new Datum *[this->_mpopi->samples().size()];
+        loc->d = new Datum *[loc->sample_cnt];
         for (size_t i = 0; i < this->_mpopi->samples().size(); i++) loc->d[i] = NULL;
         PopMap<CSLocus>::populate_locus(loc->d, *loc->cloc, records, (const VcfHeader &) *this->_vcf_header, (const MetaPopInfo &) *this->_mpopi);
 
@@ -699,9 +711,16 @@ BatchLocusProcessor::init_external_loci(string in_path, string pmap_path)
         this->_mpopi->set_sample_id(i, i+1); //id=i+1
 
     //
+    // Initialize the locus filter after we have constructed the population map.
+    //
+    this->_loc_filter.init(this->pop_info());
+
+    //
     // Store the VCF header data.
     //
     this->_vcf_header = new VcfHeader(this->vcf_reader().header());
+
+    this->_total_ext_vcf = 0;
 
     return 0;
 }
@@ -711,60 +730,168 @@ BatchLocusProcessor::next_batch_external_loci(ostream &log_fh)
 {
     //
     // VCF mode
+    //    
+    LocBin   *loc;
+    string    prev_chr, cur_chr;
+    size_t    loc_cnt = 0;
+    size_t    cloc_id = 1;
+    VcfRecord rec;
+
     //
-    
-    if (this->_ext_vcf_rec != NULL)
-        delete this->_ext_vcf_rec;
-    this->_ext_vcf_rec = new vector<VcfRecord>();
+    // Check if we queued a LocBin object from the last round of reading.
+    //
+    if (this->_next_loc != NULL) {
+        this->_loci.push_back(this->_next_loc);
+        cloc_id         = this->_next_loc->cloc->id + 1;
+        prev_chr        = this->_next_loc->cloc->loc.chr();
+        this->_next_loc = NULL;
+        loc_cnt++;
+    }
 
-    vector<size_t> skipped_notsnp;
-    vector<size_t> skipped_filter;
-    size_t loc_cnt = 0;
+    do {
+        if (!this->_vcf_parser.next_record(rec)) break;
 
-    this->_ext_vcf_rec->push_back(VcfRecord());
-    VcfRecord* rec = & this->_ext_vcf_rec->back();
+        this->_total_ext_vcf++;
 
-    while (loc_cnt < this->_batch_size && this->_vcf_parser.next_record(*rec)) {
         // Check for a SNP.
-        if (not rec->is_snp()) {
-            skipped_notsnp.push_back(this->_vcf_parser.line_number());
+        if (not rec.is_snp()) {
+            this->_skipped_notsnp.push_back(this->_vcf_parser.line_number());
             continue;
         }
 
         // Check for a filtered-out SNP
-        if (strncmp(rec->filters(), ".", 2) != 0 && strncmp(rec->filters(), "PASS", 5) != 0) {
-            skipped_filter.push_back(this->_vcf_parser.line_number());
+        if (strncmp(rec.filters(), ".", 2) != 0 && strncmp(rec.filters(), "PASS", 5) != 0) {
+            this->_skipped_filter.push_back(this->_vcf_parser.line_number());
             continue;
         }
 
-        // Save the SNP.
-        this->_ext_vcf_rec->push_back(VcfRecord());
-        rec = & this->_ext_vcf_rec->back();
+        //
+        // Create and populate a new catalog locus.
+        //
+        loc = new LocBin(this->_mpopi->samples().size());
+        loc->cloc = new_cslocus(rec, cloc_id);
 
-        loc_cnt++;
-    }
+        if (loc->cloc == NULL) {
+            delete loc;
+            continue;
+        }
 
-    this->_ext_vcf_rec->pop_back();
+        //
+        // Create and populate a map of the population genotypes.
+        //
+        loc->d = new Datum *[loc->sample_cnt];
+        for (size_t i = 0; i < this->_mpopi->samples().size(); i++) loc->d[i] = NULL;
+        PopMap<CSLocus>::populate_locus(loc->d, *loc->cloc, rec, (const VcfHeader &) *this->_vcf_header, (const MetaPopInfo &) *this->_mpopi);
 
-    cerr << "Found " << this->_ext_vcf_rec->size() << " SNP records in file '" << in_vcf_path
-         << "'. (Skipped " << skipped_filter.size() << " already filtered-out SNPs and "
-         << skipped_notsnp.size() << " non-SNP records ; more with --verbose.)\n";
-    if (verbose && not skipped_notsnp.empty()) {
-        log_fh << "The following VCF record lines were determined not to be SNPs and skipped :";
-        for (vector<size_t>::const_iterator l=skipped_notsnp.begin(); l!=skipped_notsnp.end(); ++l)
-            log_fh << " " << *l;
-        log_fh << "\n";
-    }
-    if (this->_ext_vcf_rec->size() == 0) {
-        cerr << "Error: No records.\n";
-        throw exception();
-    }
+        this->_dists.accumulate_pre_filtering(loc->cloc);
 
-    if (this->_catalog != NULL)
-        delete this->_catalog;
-    this->_catalog = create_catalog(this->ext_vcf_records());
+        //
+        // Apply locus constraints to remove entire loci below the -r/-p thresholds.
+        //
+        if (this->_loc_filter.filter(this->_mpopi, loc->d)) {
+            delete loc;
+            continue;
+        }
+
+        //
+        // Create the PopSum object and compute the summary statistics for this locus.
+        //
+        loc->s = new LocPopSum(strlen(loc->cloc->con), (const MetaPopInfo &) *this->_mpopi);
+        loc->s->sum_pops(loc->cloc, (const Datum **) loc->d, (const MetaPopInfo &) *this->_mpopi, verbose, cerr);
+        loc->s->tally_metapop(loc->cloc);
+
+        //
+        // If write_single_snp or write_random_snp has been specified, mark sites to be pruned using the whitelist.
+        //
+        if (write_single_snp)
+            this->_loc_filter.keep_single_snp(loc->cloc, loc->s->meta_pop());
+        else if (write_random_snp)
+            this->_loc_filter.keep_random_snp(loc->cloc, loc->s->meta_pop());
+        //
+        // Prune the sites according to the whitelist.
+        //
+        this->_loc_filter.prune_sites_with_whitelist(this->_mpopi, loc->cloc, loc->d, this->_user_supplied_whitelist);
+
+        //
+        // Identify individual SNPs that are below the -r threshold or the minor allele
+        // frequency threshold (-a). In these cases we will remove the SNP, but keep the locus.
+        // If all SNPs are filtered, delete the locus.
+        //
+        if (this->_loc_filter.prune_sites(this->_mpopi, loc->cloc, loc->d, loc->s, log_fh)) {
+            delete loc;
+            continue;
+        }
+
+        //
+        // Regenerate summary statistics after pruning SNPs.
+        //
+        loc->s->sum_pops(loc->cloc, (const Datum **) loc->d, (const MetaPopInfo &) *this->_mpopi, verbose, cerr);
+        loc->s->tally_metapop(loc->cloc);
+
+        //
+        // If these data are unordered, provide an arbitrary ordering.
+        //
+        if (loc->cloc->loc.empty()) {
+            loc->cloc->loc.set("un", this->_unordered_bp, strand_plus);
+            this->_unordered_bp += strlen(loc->cloc->con);
+        } else {
+            loci_ordered = true;
+        }
+
+        cur_chr = loc->cloc->loc.chr();
+        if (prev_chr.length() == 0)
+            prev_chr = cur_chr;
+        
+        //
+        // Tabulate haplotypes present and in what combinations.
+        //
+        tabulate_locus_haplotypes(loc->cloc, loc->d, this->_mpopi->samples().size());
+
+        if (cur_chr == prev_chr) {
+            this->_loci.push_back(loc);
+            loc_cnt++;
+        } else {
+            this->_next_loc = loc;
+        }
+        cloc_id++;
+
+    } while (( loci_ordered && prev_chr == cur_chr) ||
+             (!loci_ordered && loc_cnt   < this->_batch_size));
+
+    //
+    // Record the post-filtering distribution of catalog loci for this batch.
+    //
+    this->_dists.accumulate(this->_loci);
+
+    //
+    // Sort the catalog loci, if possible.
+    //
+    if (loci_ordered)
+        sort(this->_loci.begin(), this->_loci.end(),
+             [] (const LocBin *a, const LocBin *b) -> bool {
+                 return a->cloc->loc.bp < b->cloc->loc.bp;
+             });
 
     return loc_cnt;
+}
+
+int
+BatchLocusProcessor::summarize(ostream &log_fh)
+{
+    if (this->_input_mode == InputMode::vcf) {
+        log_fh << "Found " << this->_total_ext_vcf << " SNP records in file '" << in_vcf_path
+             << "'. (Skipped " << this->_skipped_filter.size() << " already filtered-out SNPs and "
+             << this->_skipped_notsnp.size() << " non-SNP records ; more with --verbose.)\n";
+        if (verbose && not this->_skipped_notsnp.empty()) {
+            log_fh << "The following VCF record lines were determined not to be SNPs and skipped :";
+            for (vector<size_t>::const_iterator l = this->_skipped_notsnp.begin(); l != this->_skipped_notsnp.end(); ++l)
+                log_fh << " " << *l;
+            log_fh << "\n";
+        }
+    } else {
+    }
+    
+    return 0;
 }
 
 int
@@ -772,7 +899,7 @@ BatchLocusProcessor::hapstats(ostream &log_fh)
 {
     for (uint i = 0; i < this->_loci.size(); i++) {
         LocBin *loc = this->_loci[i];
-        
+
         loc->s->calc_hapstats(loc->cloc, (const Datum **) loc->d, *this->_mpopi);
     }
 
@@ -5985,7 +6112,6 @@ parse_command_line(int argc, char* argv[])
             {"help",           no_argument,       NULL, 'h'},
             {"version",        no_argument,       NULL, 'v'},
             {"verbose",        no_argument,       NULL, 'd'},
-            {"sql",            no_argument,       NULL, 's'},
             {"vcf",            no_argument,       NULL, 1004},
             {"vcf_haplotypes", no_argument,       NULL, 'n'},
             {"fasta_loci",     no_argument,       NULL, 1006},
@@ -6039,7 +6165,7 @@ parse_command_line(int argc, char* argv[])
             {"merge_prune_lim",   required_argument, NULL, 'i'},
             {"fst_correction",    required_argument, NULL, 'f'},
             {"p_value_cutoff",    required_argument, NULL, 'u'},
-            {"debug_flags",    required_argument, NULL, 1000},
+            {"debug_flags",       required_argument, NULL, 1000},
             {0, 0, 0, 0}
         };
 
@@ -6336,6 +6462,8 @@ parse_command_line(int argc, char* argv[])
     } else if (in_path.empty() && in_vcf_path.empty()) {
         cerr << "Error: One of '-P/--in_path' or '-V/--in_vcf' is required.\n";
         help();
+    } else if (not in_vcf_path.empty()) {
+        input_mode = InputMode::vcf;
     }
 
     if (input_mode == InputMode::stacks || input_mode == InputMode::stacks2) {
@@ -6410,7 +6538,6 @@ void help() {
               << "  -M,--popmap: path to a population map. (Format is 'SAMPLE1 \\t POP1 \\n SAMPLE2 ...'.)\n"
               << "  -t,--threads: number of threads to run in parallel sections of code.\n"
               << "  -b,--batch_id: ID of the catalog to consider (default: guess).\n"
-              << "  -s,--sql_out: output a file to import results into an SQL database.\n"
               << "\n"
               << "Data Filtering:\n"
               << "  -p [int]: minimum number of populations a locus must be present in to process a locus.\n"

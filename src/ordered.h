@@ -201,45 +201,6 @@ Ordered<StatT>::init_haplotypes(vector<const StatT *> &sites, map<uint, uint> &s
     return 0;
 }
 
-// template<class StatT>
-// int
-// Ordered<StatT>::init_haplotypes(vector<const StatT *> &sites, map<uint, uint> &sites_key, const vector<LocBin *> &sorted_loci, uint pop_1, uint pop_2)
-// {
-//     const LocBin  *loc;
-//     const LocStat *lstat_1, *lstat_2;
-    
-//     int      bp;
-//     set<int> bps;
-
-//     for (uint pos = 0; pos < sorted_loci.size(); pos++) {
-//         loc = sorted_loci[pos];
-//         bp  = loc->cloc->sort_bp();
-
-//         lstat_1 = loc->s->hapstats_per_pop(pop_1);
-//         lstat_2 = loc->s->hapstats_per_pop(pop_2);
-
-//         //
-//         // Check that gene diversity exists, indicating polymorphism.
-//         //
-//         if (lstat_1->stat[0] > 0.0 && lstat_2->stat[0] > 0.0)
-//             bps.insert(bp);
-//     }
-
-//     sites.resize(bps.size(), NULL);
-
-//     //
-//     // Create a key describing where in the sites array to find each basepair coordinate.
-//     //
-//     set<int>::iterator it;
-//     int i = 0;
-//     for (it = bps.begin(); it != bps.end(); it++) {
-//         sites_key[*it] = i;
-//         i++;
-//     }
-
-//     return 0;
-// }
-
 template<class StatT>
 class OHaplotypes: public Ordered<StatT> {
 public:

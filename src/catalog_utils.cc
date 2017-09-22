@@ -390,11 +390,13 @@ map<int, CSLocus*>* create_catalog(const vector<VcfRecord>& records) {
         snp.type = snp_type_unk;
         vector<char*> snp_alleles = {&snp.rank_1, &snp.rank_2, &snp.rank_3, &snp.rank_4};
         try {
+            uint j = 0;
             for (auto a=rec.begin_alleles(); a!=rec.end_alleles(); ++a) {
                 assert(strlen(*a) == 1);
                 if (**a == '*')
                     continue;
-                *snp_alleles.at(i) = **a;
+                *snp_alleles.at(j) = **a;
+                j++;
             }
         } catch (out_of_range& e) {
             cerr << "Warning: Skipping malformed VCF SNP record '"
@@ -414,6 +416,61 @@ map<int, CSLocus*>* create_catalog(const vector<VcfRecord>& records) {
     }
 
     return catalog;
+}
+
+CSLocus *
+new_cslocus(const VcfRecord rec, int id)
+{
+    CSLocus* loc = new CSLocus();
+    
+    loc->sample_id = 0;
+    loc->id        = id;
+    loc->len       = 1;
+    loc->con       = new char[2];
+    strcpy(loc->con, rec.allele0());
+    
+    loc->loc.set(rec.chrom(), (uint)rec.pos(), strand_plus);
+
+    for (auto a = rec.begin_alleles(); a != rec.end_alleles(); ++a) {
+        if (strcmp(*a, "*")==0)
+            continue;
+        loc->alleles.insert({string(*a), 0});
+    }
+    
+    loc->depth = 0;
+    loc->lnl   = 0;
+
+    loc->snps.push_back(new SNP());
+    SNP& snp = *loc->snps.back();
+    snp.col = 0;
+    snp.type = snp_type_unk;
+    vector<char*> snp_alleles = {&snp.rank_1, &snp.rank_2, &snp.rank_3, &snp.rank_4};
+    try {
+        uint j = 0;
+        for (auto a=rec.begin_alleles(); a!=rec.end_alleles(); ++a) {
+            assert(strlen(*a) == 1);
+            if (**a == '*')
+                continue;
+            *snp_alleles.at(j) = **a;
+            j++;
+        }
+    } catch (out_of_range& e) {
+        cerr << "Warning: Skipping malformed VCF SNP record '"
+             << rec.chrom() << ":" << rec.pos() << "'."
+             << " Alleles were:";
+        for (auto a=rec.begin_alleles(); a!=rec.end_alleles(); ++a)
+            cerr << " '" << *a << "';";
+        cerr << ".\n";
+        delete loc->snps[0];
+        delete loc->con;
+        delete loc;
+
+        return NULL;
+    }
+
+    loc->populate_alleles();
+
+    return loc;
 }
 
 CSLocus* new_cslocus(const Seq& consensus, const vector<VcfRecord>& records, int id) {
