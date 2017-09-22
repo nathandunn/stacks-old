@@ -859,12 +859,12 @@ count_haplotypes_at_locus(int start, int end, const Datum **d, map<string, doubl
     return n;
 }
 
-LocDivergence::LocDivergence(const MetaPopInfo *mpopi)
+LocusDivergence::LocusDivergence(const MetaPopInfo *mpopi)
 {
     this->_mpopi = mpopi;
 }
 
-LocDivergence::~LocDivergence()
+LocusDivergence::~LocusDivergence()
 {
     for (uint i = 0; i < this->_snps.size(); i++)
         for (uint j = i + 1; j < this->_snps[i].size(); j++)
@@ -876,7 +876,7 @@ LocDivergence::~LocDivergence()
 }
 
 int
-LocDivergence::snp_divergence(const vector<LocBin *> &loci)
+LocusDivergence::snp_divergence(const vector<LocBin *> &loci)
 {
     for (uint pop_1 = 0; pop_1 < this->_mpopi->pops().size(); pop_1++) {
         
@@ -937,7 +937,7 @@ LocDivergence::snp_divergence(const vector<LocBin *> &loci)
 }
 
 PopPair *
-LocDivergence::Fst(const CSLocus *cloc, const LocPopSum *s, int pop_1, int pop_2, int pos)
+LocusDivergence::Fst(const CSLocus *cloc, const LocPopSum *s, int pop_1, int pop_2, int pos)
 {
     const LocSum *s_1 = s->per_pop(pop_1);
     const LocSum *s_2 = s->per_pop(pop_2);
@@ -1101,7 +1101,7 @@ LocDivergence::Fst(const CSLocus *cloc, const LocPopSum *s, int pop_1, int pop_2
 }
 
 int
-LocDivergence::fishers_exact_test(PopPair *pair, double p_1, double q_1, double p_2, double q_2)
+LocusDivergence::fishers_exact_test(PopPair *pair, double p_1, double q_1, double p_2, double q_2)
 {
     //                            | Allele1 | Allele2 |
     // Fisher's Exact Test:  -----+---------+---------+
@@ -1297,7 +1297,7 @@ LocDivergence::fishers_exact_test(PopPair *pair, double p_1, double q_1, double 
 }
 
 int
-LocDivergence::haplotype_divergence_pairwise(const vector<LocBin *> &loci)
+LocusDivergence::haplotype_divergence_pairwise(const vector<LocBin *> &loci)
 {
     const CSLocus *loc;
     const LocSum **s;
@@ -1354,7 +1354,7 @@ LocDivergence::haplotype_divergence_pairwise(const vector<LocBin *> &loci)
 }
 
 HapStat *
-LocDivergence::haplotype_amova(const Datum **d, const LocSum **s, vector<int> &pop_ids)
+LocusDivergence::haplotype_amova(const Datum **d, const LocSum **s, vector<int> &pop_ids)
 {
     map<string, int>          loc_hap_index;
     vector<string>            loc_haplotypes;
@@ -1654,7 +1654,7 @@ LocDivergence::haplotype_amova(const Datum **d, const LocSum **s, vector<int> &p
 }
 
 double
-LocDivergence::amova_ssd_total(vector<string> &loc_haplotypes, map<string, int> &loc_hap_index, double **hdists)
+LocusDivergence::amova_ssd_total(vector<string> &loc_haplotypes, map<string, int> &loc_hap_index, double **hdists)
 {
     //
     // Calculate sum of squared deviations for the total sample, SSD(Total)
@@ -1678,9 +1678,9 @@ LocDivergence::amova_ssd_total(vector<string> &loc_haplotypes, map<string, int> 
 }
 
 double
-LocDivergence::amova_ssd_wp(vector<int> &grps, map<int, vector<int>> &grp_members,
-                            map<string, int> &loc_hap_index, map<int, vector<string>> &pop_haplotypes,
-                            double **hdists)
+LocusDivergence::amova_ssd_wp(vector<int> &grps, map<int, vector<int>> &grp_members,
+                              map<string, int> &loc_hap_index, map<int, vector<string>> &pop_haplotypes,
+                              double **hdists)
 {
     //
     // Calculate the sum of squared deviations within populations, SSD(WP)
@@ -1716,9 +1716,9 @@ LocDivergence::amova_ssd_wp(vector<int> &grps, map<int, vector<int>> &grp_member
 }
 
 double
-LocDivergence::amova_ssd_ap_wg(vector<int> &grps, map<int, vector<int>> &grp_members,
-                               map<string, int> &loc_hap_index, map<int, vector<string>> &pop_haplotypes,
-                               double **hdists_1, double **hdists_2)
+LocusDivergence::amova_ssd_ap_wg(vector<int> &grps, map<int, vector<int>> &grp_members,
+                                 map<string, int> &loc_hap_index, map<int, vector<string>> &pop_haplotypes,
+                                 double **hdists_1, double **hdists_2)
 {
     //
     // Calculate the sum of squared deviations across populations and within groups, SSD(AP/WG)
@@ -1782,9 +1782,9 @@ LocDivergence::amova_ssd_ap_wg(vector<int> &grps, map<int, vector<int>> &grp_mem
 }
 
 double
-LocDivergence::amova_ssd_ag(vector<int> &grps, map<int, vector<int>> &grp_members,
-                            map<string, int> &loc_hap_index, map<int, vector<string>> &pop_haplotypes,
-                            double **hdists, double ssd_total)
+LocusDivergence::amova_ssd_ag(vector<int> &grps, map<int, vector<int>> &grp_members,
+                              map<string, int> &loc_hap_index, map<int, vector<string>> &pop_haplotypes,
+                              double **hdists, double ssd_total)
 {
     //
     // Calculate the sum of squared deviations across groups, SSD(AG)
@@ -1830,7 +1830,7 @@ LocDivergence::amova_ssd_ag(vector<int> &grps, map<int, vector<int>> &grp_member
 }
 
 double
-LocDivergence::haplotype_d_est(const Datum **d, const LocSum **s, vector<int> &pop_ids)
+LocusDivergence::haplotype_d_est(const Datum **d, const LocSum **s, vector<int> &pop_ids)
 {
     //
     // Calculate D_est, fixation index, as described by
@@ -1904,7 +1904,7 @@ LocDivergence::haplotype_d_est(const Datum **d, const LocSum **s, vector<int> &p
 }
 
 bool
-LocDivergence::fixed_locus(const Datum **d, vector<int> &pop_ids)
+LocusDivergence::fixed_locus(const Datum **d, vector<int> &pop_ids)
 {
     set<string>               loc_haplotypes;
     map<int, vector<string> > pop_haplotypes;
@@ -1957,7 +1957,7 @@ LocDivergence::fixed_locus(const Datum **d, vector<int> &pop_ids)
 }
 
 int
-LocDivergence::nuc_substitution_identity(map<string, int> &hap_index, double **hdists)
+LocusDivergence::nuc_substitution_identity(map<string, int> &hap_index, double **hdists)
 {
     vector<string> haplotypes;
     map<string, int>::iterator it;
@@ -1985,7 +1985,7 @@ LocDivergence::nuc_substitution_identity(map<string, int> &hap_index, double **h
 }
 
 int
-LocDivergence::nuc_substitution_identity_max(map<string, int> &hap_index, double **hdists)
+LocusDivergence::nuc_substitution_identity_max(map<string, int> &hap_index, double **hdists)
 {
     vector<string> haplotypes;
     map<string, int>::iterator it;

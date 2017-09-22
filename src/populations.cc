@@ -198,7 +198,14 @@ int main (int argc, char* argv[]) {
     LocusSmoothing *smooth = NULL;
     if (kernel_smoothed)
         smooth = new LocusSmoothing(&mpopi, log_fh);
-    
+
+    //
+    // Setup the divergence statistics calculator, if requested.
+    //
+    LocusDivergence *ldiv;
+    if (calc_fstats)
+        ldiv = new LocusDivergence(&mpopi);
+
     //
     // Open the export files and write any headers.
     //
@@ -246,11 +253,7 @@ int main (int argc, char* argv[]) {
         //
         // Calculate divergence statistics (Fst), if requested.
         //
-        LocDivergence *ldiv;
-
         if (calc_fstats) {
-            ldiv = new LocDivergence(&mpopi);
-            
             ldiv->snp_divergence(bloc.loci());
             ldiv->haplotype_divergence_pairwise(bloc.loci());
             // ldiv->haplotype_divergence(bloc.loci());
@@ -304,6 +307,8 @@ int main (int argc, char* argv[]) {
 
     if (kernel_smoothed)
         delete smooth;
+    if (calc_fstats)
+        delete ldiv;
 
     // //
     // // Merge loci that overlap on a common restriction enzyme cut site.
