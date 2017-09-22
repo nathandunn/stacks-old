@@ -286,7 +286,7 @@ public:
 
 inline
 void CLocAlnSet::add(SAlnRead&& r) {
-    assert(std::get<1>(cigar_lengths(r.cigar)) == ref_.length());
+    assert(cigar_length_ref(r.cigar) == ref_.length());
     reads_per_sample_.at(r.sample).push_back(reads_.size());
     reads_.push_back(move(r));
 }

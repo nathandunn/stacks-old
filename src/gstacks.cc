@@ -32,12 +32,13 @@ unique_ptr<const Model> model;
 size_t km_length    = 31;
 size_t min_km_count = 2;
 
-size_t dbg_max_loci        = SIZE_MAX;
+bool   dbg_no_overlaps     = false;
 bool   dbg_no_haplotypes   = false;
 bool   dbg_write_gfa       = false;
 bool   dbg_write_alns      = false;
 bool   dbg_write_hapgraphs = false;
 bool   dbg_write_nt_depths = false;
+bool   dbg_true_reference  = false;
 bool   dbg_true_alns       = false;
 
 //
@@ -134,7 +135,7 @@ try {
     //
     ProcessingStats stats {};
     cout << "Processing all loci...\n" << flush;
-    const size_t n_loci = std::min(bam_fh.n_loci(), dbg_max_loci);
+    const size_t n_loci = bam_fh.n_loci();
     ProgressMeter progress (cout, n_loci);
 
     // For parallelization.
@@ -410,19 +411,16 @@ LocusProcessor::process(CLocReadSet&& loc)
     //
     CLocAlnSet aln_loc (loc_.id, loc_.pos, loc_.mpopi);
     if (dbg_true_alns) {
-        from_true_alignments(aln_loc, move(loc));
+        from_true_alignments(aln_loc, move(loc), true);
+    } else if (dbg_true_reference) {
+        using_true_reference(aln_loc, move(loc));
     } else {
         //
-        // Transfer the already aligned foward-reads. xxx Are they actually aligned to the catalog consensus?
+        // Transfer the already aligned foward-reads.
         //
-        aln_loc.ref(DNASeq4(loc.reads().at(0).seq));
-        for (SRead& r : loc.reads()) {
-            if (r.seq.length() != aln_loc.ref().length()) {
-                cerr << "DEBUG: Error: Can't handle reads of different legnths.\n"; //xxx
-                throw exception();
-            }
-            aln_loc.add(SAlnRead(move((Read&)r), {{'M',r.seq.length()}}, r.sample));
-        }
+        aln_loc.ref(DNASeq4(loc.reads().at(0).seq.length())); // Just N's.
+        for (SRead& r : loc.reads())
+            aln_loc.add(SAlnRead(Read(move(r.seq), move(r.name)), {{'M',r.seq.length()}}, r.sample));
 
         //
         // Process the paired-end reads, if any.
@@ -459,13 +457,25 @@ LocusProcessor::process(CLocReadSet&& loc)
             // Determine if there is overlap -- and how much -- between the SE and PE contigs.
             //   We will query the PE contig suffix tree using the SE consensus sequence.
             //
+            DNASeq4 fw_consensus (aln_loc.ref().length());
+            size_t i = 0;
+            Counts<Nt4> cnts;
+            for (CLocAlnSet::site_iterator site (aln_loc); bool(site); ++site, ++i) {
+                site.counts(cnts);
+                pair<size_t,Nt4> best_nt = cnts.sorted()[0];
+                fw_consensus.set(i, best_nt.first > 0 ? best_nt.second : Nt4::n);
+            }
+            assert(i == fw_consensus.length());
             int overlap;
-            if ( (overlap = this->find_locus_overlap(stree, aln_loc.ref())) > 0) {
+            if (dbg_no_overlaps)
+                overlap = 0;
+            else
+                overlap = this->find_locus_overlap(stree, fw_consensus);
+            if (overlap > 0) {
                 this->loc_.overlapped = true;
                 this->stats_.n_se_pe_loc_overlaps++;
                 this->stats_.mean_se_pe_loc_overlap += overlap;
             }
-            assert(overlap >= 0);
 
             if (detailed_output)
                 details_ss_ << "pe_ctg"
@@ -476,36 +486,20 @@ LocusProcessor::process(CLocReadSet&& loc)
             GappedAln  *aligner = new GappedAln(loc.pe_reads().front().seq.length(), pe_aln_loc.ref().length(), true);
             AlignRes    aln_res;
             for (SRead& r : loc.pe_reads()) {
-                string seq = r.seq.str();
-
-                if (!this->align_reads_to_contig(stree, aligner, r.seq, aln_res))
-                    continue;
-
-                if (aln_res.pct_id < min_aln_cov)
-                    continue;
-
-                this->stats_.n_aln_reads++;
-
-                Cigar cigar;
-                parse_cigar(aln_res.cigar.c_str(), cigar);
-                simplify_cigar_to_MDI(cigar);
-                cigar_extend_left(cigar, aln_res.subj_pos);
-                assert(cigar_length_ref(cigar) <= pe_aln_loc.ref().length());
-                cigar_extend_right(cigar, pe_aln_loc.ref().length() - cigar_length_ref(cigar));
-
                 if (detailed_output)
                     details_ss_ << "pe_read"
                                 << '\t' << r.name
                                 << '\t' << loc_.mpopi->samples()[r.sample].name
-                                << '\t' << r.seq
-                                << '\n'
-                                << "pe_aln_local"
-                                << '\t' << r.name
-                                << '\t' << aln_res.subj_pos + 1
-                                << '\t' << aln_res.cigar
-                                << '\n';
-
-                pe_aln_loc.add(SAlnRead(move((Read&)r), move(cigar), r.sample));
+                                << '\t' << r.seq << '\n';
+                if (add_read_to_aln(pe_aln_loc, aln_res, move(r), aligner, stree)) {
+                    this->stats_.n_aln_reads++;
+                    if (detailed_output)
+                        details_ss_ << "pe_aln_local"
+                                    << '\t' << pe_aln_loc.reads().back().name
+                                    << '\t' << aln_res.subj_pos + 1
+                                    << '\t' << aln_res.cigar
+                                    << '\n';
+                }
             }
             delete aligner;
             delete stree;
@@ -516,7 +510,7 @@ LocusProcessor::process(CLocReadSet&& loc)
             aln_loc = CLocAlnSet::juxtapose(move(aln_loc), move(pe_aln_loc), (overlap > 0 ? -long(overlap) : +10));
             if (detailed_output)
                 for (auto& r : aln_loc.reads())
-                    if (r.name.length() >= 2 && strncmp(r.name.c_str()+r.name.length()-2, "/2", 2) == 0)
+                    if (r.is_read2())
                         details_ss_ << "pe_aln_global"
                                     << '\t' << r.name
                                     << '\t' << r.cigar
@@ -535,26 +529,32 @@ LocusProcessor::process(CLocReadSet&& loc)
                 << "\nEND " << loc_.id << "\n";
 
     //
-    // Call SNPs.
+    // Call SNPs. Determine the consensus sequence.
     //
     vector<SiteCounts> depths;
     vector<SiteCall> calls;
+    DNASeq4 consensus (aln_loc.ref().length());
     calls.reserve(aln_loc.ref().length());
-    for (CLocAlnSet::site_iterator site (aln_loc); bool(site); ++site) {
+    size_t i = 0;
+    for (CLocAlnSet::site_iterator site (aln_loc); bool(site); ++site, ++i) {
         depths.push_back(site.counts());
         calls.push_back(model->call(depths.back()));
-    }
 
-    // Update the consensus sequence.
-    DNASeq4 new_ref = aln_loc.ref();
-    assert(calls.size() == new_ref.length());
-    for (size_t i=0; i<calls.size(); ++i) {
-        if (calls[i].alleles().empty())
-            new_ref.set(i, Nt4::n);
-        else
-            new_ref.set(i, calls[i].most_frequent_allele());
+        if (!calls.back().alleles().empty()) {
+            consensus.set(i, calls.back().most_frequent_allele());
+        } else {
+            // The model returned a null call.
+            // (For the high/low Maruki" models this actually only happens when
+            // there is no coverage; for the Hohenlohe model it may also happen
+            // when there isn't a single significant call.)
+            pair<size_t,Nt2> best_nt = depths.back().tot.sorted()[0];
+            if (best_nt.first > 0)
+                consensus.set(i, Nt4(best_nt.second));
+            else
+                consensus.set(i, Nt4::n);
+        }
     }
-    aln_loc.ref(move(new_ref));
+    aln_loc.ref(move(consensus));
 
     // Call haplotypes.
     vector<map<size_t,PhasedHet>> phase_data;
@@ -574,7 +574,7 @@ LocusProcessor::process(CLocReadSet&& loc)
 }
 
 int
-LocusProcessor::align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 enc_query, AlignRes &aln_res)
+LocusProcessor::align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 enc_query, AlignRes &aln_res) const
 {
     vector<STAln> alns;
     vector<pair<size_t, size_t> > step_alns;
@@ -738,7 +738,7 @@ LocusProcessor::align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 
 }
 
 int
-LocusProcessor::find_locus_overlap(SuffixTree *stree, DNASeq4 se_consensus)
+LocusProcessor::find_locus_overlap(SuffixTree *stree, DNASeq4 se_consensus) const
 {
     vector<STAln> alns;
     vector<pair<size_t, size_t> > step_alns;
@@ -836,6 +836,30 @@ LocusProcessor::assemble_contig(const vector<const DNASeq4*>& seqs)
     return SPath::contig_str(best_path.begin(), best_path.end(), km_length);
 }
 
+bool LocusProcessor::add_read_to_aln(
+        CLocAlnSet& aln_loc,
+        AlignRes& aln_res,
+        SRead&& r,
+        GappedAln* aligner,
+        SuffixTree* stree
+) const {
+
+    if (!this->align_reads_to_contig(stree, aligner, r.seq, aln_res))
+        return false;
+
+    if (aln_res.pct_id < min_aln_cov)
+        return false;
+
+    Cigar cigar;
+    parse_cigar(aln_res.cigar.c_str(), cigar);
+    simplify_cigar_to_MDI(cigar);
+    cigar_extend_left(cigar, aln_res.subj_pos);
+    assert(cigar_length_ref(cigar) <= aln_loc.ref().length());
+    cigar_extend_right(cigar, aln_loc.ref().length() - cigar_length_ref(cigar));
+
+    aln_loc.add(SAlnRead(move((Read&)r), move(cigar), r.sample));
+    return true;
+}
 
 vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
         const vector<SiteCall>& calls,
@@ -1523,7 +1547,7 @@ Cigar dbg_extract_cigar(const string& read_id) {
     return cigar;
 }
 
-void from_true_alignments(CLocAlnSet& aln_loc, CLocReadSet&& loc) {
+void from_true_alignments(CLocAlnSet& aln_loc, CLocReadSet&& loc, bool merge_reads) {
     //
     // Add forward reads.
     //
@@ -1557,6 +1581,51 @@ void from_true_alignments(CLocAlnSet& aln_loc, CLocReadSet&& loc) {
             }
             aln_loc.add(SAlnRead(move((Read&)r), move(cigar), r.sample));
         }
+        if (merge_reads)
+            aln_loc.merge_paired_reads();
+    }
+}
+
+void LocusProcessor::using_true_reference(CLocAlnSet& aln_loc, CLocReadSet&& loc) {
+    // Reconstruct the reference sequence, based on true alignments.
+    from_true_alignments(aln_loc, move(loc), false);
+    DNASeq4 true_ref (aln_loc.ref().length());
+    size_t i = 0;
+    Counts<Nt4> cnts;
+    for (CLocAlnSet::site_iterator site (aln_loc); bool(site); ++site, ++i) {
+        site.counts(cnts);
+        pair<size_t,Nt4> best_nt = cnts.sorted()[0];
+        true_ref.set(i, best_nt.first > 0 ? best_nt.second : Nt4::n);
+    }
+    aln_loc.ref(move(true_ref));
+
+    // Undo the paired-end read (true) alignments.
+    // N.B. `from_true_alignments()` adds the paired-end reads at the end.
+    vector<SRead> pe_reads;
+    while(!aln_loc.reads().empty() && aln_loc.reads().back().name.back() == '2') {
+        SAlnRead& r = aln_loc.reads().back();
+        pe_reads.push_back(SRead(Read(move(r.seq), move(r.name)), r.sample));
+        aln_loc.reads().pop_back();
+    }
+
+    if (!pe_reads.empty()) {
+        // Compute the paired-end reads alignments.
+        SuffixTree stree (aln_loc.ref());
+        stree.build_tree();
+        GappedAln aligner (pe_reads.front().seq.length(), aln_loc.ref().length(), true);
+        AlignRes aln_res;
+        for (SRead& r : pe_reads)
+            if(add_read_to_aln(aln_loc, aln_res, move(r), &aligner, &stree))
+                ++stats_.n_aln_reads;
+        if (detailed_output)
+            for (auto& r : aln_loc.reads())
+                if (r.is_read2())
+                    details_ss_ << "pe_aln_global"
+                                << '\t' << r.name
+                                << '\t' << r.cigar
+                                << '\n';
+
+        // Merge forward & paired-end reads.
         aln_loc.merge_paired_reads();
     }
 }
@@ -1594,8 +1663,9 @@ const string help_string = string() +
         "  the user should generate after running tsv2bam with e.g.:\n"
         "  \"samtools merge ./batch_1.catalog.bam ./*.matches.bam\"\n"
         "\n"
-        "  --ignore-pe-reads: ignore paired-end reads even if present in the input\n"
         "  -t,--threads: number of threads to use (default: 1)\n"
+        "  --details: write a more detailed output\n"
+        "  --ignore-pe-reads: ignore paired-end reads even if present in the input\n"
         "\n"
         "Model options:\n"
         "  --model: model to use to call variants and genotypes; one of\n"
@@ -1609,14 +1679,15 @@ const string help_string = string() +
         "\n"
 #ifdef DEBUG
         "Debug options:\n"
-        "  --dbg-max-loci: process the first N loci\n"
-        "  --no-haps: disable phasing\n"
-        "  --gfa: output a GFA file for each locus\n"
-        "  --alns: output a file showing the contigs & alignments\n"
+        "  --dbg-no-overlaps: disable overlapping\n"
+        "  --dbg-no-haps: disable phasing\n"
+        "  --dbg-gfa: output a GFA file for each locus\n"
+        "  --dbg-alns: output a file showing the contigs & alignments\n"
         "  --hap-graphs: output a dot graph file showing phasing information\n"
-        "  --depths: write detailed depth data in the output VCF\n"
-        "  --true-alns: use true alignments (for simulated data; read IDs must\n"
+        "  --dbg-depths: write detailed depth data in the output VCF\n"
+        "  --dbg-true-alns: use true alignments (for simulated data; read IDs must\n"
         "               include 'cig1=...' and 'cig2=...' fields.\n"
+        "  --dbg-true-reference: align paired-end reads to the true reference\n"
         "\n"
 #endif
         ;
@@ -1642,16 +1713,17 @@ try {
         {"var-alpha",    required_argument, NULL,  1008},
         {"kmer-length",  required_argument, NULL,  1001},
         {"min-kmer-cov", required_argument, NULL,  1002},
-        {"no-haps",      no_argument,       NULL,  1009},
         {"ignore-pe-reads", no_argument,    NULL,  1012},
         {"details",      no_argument,       NULL,  1013},
         //debug options
-        {"dbg-max-loci", required_argument, NULL,  2000},
         {"dbg-gfa",      no_argument,       NULL,  2003},
         {"dbg-alns",     no_argument,       NULL,  2004}, {"alns", no_argument, NULL, 3004},
         {"dbg-depths",   no_argument,       NULL,  2007},
         {"dbg-hap-graphs", no_argument,     NULL,  2010},
+        {"dbg-true-reference", no_argument, NULL,  2012},
         {"dbg-true-alns", no_argument,      NULL,  2011}, {"true-alns", no_argument, NULL, 3011},
+        {"dbg-no-overlaps", no_argument,    NULL,  2008},
+        {"dbg-no-haps",  no_argument,       NULL,  2009},
         {0, 0, 0, 0}
     };
 
@@ -1710,9 +1782,6 @@ try {
         case 1002://min-cov
             min_km_count = atoi(optarg);
             break;
-            case 1009://no-haps
-            dbg_no_haplotypes = true;
-            break;
         case 1013://details
             detailed_output = true;
             break;
@@ -1720,8 +1789,8 @@ try {
         //
         // Debug options
         //
-        case 2000://dbg-max-loci
-            dbg_max_loci = is_integer(optarg);
+        case 2012://dbg-true-alns
+            dbg_true_reference = true;
             break;
         case 3011:
         case 2011://dbg-true-alns
@@ -1739,6 +1808,12 @@ try {
             break;
         case 2007://dbg-depths
             dbg_write_nt_depths = true;
+            break;
+        case 2008://dbg-no-haps
+            dbg_no_overlaps = true;
+            break;
+        case 2009://dbg-no-haps
+            dbg_no_haplotypes = true;
             break;
         case '?':
             bad_args();
@@ -1801,7 +1876,4 @@ void report_options(ostream& os) {
         os << "  Kmer length: " << km_length << "\n";
     if (min_km_count != 2)
         os << "  Min coverage: " << min_km_count << "\n";
-
-    if (dbg_max_loci != SIZE_MAX)
-        os << "  DEBUG: Processing max. " << dbg_max_loci << "loci\n";
 }
