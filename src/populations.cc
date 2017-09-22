@@ -243,17 +243,16 @@ int main (int argc, char* argv[]) {
             cerr << "  Analyzed " << loc_cnt << " loci from " << bloc.loci().front()->cloc->loc.chr() << ".\n";
 
         //
-        // Calculate divergence statistics (Fst).
+        // Calculate divergence statistics (Fst), if requested.
         //
+        LocDivergence *ldiv;
+
         if (calc_fstats) {
-            LocDivergence ldiv(&mpopi);
-
-            ldiv.snp_divergence(bloc.loci());
-            ldiv.haplotype_divergence_pairwise(bloc.loci());
-            // ldiv.haplotype_divergence(bloc.loci());
-
-            sdiv_exp->write_batch_pairwise(bloc.loci(), ldiv.snp_values());
-            hdiv_exp->write_batch_pairwise(bloc.loci(), ldiv.haplotype_values());
+            ldiv = new LocDivergence(&mpopi);
+            
+            ldiv->snp_divergence(bloc.loci());
+            ldiv->haplotype_divergence_pairwise(bloc.loci());
+            // ldiv->haplotype_divergence(bloc.loci());
         }
 
         //
@@ -265,12 +264,18 @@ int main (int argc, char* argv[]) {
             smooth->hapstats(bloc.loci(), log_fh);
 
             if (calc_fstats) {
-                smooth->snp_divergence(ldiv);
-                smooth->haplotype_divergence(ldiv);
+                smooth->snp_divergence(bloc.loci(), ldiv->snp_values(), log_fh);
+                smooth->hap_divergence(bloc.loci(), ldiv->haplotype_values(), log_fh);
             }
             cerr << "done.\n";
         } else if (kernel_smoothed) {
             cerr << "    Notice: Smoothing was requested (-k), but will not be performed as the loci are not ordered.\n";
+        }
+
+        if (calc_fstats) {
+            sdiv_exp->write_batch_pairwise(bloc.loci(), ldiv->snp_values());
+            hdiv_exp->write_batch_pairwise(bloc.loci(), ldiv->haplotype_values());
+            delete ldiv;
         }
 
     } while (loc_cnt > 0);
@@ -5113,13 +5118,12 @@ int
 LocusSmoothing::snp_divergence(const vector<LocBin *> &loci, const vector<vector<PopPair **>> &div, ofstream &log_fh)
 {
     for (uint i = 0; i < div.size(); i++) {
-        map<uint, uint> sites_key;
-
         assert(div[i].size() == loci.size());
 
-        vector<const PopPair **> sites;
+        map<uint, uint> sites_key;
+        vector<const PopPair *> sites;
         
-        this->_ord_pp->order(sites, sites_key, loci, div);
+        this->_ord_pp->order(sites, sites_key, loci, div[i]);
         this->_ks_pp->smooth(sites);
     }
 
@@ -5129,15 +5133,16 @@ LocusSmoothing::snp_divergence(const vector<LocBin *> &loci, const vector<vector
 int
 LocusSmoothing::hap_divergence(const vector<LocBin *> &loci, const vector<vector<HapStat *>> &div, ofstream &log_fh)
 {
-    map<uint, uint> sites_key;
+    for (uint i = 0; i < div.size(); i++) {
+        assert(div[i].size() == loci.size());
+
+        map<uint, uint> sites_key;
+        vector<const HapStat *> sites;
+        
+        this->_ord_hs->order(sites, sites_key, loci, div[i]);
+        this->_ks_hs->smooth(sites);
+    }
     
-    // for (uint i = 0; i < this->_mpopi->pops().size(); i++) {
-    //     vector<const LocStat *> sites;
-
-    //     this->_ord_ls->order(sites, locstats_key, loci);
-    //     this->_ks_ls->smooth(sites);
-    // }
-
     return 0;
 }
 

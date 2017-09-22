@@ -49,6 +49,7 @@ public:
     int init_sites(vector<const StatT *> &, map<uint, uint> &, const vector<LocBin *> &, uint);
     int init_sites(vector<const StatT *> &, map<uint, uint> &, const vector<LocBin *> &, uint, uint);
     int init_haplotypes(vector<const StatT *> &, map<uint, uint> &, const vector<LocBin *> &);
+    int init_haplotypes(vector<const StatT *> &, map<uint, uint> &, const vector<LocBin *> &, uint, uint);
 };
 
 template<class StatT>
@@ -200,12 +201,52 @@ Ordered<StatT>::init_haplotypes(vector<const StatT *> &sites, map<uint, uint> &s
     return 0;
 }
 
+// template<class StatT>
+// int
+// Ordered<StatT>::init_haplotypes(vector<const StatT *> &sites, map<uint, uint> &sites_key, const vector<LocBin *> &sorted_loci, uint pop_1, uint pop_2)
+// {
+//     const LocBin  *loc;
+//     const LocStat *lstat_1, *lstat_2;
+    
+//     int      bp;
+//     set<int> bps;
+
+//     for (uint pos = 0; pos < sorted_loci.size(); pos++) {
+//         loc = sorted_loci[pos];
+//         bp  = loc->cloc->sort_bp();
+
+//         lstat_1 = loc->s->hapstats_per_pop(pop_1);
+//         lstat_2 = loc->s->hapstats_per_pop(pop_2);
+
+//         //
+//         // Check that gene diversity exists, indicating polymorphism.
+//         //
+//         if (lstat_1->stat[0] > 0.0 && lstat_2->stat[0] > 0.0)
+//             bps.insert(bp);
+//     }
+
+//     sites.resize(bps.size(), NULL);
+
+//     //
+//     // Create a key describing where in the sites array to find each basepair coordinate.
+//     //
+//     set<int>::iterator it;
+//     int i = 0;
+//     for (it = bps.begin(); it != bps.end(); it++) {
+//         sites_key[*it] = i;
+//         i++;
+//     }
+
+//     return 0;
+// }
+
 template<class StatT>
 class OHaplotypes: public Ordered<StatT> {
 public:
     OHaplotypes(): Ordered<StatT>() { }
 
     int order(vector<const StatT *> &, map<uint, uint> &, const vector<LocBin *> &);
+    int order(vector<const StatT *> &, map<uint, uint> &, const vector<LocBin *> &, const vector<StatT *> &);
 };
 
 template<class StatT>
@@ -218,36 +259,74 @@ OHaplotypes<StatT>::order(vector<const StatT *> &sites, map<uint, uint> &sites_k
 };
 
 template<class StatT>
+int
+OHaplotypes<StatT>::order(vector<const StatT *> &sites, map<uint, uint> &sites_key, const vector<LocBin *> &sorted_loci, const vector<StatT *> &div)
+{
+    StatT *pair;
+
+    this->init_haplotypes(sites, sites_key, sorted_loci);
+
+    for (uint i = 0; i < div.size(); i++) {
+        pair = div[i];
+
+        if (pair == NULL)
+            continue;
+        
+        sites[sites_key[pair->bp]] = pair;
+    }
+
+    return 0;
+};
+
+template<class StatT>
 class OPopPair: public Ordered<StatT> {
 public:
     OPopPair(ofstream &log_fh): Ordered<StatT>() {
         this->log_fh = &log_fh;
     }
 
-    int order(const vector<StatT *> &, map<uint, uint> &, const vector<LocBin *> &, uint, uint);
+    int order(vector<const StatT *> &, map<uint, uint> &, const vector<LocBin *> &, const vector<StatT **> &);
 };
 
 template<class StatT>
 int
-OPopPair<StatT>::order(const vector<StatT *> &sites, map<uint, uint> &sites_key, const vector<LocBin *> &sorted_loci, const vector<StatT **> &div)
+OPopPair<StatT>::order(vector<const StatT *> &sites, map<uint, uint> &sites_key, const vector<LocBin *> &sorted_loci, const vector<StatT **> &div)
 {
     CSLocus *loc;
     StatT  **pair;
-    int      len;
+    uint     cloc_len;
+    bool     found = false;
 
     this->incompatible_loci = 0;
     this->multiple_loci     = 0;
 
-    this->init_sites(sites, sites_key, sorted_loci);
+    uint pop_1, pop_2;
+    for (uint i = 0; i < div.size(); i++) {
+        cloc_len = strlen(sorted_loci[i]->cloc->con);
+        pair     = div[i];
+        
+        for (uint j = 0; j < cloc_len; j++) {
+            if (pair[j] != NULL) {
+                pop_1 = pair[j]->pop_1;
+                pop_2 = pair[j]->pop_2;
+                found = true;
+                break;
+            }
+        }
+        if (found == true) break;
+    }
 
+    this->init_sites(sites, sites_key, sorted_loci, pop_1, pop_2);
 
-    for (uint i = 0; pos < div.size(); pos++) {
-        loc  = sorted_loci[i]->cloc;
-        len  = strlen(loc->con);
-        pair = div[i];
+    for (uint i = 0; i < div.size(); i++) {
+        loc      = sorted_loci[i]->cloc;
+        cloc_len = strlen(loc->con);
+        pair     = div[i];
 
-        for (uint pos = 0; pos < len; pos++) {
-            
+        for (uint pos = 0; pos < cloc_len; pos++) {
+            if (pair[pos] == NULL)
+                continue;
+
             //
             // Check if this basepair position is already covered by a RAD site.
             //
