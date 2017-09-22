@@ -304,14 +304,19 @@ private:
 };
 
 struct LocBin {
+    size_t     sample_cnt;
     CSLocus   *cloc;
     Datum    **d;
     LocPopSum *s;
 
-    LocBin(): cloc(NULL), d(NULL), s(NULL) {}
+    LocBin(size_t cnt): sample_cnt(cnt), cloc(NULL), d(NULL), s(NULL) {}
     ~LocBin() {
         if (this->cloc != NULL) delete cloc;
-        if (this->d    != NULL) delete [] d;
+        if (this->d    != NULL) {
+            for (uint i = 0; i < sample_cnt; i++)
+                if (d[i] != NULL) delete d[i];
+            delete [] d;
+        }
         if (this->s    != NULL) delete s;
     }
 };
