@@ -418,7 +418,7 @@ int
 BatchLocusProcessor::init(int batch_id, string in_path, string pmap_path)
 {
     //
-    // Read the blacklist and whitelist to control which loci we load..
+    // Read the blacklist and whitelist to control which loci we load.
     //
     int cnt;
     if (bl_file.length() > 0) {
