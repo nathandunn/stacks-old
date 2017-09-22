@@ -134,16 +134,23 @@ private:
     string o_fa_;
 
     string assemble_contig(const vector<const DNASeq4*>& seqs);
+    bool add_read_to_aln(
+            CLocAlnSet& aln_loc,
+            AlignRes& aln_res,
+            SRead&& read,
+            GappedAln* aligner,
+            SuffixTree* stree
+            ) const;
 
-    int align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 query, AlignRes &aln_res);
-    int find_locus_overlap(SuffixTree *st, DNASeq4 se_consensus);
+    int align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 query, AlignRes &aln_res) const;
+    int find_locus_overlap(SuffixTree *st, DNASeq4 se_consensus) const;
 
     // For each sample, phase heterozygous SNPs.
     vector<map<size_t,PhasedHet>> phase_hets (
             const vector<SiteCall>& calls,
             const CLocAlnSet& aln_loc,
             set<size_t>& inconsistent_samples
-    ) const;
+            ) const;
 
     void count_pairwise_cooccurrences(
             SnpAlleleCooccurrenceCounter& cooccurrences,
@@ -193,6 +200,14 @@ private:
             const vector<const SampleCall*>& sample_het_calls,
             const SnpAlleleCooccurrenceCounter& cooccurences
             ) const;
+
+    //
+    // (debug) Creates a CLocAlnSet from a CLocReadSet, using the true
+    // reference but computing paired-end reads alignments. Same requirements as
+    // `from_true_alignments()`.
+    //
+    void using_true_reference(CLocAlnSet& aln_loc, CLocReadSet&& loc);
+
 };
 
 //
@@ -214,7 +229,7 @@ Cigar dbg_extract_cigar(const string& read_id);
 // ----------
 // Creates a CLocAlnSet from a CLocReadSet, using true alignments.
 //
-void from_true_alignments(CLocAlnSet& aln_loc, CLocReadSet&& loc);
+void from_true_alignments(CLocAlnSet& aln_loc, CLocReadSet&& loc, bool merge_reads);
 
 //
 // Clocks
