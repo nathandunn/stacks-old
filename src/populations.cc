@@ -48,6 +48,7 @@ string    enz;
 double    sigma             = 150000.0;
 double    sample_limit      = 0.0;
 int       population_limit  = 1;
+int       batch_size        = 10000;
 bool      calc_fstats       = false;
 bool      bootstrap         = false;
 bool      bootstrap_fst     = false;
@@ -154,7 +155,7 @@ int main (int argc, char* argv[]) {
     //
     // Locate and open input files, read VCF headers, parse population map, load black/white lists.
     //
-    BatchLocusProcessor bloc(input_mode, 100, &mpopi);
+    BatchLocusProcessor bloc(input_mode, batch_size, &mpopi);
 
     bloc.init(batch_id, in_path, pmap_path);
 
