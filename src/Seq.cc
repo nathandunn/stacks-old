@@ -19,7 +19,7 @@ PhyLoc::PhyLoc(const string& s) : PhyLoc() {
         // BP.
         ++p;
         char* end;
-        bp = strtol(p, &end, 10) + 1;
+        bp = strtol(p, &end, 10) - 1;
         if (end == p)
             throw exception();
 
