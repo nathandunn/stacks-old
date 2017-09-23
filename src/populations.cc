@@ -302,6 +302,9 @@ int main (int argc, char* argv[]) {
     sumstats.final_calculation();
     sumstats.write_results();
 
+    if (calc_fstats)
+        ldiv->write_summary(out_path + out_prefix);
+    
     //
     // Write out the distributions of catalog loci.
     //
@@ -3456,40 +3459,6 @@ SumStatsSummary::~SumStatsSummary()
     delete [] this->_fis_acc_mean_all;
     delete [] this->_fis_var_all;
 }
-
-    // //
-    // // Write out the mean Fst measure of each pair of populations.
-    // //
-    // string file = out_path + out_prefix + ".fst_summary.tsv";
-    // ofstream fh(file.c_str(), ofstream::out);
-
-    // if (fh.fail()) {
-    //     cerr << "Error opening generic output file '" << file << "'\n";
-    //     exit(1);
-    // }
-
-    // //
-    // // Write out X-axis header.
-    // //
-    // for (auto& pop : mpopi.pops())
-    //     fh << "\t" << pop.name;
-    // fh << "\n";
-
-    // uint n = 0;
-    // for (uint i = 0; i < mpopi.pops().size() - 1; i++) {
-    //     fh << mpopi.pops()[i].name;
-
-    //     for (uint k = 0; k <= i; k++)
-    //         fh << "\t";
-
-    //     for (uint j = i + 1; j < mpopi.pops().size(); j++) {
-    //         fh << "\t" << means[n];
-    //         n++;
-    //     }
-    //     fh << "\n";
-    // }
-
-    // fh.close();
 
 int
 correct_fst_bonferroni_win(vector<PopPair *> &pairs)

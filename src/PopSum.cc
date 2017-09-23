@@ -899,6 +899,11 @@ LocusDivergence::snp_divergence(const vector<LocBin *> &loci)
             this->_snps.push_back(vector<PopPair **>());
             vector<PopPair **> *pairs = &this->_snps.back();
 
+            this->_mean_fst.push_back(0.0);
+            this->_mean_fst_cnt.push_back(0.0);
+            double *fst_mean = &this->_mean_fst.back();
+            double *fst_cnt  = &this->_mean_fst_cnt.back();
+            
             for (uint k = 0; k < loci.size(); k++) {
                 uint cloc_len = loci[k]->cloc->len;
                 PopPair  **pp = new PopPair *[cloc_len];
@@ -940,6 +945,9 @@ LocusDivergence::snp_divergence(const vector<LocBin *> &loci)
                         }
                         break;
                     }
+
+                    *fst_mean += pp[pos]->amova_fst;
+                    (*fst_cnt)++;
                 }
 
                 pairs->push_back(pp);
@@ -1326,8 +1334,17 @@ LocusDivergence::haplotype_divergence_pairwise(const vector<LocBin *> &loci)
             subpop_ids.push_back(pop_2);
 
             this->_haplotypes.push_back(vector<HapStat *>());
-            vector<HapStat *> &haps = this->_haplotypes.back();
+            vector<HapStat *> *haps = &this->_haplotypes.back();
 
+            this->_mean_phist.push_back(0.0);
+            this->_mean_phist_cnt.push_back(0.0);
+            this->_mean_fstp.push_back(0.0);
+            this->_mean_fstp_cnt.push_back(0.0);
+            double *phist_mean = &this->_mean_phist.back();
+            double *phist_cnt  = &this->_mean_phist_cnt.back();
+            double *fstp_mean  = &this->_mean_fstp.back();
+            double *fstp_cnt   = &this->_mean_fstp_cnt.back();
+            
             #pragma omp for schedule(dynamic, 1)
             for (uint k = 0; k < loci.size(); k++) {
                 loc = (const CSLocus *) loci[k]->cloc;
@@ -1335,7 +1352,7 @@ LocusDivergence::haplotype_divergence_pairwise(const vector<LocBin *> &loci)
                 d   = (const Datum **) loci[k]->d;
 
                 if (loc->snps.size() == 0) {
-                    haps.push_back(NULL);
+                    haps->push_back(NULL);
                     continue;
                 }
 
@@ -1344,7 +1361,7 @@ LocusDivergence::haplotype_divergence_pairwise(const vector<LocBin *> &loci)
                 // do not calculate haplotype F stats.
                 //
                 if (fixed_locus(d, subpop_ids)) {
-                    haps.push_back(NULL);
+                    haps->push_back(NULL);
                     continue;
                 }
 
@@ -1359,7 +1376,12 @@ LocusDivergence::haplotype_divergence_pairwise(const vector<LocBin *> &loci)
                     h->bp     = loc->sort_bp();
                 }
 
-                haps.push_back(h);
+                haps->push_back(h);
+
+                *phist_mean += h->stat[0];
+                (*phist_cnt)++;
+                *fstp_mean  += h->stat[3];
+                (*fstp_cnt)++;
             }
         }
     }
@@ -2014,6 +2036,101 @@ LocusDivergence::nuc_substitution_identity_max(map<string, int> &hap_index, doub
             hdists[j][i] = 1.0;
         }
     }
+
+    return 0;
+}
+
+int
+LocusDivergence::write_summary(string path)
+{
+    //
+    // Write out the mean Fst measure of each pair of populations.
+    //
+    string file = path + ".fst_summary.tsv";
+    ofstream fh(file.c_str(), ofstream::out);
+
+    if (fh.fail()) {
+        cerr << "Error opening fst summary output file '" << file << "'\n";
+        exit(1);
+    }
+
+    //
+    // Write out X-axis header.
+    //
+    for (auto& pop : this->_mpopi->pops())
+        fh << "\t" << pop.name;
+    fh << "\n";
+
+    uint n = 0;
+    for (uint i = 0; i < this->_mpopi->pops().size() - 1; i++) {
+        fh << this->_mpopi->pops()[i].name;
+
+        for (uint k = 0; k <= i; k++)
+            fh << "\t";
+
+        for (uint j = i + 1; j < this->_mpopi->pops().size(); j++) {
+            fh << "\t" << this->_mean_fst[n] / this->_mean_fst_cnt[n];
+            n++;
+        }
+        fh << "\n";
+    }
+
+    fh.close();
+
+    file = path + ".phistats_summary.tsv";
+    fh.open(file.c_str(), ofstream::out);
+
+    if (fh.fail()) {
+        cerr << "Error opening fst summary output file '" << file << "'\n";
+        exit(1);
+    }
+
+    fh << "# Phi_st Means\n";
+    //
+    // Write out X-axis header.
+    //
+    for (auto& pop : this->_mpopi->pops())
+        fh << "\t" << pop.name;
+    fh << "\n";
+
+    n = 0;
+    for (uint i = 0; i < this->_mpopi->pops().size() - 1; i++) {
+        fh << this->_mpopi->pops()[i].name;
+
+        for (uint k = 0; k <= i; k++)
+            fh << "\t";
+
+        for (uint j = i + 1; j < this->_mpopi->pops().size(); j++) {
+            fh << "\t" << this->_mean_phist[n] / this->_mean_phist_cnt[n];
+            n++;
+        }
+        fh << "\n";
+    }
+
+    fh << "\n"
+       << "# Fst' Means\n";
+    //
+    // Write out X-axis header.
+    //
+    for (auto& pop : this->_mpopi->pops())
+        fh << "\t" << pop.name;
+    fh << "\n";
+
+    n = 0;
+    for (uint i = 0; i < this->_mpopi->pops().size() - 1; i++) {
+        fh << this->_mpopi->pops()[i].name;
+
+        for (uint k = 0; k <= i; k++)
+            fh << "\t";
+
+        for (uint j = i + 1; j < this->_mpopi->pops().size(); j++) {
+            fh << "\t" << this->_mean_fstp[n] / this->_mean_fstp_cnt[n];
+            n++;
+        }
+        fh << "\n";
+    }
+
+    fh.close();
 
     return 0;
 }
