@@ -139,13 +139,18 @@ SuffixTree::align(const char *query, vector<pair<size_t, size_t> > &alns)
     } else if (node_pos < node_stop) {
         //
         // Otherwise, traverse this path to the first leaf node to determine the alignment position.
+        //  We calculate the alignment position by finding a path to a leaf node (the end of the sequence), then
+        //  subtracting from the sequence length: 1) the distance from the last matching node, 2) the distance from
+        //  the end of the node string to the location within the node string where the match ended, and 3) the length
+        //  of the matching alignment; which will give us the length to the start of the alignmnet.
         //
-        size_t aln_pos = find_leaf_dist(active_node->edge(active_edge)->succ()) - qcnt + 1;
+        size_t aln_pos = this->seq_.length() - find_leaf_dist(active_node->edge(active_edge)->succ()) - (node_stop - node_pos) - qcnt;
         alns.push_back(make_pair(aln_pos, qcnt));
 
     } else {
         //
-        // Traverse the remaining paths out of active_node's successor to determine all the alignments for this fragment.
+        // Do the same traversal as described in the previous if/else branch, but traverse all the remaining paths
+        // out of active_node's successor to determine all the alignments for this fragment.
         //
         vector<size_t> dists;
 
