@@ -330,9 +330,6 @@ int main (int argc, char* argv[]) {
     // //
     // write_generic(catalog, pmap, false);
 
-    // //
-    // // Output data in requested formats
-    // //
     // if (fasta_loci_out)
     //     write_fasta_loci(catalog, pmap);
 
@@ -3331,6 +3328,14 @@ SumStatsSummary::write_results()
            << _fis_var[j]             << "\t"
            << sqrt(_num_indv_var[j])  / _sq_n[j] << "\n";
 
+    cerr << "\nPopulation summary statistics (more detail in populations.sumstats_summary.tsv):\n";
+    
+    for (uint j = 0; j < this->_pop_cnt; j++)
+        cerr << "  " << mpopi.pops()[j].name << ": "
+             << "private alleles: " << _private_cnt[j] << ", "
+             << "mean individuals per locus: " << _num_indv_mean[j] << ", "
+             << "mean pi: " << _pi_mean[j] << "\n";
+    
     fh << "# All positions (variant and fixed)\n"
        << "# Pop ID\t"
        << "Private\t"
