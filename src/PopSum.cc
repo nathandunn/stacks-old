@@ -2132,5 +2132,20 @@ LocusDivergence::write_summary(string path)
 
     fh.close();
 
+    cerr << "\nPopulation pair divergence statistics (more in populations.fst_summary.tsv and populations.phistats_summary.tsv):\n";
+    n = 0;
+    for (uint i = 0; i < this->_mpopi->pops().size() - 1; i++) {
+        cerr << "  " << this->_mpopi->pops()[i].name << "-";
+
+        for (uint j = i + 1; j < this->_mpopi->pops().size(); j++) {
+            cerr << this->_mpopi->pops()[j].name 
+                 << ": mean Fst: "    << this->_mean_fst[n]   / this->_mean_fst_cnt[n]
+                 << "; mean Phi_st: " << this->_mean_phist[n] / this->_mean_phist_cnt[n]
+                 << "; mean Fst': "   << this->_mean_fstp[n]  / this->_mean_fstp_cnt[n] << "\n";
+            n++;
+        }
+        fh << "\n";
+    }
+    
     return 0;
 }
