@@ -138,6 +138,8 @@ public:
     double *comp;
 
     PopPair() {
+        pop_1     = 0;
+        pop_2     = 0;
         col       = 0;
         pi        = 0.0;
         fst       = 0.0;

@@ -249,6 +249,8 @@ int main (int argc, char* argv[]) {
 
         if (loci_ordered)
             cerr << "  Analyzed " << loc_cnt << " loci from " << bloc.loci().front()->cloc->loc.chr() << ".\n";
+        else
+            cerr << "  Analyzed " << loc_cnt << " loci; " << tot_cnt << " total loci analyzed.\n";
 
         //
         // Calculate divergence statistics (Fst), if requested.
