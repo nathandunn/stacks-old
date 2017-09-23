@@ -394,21 +394,21 @@ CSLocus* new_cslocus(const Seq& consensus, const vector<VcfRecord>& records, int
     
     const char *p, *q;
     p = consensus.comment;
-    q = p;
 
     do {
+        q = p;
+        while (*q != '\0' && *q != ' ' && *q != '\t')
+            ++q;
+
         if (strncmp(p, "pos=", 4) == 0) {
             p += 4;
-            q  = p;
-            while (*q != '\0' && *q != ' ' && *q != '\t')
-                ++q;
             loc->loc = PhyLoc(string(p, q));
             break;
         }
 
         p = *q == '\0' ? q : q + 1;
         
-    } while ((p = strchr(p, ' ')) != NULL);
+    } while (p != '\0');
     
     if (loc->loc.empty())
         loc->loc = PhyLoc("", 0, strand_plus); // n.b. Not the same as PhyLoc(); with this `PhyLoc::chr != NULL`.

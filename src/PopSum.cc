@@ -762,7 +762,7 @@ LocPopSum::haplotype_diversity(int start, int end, const Datum **d)
     // cerr << "  Population " << pop_id << " has haplotype diversity (pi) of " << s[pop_index]->pi << "\n";
 
     for (k = 0; k < hap_index.size(); k++)
-        delete hdists[k];
+        delete [] hdists[k];
     delete [] hdists;
 
     return lstat;
@@ -869,9 +869,10 @@ LocusDivergence::clear(const vector<LocBin *> &loci)
 {
     for (uint i = 0; i < this->_snps.size(); i++) {
         assert (this->_snps[i].size() == loci.size());
-        for (uint j = i + 1; j < this->_snps[i].size(); j++) {
-            for (uint k = 0; k < loci[i]->cloc->len; k++)
-                delete this->_snps[i][j][k];
+        for (uint j = 0; j < this->_snps[i].size(); j++) {
+            for (uint k = 0; k < loci[j]->cloc->len; k++)
+                if (this->_snps[i][j][k] != NULL)
+                    delete this->_snps[i][j][k];
             delete [] this->_snps[i][j];
         }
         this->_snps[i].clear();
@@ -879,7 +880,7 @@ LocusDivergence::clear(const vector<LocBin *> &loci)
     this->_snps.clear();
 
     for (uint i = 0; i < this->_haplotypes.size(); i++) {
-        for (uint j = i + 1; j < this->_haplotypes[i].size(); j++)
+        for (uint j = 0; j < this->_haplotypes[i].size(); j++)
             delete this->_haplotypes[i][j];
         this->_haplotypes[i].clear();
     }
@@ -896,12 +897,12 @@ LocusDivergence::snp_divergence(const vector<LocBin *> &loci)
         for (uint pop_2 = pop_1 + 1; pop_2 < this->_mpopi->pops().size(); pop_2++) {
 
             this->_snps.push_back(vector<PopPair **>());
-            vector<PopPair **> &pairs = this->_snps.back();
-            
+            vector<PopPair **> *pairs = &this->_snps.back();
+
             for (uint k = 0; k < loci.size(); k++) {
-                uint cloc_len = strlen(loci[k]->cloc->con);
+                uint cloc_len = loci[k]->cloc->len;
                 PopPair  **pp = new PopPair *[cloc_len];
-                
+
                 for (uint pos = 0; pos < cloc_len; pos++) {
                     pp[pos] = this->Fst(loci[k]->cloc, loci[k]->s, pop_1, pop_2, pos);
 
@@ -941,7 +942,7 @@ LocusDivergence::snp_divergence(const vector<LocBin *> &loci)
                     }
                 }
 
-                pairs.push_back(pp);
+                pairs->push_back(pp);
             }
         }
     }
@@ -1011,7 +1012,7 @@ LocusDivergence::Fst(const CSLocus *cloc, const LocPopSum *s, int pop_1, int pop
         if (ncnt[i] > 0) allele_cnt++;
 
     if (allele_cnt > 2)
-        return NULL;
+        return pair;
 
     double tot_alleles = n_1 + n_2;
     double p_1 = round(n_1 * s_1->nucs[pos].p);
