@@ -147,10 +147,10 @@ public:
         delete this->_ord_pp;
     }
 
-    int snpstats(const vector<LocBin *> &loci, ofstream &log_fh);
-    int hapstats(const vector<LocBin *> &loci, ofstream &log_fh);
-    int snp_divergence(const vector<LocBin *> &loci, const vector<vector<PopPair **>> &div, ofstream &log_fh);
-    int hap_divergence(const vector<LocBin *> &loci, const vector<vector<HapStat *>>  &div, ofstream &log_fh);
+    int snpstats(const vector<LocBin *> &, ofstream &);
+    int hapstats(const vector<LocBin *> &, ofstream &);
+    int snp_divergence(const vector<LocBin *> &, const vector<vector<PopPair **>> &, ofstream &);
+    int hap_divergence(const vector<LocBin *> &, const vector<vector<HapStat *>>  &, const vector<HapStat *> &, ofstream &);
 };
 
 //
