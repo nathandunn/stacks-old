@@ -220,6 +220,8 @@ int main (int argc, char* argv[]) {
     //
     SumStatsSummary sumstats(mpopi.pops().size());
     int loc_cnt, tot_cnt = 0;
+
+    cerr << "\nProcessing data in batches...\n";
     
     do {
         //
@@ -247,10 +249,10 @@ int main (int argc, char* argv[]) {
         for (uint i = 0; i < exports.size(); i++)
             exports[i]->write_batch(bloc.loci());
 
+        cerr << "  Analyzed " << loc_cnt << " loci";
         if (loci_ordered)
-            cerr << "  Analyzed " << loc_cnt << " loci from " << bloc.loci().front()->cloc->loc.chr() << ".\n";
-        else
-            cerr << "  Analyzed " << loc_cnt << " loci; " << tot_cnt << " total loci analyzed.\n";
+            cerr <<  " from " << bloc.loci().front()->cloc->loc.chr();
+        cerr << "; " << tot_cnt << " total loci analyzed.\n";
 
         //
         // Calculate divergence statistics (Fst), if requested.
@@ -258,7 +260,7 @@ int main (int argc, char* argv[]) {
         if (calc_fstats) {
             ldiv->snp_divergence(bloc.loci());
             ldiv->haplotype_divergence_pairwise(bloc.loci());
-            // ldiv->haplotype_divergence(bloc.loci());
+            ldiv->haplotype_divergence(bloc.loci());
         }
 
         //
@@ -280,7 +282,7 @@ int main (int argc, char* argv[]) {
 
         if (calc_fstats) {
             sdiv_exp->write_batch_pairwise(bloc.loci(), ldiv->snp_values());
-            hdiv_exp->write_batch_pairwise(bloc.loci(), ldiv->haplotype_values());
+            hdiv_exp->write_batch_pairwise(bloc.loci(), ldiv->haplotype_values(), ldiv->metapop_haplotype_values());
             ldiv->clear(bloc.loci());
         }
 
@@ -2707,250 +2709,6 @@ int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
     return 0;
 }
 
-/*
-int
-calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum)
-{
-    map<string, vector<CSLocus *> >::const_iterator it;
-
-    if (bootstrap_phist)
-        cerr << "Calculating halotype F statistics across all populations/groups and bootstrap resampling...\n";
-    else
-        cerr << "Calculating haplotype F statistics across all populations/groups...\n";
-
-    //
-    // Create a list of all the populations we have.
-    //
-    vector<int> pop_ids;
-    for (size_t i=0; i<mpopi.pops().size(); ++i)
-        pop_ids.push_back(i);
-
-    //
-    // Instantiate the kernel smoothing object and associated ordering object if requested.
-    //
-    KSmooth<HapStat>     *ks=NULL;
-    OHaplotypes<HapStat> *ord=NULL;
-    Bootstrap<HapStat>   *bs=NULL;
-    if (kernel_smoothed && loci_ordered) {
-        ks  = new KSmooth<HapStat>(5);
-        ord = new OHaplotypes<HapStat>();
-    }
-
-    if (bootstrap_phist)
-        bs = new Bootstrap<HapStat>(5);
-
-    map<string, vector<HapStat *> > genome_hapstats;
-
-    uint cnt = 0;
-    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
-        string chr = it->first;
-
-        cerr << "  Generating haplotype F statistics for " << chr << "...";
-
-        map<uint, uint>    hapstats_key;
-        vector<HapStat *> &hapstats = genome_hapstats[chr];
-        // ord->order(hapstats, hapstats_key, it->second);
-
-        #pragma omp parallel
-        {
-            const CSLocus  *loc;
-            //LocSum  **s;
-            Datum   **d;
-            HapStat  *h = NULL;
-
-            #pragma omp for schedule(dynamic, 1) reduction(+:cnt)
-            for (uint pos = 0; pos < it->second.size(); pos++) {
-                loc = it->second[pos];
-                //s   = psum->locus(loc->id);
-                d   = pmap->locus(loc->id);
-
-                if (loc->snps.size() == 0)
-                    continue;
-
-                //
-                // If this locus only appears in one population or there is only a single haplotype,
-                // do not calculate haplotype F stats.
-                //
-                if (fixed_locus(d, pop_ids))
-                    continue;
-
-                cnt++;
-                // cerr << "Processing locus " << loc->id << "\n";
-
-                // h = haplotype_amova(d, s, pop_ids);
-
-                if (h != NULL) {
-                    //h->stat[4] = haplotype_d_est(d, s, pop_ids);
-
-                    h->loc_id = loc->id;
-                    h->bp     = loc->sort_bp();
-                    hapstats[hapstats_key[h->bp]] = h;
-                }
-            }
-        }
-
-        if (bootstrap_phist)
-            bs->add_data(hapstats);
-
-        cerr << "done.\n";
-
-        //
-        // Calculate kernel-smoothed Fst values.
-        //
-        if (kernel_smoothed && loci_ordered) {
-            cerr << "  Generating kernel-smoothed haplotype F statistics for " << it->first << "...";
-            // ks->smooth(hapstats);
-            cerr << "done.\n";
-        }
-    }
-
-    if (bootstrap_phist) {
-        for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++)
-            bs->execute(genome_hapstats[it->first]);
-    }
-
-    cerr << "done.\n";
-
-    if (kernel_smoothed && loci_ordered) {
-        delete ks;
-        delete ord;
-    }
-
-    if (bootstrap_phist)
-        delete bs;
-
-    cerr << "Writing haplotype F statistics... ";
-
-    string file = out_path + out_prefix + ".phistats.tsv";
-
-    ofstream fh(file.c_str(), ofstream::out);
-    if (fh.fail()) {
-        cerr << "Error opening haplotype Phi_st file '" << file << "'\n";
-        exit(1);
-    }
-    fh.precision(fieldw);
-    fh.setf(std::ios::fixed);
-
-    //
-    // Write the population members.
-    //
-    for (auto& pop : mpopi.pops()) {
-        fh << "# Population " << pop.name << "\t";
-        for (size_t k = pop.first_sample; k <= pop.last_sample; k++) {
-            fh << mpopi.samples()[k].name;
-            if (k < pop.last_sample)
-                fh << ",";
-        }
-        fh << "\n";
-    }
-
-    //
-    // Write the group members.
-    //
-    for (auto& group : mpopi.groups()) {
-        fh << "# Group " << group.name << "\t";
-        for (size_t i_pop : group.pops) {
-            fh << mpopi.pops()[i_pop].name;
-            if (i_pop != group.pops.back())
-                fh << ",";
-        }
-        fh << "\n";
-    }
-
-    fh << "# Batch ID " << "\t"
-       << "Locus ID"    << "\t"
-       << "Chr"         << "\t"
-       << "BP"          << "\t"
-       << "PopCnt"      << "\t";
-    if (log_fst_comp)
-        fh << "SSD(WP)"     << "\t"
-           << "SSD(AP/WG)"  << "\t"
-           << "SSD(AG)"     << "\t"
-           << "SSD(TOTAL)"  << "\t"
-           << "MSD(WP)"     << "\t"
-           << "MSD(AP/WG)"  << "\t"
-           << "MSD(AG)"     << "\t"
-           << "MSD(TOTAL)"  << "\t"
-           << "n"           << "\t"
-           << "n'"          << "\t"
-           << "n''"         << "\t"
-           << "Sigma2_a"    << "\t"
-           << "Sigma2_b"    << "\t"
-           << "Sigma2_c"    << "\t"
-           << "Sigma_Total" << "\t";
-    fh << "phi_st"          << "\t"
-       << "Smoothed Phi_st" << "\t"
-       << "Smoothed Phi_st P-value" << "\t"
-       << "Phi_ct"          << "\t"
-       << "Smoothed Phi_ct" << "\t"
-       << "Smoothed Phi_ct P-value" << "\t"
-       << "Phi_sc"          << "\t"
-       << "Smoothed Phi_sc" << "\t"
-       << "Smoothed Phi_sc P-value" << "\t"
-       << "Fst'"            << "\t"
-       << "Smoothed Fst'"   << "\t"
-       << "Smoothed Fst' P-value"   << "\t"
-       << "D_est"           << "\t"
-       << "Smoothed D_est"  << "\t"
-       << "Smoothed D_est P-value"  << "\n";
-
-    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
-        string chr = it->first;
-
-        vector<HapStat *> &hapstats = genome_hapstats[chr];
-
-        for (uint k = 0; k < hapstats.size(); k++) {
-            if (hapstats[k] == NULL) continue;
-
-            fh << batch_id            << "\t"
-               << hapstats[k]->loc_id << "\t"
-               << chr                 << "\t"
-               << hapstats[k]->bp +1  << "\t"
-               << hapstats[k]->popcnt << "\t";
-            if (log_fst_comp)
-                fh << hapstats[k]->comp[0]  << "\t"
-                   << hapstats[k]->comp[1]  << "\t"
-                   << hapstats[k]->comp[2]  << "\t"
-                   << hapstats[k]->comp[3]  << "\t"
-                   << hapstats[k]->comp[4]  << "\t"
-                   << hapstats[k]->comp[5]  << "\t"
-                   << hapstats[k]->comp[6]  << "\t"
-                   << hapstats[k]->comp[7]  << "\t"
-                   << hapstats[k]->comp[8]  << "\t"
-                   << hapstats[k]->comp[9]  << "\t"
-                   << hapstats[k]->comp[10] << "\t"
-                   << hapstats[k]->comp[11] << "\t"
-                   << hapstats[k]->comp[12] << "\t"
-                   << hapstats[k]->comp[13] << "\t"
-                   << hapstats[k]->comp[14] << "\t";
-            fh << hapstats[k]->stat[0]     << "\t"
-               << hapstats[k]->smoothed[0] << "\t"
-               << hapstats[k]->bs[0]       << "\t"
-               << hapstats[k]->stat[1]     << "\t"
-               << hapstats[k]->smoothed[1] << "\t"
-               << hapstats[k]->bs[1]       << "\t"
-               << hapstats[k]->stat[2]     << "\t"
-               << hapstats[k]->smoothed[2] << "\t"
-               << hapstats[k]->bs[2]       << "\t"
-               << hapstats[k]->stat[3]     << "\t"
-               << hapstats[k]->smoothed[3] << "\t"
-               << hapstats[k]->bs[3]       << "\t"
-               << hapstats[k]->stat[4]     << "\t"
-               << hapstats[k]->smoothed[4] << "\t"
-               << hapstats[k]->bs[4]       << "\n";
-
-            delete hapstats[k];
-        }
-    }
-
-    fh.close();
-
-    cerr << "wrote " << cnt << " loci to haplotype Phi_st file, '" << file << "'\n";
-
-    return 0;
-}
-*/
-
 SumStatsSummary::SumStatsSummary(size_t pop_cnt)
 {
     this->_pop_cnt           = pop_cnt;
@@ -3267,8 +3025,6 @@ SumStatsSummary::write_results()
     fh.precision(fieldw);
     fh.setf(std::ios::fixed);
 
-    cerr << "Summaries of statistics describing the metapopulation will be written to '" << path << "'\n";
-
     //
     // Write out summary statistics of the summary statistics.
     //
@@ -3332,9 +3088,9 @@ SumStatsSummary::write_results()
     
     for (uint j = 0; j < this->_pop_cnt; j++)
         cerr << "  " << mpopi.pops()[j].name << ": "
-             << "private alleles: " << _private_cnt[j] << ", "
              << "mean individuals per locus: " << _num_indv_mean[j] << ", "
-             << "mean pi: " << _pi_mean[j] << "\n";
+             << "mean pi: " << _pi_mean[j] << ", "
+             << "private alleles: " << _private_cnt[j] << "\n";
     
     fh << "# All positions (variant and fixed)\n"
        << "# Pop ID\t"

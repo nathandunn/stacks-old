@@ -331,6 +331,7 @@ class LocusDivergence {
     const MetaPopInfo         *_mpopi;
     vector<vector<PopPair **>> _snps;
     vector<vector<HapStat *>>  _haplotypes;
+    vector<HapStat *>          _metapop_haplotypes;
 
     vector<double> _mean_fst;
     vector<double> _mean_fst_cnt;
@@ -344,12 +345,13 @@ public:
     int clear(const vector<LocBin *> &loci);
     int snp_divergence(const vector<LocBin *> &loci);
     int haplotype_divergence_pairwise(const vector<LocBin *> &loci);
-    int haplotype_divergence(const vector<LocBin *> &loci) { return 0; }
+    int haplotype_divergence(const vector<LocBin *> &loci);
 
     int write_summary(string);
     
     vector<vector<PopPair **>>& snp_values()       { return this->_snps; }
     vector<vector<HapStat *>>&  haplotype_values() { return this->_haplotypes; }
+    vector<HapStat *>&  metapop_haplotype_values() { return this->_metapop_haplotypes; }
 
 private:
     //
