@@ -95,10 +95,10 @@ double    p_value_cutoff    = 0.05;
 corr_type fst_correction    = no_correction;
 set<string> debug_flags;
 
-string    out_prefix;
-
-MetaPopInfo mpopi;
-set<int>    bootstraplist;
+string           out_prefix;
+MetaPopInfo      mpopi;
+vector<Export *> exports;
+set<int>         bootstraplist;
 
 //
 // Hold information about restriction enzymes
@@ -174,7 +174,6 @@ int main (int argc, char* argv[]) {
     //
     // Setup the default data exports.
     //
-    vector<Export *> exports;
     Export *exp;
     exp = new MarkersExport();
     exports.push_back(exp);
@@ -331,15 +330,6 @@ int main (int argc, char* argv[]) {
     // // Output the observed haplotypes.
     // //
     // write_generic(catalog, pmap, false);
-
-    // if (fasta_loci_out)
-    //     write_fasta_loci(catalog, pmap);
-
-    // if (fasta_samples_out)
-    //     write_fasta_samples(catalog, pmap);
-
-    // if (fasta_samples_raw_out)
-    //     write_fasta_samples_raw(catalog, pmap);
 
     // if (genepop_out && ordered_export)
     //     write_genepop_ordered(catalog, pmap, psum, log_fh);
@@ -4096,6 +4086,7 @@ output_parameters(ostream &fh)
 int
 parse_command_line(int argc, char* argv[])
 {
+    Export *exp;
 
     while (1) {
         static struct option long_options[] = {
@@ -4304,13 +4295,16 @@ parse_command_line(int argc, char* argv[])
             vcf_haplo_out = true;
             break;
         case 1006:
-            fasta_loci_out = true;
+            exp = new FastaLociExport();
+            exports.push_back(exp);
             break;
         case 'F':
-            fasta_samples_raw_out = true;
+            exp = new FastaRawExport();
+            exports.push_back(exp);
             break;
         case 'J':
-            fasta_samples_out = true;
+            exp = new FastaSamplesExport();
+            exports.push_back(exp);
             break;
         case 'G':
             genepop_out = true;
