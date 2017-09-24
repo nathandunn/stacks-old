@@ -11,7 +11,8 @@
 #include "ordered.h" // for "snp"
 #include "populations.h" // for "merget", "InputMode", "uncalled_haplotype()", "count_haplotypes_at_locus()"
 
-enum class ExportType {markers, sumstats, hapstats, snpdivergence, hapdivergence, structure, genepop, vcf};
+enum class ExportType {markers, sumstats, hapstats, snpdivergence, hapdivergence,
+        fasta_loci, fasta_raw, fasta_samples, structure, genepop, vcf};
 
 class Export {
  protected:
@@ -164,12 +165,66 @@ class HapDivergenceExport: public Export {
     }
 };
 
+class FastaLociExport: public Export {
+    //
+    // Output a list of heterozygous loci and the associated haplotype frequencies.
+    //
+    const MetaPopInfo *_mpopi;
+    
+ public:
+    FastaLociExport();
+    ~FastaLociExport() {};
+    int  open(const MetaPopInfo *mpopi);
+    int  write_header() { return 0; }
+    int  write_batch(const vector<LocBin *> &);
+    int  post_processing() { return 0; }
+    void close() {
+        this->_fh.close();
+        return;
+    }
+};
+
+class FastaRawExport: public Export {
+    //
+    // Output a list of heterozygous loci and the associated haplotype frequencies.
+    //
+    const MetaPopInfo *_mpopi;
+    
+ public:
+    FastaRawExport();
+    ~FastaRawExport() {};
+    int  open(const MetaPopInfo *mpopi);
+    int  write_header() { return 0; }
+    int  write_batch(const vector<LocBin *> &);
+    int  post_processing() { return 0; }
+    void close() {
+        this->_fh.close();
+        return;
+    }
+};
+
+class FastaSamplesExport: public Export {
+    //
+    // Output a list of heterozygous loci and the associated haplotype frequencies.
+    //
+    const MetaPopInfo *_mpopi;
+    
+ public:
+    FastaSamplesExport();
+    ~FastaSamplesExport() {};
+    int  open(const MetaPopInfo *mpopi);
+    int  write_header() { return 0; }
+    int  write_batch(const vector<LocBin *> &);
+    int  post_processing() { return 0; }
+    void close() {
+        this->_fh.close();
+        return;
+    }
+};
+
 /*
 int write_generic(map<int, CSLocus *> &, PopMap<CSLocus> *, bool);
 int write_genomic(map<int, CSLocus *> &, PopMap<CSLocus> *);
-int write_fasta_loci(map<int, CSLocus *> &, PopMap<CSLocus> *);
-int write_fasta_samples(map<int, CSLocus *> &, PopMap<CSLocus> *);
-int write_fasta_samples_raw(map<int, CSLocus *> &, PopMap<CSLocus> *);
 int write_vcf(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<merget, int> > &);
 int write_vcf_ordered(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<merget, int> > &, ofstream &);
 int write_vcf_haplotypes(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);

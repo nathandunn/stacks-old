@@ -791,197 +791,211 @@ MarkersExport::write_batch(const vector<LocBin *> &loci)
     return 0;
 }
 
-/*
-int
-write_fasta_loci(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
+FastaLociExport::FastaLociExport() : Export(ExportType::fasta_loci)
 {
-    string file = out_path + out_prefix + ".loci.fa";
-    cerr << "Writing consensus sequences to FASTA file '" << file << "'\n";
-    ofstream fh(file);
-    if (fh.fail()) {
-        cerr << "Error opening file '" << file << "' for writing.\n";
+    this->_path = out_path + out_prefix + ".loci.fa";
+}
+
+int
+FastaLociExport::open(const MetaPopInfo *mpopi)
+{
+    this->_mpopi = mpopi;
+
+    this->_fh.open(this->_path.c_str(), ofstream::out);
+    if (this->_fh.fail()) {
+        cerr << "Error opening FASTA Loci file '" << this->_path << "'\n";
         exit(1);
     }
 
-    for (auto& chr: pmap->ordered_loci()) {
-        for (uint pos = 0; pos < chr.second.size(); pos++) {
-            CSLocus* loc = chr.second[pos];
+    cerr << "FASTA consensus sequences for each locus in the metapopulation  will be written to '" << this->_path << "'\n";
 
-            fh << ">CLocus_" << loc->id;
-            if (strcmp(loc->loc.chr(), "un") != 0)
-                fh << " [" << loc->loc.chr() << ", " << loc->sort_bp() + 1 << ", " << (loc->loc.strand == strand_plus ? "+" : "-");
-            fh << '\n' << loc->con << '\n';
+    return 0;
+}
+
+int
+FastaLociExport::write_batch(const vector<LocBin *> &loci)
+{
+    for (uint i = 0; i < loci.size(); i++) {
+        LocBin* loc = loci[i];
+
+        this->_fh << ">CLocus_" << loc->cloc->id;
+        if (strcmp(loc->cloc->loc.chr(), "un") != 0)
+            this->_fh << " [" << loc->cloc->loc.chr() << ", " << loc->cloc->sort_bp() + 1 << ", " << (loc->cloc->loc.strand == strand_plus ? "+" : "-");
+        this->_fh << '\n' << loc->cloc->con << '\n';
 
 #ifdef DEBUG
-            bool no_samples = true;
-            Datum** d = pmap->locus(loc->id);
-            for (int j = 0; j < pmap->sample_cnt(); j++)
-                if (d[j] != NULL)
-                    no_samples = false;
-            assert(!no_samples);
+        bool no_samples = true;
+        Datum** d = loc->d;
+        for (uint j = 0; j < this->_mpopi->samples().size(); j++)
+            if (d[j] != NULL)
+                no_samples = false;
+        assert(!no_samples);
 #endif
-        }
     }
 
-    fh.close();
+    return 0;
+}
+
+FastaRawExport::FastaRawExport() : Export(ExportType::fasta_raw)
+{
+    this->_path = out_path + out_prefix + ".samples-raw.fa";
+}
+
+int
+FastaRawExport::open(const MetaPopInfo *mpopi)
+{
+    this->_mpopi = mpopi;
+
+    this->_fh.open(this->_path.c_str(), ofstream::out);
+    if (this->_fh.fail()) {
+        cerr << "Error opening FASTA raw samples file '" << this->_path << "'\n";
+        exit(1);
+    }
+    
+    cerr << "Raw FASTA consensus sequences for each sample will be written to '" << this->_path << "'\n";
 
     return 0;
 }
 
 int
-write_fasta_samples_raw(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
+FastaRawExport::write_batch(const vector<LocBin *> &loci)
 {
     //
     // Write a FASTA file containing each allele from each locus from
     // each sample in the population.
     //
-    string file = out_path + out_prefix + ".samples-raw.fa";
+    LocBin *loc;
+    Datum **d;
+    char   *seq;
 
-    cerr << "Writing sample alleles (raw) to FASTA file '" << file << "'\n";
+    for (uint i = 0; i < loci.size(); i++) {
+        loc = loci[i];
+        d   = loc->d;
+        seq = new char[loc->cloc->len + 1];
+        strcpy(seq, loc->cloc->con);
 
-    ofstream fh(file.c_str(), ofstream::out);
+        for (uint j = 0; j < this->_mpopi->samples().size(); j++) {
+            if (d[j] == NULL)
+                continue;
 
-    if (fh.fail()) {
-        cerr << "Error opening file '" << file << "' for writing\n";
-        exit(1);
+            for (uint k = 0; k < d[j]->obshap.size(); k++) {
+
+                for (uint i = 0; i < loc->cloc->snps.size(); i++) {
+                    uint col = loc->cloc->snps[i]->col;
+                    seq[col] = col < loc->cloc->len ? d[j]->obshap[k][i] : loc->cloc->con[col];
+                }
+
+                this->_fh << ">CLocus_" << loc->cloc->id
+                          << "_Sample_" << this->_mpopi->samples()[j].id
+                          << "_Locus_"  << d[j]->id
+                          << "_Allele_" << k
+                          << " ["       << this->_mpopi->samples()[j].name;
+
+                if (strcmp(loc->cloc->loc.chr(), "un") != 0)
+                    this->_fh << "; " << loc->cloc->loc.chr() << ", " << loc->cloc->sort_bp() + 1 << ", " << (loc->cloc->loc.strand == strand_plus ? "+" : "-");
+                this->_fh << "]\n"
+                          << seq << "\n";
+            }
+        }
+        delete [] seq;
     }
 
-    map<string, vector<CSLocus *> >::const_iterator it;
-    CSLocus *loc;
-    Datum  **d;
-    char    *seq;
+    return 0;
+}
 
-    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
-        for (uint pos = 0; pos < it->second.size(); pos++) {
-            loc = it->second[pos];
-            d   = pmap->locus(loc->id);
-            seq = new char[loc->len + 1];
-            strcpy(seq, loc->con);
+FastaSamplesExport::FastaSamplesExport() : Export(ExportType::fasta_samples)
+{
+    this->_path = out_path + out_prefix + ".samples.fa";
+}
 
-            for (int j = 0; j < pmap->sample_cnt(); j++) {
-                if (d[j] == NULL)
-                    continue;
+int
+FastaSamplesExport::open(const MetaPopInfo *mpopi)
+{
+    this->_mpopi = mpopi;
 
+    this->_fh.open(this->_path.c_str(), ofstream::out);
+    if (this->_fh.fail()) {
+        cerr << "Error opening FASTA samples file '" << this->_path << "'\n";
+        exit(1);
+    }
+    
+    cerr << "FASTA consensus sequences for each sample will be written to '" << this->_path << "'\n";
+
+    return 0;
+}
+
+int
+FastaSamplesExport::write_batch(const vector<LocBin *> &loci)
+{
+    LocBin *loc;
+    Datum **d;
+    char   *seq;
+
+    for (uint i = 0; i < loci.size(); i++) {
+        loc = loci[i];
+        d   = loc->d;
+        seq = new char[loc->cloc->len + 1];
+        strcpy(seq, loc->cloc->con);
+
+        for (uint j = 0; j < this->_mpopi->samples().size(); j++) {
+            if (d[j] == NULL)
+                continue;
+            if (d[j]->obshap.size() > 2)
+                continue;
+
+            if (d[j]->obshap.size() == 1) {
+
+                for (uint i = 0; i < loc->cloc->snps.size(); i++) {
+                    uint col = loc->cloc->snps[i]->col;
+                    seq[col] = col < loc->cloc->len ? d[j]->obshap[0][i] : loc->cloc->con[col];
+                }
+
+                this->_fh << ">CLocus_" << loc->cloc->id
+                          << "_Sample_" << this->_mpopi->samples()[j].id
+                          << "_Locus_"  << d[j]->id
+                          << "_Allele_" << 0
+                          << " ["       << this->_mpopi->samples()[j].name;
+                if (strcmp(loc->cloc->loc.chr(), "un") != 0)
+                    this->_fh << "; " << loc->cloc->loc.chr() << ", " << loc->cloc->sort_bp() + 1 << ", " << (loc->cloc->loc.strand == strand_plus ? "+" : "-");
+                this->_fh << "]\n"
+                          << seq << "\n";
+
+                this->_fh << ">CLocus_" << loc->cloc->id
+                          << "_Sample_" << this->_mpopi->samples()[j].id
+                          << "_Locus_"  << d[j]->id
+                          << "_Allele_" << 1
+                          << " ["       << mpopi.samples()[j].name;
+                if (strcmp(loc->cloc->loc.chr(), "un") != 0)
+                    this->_fh << "; " << loc->cloc->loc.chr() << ", " << loc->cloc->sort_bp() + 1 << ", " << (loc->cloc->loc.strand == strand_plus ? "+" : "-");
+                this->_fh << "]\n"
+                          << seq << "\n";
+
+            } else {
                 for (uint k = 0; k < d[j]->obshap.size(); k++) {
-
-                    for (uint i = 0; i < loc->snps.size(); i++) {
-                        uint col = loc->snps[i]->col;
-                        seq[col] = col < loc->len ? d[j]->obshap[k][i] : loc->con[col];
+                    for (uint i = 0; i < loc->cloc->snps.size(); i++) {
+                        uint col = loc->cloc->snps[i]->col;
+                        seq[col] = col < loc->cloc->len ? d[j]->obshap[k][i] : loc->cloc->con[col];
                     }
 
-                    fh << ">CLocus_" << loc->id
-                       << "_Sample_" << pmap->rev_sample_index(j)
-                       << "_Locus_"  << d[j]->id
-                       << "_Allele_" << k
-                       << " ["       << mpopi.samples()[j].name;
-
-                    if (strcmp(loc->loc.chr(), "un") != 0)
-                        fh << "; " << loc->loc.chr() << ", " << loc->sort_bp() + 1 << ", " << (loc->loc.strand == strand_plus ? "+" : "-");
-                    fh << "]\n"
-                       << seq << "\n";
+                    this->_fh << ">CLocus_" << loc->cloc->id
+                              << "_Sample_" <<  this->_mpopi->samples()[j].id
+                              << "_Locus_"  << d[j]->id
+                              << "_Allele_" << k
+                              << " ["       <<  this->_mpopi->samples()[j].name;
+                    if (strcmp(loc->cloc->loc.chr(), "un") != 0)
+                        this->_fh << "; " << loc->cloc->loc.chr() << ", " << loc->cloc->sort_bp() + 1 << ", " << (loc->cloc->loc.strand == strand_plus ? "+" : "-");
+                    this->_fh << "]\n"
+                              << seq << "\n";
                 }
             }
-            delete [] seq;
         }
-    }
 
-    fh.close();
+        delete [] seq;
+    }
 
     return 0;
 }
-
-int
-write_fasta_samples(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
-{
-    //
-    // Write a FASTA file containing each allele from each locus from
-    // each sample in the population.
-    //
-    string file = out_path + out_prefix + ".samples.fa";
-
-    cerr << "Writing sample alleles to FASTA file '" << file << "'\n";
-
-    ofstream fh(file.c_str(), ofstream::out);
-
-    if (fh.fail()) {
-        cerr << "Error opening file '" << file << "' for writing.\n";
-        exit(1);
-    }
-
-    map<string, vector<CSLocus *> >::const_iterator it;
-    CSLocus *loc;
-    Datum  **d;
-    char    *seq;
-
-    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
-        for (uint pos = 0; pos < it->second.size(); pos++) {
-            loc = it->second[pos];
-            d   = pmap->locus(loc->id);
-            seq = new char[loc->len + 1];
-            strcpy(seq, loc->con);
-
-            for (int j = 0; j < pmap->sample_cnt(); j++) {
-                if (d[j] == NULL)
-                    continue;
-                if (d[j]->obshap.size() > 2)
-                    continue;
-
-                if (d[j]->obshap.size() == 1) {
-
-                    for (uint i = 0; i < loc->snps.size(); i++) {
-                        uint col = loc->snps[i]->col;
-                        seq[col] = col < loc->len ? d[j]->obshap[0][i] : loc->con[col];
-                    }
-
-                    fh << ">CLocus_" << loc->id
-                       << "_Sample_" << pmap->rev_sample_index(j)
-                       << "_Locus_"  << d[j]->id
-                       << "_Allele_" << 0
-                       << " ["       << mpopi.samples()[j].name;
-                    if (strcmp(loc->loc.chr(), "un") != 0)
-                        fh << "; " << loc->loc.chr() << ", " << loc->sort_bp() + 1 << ", " << (loc->loc.strand == strand_plus ? "+" : "-");
-                    fh << "]\n"
-                       << seq << "\n";
-
-                    fh << ">CLocus_" << loc->id
-                       << "_Sample_" << pmap->rev_sample_index(j)
-                       << "_Locus_"  << d[j]->id
-                       << "_Allele_" << 1
-                       << " ["       << mpopi.samples()[j].name;
-                    if (strcmp(loc->loc.chr(), "un") != 0)
-                        fh << "; " << loc->loc.chr() << ", " << loc->sort_bp() + 1 << ", " << (loc->loc.strand == strand_plus ? "+" : "-");
-                    fh << "]\n"
-                       << seq << "\n";
-
-                } else {
-                    for (uint k = 0; k < d[j]->obshap.size(); k++) {
-                        for (uint i = 0; i < loc->snps.size(); i++) {
-                            uint col = loc->snps[i]->col;
-                            seq[col] = col < loc->len ? d[j]->obshap[k][i] : loc->con[col];
-                        }
-
-                        fh << ">CLocus_" << loc->id
-                           << "_Sample_" <<  mpopi.samples()[j].id
-                           << "_Locus_"  << d[j]->id
-                           << "_Allele_" << k
-                           << " ["       <<  mpopi.samples()[j].name;
-                        if (strcmp(loc->loc.chr(), "un") != 0)
-                            fh << "; " << loc->loc.chr() << ", " << loc->sort_bp() + 1 << ", " << (loc->loc.strand == strand_plus ? "+" : "-");
-                        fh << "]\n"
-                           << seq << "\n";
-                    }
-                }
-            }
-
-            delete [] seq;
-        }
-    }
-
-    fh.close();
-
-    return 0;
-}
-
+/*
 int
 write_vcf_ordered(map<int, CSLocus *> &catalog,
                   PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum,
