@@ -12,7 +12,7 @@
 #include "populations.h" // for "merget", "InputMode", "uncalled_haplotype()", "count_haplotypes_at_locus()"
 
 enum class ExportType {markers, sumstats, hapstats, snpdivergence, hapdivergence,
-        fasta_loci, fasta_raw, fasta_samples, structure, genepop, vcf};
+        fasta_loci, fasta_raw, fasta_samples, structure, genepop, ordered_genepop, vcf, ordered_vcf};
 
 class Export {
  protected:
@@ -30,6 +30,7 @@ class Export {
     virtual void close()           = 0;
 
     ExportType type() { return this->_type; }
+    int transpose(ifstream &ifh, ofstream &ofh);
 };
 
 class GenPos {
@@ -165,6 +166,42 @@ class HapDivergenceExport: public Export {
     }
 };
 
+class GenePopExport: public Export {
+    //
+    // Output a list of heterozygous loci and the associated haplotype frequencies.
+    //
+    const MetaPopInfo *_mpopi;
+    string   _tmp_path;
+    ostream *_tmpfh;
+
+ public:
+    GenePopExport();
+    ~GenePopExport() {};
+    int  open(const MetaPopInfo *mpopi);
+    int  write_header() { return 0; }
+    int  write_batch(const vector<LocBin *> &);
+    int  post_processing();
+    void close();
+};
+
+class OrderedGenePopExport: public Export {
+    //
+    // Output a list of heterozygous loci and the associated haplotype frequencies.
+    //
+    const MetaPopInfo *_mpopi;
+    string   _tmp_path;
+    ofstream _tmpfh;
+
+ public:
+    OrderedGenePopExport();
+    ~OrderedGenePopExport() {};
+    int  open(const MetaPopInfo *mpopi);
+    int  write_header() { return 0; }
+    int  write_batch(const vector<LocBin *> &);
+    int  post_processing();
+    void close();
+};
+
 class FastaLociExport: public Export {
     //
     // Output a list of heterozygous loci and the associated haplotype frequencies.
@@ -175,7 +212,7 @@ class FastaLociExport: public Export {
     FastaLociExport();
     ~FastaLociExport() {};
     int  open(const MetaPopInfo *mpopi);
-    int  write_header() { return 0; }
+    int  write_header();
     int  write_batch(const vector<LocBin *> &);
     int  post_processing() { return 0; }
     void close() {
@@ -194,7 +231,7 @@ class FastaRawExport: public Export {
     FastaRawExport();
     ~FastaRawExport() {};
     int  open(const MetaPopInfo *mpopi);
-    int  write_header() { return 0; }
+    int  write_header();
     int  write_batch(const vector<LocBin *> &);
     int  post_processing() { return 0; }
     void close() {
@@ -213,7 +250,7 @@ class FastaSamplesExport: public Export {
     FastaSamplesExport();
     ~FastaSamplesExport() {};
     int  open(const MetaPopInfo *mpopi);
-    int  write_header() { return 0; }
+    int  write_header();
     int  write_batch(const vector<LocBin *> &);
     int  post_processing() { return 0; }
     void close() {
@@ -244,7 +281,7 @@ int write_fullseq_phylip(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocu
 */
 
 int find_datum_allele_depths(Datum *, int, char, char, int &, int &);
-int tally_observed_haplotypes(vector<char *> &, int, char &, char &);
+int tally_observed_haplotypes(const vector<char *> &, int, char &, char &);
 int tally_haplotype_freq(CSLocus *, Datum **, uint, int &, double &, string &);
 
 #endif // EXPORT_FORMATS_H
