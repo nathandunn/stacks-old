@@ -470,6 +470,20 @@ HapDivergenceExport::open(const MetaPopInfo *mpopi)
         }
     }
 
+    //
+    // Open an single Haplotype Divergence output file for the full meta population.
+    //
+    path = out_path + out_prefix + ".phistats.tsv";
+    fh = new ofstream(path.c_str(), ofstream::out);
+    if (fh->fail()) {
+        cerr << "Error opening Fst output file '" << path << "'\n";
+        exit(1);
+    }
+    fh->precision(fieldw);
+    fh->setf(std::ios::fixed);
+
+    this->_metapop_fh = fh;
+
     return 0;
 }
 
@@ -477,7 +491,7 @@ int
 HapDivergenceExport::write_header()
 {
     //
-    // Write a header into each SNP Divergence output file (one for each pair of populations).
+    // Write a header into each haplotype divergence output file (one for each pair of populations).
     //
     ofstream *fh;
 
@@ -542,11 +556,73 @@ HapDivergenceExport::write_header()
         }
     }
 
+    //
+    // Write a header into the meta population haplotype divergence output file.
+    //
+    fh = this->_metapop_fh;
+
+    //
+    // Write the population members.
+    //
+    for (auto& pop : this->_mpopi->pops()) {
+        *fh << "# Population " << pop.name << "\t";
+        for (size_t k = pop.first_sample; k <= pop.last_sample; k++) {
+            *fh << this->_mpopi->samples()[k].name;
+            if (k < pop.last_sample)
+                *fh << ",";
+        }
+        *fh << "\n";
+    }
+
+    //
+    // Write the group members.
+    //
+    for (auto& group : this->_mpopi->groups()) {
+        *fh << "# Group " << group.name << "\t";
+        for (size_t i_pop : group.pops) {
+            *fh << this->_mpopi->pops()[i_pop].name;
+            if (i_pop != group.pops.back())
+                *fh << ",";
+        }
+        *fh << "\n";
+    }
+
+    *fh << "# Locus ID" << "\t"
+        << "Chr"        << "\t"
+        << "BP"         << "\t";
+    if (log_fst_comp)
+        *fh << "SSD(WP)"     << "\t"
+            << "SSD(AP/WG)"  << "\t"
+            << "SSD(AG)"     << "\t"
+            << "SSD(TOTAL)"  << "\t"
+            << "MSD(WP)"     << "\t"
+            << "MSD(AP/WG)"  << "\t"
+            << "MSD(AG)"     << "\t"
+            << "MSD(TOTAL)"  << "\t"
+            << "n"           << "\t"
+            << "n'"          << "\t"
+            << "n''"         << "\t"
+            << "Sigma2_a"    << "\t"
+            << "Sigma2_b"    << "\t"
+            << "Sigma2_c"    << "\t"
+            << "Sigma_Total" << "\t";
+    *fh << "phi_st"          << "\t"
+        << "Smoothed Phi_st" << "\t"
+        << "Smoothed Phi_st P-value" << "\t"
+        << "Fst'"            << "\t"
+        << "Smoothed Fst'"   << "\t"
+        << "Smoothed Fst' P-value"   << "\t"
+        << "D_est"          << "\t"
+        << "Smoothed D_est" << "\t"
+        << "Smoothed D_est P-value" << "\n";
+
     return 0;
 }
 
 int
-HapDivergenceExport::write_batch_pairwise(const vector<LocBin *> &loci, const vector<vector<HapStat *>> &div)
+HapDivergenceExport::write_batch_pairwise(const vector<LocBin *> &loci,
+                                          const vector<vector<HapStat *>> &div,
+                                          const vector<HapStat *> &metapop_div)
 {
     ofstream *fh;
     HapStat  *h;
@@ -595,6 +671,46 @@ HapDivergenceExport::write_batch_pairwise(const vector<LocBin *> &loci, const ve
                 << h->smoothed[4] << "\t"
                 << h->bs[4]       << "\n";
         }
+    }
+
+    fh = this->_metapop_fh;
+
+    assert(metapop_div.size() == loci.size());
+
+    for (uint j = 0; j < metapop_div.size(); j++) {
+        loc = loci[j];
+        h   = metapop_div[j];
+
+        if (h == NULL) continue;
+
+        *fh << h->loc_id    << "\t"
+            << loc->cloc->loc.chr() << "\t"
+            << h->bp +1     << "\t";
+        if (log_fst_comp)
+            *fh << h->comp[0]  << "\t"
+                << h->comp[1]  << "\t"
+                << h->comp[2]  << "\t"
+                << h->comp[3]  << "\t"
+                << h->comp[4]  << "\t"
+                << h->comp[5]  << "\t"
+                << h->comp[6]  << "\t"
+                << h->comp[7]  << "\t"
+                << h->comp[8]  << "\t"
+                << h->comp[9]  << "\t"
+                << h->comp[10] << "\t"
+                << h->comp[11] << "\t"
+                << h->comp[12] << "\t"
+                << h->comp[13] << "\t"
+                << h->comp[14] << "\t";
+        *fh << h->stat[0]     << "\t"
+            << h->smoothed[0] << "\t"
+            << h->bs[0]       << "\t"
+            << h->stat[3]     << "\t"
+            << h->smoothed[3] << "\t"
+            << h->bs[3]       << "\t"
+            << h->stat[4]     << "\t"
+            << h->smoothed[4] << "\t"
+            << h->bs[4]       << "\n";
     }
 
     return 0;

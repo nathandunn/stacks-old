@@ -144,6 +144,7 @@ class HapDivergenceExport: public Export {
     //
     const MetaPopInfo *_mpopi;
     vector<ofstream *> _fhs;
+    ofstream *_metapop_fh;
     
  public:
     HapDivergenceExport();
@@ -154,7 +155,7 @@ class HapDivergenceExport: public Export {
     int  open(const MetaPopInfo *mpopi);
     int  write_header();
     int  write_batch(const vector<LocBin *> &) { return 0; }
-    int  write_batch_pairwise(const vector<LocBin *> &, const vector<vector<HapStat *>> &);
+    int  write_batch_pairwise(const vector<LocBin *> &, const vector<vector<HapStat *>> &, const vector<HapStat *> &);
     int  post_processing() { return 0; }
     void close() {
         for (uint i = 0; i < this->_fhs.size(); i++)

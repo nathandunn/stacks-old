@@ -862,6 +862,16 @@ count_haplotypes_at_locus(int start, int end, const Datum **d, map<string, doubl
 LocusDivergence::LocusDivergence(const MetaPopInfo *mpopi)
 {
     this->_mpopi = mpopi;
+
+    for (uint pop_1 = 0; pop_1 < this->_mpopi->pops().size(); pop_1++)    
+        for (uint pop_2 = pop_1 + 1; pop_2 < this->_mpopi->pops().size(); pop_2++) {
+            this->_mean_fst.push_back(0.0);
+            this->_mean_fst_cnt.push_back(0.0);
+            this->_mean_phist.push_back(0.0);
+            this->_mean_phist_cnt.push_back(0.0);
+            this->_mean_fstp.push_back(0.0);
+            this->_mean_fstp_cnt.push_back(0.0);
+        }
 }
 
 int
@@ -892,66 +902,75 @@ LocusDivergence::clear(const vector<LocBin *> &loci)
 int
 LocusDivergence::snp_divergence(const vector<LocBin *> &loci)
 {
+    uint i = 0;
+
     for (uint pop_1 = 0; pop_1 < this->_mpopi->pops().size(); pop_1++) {
-        
+       
         for (uint pop_2 = pop_1 + 1; pop_2 < this->_mpopi->pops().size(); pop_2++) {
 
             this->_snps.push_back(vector<PopPair **>());
             vector<PopPair **> *pairs = &this->_snps.back();
 
-            this->_mean_fst.push_back(0.0);
-            this->_mean_fst_cnt.push_back(0.0);
-            double *fst_mean = &this->_mean_fst.back();
-            double *fst_cnt  = &this->_mean_fst_cnt.back();
-            
-            for (uint k = 0; k < loci.size(); k++) {
-                uint cloc_len = loci[k]->cloc->len;
-                PopPair  **pp = new PopPair *[cloc_len];
+            double fmean = 0.0;
+            double fcnt  = 0.0;
 
-                for (uint pos = 0; pos < cloc_len; pos++) {
-                    pp[pos] = this->Fst(loci[k]->cloc, loci[k]->s, pop_1, pop_2, pos);
+            #pragma omp parallel
+            {
+                for (uint k = 0; k < loci.size(); k++) {
+                    uint cloc_len = loci[k]->cloc->len;
+                    PopPair  **pp = new PopPair *[cloc_len];
 
-                    //
-                    // Locus is fixed in both populations, or was only found in one population.
-                    //
-                    if (pp[pos]->pi == 0) {
-                        delete pp[pos];
-                        pp[pos] = NULL;
-                        continue;
-                    }
+                    #pragma omp for schedule(dynamic, 1) reduction(+:fmean, fcnt)
+                    for (uint pos = 0; pos < cloc_len; pos++) {
+                        pp[pos] = this->Fst(loci[k]->cloc, loci[k]->s, pop_1, pop_2, pos);
+
+                        //
+                        // Locus is fixed in both populations, or was only found in one population.
+                        //
+                        if (pp[pos]->pi == 0) {
+                            delete pp[pos];
+                            pp[pos] = NULL;
+                            continue;
+                        }
                     
-                    pp[pos]->loc_id = loci[k]->cloc->id;
-                    pp[pos]->bp     = loci[k]->cloc->sort_bp(pos);
-                    pp[pos]->col    = pos;
-                    pp[pos]->pop_1  = pop_1;
-                    pp[pos]->pop_2  = pop_2;
+                        pp[pos]->loc_id = loci[k]->cloc->id;
+                        pp[pos]->bp     = loci[k]->cloc->sort_bp(pos);
+                        pp[pos]->col    = pos;
+                        pp[pos]->pop_1  = pop_1;
+                        pp[pos]->pop_2  = pop_2;
             
-                    //
-                    // Apply user-selected correction to the Fst values.
-                    //
-                    switch(fst_correction) {
-                    case p_value:
-                        if (pp[pos] != NULL) {
-                            pp[pos]->stat[0] = pp[pos]->fet_p < p_value_cutoff ? pp[pos]->fst : 0;
-                            pp[pos]->stat[1] = pp[pos]->fet_p < p_value_cutoff ? pp[pos]->amova_fst : 0;
+                        //
+                        // Apply user-selected correction to the Fst values.
+                        //
+                        switch(fst_correction) {
+                        case p_value:
+                            if (pp[pos] != NULL) {
+                                pp[pos]->stat[0] = pp[pos]->fet_p < p_value_cutoff ? pp[pos]->fst : 0;
+                                pp[pos]->stat[1] = pp[pos]->fet_p < p_value_cutoff ? pp[pos]->amova_fst : 0;
+                            }
+                            break;
+                        case no_correction:
+                        case bonferroni_win:
+                        case bonferroni_gen:
+                            if (pp[pos] != NULL) {
+                                pp[pos]->stat[0] = pp[pos]->fst;
+                                pp[pos]->stat[1] = pp[pos]->amova_fst;
+                            }
+                            break;
                         }
-                        break;
-                    case no_correction:
-                    case bonferroni_win:
-                    case bonferroni_gen:
-                        if (pp[pos] != NULL) {
-                            pp[pos]->stat[0] = pp[pos]->fst;
-                            pp[pos]->stat[1] = pp[pos]->amova_fst;
-                        }
-                        break;
+
+                        fmean += pp[pos]->amova_fst;
+                        fcnt++;
                     }
 
-                    *fst_mean += pp[pos]->amova_fst;
-                    (*fst_cnt)++;
+                    #pragma omp critical
+                    pairs->push_back(pp);
                 }
-
-                pairs->push_back(pp);
             }
+            
+            this->_mean_fst[i]     += fmean;
+            this->_mean_fst_cnt[i] += fcnt;
+            i++;
         }
     }
 
@@ -1321,11 +1340,7 @@ LocusDivergence::fishers_exact_test(PopPair *pair, double p_1, double q_1, doubl
 int
 LocusDivergence::haplotype_divergence_pairwise(const vector<LocBin *> &loci)
 {
-    const CSLocus *loc;
-    const LocSum **s;
-    const Datum  **d;
-    HapStat *h;
-
+    uint i = 0;
     for (uint pop_1 = 0; pop_1 < this->_mpopi->pops().size(); pop_1++) {
         for (uint pop_2 = pop_1 + 1; pop_2 < this->_mpopi->pops().size(); pop_2++) {
 
@@ -1336,53 +1351,120 @@ LocusDivergence::haplotype_divergence_pairwise(const vector<LocBin *> &loci)
             this->_haplotypes.push_back(vector<HapStat *>());
             vector<HapStat *> *haps = &this->_haplotypes.back();
 
-            this->_mean_phist.push_back(0.0);
-            this->_mean_phist_cnt.push_back(0.0);
-            this->_mean_fstp.push_back(0.0);
-            this->_mean_fstp_cnt.push_back(0.0);
-            double *phist_mean = &this->_mean_phist.back();
-            double *phist_cnt  = &this->_mean_phist_cnt.back();
-            double *fstp_mean  = &this->_mean_fstp.back();
-            double *fstp_cnt   = &this->_mean_fstp_cnt.back();
+            double pmean = 0.0;
+            double pcnt  = 0.0;
+            double fmean = 0.0;
+            double fcnt  = 0.0;
+
+            #pragma omp parallel
+            {
+                const CSLocus *loc;
+                const LocSum **s;
+                const Datum  **d;
+                HapStat *h;
             
-            #pragma omp for schedule(dynamic, 1)
-            for (uint k = 0; k < loci.size(); k++) {
-                loc = (const CSLocus *) loci[k]->cloc;
-                s   = loci[k]->s->all_pops();
-                d   = (const Datum **) loci[k]->d;
+                #pragma omp for schedule(dynamic, 1) reduction(+:pmean, pcnt, fmean, fcnt)
+                for (uint k = 0; k < loci.size(); k++) {
+                    loc = (const CSLocus *) loci[k]->cloc;
+                    s   = loci[k]->s->all_pops();
+                    d   = (const Datum **) loci[k]->d;
 
-                if (loc->snps.size() == 0) {
-                    haps->push_back(NULL);
-                    continue;
+                    if (loc->snps.size() == 0) {
+                        haps->push_back(NULL);
+                        continue;
+                    }
+
+                    //
+                    // If this locus only appears in one population or there is only a single haplotype,
+                    // do not calculate haplotype F stats.
+                    //
+                    if (fixed_locus(d, subpop_ids)) {
+                        haps->push_back(NULL);
+                        continue;
+                    }
+
+                    h = this->haplotype_amova(d, s, subpop_ids);
+
+                    if (h != NULL) {
+                        h->pop_1   = pop_1;
+                        h->pop_2   = pop_2;
+                        h->stat[4] = haplotype_d_est(d, s, subpop_ids);
+
+                        h->loc_id = loc->id;
+                        h->bp     = loc->sort_bp();
+                    }
+
+                    #pragma omp critical
+                    haps->push_back(h);
+
+                    pmean += h->stat[0];
+                    pcnt++;
+                    fmean += h->stat[3];
+                    fcnt++;
                 }
-
-                //
-                // If this locus only appears in one population or there is only a single haplotype,
-                // do not calculate haplotype F stats.
-                //
-                if (fixed_locus(d, subpop_ids)) {
-                    haps->push_back(NULL);
-                    continue;
-                }
-
-                h = this->haplotype_amova(d, s, subpop_ids);
-
-                if (h != NULL) {
-                    h->pop_1   = pop_1;
-                    h->pop_2   = pop_2;
-                    h->stat[4] = haplotype_d_est(d, s, subpop_ids);
-
-                    h->loc_id = loc->id;
-                    h->bp     = loc->sort_bp();
-                }
-
-                haps->push_back(h);
-
-                *phist_mean += h->stat[0];
-                (*phist_cnt)++;
-                *fstp_mean  += h->stat[3];
-                (*fstp_cnt)++;
             }
+
+            this->_mean_phist[i]     += pmean;
+            this->_mean_phist_cnt[i] += pcnt;
+            this->_mean_fstp[i]      += fmean;
+            this->_mean_fstp_cnt[i]  += fcnt;
+            i++;
+        }
+    }
+
+    return 0;
+}
+
+int
+LocusDivergence::haplotype_divergence(const vector<LocBin *> &loci)
+{
+    //
+    // Create a list of all the populations we have.
+    //
+    vector<int> pop_ids;
+    for (size_t i = 0; i < this->_mpopi->pops().size(); ++i)
+        pop_ids.push_back(i);
+
+    vector<HapStat *> *haps = &this->_metapop_haplotypes;
+
+    #pragma omp parallel
+    {
+        const CSLocus *loc;
+        const LocSum **s;
+        const Datum  **d;
+        HapStat *h;
+
+        #pragma omp for schedule(dynamic, 1)
+        for (uint k = 0; k < loci.size(); k++) {
+            loc = (const CSLocus *) loci[k]->cloc;
+            s   = loci[k]->s->all_pops();
+            d   = (const Datum **) loci[k]->d;
+
+            if (loc->snps.size() == 0) {
+                haps->push_back(NULL);
+                continue;
+            }
+
+            //
+            // If this locus only appears in one population or there is only a single haplotype,
+            // do not calculate haplotype F stats.
+            //
+            if (fixed_locus(d, pop_ids)) {
+                haps->push_back(NULL);
+                continue;
+            }
+
+            h = this->haplotype_amova(d, s, pop_ids);
+
+            if (h != NULL) {
+                h->stat[4] = haplotype_d_est(d, s, pop_ids);
+
+                h->loc_id  = loc->id;
+                h->bp      = loc->sort_bp();
+            }
+
+            #pragma omp critical
+            haps->push_back(h);
         }
     }
 
