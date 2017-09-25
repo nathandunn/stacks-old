@@ -30,7 +30,7 @@ class Export {
     virtual void close()           = 0;
 
     ExportType type() { return this->_type; }
-    int transpose(ifstream &ifh, ofstream &ofh);
+    int transpose(ifstream &ifh, vector<string> &transposed);
 };
 
 class GenPos {
@@ -171,14 +171,16 @@ class GenePopExport: public Export {
     // Output a list of heterozygous loci and the associated haplotype frequencies.
     //
     const MetaPopInfo *_mpopi;
+    int      _fd;
     string   _tmp_path;
     ostream *_tmpfh;
+    ifstream _intmpfh;
 
  public:
     GenePopExport();
     ~GenePopExport() {};
     int  open(const MetaPopInfo *mpopi);
-    int  write_header() { return 0; }
+    int  write_header();
     int  write_batch(const vector<LocBin *> &);
     int  post_processing();
     void close();
