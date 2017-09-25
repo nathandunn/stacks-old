@@ -67,7 +67,6 @@ bool      vcf_haplo_out     = false;
 bool      fasta_loci_out    = false;
 bool      fasta_samples_out = false;
 bool      fasta_samples_raw_out = false;
-bool      genepop_out       = false;
 bool      genomic_out       = false;
 bool      structure_out     = false;
 bool      phase_out         = false;
@@ -221,7 +220,7 @@ int main (int argc, char* argv[]) {
     int loc_cnt, tot_cnt = 0;
 
     cerr << "\nProcessing data in batches...\n";
-    
+    int batch_cnt = 1;
     do {
         //
         // Read the next set of loci to process.
@@ -230,8 +229,14 @@ int main (int argc, char* argv[]) {
         // - Filter the loci according to command line parameters (-r, -p, --maf, --write_single_snp, etc.)
         // - Sort the loci by basepair if they are ordered.
         //
+        cerr << "  Starting batch " << batch_cnt << "...";
         loc_cnt  = bloc.next_batch(log_fh);
         tot_cnt += loc_cnt;
+
+        cerr << "analyzed " << loc_cnt << " loci";
+        if (loci_ordered)
+            cerr <<  " from " << bloc.loci().front()->cloc->loc.chr();
+        cerr << "; " << tot_cnt << " total loci analyzed.\n";
 
         if (loc_cnt == 0) break;
 
@@ -247,11 +252,6 @@ int main (int argc, char* argv[]) {
         //
         for (uint i = 0; i < exports.size(); i++)
             exports[i]->write_batch(bloc.loci());
-
-        cerr << "  Analyzed " << loc_cnt << " loci";
-        if (loci_ordered)
-            cerr <<  " from " << bloc.loci().front()->cloc->loc.chr();
-        cerr << "; " << tot_cnt << " total loci analyzed.\n";
 
         //
         // Calculate divergence statistics (Fst), if requested.
@@ -285,6 +285,7 @@ int main (int argc, char* argv[]) {
             ldiv->clear(bloc.loci());
         }
 
+        batch_cnt++;
     } while (loc_cnt > 0);
 
     //
@@ -333,8 +334,6 @@ int main (int argc, char* argv[]) {
 
     // if (genepop_out && ordered_export)
     //     write_genepop_ordered(catalog, pmap, psum, log_fh);
-    // else if (genepop_out)
-    //     write_genepop(catalog, pmap, psum);
 
     // if (structure_out && ordered_export)
     //     write_structure_ordered(catalog, pmap, psum, log_fh);
@@ -1020,7 +1019,6 @@ LocusFilter::init(MetaPopInfo *mpopi)
 void
 LocusFilter::reset()
 {
-    memset(this->_samples,  0, this->_sample_cnt * sizeof(size_t));
     memset(this->_pop_cnts, 0, this->_pop_cnt * sizeof(size_t));
 }
 
@@ -4307,7 +4305,8 @@ parse_command_line(int argc, char* argv[])
             exports.push_back(exp);
             break;
         case 'G':
-            genepop_out = true;
+            exp = new GenePopExport();
+            exports.push_back(exp);
             break;
         case 'S':
             structure_out = true;
