@@ -294,7 +294,8 @@ int main (int argc, char* argv[]) {
     bloc.summarize(cerr);
 
     const LocusFilter &filter = bloc.filter();
-    cerr << "Removed " << filter.filtered() << " loci that did not pass sample/population constraints from " << filter.total() << " loci.\n"
+    cerr << "\n"
+         << "Removed " << filter.filtered() << " loci that did not pass sample/population constraints from " << filter.total() << " loci.\n"
          << "Kept "    << tot_cnt << " loci.\n";
     cerr << "Total polymorphic sites examined: " << filter.total_sites() << "; filtered " << filter.filtered_sites() << " of those sites.\n";
 
@@ -385,8 +386,8 @@ int main (int argc, char* argv[]) {
     // Close the export files and do any required post processing.
     //
     for (uint i = 0; i < exports.size(); i++) {
-        exports[i]->close();
         exports[i]->post_processing();
+        exports[i]->close();
         delete exports[i];
     }
 

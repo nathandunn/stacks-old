@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <vector>
+#include <unistd.h>
 #include <ext/stdio_filebuf.h>
 using __gnu_cxx::stdio_filebuf;
 
@@ -27,9 +28,59 @@ extern MetaPopInfo mpopi;
 extern map<string, int> renz_olap;
 
 int
-Export::transpose(ifstream &ifh, ofstream &ofh)
+Export::transpose(ifstream &ifh, vector<string> &transposed)
 {
-    return 0;
+    vector<string> fields;
+    string buf;
+    size_t len;
+    char   line[max_len];
+
+    transposed.clear();
+    
+    do {
+        buf.clear();
+
+        //
+        // Read the one line from the file.
+        //
+        ifh.getline(line, max_len);
+
+        if (!ifh.good()) {
+            return 0;
+        }
+    
+        //
+        // Check if we read a full line.
+        //
+        while (ifh.fail() && !ifh.eof()) {
+            buf += line;
+            ifh.clear();
+            ifh.getline(line, max_len);
+        }
+
+        len = strlen(line);
+        if (len > 0 && line[len - 1] == '\r') line[len - 1] = '\0';
+
+        buf += line;
+
+        //
+        // Break the line up by tabs.
+        //
+        parse_tsv(buf.c_str(), fields);
+
+        if (transposed.size() == 0) {
+            transposed.push_back("");
+            for (uint i = 0; i < fields.size(); i++)
+                transposed.push_back(fields[i]);
+
+        } else {
+            assert(fields.size() == transposed.size());
+            for (uint i = 0; i < fields.size(); i++)
+                transposed.at(i) += "\t" + fields[i];
+        }
+    } while (!ifh.eof());
+    
+    return 1;
 }
 
 SumstatsExport::SumstatsExport() : Export(ExportType::sumstats)
@@ -1395,13 +1446,7 @@ write_vcf_haplotypes(map<int, CSLocus *> &catalog,
 }
 */
 
-GenePopExport::GenePopExport() : Export(ExportType::genepop)
-{
-    //
-    // Write a GenePop file as defined here: http://kimura.univ-montp2.fr/~rousset/Genepop.htm
-    //
-    this->_path = out_path + out_prefix + ".genepop";    
-}
+GenePopExport::GenePopExport() : Export(ExportType::genepop) {}
 
 int
 GenePopExport::open(const MetaPopInfo *mpopi)
@@ -1409,14 +1454,21 @@ GenePopExport::open(const MetaPopInfo *mpopi)
     this->_mpopi = mpopi;
 
     //
+    // Write a GenePop file as defined here: http://kimura.univ-montp2.fr/~rousset/Genepop.htm
+    //
+    this->_path = out_path + out_prefix + ".genepop";    
+
+    //
     // Open a temporary file.
     //
-    char id[id_len];
-    snprintf(id, id_len, "%s%spopulations.XXXXXX", out_path.c_str(), out_prefix.c_str());
+    stdio_filebuf<char> *buf;
+    char                 id[id_len];
+
+    snprintf(id, id_len, "%s%s.XXXXXX", out_path.c_str(), out_prefix.c_str());
+    this->_fd       =  mkstemp(id);
     this->_tmp_path = id;
-    int fd          =  mkstemp(id);
-    stdio_filebuf<char> *buf = new stdio_filebuf<char>(fd, std::ios::out);
-    this->_tmpfh = new ostream(buf);
+    buf             = new stdio_filebuf<char>(this->_fd, std::ios::out);
+    this->_tmpfh    = new ostream(buf);
 
     cerr << "Polymorphic sites in GenePop format will be written to '" << this->_path << "'\n";
 
@@ -1424,34 +1476,30 @@ GenePopExport::open(const MetaPopInfo *mpopi)
 }
 
 int
-GenePopExport::write_batch(const vector<LocBin *> &loci)
+GenePopExport::write_header()
 {
-    LocBin   *loc;
-    const CSLocus  *cloc;
-    const Datum   **d;
-    const LocSum  **s;
-    const LocTally *t;
-    int      col;
-    char     p_allele, q_allele;
-
-    for (uint i = 0; i < loci.size(); i++) {
-        loc  = loci[i];
-        cloc = loc->cloc;
-        t    = loc->s->meta_pop();
-
-        for (uint j = 0; j < cloc->snps.size(); j++) {
-            col = cloc->snps[j]->col;
-            //
-            // If this site is fixed in all populations or has too many alleles don't output it.
-            //
-            if (t->nucs[col].allele_cnt != 2)
-                continue;
-
-            *this->_tmpfh << cloc->id << "_" << col;
-            if (j < loci.size() - 1) *this->_tmpfh << ",";
+    for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
+        const Pop& pop = this->_mpopi->pops()[p];
+        for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
+            *this->_tmpfh << mpopi.samples()[j].name;
+            if (j < this->_mpopi->samples().size() - 1)
+                *this->_tmpfh << "\t";
         }
     }
     *this->_tmpfh << "\n";
+
+    return 0;
+}
+
+int
+GenePopExport::write_batch(const vector<LocBin *> &loci)
+{
+    LocBin         *loc;
+    const CSLocus  *cloc;
+    const Datum   **d;
+    const LocSum   *s;
+    const LocTally *t;
+    char            p_allele, q_allele;
 
     map<char, string> nuc_map;
     nuc_map['A'] = "01";
@@ -1459,26 +1507,28 @@ GenePopExport::write_batch(const vector<LocBin *> &loci)
     nuc_map['G'] = "03";
     nuc_map['T'] = "04";
 
-    for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
-        const Pop& pop = this->_mpopi->pops()[p];
-        s = (const LocSum **) loc->s->per_pop(p);
-        
-        for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
+    for (uint k = 0; k < loci.size(); k++) {
+        loc  = loci[k];
+        cloc = loc->cloc;
+        d    = (const Datum **) loc->d;
+        t    = loc->s->meta_pop();
 
-            for (uint k = 0; k < loci.size(); k++) {
-                loc  = loci[k];
-                cloc = loc->cloc;
-                d    = (const Datum **) loc->d;
-                t    = loc->s->meta_pop();
- 
-                for (uint i = 0; i < cloc->snps.size(); i++) {
-                    uint col = cloc->snps[i]->col;
+        for (uint i = 0; i < cloc->snps.size(); i++) {
+            uint col = cloc->snps[i]->col;
 
-                    if (t->nucs[col].allele_cnt != 2)
-                        continue;
+            if (t->nucs[col].allele_cnt != 2)
+                continue;
 
-                    if (s[p]->nucs[col].incompatible_site ||
-                        s[p]->nucs[col].filtered_site) {
+            *this->_tmpfh << cloc->id << "_" << col;
+
+            for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
+                const Pop& pop = this->_mpopi->pops()[p];
+                s = loc->s->per_pop(p);
+
+                for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
+                    
+                    if (s->nucs[col].incompatible_site ||
+                        s->nucs[col].filtered_site) {
                         //
                         // This site contains more than two alleles in this population or was filtered
                         // due to a minor allele frequency that is too low.
@@ -1525,12 +1575,6 @@ GenePopExport::write_batch(const vector<LocBin *> &loci)
 int
 GenePopExport::post_processing()
 {
-    this->_fh.open(this->_path.c_str(), ofstream::out);
-    if (this->_fh.fail()) {
-        cerr << "Error opening markers file '" << this->_path << "'\n";
-        exit(1);
-    }
-
     //
     // Obtain the current date.
     //
@@ -1541,30 +1585,70 @@ GenePopExport::post_processing()
     timeinfo = localtime(&rawtime);
     strftime(date, 32, "%B %d, %Y", timeinfo);
 
+    this->_fh.open(this->_path.c_str(), ofstream::out);
+    if (this->_fh.fail()) {
+        cerr << "Error opening GenePop file '" << this->_path << "'\n";
+        return(0);
+    }
+
     //
     // Output the header line.
     //
-    this->_fh << "Stacks version " << VERSION << "; Genepop version 4.1.3; " << date << "\n";
+    this->_fh << "# Stacks version " << VERSION << "; Genepop version 4.1.3; " << date << "\n";
 
-    this->_tmpfh->seekp(ios_base::beg);
+    this->_intmpfh.open(this->_tmp_path.c_str(), ofstream::in);
+    if (this->_intmpfh.fail()) {
+        cerr << "Error opening GenePop file '" << this->_tmp_path << "'\n";
+        return(0);
+    }
 
-    //this->_fh << "pop\n";
+    vector<string> transposed_lines;
 
-    //this->_fh << mpopi.samples()[j].name << ",";
+    this->transpose(this->_intmpfh, transposed_lines);
 
-    return 0;
+    assert(transposed_lines.size() == this->_mpopi->samples().size() + 1);
+
+    size_t line_cnt = 0;
+    size_t pos;
+    //
+    // The first line has a list of locus IDs, convert these to comma-separated.
+    //
+    for (uint i = 1; i < transposed_lines[line_cnt].size(); i++)
+        if (transposed_lines[line_cnt][i] == '\t')
+            transposed_lines[line_cnt][i] = ',';
+
+    this->_fh << transposed_lines[line_cnt].substr(1) << "\n";
+    line_cnt++;
+
+    for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
+        const Pop& pop = this->_mpopi->pops()[p];
+        this->_fh << "pop\n";
+
+        for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
+            pos = transposed_lines[line_cnt].find_first_of('\t');
+            transposed_lines[line_cnt][pos] = ',';
+            this->_fh
+                << transposed_lines[line_cnt].substr(0, pos + 1) << "\t"
+                << transposed_lines[line_cnt].substr(pos + 1) << "\n";
+            line_cnt++;
+        }
+    }
+
+    return 1;
 }
 
 void
 GenePopExport::close()
 {
     //
-    // Close and delete the temporary file.
+    // Close and delete the temporary files.
     //
-    //this->_tmpfh->close();
+    this->_intmpfh.close();
+
+    ::close(this->_fd);
     delete this->_tmpfh;
-    // remove(this->_tmp_path);
-    
+    remove(this->_tmp_path.c_str());
+
     this->_fh.close();
     return;
 }
