@@ -343,6 +343,7 @@ MetaPopInfo::status(ostream &fh)
         }
         fh << this->pops()[g->pops.back()].name << "\n";
     }
+    fh << "\n";
 }
 
 void MetaPopInfo::reset_sample_id_map() {

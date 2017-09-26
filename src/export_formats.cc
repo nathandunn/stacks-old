@@ -437,7 +437,7 @@ SnpDivergenceExport::write_batch_pairwise(const vector<LocBin *> &loci, const ve
         for (uint j = 0; j < div[i].size(); j++) {
 
             loc      = loci[j];
-            cloc_len = strlen(loc->cloc->con);
+            cloc_len = loc->cloc->len;
             pp       = div[i][j];
             
             for (uint pos = 0; pos < cloc_len; pos++) {
@@ -449,7 +449,7 @@ SnpDivergenceExport::write_batch_pairwise(const vector<LocBin *> &loci, const ve
                     << this->_mpopi->pops()[pp[pos]->pop_1].name << "\t"
                     << this->_mpopi->pops()[pp[pos]->pop_2].name << "\t"
                     << loc->cloc->loc.chr() << "\t"
-                    << pp[pos]->bp +1       << "\t"
+                    << pp[pos]->bp + 1      << "\t"
                     << pp[pos]->col         << "\t"
                     << pp[pos]->pi          << "\t"
                     << pp[pos]->amova_fst   << "\t"
