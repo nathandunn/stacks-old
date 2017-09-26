@@ -229,7 +229,7 @@ int main (int argc, char* argv[]) {
         // - Filter the loci according to command line parameters (-r, -p, --maf, --write_single_snp, etc.)
         // - Sort the loci by basepair if they are ordered.
         //
-        cerr << "  Starting batch " << batch_cnt << "...";
+        cerr << "  Begin batch " << batch_cnt << "...";
         loc_cnt  = bloc.next_batch(log_fh);
         tot_cnt += loc_cnt;
 
@@ -257,9 +257,11 @@ int main (int argc, char* argv[]) {
         // Calculate divergence statistics (Fst), if requested.
         //
         if (calc_fstats) {
+            cerr << "    Calculating F statistics...";
             ldiv->snp_divergence(bloc.loci());
             ldiv->haplotype_divergence_pairwise(bloc.loci());
             ldiv->haplotype_divergence(bloc.loci());
+            cerr << "done.\n";
         }
 
         //
@@ -4124,6 +4126,7 @@ parse_command_line(int argc, char* argv[])
             {"popmap",         required_argument, NULL, 'M'},
             {"whitelist",      required_argument, NULL, 'W'},
             {"blacklist",      required_argument, NULL, 'B'},
+            {"batch_size",     required_argument, NULL, 1999},
             {"write_single_snp",  no_argument,       NULL, 'I'},
             {"write_random_snp",  no_argument,       NULL, 'j'},
             {"ordered_export",    no_argument,       NULL, 1002},
@@ -4173,6 +4176,9 @@ parse_command_line(int argc, char* argv[])
             break;
         case 2000: //v1
             input_mode = InputMode::stacks;
+            break;
+        case 1999:
+            batch_size = is_integer(optarg);
             break;
         case 'O':
             out_path = optarg;
