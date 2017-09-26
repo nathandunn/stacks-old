@@ -157,7 +157,7 @@ int main (int argc, char* argv[]) {
     BatchLocusProcessor bloc(input_mode, batch_size, &mpopi);
 
     bloc.init(batch_id, in_path, pmap_path);
-
+    
     //
     // Report information on the structure of the populations specified.
     //
@@ -217,10 +217,11 @@ int main (int argc, char* argv[]) {
     // as the individual loci are read and processed.
     //
     SumStatsSummary sumstats(mpopi.pops().size());
-    int loc_cnt, tot_cnt = 0;
 
+    const LocusFilter &filter = bloc.filter();
     cerr << "\nProcessing data in batches...\n";
-    int batch_cnt = 1;
+    int loc_cnt = 0;
+
     do {
         //
         // Read the next set of loci to process.
@@ -229,14 +230,13 @@ int main (int argc, char* argv[]) {
         // - Filter the loci according to command line parameters (-r, -p, --maf, --write_single_snp, etc.)
         // - Sort the loci by basepair if they are ordered.
         //
-        cerr << "  Begin batch " << batch_cnt << "...";
+        cerr << "  Begin batch " << bloc.next_batch_number() << "...";
         loc_cnt  = bloc.next_batch(log_fh);
-        tot_cnt += loc_cnt;
 
-        cerr << "analyzed " << loc_cnt << " loci";
+        cerr << "analyzed " << filter.batch_total() << " loci";
         if (loci_ordered)
             cerr <<  " from " << bloc.loci().front()->cloc->loc.chr();
-        cerr << "; " << tot_cnt << " total loci analyzed.\n";
+        cerr << "; filtered " << filter.batch_filtered() << " loci; " << filter.batch_seen() << " loci seen.\n";
 
         if (loc_cnt == 0) break;
 
@@ -287,7 +287,6 @@ int main (int argc, char* argv[]) {
             ldiv->clear(bloc.loci());
         }
 
-        batch_cnt++;
     } while (loc_cnt > 0);
 
     //
@@ -295,10 +294,9 @@ int main (int argc, char* argv[]) {
     //
     bloc.summarize(cerr);
 
-    const LocusFilter &filter = bloc.filter();
     cerr << "\n"
-         << "Removed " << filter.filtered() << " loci that did not pass sample/population constraints from " << filter.total() << " loci.\n"
-         << "Kept "    << tot_cnt << " loci.\n";
+         << "Removed " << filter.filtered() << " loci that did not pass sample/population constraints from " << filter.seen() << " loci.\n"
+         << "Kept "    << filter.total() << " loci.\n";
     cerr << "Total polymorphic sites examined: " << filter.total_sites() << "; filtered " << filter.filtered_sites() << " of those sites.\n";
 
     //
@@ -448,6 +446,8 @@ BatchLocusProcessor::next_batch(ostream &log_fh)
         delete this->_loci[i];
     this->_loci.clear();
 
+    this->_batch_num++;
+    
     if (this->_input_mode == InputMode::vcf)
         loc_cnt = this->next_batch_external_loci(log_fh);
     else
@@ -517,10 +517,8 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
     size_t  loc_cnt = 0;
 
     this->_loci.clear();
-
-    const set<int>           &blacklist = this->_loc_filter.blacklist();
-    const map<int, set<int>> &whitelist = this->_loc_filter.whitelist();
-
+    this->_loc_filter.batch_clear();
+    
     //
     // Check if we queued a LocBin object from the last round of reading.
     //
@@ -528,6 +526,7 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
         this->_loci.push_back(this->_next_loc);
         prev_chr        = this->_next_loc->cloc->loc.chr();
         this->_next_loc = NULL;
+        this->_loc_filter.keep_locus();
         loc_cnt++;
     }
     
@@ -554,14 +553,16 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
             throw exception();
         }
 
+        this->_loc_filter.locus_seen();
+
         //
         // Check if this locus is filtered.
         //
-        if (this->_user_supplied_whitelist && whitelist.count(cloc_id) == 0) {
+        if (this->_user_supplied_whitelist && this->_loc_filter.whitelist_filter(cloc_id)) {
             records.clear();
             continue;
         }
-        if (blacklist.count(cloc_id)) {
+        if (this->_loc_filter.blacklist_filter(cloc_id)) {
             records.clear();
             continue;
         }
@@ -648,6 +649,8 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
         if (cur_chr == prev_chr) {
             this->_loci.push_back(loc);
             loc_cnt++;
+            this->_loc_filter.keep_locus();
+
         } else {
             this->_next_loc = loc;
         }
@@ -908,11 +911,57 @@ BatchLocusProcessor::hapstats(ostream &log_fh)
     return 0;
 }
 
+void
+LocusFilter::batch_clear()
+{
+    this->_batch_total_loci    = 0;
+    this->_batch_filtered_loci = 0;
+    this->_batch_seen_loci     = 0;
+}
+
+void
+LocusFilter::locus_seen()
+{
+    this->_seen_loci++;
+    this->_batch_seen_loci++;
+}
+
+void
+LocusFilter::keep_locus()
+{
+    this->_total_loci++;
+    this->_batch_total_loci++;
+}
+
+bool
+LocusFilter::whitelist_filter(size_t locus_id)
+{
+    if (this->_whitelist.count(locus_id))
+        return false;
+
+    this->_filtered_loci++;
+    this->_batch_filtered_loci++;
+
+    return true;
+}
+
+bool
+LocusFilter::blacklist_filter(size_t locus_id)
+{
+    if (this->_blacklist.count(locus_id)) {
+        this->_filtered_loci++;
+        this->_batch_filtered_loci++;
+        return true;
+    }
+
+    return false;
+}
+
+
 bool
 LocusFilter::filter(MetaPopInfo *mpopi, Datum **d)
 {
     this->reset();
-    this->_total_loci++;
 
     for (size_t i = 0; i < this->_sample_cnt; i++) {
         //
@@ -970,8 +1019,10 @@ LocusFilter::filter(MetaPopInfo *mpopi, Datum **d)
     if (pops < population_limit)
         pop_limit = true;
 
-    if (pop_limit)
+    if (pop_limit) {
         this->_filtered_loci++;
+        this->_batch_filtered_loci++;
+    }
 
     return pop_limit;
 }
@@ -1329,9 +1380,10 @@ LocusFilter::prune_sites(MetaPopInfo *mpopi, CSLocus *cloc, Datum **d, LocPopSum
                    << cloc->sort_bp() +1 << "\t"
                    << 0 << "\tno_snps_remaining\n";
         this->_filtered_loci++;
+        this->_batch_filtered_loci++;
         return true;
     }
-    
+
     return false;
 }
 
