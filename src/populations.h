@@ -167,6 +167,10 @@ public:
         this->_pop_tot    = NULL; // The total number of samples in each population.
         this->_filtered_loci  = 0;
         this->_total_loci     = 0;
+        this->_seen_loci      = 0;
+        this->_batch_filtered_loci = 0;
+        this->_batch_total_loci    = 0;
+        this->_batch_seen_loci     = 0;
         this->_filtered_sites = 0;
         this->_total_sites    = 0;
     }
@@ -192,6 +196,8 @@ public:
     int    load_blacklist(string);
 
     void   init(MetaPopInfo *mpopi);
+    bool   whitelist_filter(size_t locus_id);
+    bool   blacklist_filter(size_t locus_id);
     bool   filter(MetaPopInfo *mpopi, Datum **d);
     bool   prune_sites(MetaPopInfo *mpopi, CSLocus *cloc, Datum **d, LocPopSum *s, ostream &log_fh);
     int    keep_single_snp(const CSLocus *cloc, const LocTally *t);
@@ -200,9 +206,16 @@ public:
     
     size_t filtered()       const { return this->_filtered_loci; }
     size_t total()          const { return this->_total_loci; }
+    size_t seen()           const { return this->_seen_loci; }
+    size_t batch_filtered() const { return this->_batch_filtered_loci; }
+    size_t batch_seen()     const { return this->_batch_seen_loci; }
+    size_t batch_total()    const { return this->_batch_total_loci; }
     size_t filtered_sites() const { return this->_filtered_sites; }
     size_t total_sites()    const { return this->_total_sites; }
-
+    void   locus_seen();
+    void   keep_locus();
+    void   batch_clear();
+    
     const set<int>&            blacklist()       { return this->_blacklist; }
     const map<int, set<int>>&  whitelist()       { return this->_whitelist; }
 
@@ -215,6 +228,10 @@ private:
     size_t *_pop_tot;
     size_t  _filtered_loci;
     size_t  _total_loci;
+    size_t  _seen_loci;
+    size_t  _batch_filtered_loci;
+    size_t  _batch_total_loci;
+    size_t  _batch_seen_loci;
     size_t  _filtered_sites;
     size_t  _total_sites;
 
@@ -232,14 +249,14 @@ private:
 class BatchLocusProcessor {
 public:
     BatchLocusProcessor():
-        _input_mode(InputMode::stacks2), _user_supplied_whitelist(false), _batch_size(0), _mpopi(NULL),
-        _vcf_header(NULL), _next_loc(NULL), _unordered_bp(1) {}
+        _input_mode(InputMode::stacks2), _user_supplied_whitelist(false), _batch_size(0), _batch_num(0),
+        _mpopi(NULL), _vcf_header(NULL), _next_loc(NULL), _unordered_bp(1) {}
     BatchLocusProcessor(InputMode mode, size_t batch_size, MetaPopInfo *popi):
-        _input_mode(mode), _user_supplied_whitelist(false), _batch_size(batch_size), _mpopi(popi),
-        _vcf_header(NULL), _next_loc(NULL), _unordered_bp(1) {}
+        _input_mode(mode), _user_supplied_whitelist(false), _batch_size(batch_size), _batch_num(0),
+        _mpopi(popi), _vcf_header(NULL), _next_loc(NULL), _unordered_bp(1) {}
     BatchLocusProcessor(InputMode mode, size_t batch_size): 
-        _input_mode(mode), _user_supplied_whitelist(false), _batch_size(batch_size), _mpopi(NULL),
-        _vcf_header(NULL), _next_loc(NULL), _unordered_bp(1) {}
+        _input_mode(mode), _user_supplied_whitelist(false), _batch_size(batch_size), _batch_num(0),
+        _mpopi(NULL), _vcf_header(NULL), _next_loc(NULL), _unordered_bp(1) {}
     ~BatchLocusProcessor() {
         for (uint i = 0; i < this->_loci.size(); i++)
             delete this->_loci[i];
@@ -247,6 +264,7 @@ public:
 
     int            init(int, string, string);
     size_t         next_batch(ostream &);
+    size_t         next_batch_number() { return this->_batch_num + 1; }
     int            summarize(ostream &);
     int            hapstats(ostream &);
     int            write_distributions(ostream &log_fh) { return this->_dists.write_results(log_fh); }
@@ -268,6 +286,7 @@ private:
     InputMode    _input_mode;
     bool         _user_supplied_whitelist;
     size_t       _batch_size; // Number of loci to process at a time.
+    size_t       _batch_num;  // Counter for how many batches we have processed.
     MetaPopInfo *_mpopi;      // Population Map
 
     // Parsers
