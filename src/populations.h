@@ -165,14 +165,15 @@ public:
         this->_samples    = NULL; // Which population each sample belongs to.
         this->_pop_cnts   = NULL; // For a locus, how many samples are present in each population.
         this->_pop_tot    = NULL; // The total number of samples in each population.
-        this->_filtered_loci  = 0;
-        this->_total_loci     = 0;
-        this->_seen_loci      = 0;
+        this->_filtered_loci       = 0;
+        this->_total_loci          = 0;
+        this->_seen_loci           = 0;
         this->_batch_filtered_loci = 0;
         this->_batch_total_loci    = 0;
         this->_batch_seen_loci     = 0;
-        this->_filtered_sites = 0;
-        this->_total_sites    = 0;
+        this->_filtered_sites      = 0;
+        this->_total_sites         = 0;
+        this->_variant_sites       = 0;
     }
     LocusFilter(MetaPopInfo *mpopi) {
         assert(mpopi != NULL);
@@ -212,8 +213,9 @@ public:
     size_t batch_total()    const { return this->_batch_total_loci; }
     size_t filtered_sites() const { return this->_filtered_sites; }
     size_t total_sites()    const { return this->_total_sites; }
+    size_t variant_sites()  const { return this->_variant_sites; }
     void   locus_seen();
-    void   keep_locus();
+    void   keep_locus(size_t);
     void   batch_clear();
     
     const set<int>&            blacklist()       { return this->_blacklist; }
@@ -234,6 +236,7 @@ private:
     size_t  _batch_seen_loci;
     size_t  _filtered_sites;
     size_t  _total_sites;
+    size_t  _variant_sites;
 
     set<int>           _blacklist;
     map<int, set<int>> _whitelist;

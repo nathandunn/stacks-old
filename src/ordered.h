@@ -56,10 +56,10 @@ template<class StatT>
 int
 Ordered<StatT>::init_sites(vector<const StatT *> &sites, map<uint, uint> &sites_key, const vector<LocBin *> &sorted_loci)
 {
-    CSLocus   *loc;
-    LocTally  *ltally;
-    int        len;
-    set<int>   bps;
+    const CSLocus  *loc;
+    const LocTally *ltally;
+    int      len;
+    set<int> bps;
 
     //
     // We need to create an array to store all the SNPs for exporting. We must
@@ -67,7 +67,7 @@ Ordered<StatT>::init_sites(vector<const StatT *> &sites, map<uint, uint> &sites_
     //
     for (uint pos = 0; pos < sorted_loci.size(); pos++) {
         loc    = sorted_loci[pos]->cloc;
-        len    = strlen(loc->con);
+        len    = loc->len;
         ltally = sorted_loci[pos]->s->meta_pop();
 
         for (int k = 0; k < len; k++) {
@@ -377,13 +377,16 @@ public:
     OLocTally(ofstream &log_fh): Ordered<StatT>() {
         this->log_fh = &log_fh;
     }
+    OLocTally(): Ordered<StatT>() {
+        this->log_fh = NULL;
+    }
 
-    int order(vector<StatT *> &, const vector<LocBin *> &);
+    int order(vector<const StatT *> &, const vector<LocBin *> &);
 };
 
 template<class StatT>
 int
-OLocTally<StatT>::order(vector<StatT *> &sites, const vector<LocBin *> &sorted_loci)
+OLocTally<StatT>::order(vector<const StatT *> &sites, const vector<LocBin *> &sorted_loci)
 {
     this->incompatible_loci = 0;
     this->multiple_loci     = 0;
@@ -392,9 +395,9 @@ OLocTally<StatT>::order(vector<StatT *> &sites, const vector<LocBin *> &sorted_l
 
     this->init_sites(sites, sites_key, sorted_loci);
 
-    CSLocus   *loc;
-    LocTally  *ltally;
-    int        len;
+    const CSLocus  *loc;
+    const LocTally *ltally;
+    int len;
 
     //
     // Assign nucleotides to their proper, ordered location in the genome,
@@ -402,7 +405,7 @@ OLocTally<StatT>::order(vector<StatT *> &sites, const vector<LocBin *> &sorted_l
     //
     for (uint pos = 0; pos < sorted_loci.size(); pos++) {
         loc    = sorted_loci[pos]->cloc;
-        len    = strlen(loc->con);
+        len    = loc->len;
         ltally = sorted_loci[pos]->s->meta_pop();
 
         for (int k = 0; k < len; k++) {
@@ -416,13 +419,14 @@ OLocTally<StatT>::order(vector<StatT *> &sites, const vector<LocBin *> &sorted_l
 
             } else {
                 this->multiple_loci++;
-                *(this->log_fh) << "within_population\t"
-                                << "multiple_locus\t"
-                                << loc->id << "\t"
-                                << loc->loc.chr() << "\t"
-                                << ltally->nucs[k].bp +1 << "\t"
-                                << k << "\t"
-                                << "conflicts with locus " << sites[sites_key[ltally->nucs[k].bp]]->loc_id << "\n";
+                if (this->log_fh != NULL)
+                    *(this->log_fh) << "within_population\t"
+                                    << "multiple_locus\t"
+                                    << loc->id << "\t"
+                                    << loc->loc.chr() << "\t"
+                                    << ltally->nucs[k].bp +1 << "\t"
+                                    << k << "\t"
+                                    << "conflicts with locus " << sites[sites_key[ltally->nucs[k].bp]]->loc_id << "\n";
             }
         }
     }
