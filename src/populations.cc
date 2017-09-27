@@ -518,7 +518,7 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
     if (this->_next_loc != NULL) {
         this->_loci.push_back(this->_next_loc);
         prev_chr        = this->_next_loc->cloc->loc.chr();
-        this->_loc_filter.keep_locus(this->_next_loc->cloc->len);
+        this->_loc_filter.keep_locus(this->_next_loc);
         this->_next_loc = NULL;
         loc_cnt++;
     }
@@ -609,7 +609,7 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
         // frequency threshold (-a). In these cases we will remove the SNP, but keep the locus.
         // If all SNPs are filtered, delete the locus.
         //
-        if (this->_loc_filter.prune_sites(this->_mpopi, loc->cloc, loc->d, loc->s, log_fh)) {
+        if (this->_loc_filter.prune_sites_with_filters(this->_mpopi, loc->cloc, loc->d, loc->s, log_fh)) {
             delete loc;
             continue;
         }
@@ -642,7 +642,8 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
         if (cur_chr == prev_chr) {
             this->_loci.push_back(loc);
             loc_cnt++;
-            this->_loc_filter.keep_locus(loc->cloc->len);
+            
+            this->_loc_filter.keep_locus(loc);
 
         } else {
             this->_next_loc = loc;
@@ -815,7 +816,7 @@ BatchLocusProcessor::next_batch_external_loci(ostream &log_fh)
         // frequency threshold (-a). In these cases we will remove the SNP, but keep the locus.
         // If all SNPs are filtered, delete the locus.
         //
-        if (this->_loc_filter.prune_sites(this->_mpopi, loc->cloc, loc->d, loc->s, log_fh)) {
+        if (this->_loc_filter.prune_sites_with_filters(this->_mpopi, loc->cloc, loc->d, loc->s, log_fh)) {
             delete loc;
             continue;
         }
@@ -920,11 +921,21 @@ LocusFilter::locus_seen()
 }
 
 void
-LocusFilter::keep_locus(size_t loc_len)
+LocusFilter::keep_locus(LocBin *loc)
 {
     this->_total_loci++;
     this->_batch_total_loci++;
-    this->_total_sites += loc_len;
+
+    //
+    // Count up the number of sites and variable sites.
+    //
+    const LocTally *t = loc->s->meta_pop();            
+
+    for (uint i = 0; i < loc->cloc->len; i++) {
+        if (t->nucs[i].fixed == false)
+            this->_variant_sites++;
+        this->_total_sites++;
+    }
 }
 
 bool
@@ -1165,7 +1176,15 @@ LocusFilter::prune_sites_with_whitelist(MetaPopInfo *mpopi, CSLocus *cloc, Datum
     if (user_wl == true && this->_whitelist[cloc->id].size() == 0)
         for (uint i = 0; i < cloc->snps.size(); i++)
             this->_whitelist[cloc->id].insert(cloc->snps[i]->col);
-    
+
+    prune_sites(cloc, d, this->_whitelist[cloc->id]);
+
+    return 0;
+}
+
+int
+LocusFilter::prune_sites(CSLocus *cloc, Datum **d, set<int> &keep)
+{
     //
     // We want to prune out SNP objects that are not in the whitelist.
     //
@@ -1176,7 +1195,7 @@ LocusFilter::prune_sites_with_whitelist(MetaPopInfo *mpopi, CSLocus *cloc, Datum
     map<string, int>::iterator sit;
 
     for (uint i = 0; i < cloc->snps.size(); i++) {
-        if (this->_whitelist[cloc->id].count(cloc->snps[i]->col) > 0) {
+        if (keep.count(cloc->snps[i]->col) > 0) {
             tmp.push_back(cloc->snps[i]);
             cols.push_back(i);
         } else {
@@ -1257,7 +1276,7 @@ LocusFilter::prune_sites_with_whitelist(MetaPopInfo *mpopi, CSLocus *cloc, Datum
 }
 
 bool
-LocusFilter::prune_sites(MetaPopInfo *mpopi, CSLocus *cloc, Datum **d, LocPopSum *s, ostream &log_fh)
+LocusFilter::prune_sites_with_filters(MetaPopInfo *mpopi, CSLocus *cloc, Datum **d, LocPopSum *s, ostream &log_fh)
 {
     set<int>    site_list;
     vector<int> pop_prune_list;
@@ -1271,19 +1290,15 @@ LocusFilter::prune_sites(MetaPopInfo *mpopi, CSLocus *cloc, Datum **d, LocPopSum
 
     const LocSum   *sum;
     const LocTally *t;
-    int  pruned = 0;
 
+    t = s->meta_pop();
     for (uint i = 0; i < cloc->snps.size(); i++) {
-        t = s->meta_pop();
-
         //
         // If the site is fixed, ignore it.
         //
         if (t->nucs[cloc->snps[i]->col].fixed == true)
             continue;
 
-        this->_variant_sites++;
-        
         sample_prune = false;
         maf_prune    = false;
         het_prune    = false;
@@ -1339,9 +1354,7 @@ LocusFilter::prune_sites(MetaPopInfo *mpopi, CSLocus *cloc, Datum **d, LocPopSum
         if (maf_prune == false && het_prune == false && sample_prune == false && inc_prune == false) {
             site_list.insert(cloc->snps[i]->col);
         } else {
-            pruned++;
             this->_filtered_sites++;
-            sum->nucs[cloc->snps[i]->col].filtered_site = true;
 
             if (verbose) {
                 log_fh << "pruned_polymorphic_site\t"
@@ -1376,6 +1389,11 @@ LocusFilter::prune_sites(MetaPopInfo *mpopi, CSLocus *cloc, Datum **d, LocPopSum
         this->_filtered_loci++;
         this->_batch_filtered_loci++;
         return true;
+    } else {
+        //
+        // Remove the filtered sites from this locus.
+        //
+        this->prune_sites(cloc, d, site_list);
     }
 
     return false;
@@ -1469,197 +1487,6 @@ vcfcomp_simplify_pmap (map<int, CSLocus*>& catalog, PopMap<CSLocus>* pmap)
     reduce_catalog(catalog, empty, myblacklist);
     pmap->prune(myblacklist);
     cerr << "? Now working on " << catalog.size() << " loci (deleted " << myblacklist.size() << " loci).\n";
-}
-
-int
-apply_locus_constraints(map<int, CSLocus *> &catalog,
-                        PopMap<CSLocus> *pmap,
-                        ofstream &log_fh)
-{
-    uint pop_sthg;
-    CSLocus *loc;
-    Datum  **d;
-
-    if (sample_limit == 0 && population_limit == 0 && min_stack_depth == 0) return 0;
-
-    if (verbose)
-        log_fh << "\n#\n# List of loci removed by first filtering stage of sample and population constraints\n#\n"
-               << "# Action\tLocus ID\tChr\tBP\tColumn\tReason\n";
-
-    map<int, CSLocus *>::iterator it;
-
-    uint pop_cnt   = mpopi.pops().size();
-    int *pop_order = new int [pop_cnt];
-
-    // Which population each sample belongs to.
-    int *samples   = new int [pmap->sample_cnt()];
-
-    // For the current locus, how many samples in each population.
-    int *pop_cnts  = new int [pop_cnt];
-
-    // The total number of samples in each population.
-    int *pop_tot   = new int [pop_cnt];
-
-    pop_sthg = 0;
-    for (size_t i_pop=0; i_pop<mpopi.pops().size(); ++i_pop) {
-        const Pop& pop = mpopi.pops()[i_pop];
-        pop_tot[pop_sthg]  = 0;
-
-        for (uint i = pop.first_sample; i <= pop.last_sample; i++) {
-            samples[i] = pop_sthg;
-            pop_tot[pop_sthg]++;
-        }
-        pop_order[pop_sthg] = i_pop;
-        pop_sthg++;
-    }
-
-    for (uint i = 0; i < pop_cnt; i++)
-        pop_cnts[i] = 0;
-
-    double pct       = 0.0;
-    bool   pop_limit = false;
-    int    pops      = 0;
-    int    below_stack_dep  = 0;
-    uint   below_lnl_thresh = 0;
-    set<int> blacklist;
-
-    for (it = catalog.begin(); it != catalog.end(); it++) {
-        loc = it->second;
-        d   = pmap->locus(loc->id);
-
-        for (int i = 0; i < pmap->sample_cnt(); i++) {
-            //
-            // Check that each sample is over the minimum stack depth for this locus.
-            //
-            if (d[i] != NULL &&
-                min_stack_depth > 0 &&
-                d[i]->tot_depth < min_stack_depth) {
-                below_stack_dep++;
-                delete d[i];
-                d[i] = NULL;
-                loc->hcnt--;
-            }
-
-            //
-            // Check that each sample is over the log likelihood threshold.
-            //
-            if (d[i] != NULL &&
-                filter_lnl   &&
-                d[i]->lnl < lnl_limit) {
-                below_lnl_thresh++;
-                delete d[i];
-                d[i] = NULL;
-                loc->hcnt--;
-            }
-        }
-
-        //
-        // Tally up the count of samples in this population.
-        //
-        for (int i = 0; i < pmap->sample_cnt(); i++) {
-            if (d[i] != NULL)
-                pop_cnts[samples[i]]++;
-        }
-
-        //
-        // Check that the counts for each population are over sample_limit. If not, zero out
-        // the members of that population.
-        //
-        for (uint i = 0; i < pop_cnt; i++) {
-            const Pop& pop = mpopi.pops()[pop_order[i]];
-
-            pct = (double) pop_cnts[i] / (double) pop_tot[i];
-
-            if (pop_cnts[i] > 0 && pct < sample_limit) {
-                //cerr << "Removing population " << pop_order[i] << " at locus: " << loc->id << "; below sample limit: " << pct << "\n";
-                for (uint j  = pop.first_sample; j <= pop.last_sample; j++) {
-                    if (d[j] != NULL) {
-                        delete d[j];
-                        d[j] = NULL;
-                        loc->hcnt--;
-                    }
-                }
-                pop_cnts[i] = 0;
-            }
-        }
-
-        //
-        // Check that this locus is present in enough populations.
-        //
-        for (uint i = 0; i < pop_cnt; i++)
-            if (pop_cnts[i] > 0) pops++;
-        if (pops < population_limit) {
-            //cerr << "Removing locus: " << loc->id << "; below population limit: " << pops << "\n";
-            pop_limit = true;
-        }
-
-        if (pop_limit) {
-            blacklist.insert(loc->id);
-
-            if (verbose)
-                log_fh << "removed_locus\t"
-                       << loc->id << "\t"
-                       << loc->loc.chr() << "\t"
-                       << loc->sort_bp() +1 << "\t"
-                       << 0 << "\tfailed_population_limit\n";
-        }
-
-        for (uint i = 0; i < pop_cnt; i++)
-            pop_cnts[i] = 0;
-        pop_limit = false;
-        pops      = 0;
-    }
-
-    //
-    // Remove loci
-    //
-    if (min_stack_depth > 0)
-        cerr << "Removed " << below_stack_dep << " samples from loci that are below the minimum stack depth of " << min_stack_depth << "x\n";
-    if (filter_lnl)
-        cerr << "Removed " << below_lnl_thresh << " samples from loci that are below the log likelihood threshold of " << lnl_limit << "\n";
-    cerr << "Removing " << blacklist.size() << " loci that did not pass sample/population constraints...";
-    set<int> whitelist;
-    reduce_catalog(catalog, whitelist, blacklist);
-    int retained = pmap->prune(blacklist);
-    cerr << " retained " << retained << " loci.\n";
-
-    delete [] pop_cnts;
-    delete [] pop_tot;
-    delete [] pop_order;
-    delete [] samples;
-
-    return 0;
-}
-
-bool
-order_unordered_loci(map<int, CSLocus *> &catalog)
-{
-    map<int, CSLocus *>::iterator it;
-    CSLocus *loc;
-    set<string> chrs;
-
-    for (it = catalog.begin(); it != catalog.end(); it++) {
-        loc = it->second;
-        if (!loc->loc.empty())
-            chrs.insert(loc->loc.chr());
-    }
-
-    //
-    // This data is already reference aligned.
-    //
-    if (chrs.size() > 0)
-        return true;
-
-    cerr << "Catalog is not reference aligned, arbitrarily ordering catalog loci.\n";
-
-    uint bp = 1;
-    for (it = catalog.begin(); it != catalog.end(); it++) {
-        loc = it->second;
-        loc->loc = PhyLoc("un", bp);
-        bp += strlen(loc->con);
-    }
-
-    return false;
 }
 
 int
@@ -3125,9 +2952,10 @@ SumStatsSummary::write_results()
     
     for (uint j = 0; j < this->_pop_cnt; j++)
         cerr << "  " << mpopi.pops()[j].name << ": "
-             << "mean individuals per locus: " << _num_indv_mean[j] << ", "
-             << "mean pi: " << _pi_mean[j] << ", "
-             << "private alleles: " << _private_cnt[j] << "\n";
+             << setprecision(fieldw) << _num_indv_mean[j] << " samples per locus; "
+             << "pi: " << _pi_mean[j] << "; "
+             << setprecision(10) << "all/variant/polymorphic sites: " << _n_all[j] << "/" << _n[j] << "/" << _var_sites[j] << "; "
+             << setprecision(fieldw) << "private alleles: " << _private_cnt[j] << "\n";
     
     fh << "# All positions (variant and fixed)\n"
        << "# Pop ID\t"

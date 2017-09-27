@@ -200,10 +200,10 @@ public:
     bool   whitelist_filter(size_t locus_id);
     bool   blacklist_filter(size_t locus_id);
     bool   filter(MetaPopInfo *mpopi, Datum **d);
-    bool   prune_sites(MetaPopInfo *mpopi, CSLocus *cloc, Datum **d, LocPopSum *s, ostream &log_fh);
     int    keep_single_snp(const CSLocus *cloc, const LocTally *t);
     int    keep_random_snp(const CSLocus *cloc, const LocTally *t);
     int    prune_sites_with_whitelist(MetaPopInfo *mpopi, CSLocus *cloc, Datum **d, bool user_wl);
+    bool   prune_sites_with_filters(MetaPopInfo *mpopi, CSLocus *cloc, Datum **d, LocPopSum *s, ostream &log_fh);
     
     size_t filtered()       const { return this->_filtered_loci; }
     size_t total()          const { return this->_total_loci; }
@@ -215,7 +215,7 @@ public:
     size_t total_sites()    const { return this->_total_sites; }
     size_t variant_sites()  const { return this->_variant_sites; }
     void   locus_seen();
-    void   keep_locus(size_t);
+    void   keep_locus(LocBin *);
     void   batch_clear();
     
     const set<int>&            blacklist()       { return this->_blacklist; }
@@ -242,6 +242,7 @@ private:
     map<int, set<int>> _whitelist;
 
     void reset();
+    int  prune_sites(CSLocus *, Datum **, set<int> &);
 };
 
 //
@@ -328,9 +329,7 @@ void    open_log(ofstream &);
 int     build_file_list();
 int     load_marker_list(string, set<int> &);
 int     load_marker_column_list(string, map<int, set<int> > &);
-int     apply_locus_constraints(map<int, CSLocus *> &, PopMap<CSLocus> *, ofstream &);
 int     log_haplotype_cnts(map<int, CSLocus *> &, ofstream &);
-bool    order_unordered_loci(map<int, CSLocus *> &);
 //int     merge_shared_cutsite_loci(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<merget, int> > &, ofstream &);
 phaset  merge_and_phase_loci(PopMap<CSLocus> *, CSLocus *, CSLocus *, set<int> &, ofstream &);
 int     merge_datums(int, int, Datum **, Datum **, set<string> &, int);

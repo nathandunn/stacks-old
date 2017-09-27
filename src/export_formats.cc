@@ -177,15 +177,10 @@ SumstatsExport::write_batch(const vector<LocBin *> &loci)
     for (uint i = 0; i < loci.size(); i++) {
         cloc = loci[i]->cloc;
         t    = loci[i]->s->meta_pop();
-        uint len = strlen(cloc->con);
 
-        for (uint pos = 0; pos < len; pos++) {
-            //
-            // If this site is fixed in all populations, DON'T output it. If it is variable,
-            // or fixed within populations but variable among, DO output it.
-            //
-            if (t->nucs[pos].allele_cnt == 2) {
+        for (uint pos = 0; pos < cloc->len; pos++) {
 
+            if (!t->nucs[pos].fixed) {
                 for (uint pop = 0; pop < this->_pop_cnt; pop++) {
 
                     s = loci[i]->s->per_pop(pop);

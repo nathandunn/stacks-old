@@ -128,7 +128,7 @@ const int libz_buffer_size = 1048576;
 //
 // Number of digits to use when writing numbers in scientific notation.
 //
-const unsigned int fieldw = 4;
+const unsigned int fieldw = 5;
 
 //
 // Supported file types

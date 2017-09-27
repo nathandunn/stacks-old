@@ -389,11 +389,10 @@ LocPopSum::tally_metapop(const CSLocus *cloc)
 {
     int       variable_pop;
     uint16_t  p_cnt, q_cnt, col;
-    LocSum   **s   = this->_per_pop;
-    LocTally  *mp  = this->_meta_pop;
-    uint16_t   len = strlen(cloc->con);
+    LocSum  **s  = this->_per_pop;
+    LocTally *mp = this->_meta_pop;
 
-    for (col = 0; col < len; col++) {
+    for (col = 0; col < cloc->len; col++) {
 
         mp->nucs[col].reset();
         
