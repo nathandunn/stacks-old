@@ -173,13 +173,9 @@ int main (int argc, char* argv[]) {
     //
     // Setup the default data exports.
     //
-    Export *exp;
-    exp = new MarkersExport();
-    exports.push_back(exp);
-    exp = new SumstatsExport();
-    exports.push_back(exp);
-    exp = new HapstatsExport();
-    exports.push_back(exp);
+    exports.push_back(new MarkersExport());
+    exports.push_back(new SumstatsExport());
+    exports.push_back(new HapstatsExport());
 
     SnpDivergenceExport *sdiv_exp;
     HapDivergenceExport *hdiv_exp;
@@ -296,8 +292,8 @@ int main (int argc, char* argv[]) {
 
     cerr << "\n"
          << "Removed " << filter.filtered() << " loci that did not pass sample/population constraints from " << filter.seen() << " loci.\n"
-         << "Kept "    << filter.total() << " loci.\n";
-    cerr << "Total polymorphic sites examined: " << filter.total_sites() << "; filtered " << filter.filtered_sites() << " of those sites.\n";
+         << "Kept " << filter.total() << " loci, composed of " << filter.total_sites() << " sites; "
+         << filter.filtered_sites() << " of those sites were filtered, " << filter.variant_sites() << " variant sites remained.\n";
 
     //
     // Do the final sumstats calculations and write the sumstats summary files.
@@ -332,9 +328,6 @@ int main (int argc, char* argv[]) {
     // // Output the observed haplotypes.
     // //
     // write_generic(catalog, pmap, false);
-
-    // if (genepop_out && ordered_export)
-    //     write_genepop_ordered(catalog, pmap, psum, log_fh);
 
     // if (structure_out && ordered_export)
     //     write_structure_ordered(catalog, pmap, psum, log_fh);
@@ -525,8 +518,8 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
     if (this->_next_loc != NULL) {
         this->_loci.push_back(this->_next_loc);
         prev_chr        = this->_next_loc->cloc->loc.chr();
+        this->_loc_filter.keep_locus(this->_next_loc->cloc->len);
         this->_next_loc = NULL;
-        this->_loc_filter.keep_locus();
         loc_cnt++;
     }
     
@@ -622,20 +615,20 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
         }
 
         //
-        // Regenerate summary statistics after pruning SNPs.
-        //
-        loc->s->sum_pops(loc->cloc, (const Datum **) loc->d, (const MetaPopInfo &) *this->_mpopi, verbose, cerr);
-        loc->s->tally_metapop(loc->cloc);
-
-        //
         // If these data are unordered, provide an arbitrary ordering.
         //
         if (loc->cloc->loc.empty()) {
             loc->cloc->loc.set("un", this->_unordered_bp, strand_plus);
-            this->_unordered_bp += strlen(loc->cloc->con);
+            this->_unordered_bp += loc->cloc->len;
         } else {
             loci_ordered = true;
         }
+
+        //
+        // Regenerate summary statistics after pruning SNPs.
+        //
+        loc->s->sum_pops(loc->cloc, (const Datum **) loc->d, (const MetaPopInfo &) *this->_mpopi, verbose, cerr);
+        loc->s->tally_metapop(loc->cloc);
 
         cur_chr = loc->cloc->loc.chr();
         if (prev_chr.length() == 0)
@@ -649,7 +642,7 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
         if (cur_chr == prev_chr) {
             this->_loci.push_back(loc);
             loc_cnt++;
-            this->_loc_filter.keep_locus();
+            this->_loc_filter.keep_locus(loc->cloc->len);
 
         } else {
             this->_next_loc = loc;
@@ -927,10 +920,11 @@ LocusFilter::locus_seen()
 }
 
 void
-LocusFilter::keep_locus()
+LocusFilter::keep_locus(size_t loc_len)
 {
     this->_total_loci++;
     this->_batch_total_loci++;
+    this->_total_sites += loc_len;
 }
 
 bool
@@ -1288,7 +1282,7 @@ LocusFilter::prune_sites(MetaPopInfo *mpopi, CSLocus *cloc, Datum **d, LocPopSum
         if (t->nucs[cloc->snps[i]->col].fixed == true)
             continue;
 
-        this->_total_sites++;
+        this->_variant_sites++;
         
         sample_prune = false;
         maf_prune    = false;
@@ -3074,22 +3068,22 @@ SumStatsSummary::write_results()
     fh << "# Variant positions\n"
        << "# Pop ID\t"
        << "Private\t"
-       << "Num Indv\t"
+       << "Num_Indv\t"
        << "Var\t"
        << "StdErr\t"
        << "P\t"
        << "Var\t"
        << "StdErr\t"
-       << "Obs Het\t"
+       << "Obs_Het\t"
        << "Var\t"
        << "StdErr\t"
-       << "Obs Hom\t"
+       << "Obs_Hom\t"
        << "Var\t"
        << "StdErr\t"
-       << "Exp Het\t"
+       << "Exp_Het\t"
        << "Var\t"
        << "StdErr\t"
-       << "Exp Hom\t"
+       << "Exp_Hom\t"
        << "Var\t"
        << "StdErr\t"
        << "Pi\t"
@@ -3139,25 +3133,25 @@ SumStatsSummary::write_results()
        << "# Pop ID\t"
        << "Private\t"
        << "Sites\t"
-       << "Variant Sites\t"
-       << "Polymorphic Sites\t"
-       << "% Polymorphic Loci\t"
-       << "Num Indv\t"
+       << "Variant_Sites\t"
+       << "Polymorphic_Sites\t"
+       << "%Polymorphic_Loci\t"
+       << "Num_Indv\t"
        << "Var\t"
        << "StdErr\t"
        << "P\t"
        << "Var\t"
        << "StdErr\t"
-       << "Obs Het\t"
+       << "Obs_Het\t"
        << "Var\t"
        << "StdErr\t"
-       << "Obs Hom\t"
+       << "Obs_Hom\t"
        << "Var\t"
        << "StdErr\t"
-       << "Exp Het\t"
+       << "Exp_Het\t"
        << "Var\t"
        << "StdErr\t"
-       << "Exp Hom\t"
+       << "Exp_Hom\t"
        << "Var\t"
        << "StdErr\t"
        << "Pi\t"
@@ -3169,10 +3163,10 @@ SumStatsSummary::write_results()
 
     for (uint j = 0; j < this->_pop_cnt; j++) {
         fh << mpopi.pops()[j].name << "\t"
-           << _private_cnt[j]             << "\t"
+           << _private_cnt[j]             << "\t" << setprecision(0)
            << _n_all[j]                   << "\t"
            << _n[j]                       << "\t"
-           << _var_sites[j]               << "\t"
+           << _var_sites[j]               << "\t" << setprecision(fieldw)
            << _var_sites[j]             / _n_all[j] * 100 << "\t"
            << _num_indv_mean_all[j]       << "\t"
            << _num_indv_var_all[j]        << "\t"

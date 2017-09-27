@@ -1,3 +1,22 @@
+// -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
+//
+// Copyright 2012-2017, Julian Catchen <jcatchen@illinois.edu>
+//
+// This file is part of Stacks.
+//
+// Stacks is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Stacks is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Stacks.  If not, see <http://www.gnu.org/licenses/>.
+//
 #include <algorithm>
 #include <vector>
 #include <unistd.h>
@@ -20,6 +39,7 @@ extern string out_path;
 extern string out_prefix;
 extern bool phylip_var;
 extern bool loci_ordered;
+extern bool ordered_export;
 extern bool merge_sites;
 extern string enz;
 extern set<string> debug_flags;
@@ -1494,81 +1514,119 @@ GenePopExport::write_header()
 int
 GenePopExport::write_batch(const vector<LocBin *> &loci)
 {
-    LocBin         *loc;
-    const CSLocus  *cloc;
-    const Datum   **d;
-    const LocSum   *s;
-    const LocTally *t;
-    char            p_allele, q_allele;
+    LocBin *loc;
 
+    if (ordered_export) {
+        //
+        // We need to order the SNPs to take into account overlapping loci.
+        //
+        vector<const NucTally *> sites;
+        OLocTally<NucTally> *ord = new OLocTally<NucTally>();
+        ord->order(sites, loci);
+
+        uint k = 0;
+        for (uint pos = 0; pos < sites.size(); pos++) {
+            int loc_id = sites[pos]->loc_id;
+
+            //
+            // Advance through the loci list until we find the proper locus.
+            //
+            while (k < loci.size() && loci[k]->cloc->id != loc_id) k++;
+
+            assert(k < loci.size() && loci[k]->cloc->id == loc_id);
+            loc  = loci[k];
+            size_t col       = sites[pos]->col;
+            size_t snp_index = loc->cloc->snp_index(col);
+
+            this->write_site(loc->cloc, (const LocPopSum *) loc->s, (const Datum **) loc->d, col, snp_index);
+        }
+        
+        delete ord;
+
+    } else {
+        const CSLocus  *cloc;
+        const Datum   **d;
+        const LocTally *t;
+
+        for (uint k = 0; k < loci.size(); k++) {
+            loc  = loci[k];
+            cloc = loc->cloc;
+            d    = (const Datum **) loc->d;
+            t    = loc->s->meta_pop();
+
+            for (uint snp_index = 0; snp_index < cloc->snps.size(); snp_index++) {
+                uint col = cloc->snps[snp_index]->col;
+
+                if (t->nucs[col].allele_cnt != 2)
+                    continue;
+
+                this->write_site(cloc, loc->s, d, col, snp_index);
+            }
+        }
+    }
+    
+    return 0;
+}
+
+int
+GenePopExport::write_site(const CSLocus *loc, const LocPopSum *lps, const Datum **d, size_t col, size_t snp_index)
+{
     map<char, string> nuc_map;
     nuc_map['A'] = "01";
     nuc_map['C'] = "02";
     nuc_map['G'] = "03";
     nuc_map['T'] = "04";
 
-    for (uint k = 0; k < loci.size(); k++) {
-        loc  = loci[k];
-        cloc = loc->cloc;
-        d    = (const Datum **) loc->d;
-        t    = loc->s->meta_pop();
+    const LocSum *s;
+    char p_allele, q_allele;
 
-        for (uint i = 0; i < cloc->snps.size(); i++) {
-            uint col = cloc->snps[i]->col;
+    *this->_tmpfh << loc->id << "_" << col;
 
-            if (t->nucs[col].allele_cnt != 2)
-                continue;
+    for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
+        const Pop& pop = this->_mpopi->pops()[p];
+        s = lps->per_pop(p);
 
-            *this->_tmpfh << cloc->id << "_" << col;
-
-            for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
-                const Pop& pop = this->_mpopi->pops()[p];
-                s = loc->s->per_pop(p);
-
-                for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
+        for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
                     
-                    if (s->nucs[col].incompatible_site ||
-                        s->nucs[col].filtered_site) {
-                        //
-                        // This site contains more than two alleles in this population or was filtered
-                        // due to a minor allele frequency that is too low.
-                        //
-                        *this->_tmpfh << "\t0000";
-                    } else if (d[j] == NULL || col >= uint(d[j]->len)) {
-                        //
-                        // Data does not exist.
-                        //
-                        *this->_tmpfh << "\t0000";
-                    } else if (d[j]->model[col] == 'U') {
-                        //
-                        // Data exists, but the model call was uncertain.
-                        //
-                        *this->_tmpfh << "\t0000";
-                    } else {
-                        //
-                        // Tally up the nucleotide calls.
-                        //
-                        tally_observed_haplotypes(d[j]->obshap, i, p_allele, q_allele);
+            if (s->nucs[col].incompatible_site ||
+                s->nucs[col].filtered_site) {
+                //
+                // This site contains more than two alleles in this population or was filtered
+                // due to a minor allele frequency that is too low.
+                //
+                *this->_tmpfh << "\t0000";
+            } else if (d[j] == NULL || col >= uint(d[j]->len)) {
+                //
+                // Data does not exist.
+                //
+                *this->_tmpfh << "\t0000";
+            } else if (d[j]->model[col] == 'U') {
+                //
+                // Data exists, but the model call was uncertain.
+                //
+                *this->_tmpfh << "\t0000";
+            } else {
+                //
+                // Tally up the nucleotide calls.
+                //
+                tally_observed_haplotypes(d[j]->obshap, snp_index, p_allele, q_allele);
 
-                        if (p_allele == 0 && q_allele == 0) {
-                            // More than two potential alleles.
-                            *this->_tmpfh << "\t0000";
-                        } else if (p_allele == 0) {
-                            *this->_tmpfh << "\t" << nuc_map[q_allele] << nuc_map[q_allele];
+                if (p_allele == 0 && q_allele == 0) {
+                    // More than two potential alleles.
+                    *this->_tmpfh << "\t0000";
+                } else if (p_allele == 0) {
+                    *this->_tmpfh << "\t" << nuc_map[q_allele] << nuc_map[q_allele];
 
-                        } else if (q_allele == 0) {
-                            *this->_tmpfh << "\t" << nuc_map[p_allele] << nuc_map[p_allele];
+                } else if (q_allele == 0) {
+                    *this->_tmpfh << "\t" << nuc_map[p_allele] << nuc_map[p_allele];
 
-                        } else {
-                            *this->_tmpfh << "\t" << nuc_map[p_allele] << nuc_map[q_allele];
-                        }
-                    }
+                } else {
+                    *this->_tmpfh << "\t" << nuc_map[p_allele] << nuc_map[q_allele];
                 }
             }
-            *this->_tmpfh << "\n";
         }
     }
-
+    *this->_tmpfh << "\n";    
     return 0;
 }
 
