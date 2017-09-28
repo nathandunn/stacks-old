@@ -1,21 +1,26 @@
+Stacks 1.48 - Sept 28, 2017
+---------------------------
+    Feature: Added --null_inline mode to clone_filter (and process_radtags) for previously unseen type 
+             of oligo combination.
+
 Stacks 1.47 - Sept 06, 2017
 ---------------------------
-    Feature: Improved populations's fasta output options (especially,
-             added a option to export locus consensus sequences).
-    Feature: denovo_map.pl and ref_map.pl now stop if a component
-             of the pipeline fails.
+    Feature: Improved populations's fasta output options (especially, added a option to export locus 
+             consensus sequences).
+    Feature: denovo_map.pl and ref_map.pl now stop if a component of the pipeline fails.
     Feature: Improved the output of denovo_map.pl and ref_map.pl.
-    Bugfix: Added a format check in Fasta/GzFasta to avoid a potential
-            segfault when working on FastQ files.
-    Bugfix: Fixed a bug in count_fixed_catalog_snps.py that could cause
-            overwrites when working with uncompressed files.
+    Bugfix: Added a format check in Fasta/GzFasta to avoid a potential segfault when working on FastQ 
+            files.
+    Bugfix: Fixed a bug in count_fixed_catalog_snps.py that could cause overwrites when working with 
+            uncompressed files.
 
 Stacks 1.46 - Apr 17, 2017
 --------------------------
     Feature: Added HaeIII enzyme.
     Bugfix: Corrected memory leaks in rxstacks.
     Bugfix: Corrected non-functioning --min_mapq parameter for pstacks.
-    Bugfix: Corrected segfault when combining a VCF input file to populations, with genomic output and masking a restriction enzyme.
+    Bugfix: Corrected segfault when combining a VCF input file to populations, with genomic output and 
+            masking a restriction enzyme.
 
 Stacks 1.45 - Feb 24, 2017
 --------------------------

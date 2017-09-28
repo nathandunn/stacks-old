@@ -323,25 +323,31 @@ parse_input_record(Seq *s, Read *r)
     r->len = len;
 
     if (r->read == 1) {
-            switch (barcode_type) {
-            case inline_null:
-            case inline_inline:
-            case inline_index:
-                strncpy(r->inline_bc, r->seq, max_bc_size_1);
-                r->inline_bc[max_bc_size_1] = '\0';
-                break;
-            case index_inline:
-                strncpy(r->inline_bc, r->seq, max_bc_size_2);
-                r->inline_bc[max_bc_size_2] = '\0';
-                break;
-            default:
-                break;
-            }
-    } else if (r->read == 2 &&
-               (barcode_type == inline_inline ||
-                barcode_type == index_inline)) {
-        strncpy(r->inline_bc, r->seq, max_bc_size_2);
-        r->inline_bc[max_bc_size_2] = '\0';
+        switch (barcode_type) {
+        case inline_null:
+        case inline_inline:
+        case inline_index:
+            strncpy(r->inline_bc, r->seq, max_bc_size_1);
+            r->inline_bc[max_bc_size_1] = '\0';
+            break;
+        case index_inline:
+            strncpy(r->inline_bc, r->seq, max_bc_size_2);
+            r->inline_bc[max_bc_size_2] = '\0';
+            break;
+        default:
+            break;
+        }
+    } else if (r->read == 2) {
+        switch (barcode_type) {
+        case null_inline:
+        case inline_inline:
+        case index_inline:
+            strncpy(r->inline_bc, r->seq, max_bc_size_2);
+            r->inline_bc[max_bc_size_2] = '\0';
+            break;
+        default:
+            break;
+        }
     }
 
     r->retain = 1;

@@ -40,7 +40,8 @@ using std::unordered_map;
 
 enum fastqt   {generic_fastq, illv1_fastq, illv2_fastq};
 
-enum barcodet {null_null, null_index,
+enum barcodet {null_null,
+               null_inline,   null_index,
                inline_null,   index_null,
                inline_inline, index_index,
                inline_index,  index_inline};
@@ -227,6 +228,7 @@ public:
             }
         } else if (this->read == 2) {
             switch(barcode_type) {
+            case null_inline:
             case inline_inline:
             case index_inline:
                 this->pe_bc = this->inline_bc;
