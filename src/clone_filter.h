@@ -51,6 +51,7 @@ using google::sparse_hash_map;
 #include "gzFasta.h"    // Reading gzipped input files in FASTA format
 #include "gzFastq.h"    // Reading gzipped input files in FASTQ format
 #include "BamUnalignedI.h"
+#include "utils.h"
 #include "clean.h"
 #include "file_io.h"
 #include "write.h"
