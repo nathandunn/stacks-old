@@ -1562,7 +1562,11 @@ void from_true_alignments(CLocAlnSet& aln_loc, CLocReadSet&& loc, bool merge_rea
                  << ", not " << cigar_length_ref(cigar) << ".\n";
             throw exception();
         }
+        // Undo the alignments. We remove the Ns added by tsv2bam (that make
+        // the sequence longer than the read), but not the Ns added by
+        // ustacks/pstacks (as the sequence was trimmed accordingly).
         r.seq.shift_Ns_towards_the_end();
+        r.seq.resize(cigar_length_query(cigar));
         aln_loc.add(SAlnRead(move((Read&)r), move(cigar), r.sample));
     }
 
