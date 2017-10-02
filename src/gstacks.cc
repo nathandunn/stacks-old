@@ -17,10 +17,12 @@
 //
 // Argument globals.
 //
-bool   quiet       = false;
-int    num_threads = 1;
-string in_dir;
-int    batch_id          = -1;
+string in_bam;
+string o_prefix;
+GStacksInputT input_type = GStacksInputT::unknown;
+
+int    num_threads       = 1;
+bool   quiet             = false;
 bool   ignore_pe_reads   = false;
 double min_aln_cov       = 0.75;
 int    min_se_pe_overlap = 5;
@@ -81,7 +83,11 @@ try {
     // Parse arguments.
     //
     parse_command_line(argc, argv);
-    string o_prefix = in_dir + "batch_" + to_string(batch_id) + "." + prog_name;
+
+    //
+    // Open (and check the existence of) the input BAM file.
+    //
+    Bam* bam_f_ptr = new Bam(in_bam.c_str());
 
     //
     // Open the log.
@@ -98,9 +104,8 @@ try {
     #endif
 
     //
-    // Open the BAM file and parse the header.
+    // Parse the BAM header.
     //
-    Bam* bam_f_ptr = new Bam((in_dir + "batch_" + to_string(batch_id) + ".catalog.bam").c_str());
     BamCLocReader bam_fh (&bam_f_ptr);
 
     //
@@ -825,8 +830,8 @@ LocusProcessor::assemble_contig(const vector<const DNASeq4*>& seqs)
     }
 
     if (dbg_write_gfa) {
-        graph.dump_gfa(in_dir + to_string(loc_.id) + ".spaths.gfa");
-        graph.dump_gfa(in_dir + to_string(loc_.id) + ".nodes.gfa", true);
+        graph.dump_gfa(o_prefix + "." + to_string(loc_.id) + ".spaths.gfa");
+        graph.dump_gfa(o_prefix + "." + to_string(loc_.id) + ".nodes.gfa", true);
     }
 
     vector<const SPath*> best_path;
@@ -1662,14 +1667,29 @@ Clocks& Clocks::operator/= (double d) {
 
 const string help_string = string() +
         prog_name + " " + VERSION  + "\n" +
-        prog_name + " -P in_dir\n"
+        prog_name + " -P stacks_dir\n" +
+        prog_name + " -B bam_file -O out_dir\n" +
         "\n"
+        "De novo mode:\n"
         "  -P: input directory\n"
         "  -b: batch ID (default: guess)\n"
+        "\n"
         "  The input directory must contain a 'batch_X.catalog.bam' file, that\n"
-        "  the user should generate after running tsv2bam with e.g.:\n"
+        "  the user should generate after running ustacks, cstacks, sstacks and\n"
+        "  tsv2bam with e.g.:\n"
         "  \"samtools merge ./batch_1.catalog.bam ./*.matches.bam\"\n"
         "\n"
+        "Reference-based mode:\n"
+        "  -B: input BAM file\n"
+        "  -O: output directory\n"
+        "\n"
+        "  The input BAM file should (i) be sorted by coordinate and (ii) comprise\n"
+        "  all aligned reads for all samples, with reads assigned to samples using\n"
+        "  BAM \"reads groups\" (gstacks uses the SN/sample name field). Please\n"
+        "  refer to the gstacks manual page for information about how to generate\n"
+        "  such a BAM file with Samtools, and examples.\n"
+        "\n"
+        "Shared options:\n"
         "  -t,--threads: number of threads to use (default: 1)\n"
         "  --details: write a more detailed output\n"
         "  --ignore-pe-reads: ignore paired-end reads even if present in the input\n"
@@ -1714,6 +1734,8 @@ try {
         {"quiet",        no_argument,       NULL,  'q'},
         {"in-dir",       required_argument, NULL,  'P'},
         {"batch-id",     required_argument, NULL,  'b'},
+        {"in-bam",       required_argument, NULL,  'B'},
+        {"out-dir",      required_argument, NULL,  'O'},
         {"threads",      required_argument, NULL,  't'},
         {"model",        required_argument, NULL,  1006},
         {"gt-alpha",     required_argument, NULL,  1005},
@@ -1734,6 +1756,9 @@ try {
         {0, 0, 0, 0}
     };
 
+    string in_dir;
+    string out_dir;
+    int batch_id = -1;
     double gt_alpha = 0.05;
     double var_alpha = 0.05;
 
@@ -1741,7 +1766,7 @@ try {
     int long_options_i;
     while (true) {
 
-        c = getopt_long(argc, argv, "hqP:b:W:t:", long_options, &long_options_i);
+        c = getopt_long(argc, argv, "hqP:b:B:O:W:t:", long_options, &long_options_i);
 
         if (c == -1)
             break;
@@ -1763,6 +1788,12 @@ try {
             break;
         case 'b':
             batch_id = atoi(optarg);
+            break;
+        case 'B':
+            in_bam = optarg;
+            break;
+        case 'O':
+            out_dir = optarg;
             break;
         case 1006: //model
             model_type = parse_model_type(optarg);
@@ -1839,6 +1870,19 @@ try {
         bad_args();
     }
 
+    if (in_dir.empty() == in_bam.empty() == true) {
+        cerr << "Error: Please specify -P or -B.\n";
+        bad_args();
+    } else if (in_dir.empty() == (in_bam.empty() && out_dir.empty()) == false) {
+        cerr << "Error: Please specify one of -P or -B/-O, not both.\n";
+        bad_args();
+    }
+
+    if (!in_bam.empty() && out_dir.empty()) {
+        cerr << "Error: Please specify an output directory (-O).\n";
+        bad_args();
+    }
+
     switch (model_type) {
     case snp:        model.reset(new MultinomialModel(gt_alpha)); break;
     case marukihigh: model.reset(new MarukiHighModel(gt_alpha, var_alpha));  break;
@@ -1850,20 +1894,31 @@ try {
     }
 
     // Process arguments.
-    if (in_dir.back() != '/')
-        in_dir += '/';
+    input_type = in_dir.empty() ? GStacksInputT::refbased : GStacksInputT::denovo;
 
-    if (batch_id < 0) {
-        vector<int> cat_ids = find_catalogs(in_dir);
-        if (cat_ids.size() == 1) {
-            batch_id = cat_ids[0];
-        } else if (cat_ids.empty()) {
-            cerr << "Error: Unable to find a catalog in '" << in_dir << "'.\n";
-            bad_args();
-        } else {
-            cerr << "Error: Input directory contains several catalogs, please specify -b.\n";
-            bad_args();
+    if (input_type == GStacksInputT::refbased) {
+        if (in_dir.back() != '/')
+            in_dir += '/';
+        if (batch_id < 0) {
+            vector<int> cat_ids = find_catalogs(in_dir);
+            if (cat_ids.size() == 1) {
+                batch_id = cat_ids[0];
+            } else if (cat_ids.empty()) {
+                cerr << "Error: Unable to find a catalog in '" << in_dir << "'.\n";
+                bad_args();
+            } else {
+                cerr << "Error: Input directory contains several catalogs, please specify -b.\n";
+                bad_args();
+            }
         }
+        in_bam = in_dir + "batch_" + to_string(batch_id) + ".catalog.bam";
+        o_prefix = in_dir + "batch_" + to_string(batch_id) + "." + prog_name;
+
+    } else {
+        if (out_dir.back() != '/')
+            out_dir += '/';
+        o_prefix = out_dir + prog_name;
+        check_or_mk_dir(out_dir);
     }
 
 } catch (std::invalid_argument&) {
@@ -1873,8 +1928,9 @@ try {
 
 void report_options(ostream& os) {
     os << "Configuration for this run:\n"
-       << "  Input directory: '" << in_dir << "'\n"
-       << "  Batch ID: " << batch_id << "\n"
+       << "  Input mode: '" << (input_type == GStacksInputT::denovo ? "de novo" : "reference-based") << "'\n"
+       << "  Input file: '" << in_bam << "'\n"
+       << "  Output prefix: " << o_prefix << "\n"
        << "  Model: " << *model << "\n";
 
     if (ignore_pe_reads)

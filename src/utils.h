@@ -130,6 +130,10 @@ inline
 void check_open (const gzFile fs, const string& path)
     {if (fs == NULL) {cerr << "Error: Failed to gz-open file '" << path << "'.\n"; throw exception();}}
 
+//
+// Check that a directory exists or try to create it.
+//
+void check_or_mk_dir(const string& path);
 
 //
 // Timing routine "gettime".

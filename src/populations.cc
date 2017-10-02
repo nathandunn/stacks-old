@@ -24,10 +24,6 @@
 //
 #include <cctype>
 
-#include <dirent.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-
 #include "export_formats.h"
 #include "populations.h"
 
@@ -3894,24 +3890,7 @@ hap_compare(const pair<string, int>& a, const pair<string, int>& b)
 void
 open_log(ofstream &log_fh)
 {
-    struct stat out_path_stat;
-
-    if (stat(out_path.substr(0, out_path.length()-1).c_str(), &out_path_stat) == 0) {
-        //
-        // Path exists, check that it is a directory
-        //
-        if (!S_ISDIR(out_path_stat.st_mode)) {
-            cerr << "Error: '" << out_path.substr(0, out_path.length()-1) << "' is not a directory.\n";
-            throw exception();
-        }
-
-    } else if (mkdir(out_path.c_str(), ACCESSPERMS) != 0) {
-        //
-        // Failed to create the directory.
-        //
-        cerr << "Error: Failed to create directory '" << out_path << "'.\n";
-        throw exception();
-    }
+    check_or_mk_dir(out_path);
 
     string log_path = out_path + out_prefix + ".log";
     log_fh.open(log_path.c_str(), ofstream::out);
