@@ -10,7 +10,9 @@
 void parse_command_line(int argc, char* argv[]);
 void report_options(ostream& os);
 
-//
+enum class GStacksInputT {unknown, denovo, refbased};
+
+ //
 // PhasedHet & PhaseSet
 // ----------
 //

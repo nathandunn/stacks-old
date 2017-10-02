@@ -28,6 +28,10 @@
 
 #include <regex>
 
+#include <dirent.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
 #include "utils.h"
 
 using namespace std;
@@ -330,6 +334,33 @@ bool compare_pair_haplotype_rev(pair<string, double> a, pair<string, double> b) 
 
 bool compare_str_len(string a, string b) {
     return (a.length() < b.length());
+}
+
+void check_or_mk_dir(const string& path) {
+    string path_stripped;
+    const string* path_p = &path;
+    if (path.back() == '/') {
+        path_stripped = path;
+        path_stripped.pop_back();
+        path_p = &path_stripped;
+    }
+
+    struct stat s;
+    if (stat(path_p->c_str(), &s) == 0) {
+        //
+        // Path exists, check that it is a directory
+        //
+        if (!S_ISDIR(s.st_mode)) {
+            cerr << "Error: '" << *path_p << "' is not a directory.\n";
+            throw exception();
+        }
+    } else if (mkdir(path_p->c_str(), ACCESSPERMS) != 0) {
+        //
+        // Failed to create the directory.
+        //
+        cerr << "Error: Failed to create directory '" << *path_p << "'.\n";
+        throw exception();
+    }    
 }
 
 VersatileLineReader::VersatileLineReader()
