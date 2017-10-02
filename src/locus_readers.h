@@ -17,12 +17,13 @@ class BamCLocReader {
     int32_t loc_i_; // Index of the next locus (chromosome). Incremented by read_one_locus().
 
 public:
-    BamCLocReader(const string& bam_path);
+    BamCLocReader(Bam** bam_f);
     ~BamCLocReader() {if (bam_f_) delete bam_f_;}
 
+    const Bam* bam_f() const {return bam_f_;}
     size_t n_loci() const {return bam_f_->h().n_ref_chroms();}
-    const MetaPopInfo& mpopi() const {return mpopi_;}
     int target2id(size_t target_i) const {return atoi(bam_f_->h().chrom_str(target_i));}
+    const MetaPopInfo& mpopi() const {return mpopi_;}
 
     // Reads one locus. Returns false on EOF.
     bool read_one_locus(CLocReadSet& readset);
@@ -50,15 +51,15 @@ class VcfCLocReader {
 //
 
 inline
-BamCLocReader::BamCLocReader(const string& bam_path)
-        : bam_f_(NULL),
+BamCLocReader::BamCLocReader(Bam** bam_f)
+        : bam_f_(*bam_f),
           eof_(false),
           mpopi_(),
           rg_to_sample_(),
           loc_i_(-1)
         {
 
-    bam_f_ = new Bam(bam_path.c_str());
+    *bam_f = NULL;
 
     //
     // Create the MetaPopInfo object from the header.
@@ -174,10 +175,10 @@ BamCLocReader::BamCLocReader(const string& bam_path)
     // Read the very first record.
     //
     if (!bam_f_->next_record()) {
-        cerr << "Error: No records in BAM file '" << bam_path << "'.\n";
+        cerr << "Error: No records in BAM file '" << bam_f_->path << "'.\n";
         throw exception();
     } else if (bam_f_->r().is_unmapped()) {
-        cerr << "Error: BAM file '" << bam_path << "' unexpectedly contains unmapped records.\n";
+        cerr << "Error: BAM file '" << bam_f_->path << "' unexpectedly contains unmapped records.\n";
         throw exception();
     }
 }

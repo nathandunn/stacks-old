@@ -49,8 +49,23 @@ unique_ptr<LogAlterator> logger;
 gzFile o_gzfasta_f = NULL;
 unique_ptr<VcfWriter> o_vcf_f;
 unique_ptr<VersatileWriter> o_details_f;
+
 ofstream o_aln_f;
 ofstream o_hapgraphs_f;
+const char o_aln_header[] =
+    "# This prints observed read haplotypes:\n"
+    "# show_loc() { loc=$1; cat ${RY_DIR:-.}/batch_1.gstacks.alns | sed -n \"/^END $loc\\b/ q; /^BEGIN $loc\\b/,$ p\" | tail -n+2; }\n"
+    "# snp_cols() { loc=$1; zcat ${RY_DIR:-.}/batch_1.gstacks.vcf.gz | awk \"\\$1==$loc; \\$1>$loc {exit}\" | awk '$5!=\".\"' | cut -f2 | paste -sd ','; }\n"
+    "# show_haps() { loc=$1; cols=$2; spl=$3; show_loc $loc | grep \"\\b$spl\\b\" | cut -f3 | cut -c \"$cols\" | sort; }\n"
+    "# true_loci() { loc=$1; spl=$2; show_loc $loc | grep \"\\b$spl\\b\" | grep -v ref | cut -d: -f1 | sort -u; }\n"
+    ;
+const char o_hapgraphs_header[] =
+    "# This prints observed read haplotypes:\n"
+    "# show_loc() { loc=$1; cat ${RY_DIR:-.}/batch_1.gstacks.alns | sed -n \"/^END $loc\\b/ q; /^BEGIN $loc\\b/,$ p\" | tail -n+2; }\n"
+    "# snp_cols() { loc=$1; zcat ${RY_DIR:-.}/batch_1.gstacks.vcf.gz | awk \"\\$1==$loc; \\$1>$loc {exit}\" | awk '$5!=\".\"' | cut -f2 | paste -sd ','; }\n"
+    "# show_haps() { loc=$1; cols=$2; spl=$3; show_loc $loc | grep \"\\b$spl\\b\" | cut -f3 | cut -c \"$cols\" | sort; }\n"
+    "# true_loci() { loc=$1; spl=$2; show_loc $loc | grep \"\\b$spl\\b\" | grep -v ref | cut -d: -f1 | sort -u; }\n"
+    ;
 
 //
 // main
@@ -66,12 +81,12 @@ try {
     // Parse arguments.
     //
     parse_command_line(argc, argv);
+    string o_prefix = in_dir + "batch_" + to_string(batch_id) + "." + prog_name;
 
     //
     // Open the log.
     //
-    string lg_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".log";
-    logger.reset(new LogAlterator(lg_path, quiet, argc, argv));
+    logger.reset(new LogAlterator(o_prefix + ".log", quiet, argc, argv));
     report_options(cout);
     cout << "\n" << flush;
 
@@ -85,49 +100,37 @@ try {
     //
     // Open the BAM file and parse the header.
     //
-    BamCLocReader bam_fh (in_dir + "batch_" + to_string(batch_id) + ".catalog.bam");
+    Bam* bam_f_ptr = new Bam((in_dir + "batch_" + to_string(batch_id) + ".catalog.bam").c_str());
+    BamCLocReader bam_fh (&bam_f_ptr);
 
     //
     // Open the output files.
     //
-    string o_gzfasta_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".fa.gz";
+    string o_gzfasta_path = o_prefix + ".fa.gz";
     o_gzfasta_f = gzopen(o_gzfasta_path.c_str(), "wb");
     check_open(o_gzfasta_f, o_gzfasta_path);
 
-    string o_vcf_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".vcf.gz";
     VcfHeader vcf_header;
     vcf_header.add_std_meta();
     for(auto& s : bam_fh.mpopi().samples())
         vcf_header.add_sample(s.name);
-    o_vcf_f.reset(new VcfWriter(o_vcf_path, move(vcf_header)));
+    o_vcf_f.reset(new VcfWriter(o_prefix + ".vcf.gz", move(vcf_header)));
 
-    if (detailed_output) {
-        string o_details_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".details.gz";
-        o_details_f.reset(new VersatileWriter(o_details_path));
-    }
+    if (detailed_output)
+        o_details_f.reset(new VersatileWriter(o_prefix + ".details.gz"));
 
     if (dbg_write_alns) {
-        string o_aln_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".alns";
+        string o_aln_path = o_prefix + ".alns";
         o_aln_f.open(o_aln_path);
         check_open(o_aln_f, o_aln_path);
-        o_aln_f <<
-            "# This prints observed read haplotypes:\n"
-            "# show_loc() { loc=$1; cat ${RY_DIR:-.}/batch_1.gstacks.alns | sed -n \"/^END $loc\\b/ q; /^BEGIN $loc\\b/,$ p\" | tail -n+2; }\n"
-            "# snp_cols() { loc=$1; zcat ${RY_DIR:-.}/batch_1.gstacks.vcf.gz | awk \"\\$1==$loc; \\$1>$loc {exit}\" | awk '$5!=\".\"' | cut -f2 | paste -sd ','; }\n"
-            "# show_haps() { loc=$1; cols=$2; spl=$3; show_loc $loc | grep \"\\b$spl\\b\" | cut -f3 | cut -c \"$cols\" | sort; }\n"
-            "# true_loci() { loc=$1; spl=$2; show_loc $loc | grep \"\\b$spl\\b\" | grep -v ref | cut -d: -f1 | sort -u; }\n"
-            ;
+        o_aln_f << o_aln_header;
     }
 
     if (dbg_write_hapgraphs) {
-        string o_hapgraphs_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".hapgraphs.dot";
+        string o_hapgraphs_path = o_prefix + ".hapgraphs.dot";
         o_hapgraphs_f.open(o_hapgraphs_path);
         check_open(o_hapgraphs_f, o_hapgraphs_path);
-        o_hapgraphs_f << "# dot -Tpdf -O batch_1.gstacks.hapgraphs.dot\n"
-                      << "# loc=371\n"
-                      << "# { g=batch_1.gstacks.hapgraphs.dot; sed -n '0,/^subgraph/p' $g | head -n-1; sed -n \"/^subgraph cluster_loc$loc\\b/,/^}/p\" $g; echo \\}; } | dot -Tpdf -o haps.$loc.pdf\n"
-                      << "graph {\n"
-                      << "edge[color=\"grey60\",fontsize=12,labeljust=\"l\"];\n";
+        o_hapgraphs_f << o_hapgraphs_header;
     }
 
     //
