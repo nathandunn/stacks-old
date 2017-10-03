@@ -106,7 +106,8 @@ public:
     string o_vcf;
     string o_fa;
     string o_details;
-
+    stringstream details_ss;
+    
     void clear();
 };
 
@@ -117,10 +118,11 @@ public:
 //
 class LocusProcessor {
 public:
-    LocusProcessor() : stats_(), loc_(), details_ss_() {}
+    LocusProcessor() : stats_(), loc_() {}
 
     // Process a locus.
-    void process(CLocReadSet&& loc);
+    void process(CLocReadSet& loc);
+    void process(CLocAlnSet& aln_loc);
 
     // Access the output. Statistics & movable fasta/vcf per-locus text outputs.
     const ProcessingStats& stats() const {return stats_;}
@@ -131,9 +133,6 @@ public:
 private:
     ProcessingStats stats_;
     mutable LocData loc_;
-    mutable stringstream details_ss_;
-
-    string o_fa_;
 
     string assemble_contig(const vector<const DNASeq4*>& seqs);
     bool add_read_to_aln(
@@ -146,6 +145,11 @@ private:
 
     int align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 query, AlignRes &aln_res) const;
     int find_locus_overlap(SuffixTree *st, DNASeq4 se_consensus) const;
+
+    DNASeq4 build_consensus(
+            const vector<SiteCounts>& depths,
+            const vector<SiteCall>& calls
+            ) const;
 
     // For each sample, phase heterozygous SNPs.
     vector<map<size_t,PhasedHet>> phase_hets (

@@ -104,22 +104,11 @@ try {
     #endif
 
     //
-    // Parse the BAM header.
-    //
-    BamCLocReader bam_fh (&bam_f_ptr);
-
-    //
-    // Open the output files.
+    // Open the output files (except the VCF file because we need the mpopi).
     //
     string o_gzfasta_path = o_prefix + ".fa.gz";
     o_gzfasta_f = gzopen(o_gzfasta_path.c_str(), "wb");
     check_open(o_gzfasta_f, o_gzfasta_path);
-
-    VcfHeader vcf_header;
-    vcf_header.add_std_meta();
-    for(auto& s : bam_fh.mpopi().samples())
-        vcf_header.add_sample(s.name);
-    o_vcf_f.reset(new VcfWriter(o_prefix + ".vcf.gz", move(vcf_header)));
 
     if (detailed_output)
         o_details_f.reset(new VersatileWriter(o_prefix + ".details.gz"));
@@ -143,7 +132,7 @@ try {
     //
     ProcessingStats stats {};
     cout << "Processing all loci...\n" << flush;
-    const size_t n_loci = bam_fh.n_loci();
+    const size_t n_loci = bam_f_ptr->h().n_ref_chroms();
     ProgressMeter progress (cout, n_loci);
 
     // For parallelization.
@@ -162,101 +151,114 @@ try {
     size_t max_size_before_write = 0;
     double actually_writing_vcf = 0;
 
-    #pragma omp parallel
-    {
-        LocusProcessor loc_proc;
-        CLocReadSet loc (bam_fh.mpopi());
-        Clocks& clocks = clocks_all[omp_get_thread_num()];
-        #pragma omp for schedule(dynamic)
-        for (size_t i=0; i<n_loci; ++i) {
-            if (omp_return != 0)
-                continue;
-            try {
-                double clock_loop_start = gettm();
-                double clocking = gettm() - clock_loop_start;
+    if (input_type == GStacksInputT::denovo) {
+        // Initialize the CLoc reader
+        BamCLocReader bam_cloc_reader (&bam_f_ptr);
 
-                #pragma omp critical(read)
-                bam_fh.read_one_locus(loc);
-                double clock_read = gettm();
+        // Open the VCF file.
+        VcfHeader vcf_header;
+        vcf_header.add_std_meta();
+        for(auto& s : bam_cloc_reader.mpopi().samples())
+            vcf_header.add_sample(s.name);
+        o_vcf_f.reset(new VcfWriter(o_prefix + ".vcf.gz", move(vcf_header)));    
+    
+        #pragma omp parallel
+        {
+            LocusProcessor loc_proc;
+            CLocReadSet loc (bam_cloc_reader.mpopi());
+            Clocks& clocks = clocks_all[omp_get_thread_num()];
+            #pragma omp for schedule(dynamic)
+            for (size_t i=0; i<n_loci; ++i) {
+                if (omp_return != 0)
+                    continue;
+                try {
+                    double clock_loop_start = gettm();
+                    double clocking = gettm() - clock_loop_start;
 
-                size_t loc_i = loc.bam_i();
-                loc_proc.process(move(loc));
-                double clock_process = gettm();
+                    #pragma omp critical(read)
+                    bam_cloc_reader.read_one_locus(loc);
+                    double clock_read = gettm();
 
-                #pragma omp critical(write_fa)
-                {
-                    for (size_t i=next_fa_to_write+fa_outputs.size(); i<=loc_i; ++i)
-                        fa_outputs.push_back( {false, string()} );
-                    fa_outputs[loc_i - next_fa_to_write] = {true, move(loc_proc.fasta_out())};
+                    size_t loc_i = loc.bam_i();
+                    loc_proc.process(loc);
+                    double clock_process = gettm();
 
-                    while (!fa_outputs.empty() && fa_outputs.front().first) {
-                        const string& fa = fa_outputs.front().second;
-                        if (!fa.empty() && gzwrite(o_gzfasta_f, fa.c_str(), fa.length()) <= 0)
-                            throw std::ios::failure("gzwrite");
-                        fa_outputs.pop_front();
-                        ++next_fa_to_write;
-                    }
-                }
-                double clock_write_fa = gettm();
-
-                #pragma omp critical(write_vcf)
-                {
-                    for (size_t i=next_vcf_to_write+vcf_outputs.size(); i<=loc_i; ++i)
-                        vcf_outputs.push_back( {false, string()} );
-                    vcf_outputs[loc_i - next_vcf_to_write] = {true, move(loc_proc.vcf_out()) };
-
-                    if (vcf_outputs.front().first) {
-                        ++n_writes;
-                        if (vcf_outputs.size() > max_size_before_write)
-                            max_size_before_write = vcf_outputs.size();
-                        double start_writing = gettm();
-                        do {
-                            o_vcf_f->file() << vcf_outputs.front().second;
-                            vcf_outputs.pop_front();
-                            ++next_vcf_to_write;
-                            ++progress;
-                        } while (!vcf_outputs.empty() && vcf_outputs.front().first);
-                        actually_writing_vcf += gettm() - start_writing - clocking;
-                    }
-                }
-                double clock_write_vcf = gettm();
-
-                if (detailed_output) {
-                    #pragma omp critical(write_details)
+                    #pragma omp critical(write_fa)
                     {
-                        for (size_t i=next_det_to_write+det_outputs.size(); i<=loc_i; ++i)
-                            det_outputs.push_back( {false, string()} );
-                        det_outputs[loc_i - next_det_to_write] = {true, move(loc_proc.details_out())};
+                        for (size_t i=next_fa_to_write+fa_outputs.size(); i<=loc_i; ++i)
+                            fa_outputs.push_back( {false, string()} );
+                        fa_outputs[loc_i - next_fa_to_write] = {true, move(loc_proc.fasta_out())};
 
-                        while (!det_outputs.empty() && det_outputs.front().first) {
-                            *o_details_f << det_outputs.front().second;
-                            det_outputs.pop_front();
-                            ++next_det_to_write;
+                        while (!fa_outputs.empty() && fa_outputs.front().first) {
+                            const string& fa = fa_outputs.front().second;
+                            if (!fa.empty() && gzwrite(o_gzfasta_f, fa.c_str(), fa.length()) <= 0)
+                                throw std::ios::failure("gzwrite");
+                            fa_outputs.pop_front();
+                            ++next_fa_to_write;
                         }
                     }
+                    double clock_write_fa = gettm();
+
+                    #pragma omp critical(write_vcf)
+                    {
+                        for (size_t i=next_vcf_to_write+vcf_outputs.size(); i<=loc_i; ++i)
+                            vcf_outputs.push_back( {false, string()} );
+                        vcf_outputs[loc_i - next_vcf_to_write] = {true, move(loc_proc.vcf_out()) };
+
+                        if (vcf_outputs.front().first) {
+                            ++n_writes;
+                            if (vcf_outputs.size() > max_size_before_write)
+                                max_size_before_write = vcf_outputs.size();
+                            double start_writing = gettm();
+                            do {
+                                o_vcf_f->file() << vcf_outputs.front().second;
+                                vcf_outputs.pop_front();
+                                ++next_vcf_to_write;
+                                ++progress;
+                            } while (!vcf_outputs.empty() && vcf_outputs.front().first);
+                            actually_writing_vcf += gettm() - start_writing - clocking;
+                        }
+                    }
+                    double clock_write_vcf = gettm();
+
+                    if (detailed_output) {
+                        #pragma omp critical(write_details)
+                        {
+                            for (size_t i=next_det_to_write+det_outputs.size(); i<=loc_i; ++i)
+                                det_outputs.push_back( {false, string()} );
+                            det_outputs[loc_i - next_det_to_write] = {true, move(loc_proc.details_out())};
+
+                            while (!det_outputs.empty() && det_outputs.front().first) {
+                                *o_details_f << det_outputs.front().second;
+                                det_outputs.pop_front();
+                                ++next_det_to_write;
+                            }
+                        }
+                    }
+                    double clock_write_details = gettm();
+
+                    clocks.clocking        += 7 * clocking;
+                    clocks.reading         += clock_read       - clock_loop_start - clocking;
+                    clocks.processing      += clock_process    - clock_read - clocking;
+                    clocks.writing_fa      += clock_write_fa   - clock_process - clocking;
+                    clocks.writing_vcf     += clock_write_vcf  - clock_write_fa - clocking;
+                    clocks.writing_details += clock_write_details  - clock_write_vcf - clocking;
+
+                } catch (exception& e) {
+                    #pragma omp critical
+                    omp_return = stacks_handle_exceptions(e);
                 }
-                double clock_write_details = gettm();
-
-                clocks.clocking        += 7 * clocking;
-                clocks.reading         += clock_read       - clock_loop_start - clocking;
-                clocks.processing      += clock_process    - clock_read - clocking;
-                clocks.writing_fa      += clock_write_fa   - clock_process - clocking;
-                clocks.writing_vcf     += clock_write_vcf  - clock_write_fa - clocking;
-                clocks.writing_details += clock_write_details  - clock_write_vcf - clocking;
-
-            } catch (exception& e) {
-                #pragma omp critical
-                omp_return = stacks_handle_exceptions(e);
             }
+
+            #pragma omp critical
+            stats += loc_proc.stats();
         }
-
-        #pragma omp critical
-        stats += loc_proc.stats();
-    }
-
-    if (omp_return != 0)
-        return omp_return;
-    progress.done();
+        if (omp_return != 0)
+            return omp_return;
+        progress.done();
+    } else if (input_type == GStacksInputT::refbased) {
+        // TODO
+    } else DOES_NOT_HAPPEN;
 
     //
     // Report statistics on the analysis.
@@ -335,6 +337,7 @@ try {
     return 0;
 
 } catch (exception& e) {
+    model.reset();
     return stacks_handle_exceptions(e);
 }
 }
@@ -389,6 +392,8 @@ void LocData::clear() {
     o_vcf.clear();
     o_fa.clear();
     o_details.clear();
+    details_ss.clear();
+    details_ss.str(string());
 }
 
 //
@@ -397,7 +402,7 @@ void LocData::clear() {
 //
 
 void
-LocusProcessor::process(CLocReadSet&& loc)
+LocusProcessor::process(CLocReadSet& loc)
 {
     if (loc.reads().empty())
         return;
@@ -407,17 +412,15 @@ LocusProcessor::process(CLocReadSet&& loc)
     this->loc_.id  =  loc.id();
     this->loc_.pos =  loc.pos();
     this->loc_.mpopi   = &loc.mpopi();
-
-    if (detailed_output) {
-        details_ss_.clear();
-        details_ss_.str(string());
-        details_ss_ << "BEGIN " << loc_.id << "\n";
-    }
+    if (detailed_output)
+        loc_.details_ss << "BEGIN " << loc_.id << "\n";
 
     //
     // Build the alignment matrix.
     //
-    CLocAlnSet aln_loc (loc_.id, loc_.pos, loc_.mpopi);
+    CLocAlnSet aln_loc;
+    aln_loc.reinit(loc.id(), loc.pos(), &loc.mpopi());
+
     if (dbg_true_alns) {
         from_true_alignments(aln_loc, move(loc), true);
     } else if (dbg_true_reference) {
@@ -451,9 +454,9 @@ LocusProcessor::process(CLocReadSet&& loc)
                 break;
 
             // Align each read to the contig.
-            CLocAlnSet pe_aln_loc (loc_.id, loc_.pos, loc_.mpopi);
+            CLocAlnSet pe_aln_loc;
+            pe_aln_loc.reinit(loc_.id, loc_.pos, loc_.mpopi);
             pe_aln_loc.ref(DNASeq4(ctg));
-            this->stats_.n_tot_reads += loc.pe_reads().size();
 
             //
             // Build a SuffixTree of the reference sequence for this locus.
@@ -486,23 +489,24 @@ LocusProcessor::process(CLocReadSet&& loc)
             }
 
             if (detailed_output)
-                details_ss_ << "pe_ctg"
+                loc_.details_ss << "pe_ctg"
                             << "\tolap=" << overlap
                             << '\t' << ctg
                             << '\n';
 
+            this->stats_.n_tot_reads += loc.pe_reads().size();
             GappedAln  *aligner = new GappedAln(loc.pe_reads().front().seq.length(), pe_aln_loc.ref().length(), true);
             AlignRes    aln_res;
             for (SRead& r : loc.pe_reads()) {
                 if (detailed_output)
-                    details_ss_ << "pe_read"
+                    loc_.details_ss << "pe_read"
                                 << '\t' << r.name
                                 << '\t' << loc_.mpopi->samples()[r.sample].name
                                 << '\t' << r.seq << '\n';
                 if (add_read_to_aln(pe_aln_loc, aln_res, move(r), aligner, stree)) {
                     this->stats_.n_aln_reads++;
                     if (detailed_output)
-                        details_ss_ << "pe_aln_local"
+                        loc_.details_ss << "pe_aln_local"
                                     << '\t' << pe_aln_loc.reads().back().name
                                     << '\t' << aln_res.subj_pos + 1
                                     << '\t' << aln_res.cigar
@@ -519,7 +523,7 @@ LocusProcessor::process(CLocReadSet&& loc)
             if (detailed_output)
                 for (auto& r : aln_loc.reads())
                     if (r.is_read2())
-                        details_ss_ << "pe_aln_global"
+                        loc_.details_ss << "pe_aln_global"
                                     << '\t' << r.name
                                     << '\t' << r.cigar
                                     << '\n';
@@ -529,6 +533,25 @@ LocusProcessor::process(CLocReadSet&& loc)
         } while (false);
     }
     loc.clear();
+
+    process(aln_loc);
+}
+
+void
+LocusProcessor::process(CLocAlnSet& aln_loc)
+{
+    if (input_type == GStacksInputT::denovo) {
+        // Called from process(CLocReadSet&).
+        assert(this->loc_.id == aln_loc.id());
+    } else {
+        ++stats_.n_nonempty_loci;
+        this->loc_.clear();
+        this->loc_.id = aln_loc.id();
+        this->loc_.pos = aln_loc.pos();
+        this->loc_.mpopi = &aln_loc.mpopi();
+        if (detailed_output)
+            this->loc_.details_ss << "BEGIN " << loc_.id << "\n";
+    }
 
     if (dbg_write_alns)
         #pragma omp critical
@@ -541,28 +564,13 @@ LocusProcessor::process(CLocReadSet&& loc)
     //
     vector<SiteCounts> depths;
     vector<SiteCall> calls;
-    DNASeq4 consensus (aln_loc.ref().length());
+    depths.reserve(aln_loc.ref().length());
     calls.reserve(aln_loc.ref().length());
-    size_t i = 0;
-    for (CLocAlnSet::site_iterator site (aln_loc); bool(site); ++site, ++i) {
+    for (CLocAlnSet::site_iterator site (aln_loc); bool(site); ++site) {
         depths.push_back(site.counts());
         calls.push_back(model->call(depths.back()));
-
-        if (!calls.back().alleles().empty()) {
-            consensus.set(i, calls.back().most_frequent_allele());
-        } else {
-            // The model returned a null call.
-            // (For the high/low Maruki" models this actually only happens when
-            // there is no coverage; for the Hohenlohe model it may also happen
-            // when there isn't a single significant call.)
-            pair<size_t,Nt2> best_nt = depths.back().tot.sorted()[0];
-            if (best_nt.first > 0)
-                consensus.set(i, Nt4(best_nt.second));
-            else
-                consensus.set(i, Nt4::n);
-        }
     }
-    aln_loc.ref(move(consensus));
+    aln_loc.ref(build_consensus(depths, calls));
 
     // Call haplotypes.
     vector<map<size_t,PhasedHet>> phase_data;
@@ -576,8 +584,8 @@ LocusProcessor::process(CLocReadSet&& loc)
     write_one_locus(aln_loc, depths, calls, phase_data);
 
     if (detailed_output) {
-        details_ss_ << "END " << loc_.id << "\n";
-        loc_.o_details = details_ss_.str();
+        loc_.details_ss << "END " << loc_.id << "\n";
+        loc_.o_details = loc_.details_ss.str();
     }
 }
 
@@ -867,6 +875,30 @@ bool LocusProcessor::add_read_to_aln(
 
     aln_loc.add(SAlnRead(move((Read&)r), move(cigar), r.sample));
     return true;
+}
+
+DNASeq4 LocusProcessor::build_consensus(
+        const vector<SiteCounts>& depths,
+        const vector<SiteCall>& calls
+) const {
+    assert(depths.size() == calls.size());
+    DNASeq4 consensus (depths.size());
+    for (size_t i=0; i<depths.size(); ++i) {
+        if (!calls[i].alleles().empty()) {
+            consensus.set(i, calls[i].most_frequent_allele());
+        } else {
+            // The model returned a null call.
+            // (For the high/low Maruki" models this actually only happens when
+            // there is no coverage; for the Hohenlohe model it may also happen
+            // when there isn't a single significant call.)
+            pair<size_t,Nt2> best_nt = depths[i].tot.sorted()[0];
+            if (best_nt.first > 0)
+                consensus.set(i, Nt4(best_nt.second));
+            else
+                consensus.set(i, Nt4::n);
+        }
+    }
+    return consensus;
 }
 
 vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
@@ -1632,7 +1664,7 @@ void LocusProcessor::using_true_reference(CLocAlnSet& aln_loc, CLocReadSet&& loc
         if (detailed_output)
             for (auto& r : aln_loc.reads())
                 if (r.is_read2())
-                    details_ss_ << "pe_aln_global"
+                    loc_.details_ss << "pe_aln_global"
                                 << '\t' << r.name
                                 << '\t' << r.cigar
                                 << '\n';
