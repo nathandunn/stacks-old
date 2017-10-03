@@ -257,8 +257,99 @@ try {
             return omp_return;
         progress.done();
     } else if (input_type == GStacksInputT::refbased) {
-        // TODO
-    } else DOES_NOT_HAPPEN;
+        // Initialize the CLoc reader
+        BamCLocBuilder bam_cloc_builder (&bam_f_ptr);
+
+        // Open the VCF file.
+        VcfHeader vcf_header;
+        vcf_header.add_std_meta();
+        for(auto& s : bam_cloc_builder.mpopi().samples())
+            vcf_header.add_sample(s.name);
+        o_vcf_f.reset(new VcfWriter(o_prefix + ".vcf.gz", move(vcf_header)));    
+
+        //#pragma omp parallel
+        {
+            LocusProcessor loc_proc;
+            CLocAlnSet aln_loc;
+            Clocks& clocks = clocks_all.front(); //clocks_all[omp_get_thread_num()];
+            for(size_t loc_i=0; true; ++loc_i) {
+                double clock_loop_start = gettm();
+                double clocking = gettm() - clock_loop_start;
+
+                //#pragma omp critical(read)
+                bool rv = bam_cloc_builder.build_one_locus(aln_loc);
+                if (!rv)
+                    break;
+                double clock_read = gettm();
+
+                loc_proc.process(aln_loc);
+                double clock_process = gettm();
+
+                //#pragma omp critical(write_fa)
+                {
+                    for (size_t i=next_fa_to_write+fa_outputs.size(); i<=loc_i; ++i)
+                        fa_outputs.push_back( {false, string()} );
+                    fa_outputs[loc_i - next_fa_to_write] = {true, move(loc_proc.fasta_out())};
+
+                    while (!fa_outputs.empty() && fa_outputs.front().first) {
+                        const string& fa = fa_outputs.front().second;
+                        if (!fa.empty() && gzwrite(o_gzfasta_f, fa.c_str(), fa.length()) <= 0)
+                            throw std::ios::failure("gzwrite");
+                        fa_outputs.pop_front();
+                        ++next_fa_to_write;
+                    }
+                }
+                double clock_write_fa = gettm();
+
+                //#pragma omp critical(write_vcf)
+                {
+                    for (size_t i=next_vcf_to_write+vcf_outputs.size(); i<=loc_i; ++i)
+                        vcf_outputs.push_back( {false, string()} );
+                    vcf_outputs[loc_i - next_vcf_to_write] = {true, move(loc_proc.vcf_out()) };
+
+                    if (vcf_outputs.front().first) {
+                        ++n_writes;
+                        if (vcf_outputs.size() > max_size_before_write)
+                            max_size_before_write = vcf_outputs.size();
+                        double start_writing = gettm();
+                        do {
+                            o_vcf_f->file() << vcf_outputs.front().second;
+                            vcf_outputs.pop_front();
+                            ++next_vcf_to_write;
+                            ++progress;
+                        } while (!vcf_outputs.empty() && vcf_outputs.front().first);
+                        actually_writing_vcf += gettm() - start_writing - clocking;
+                    }
+                }
+                double clock_write_vcf = gettm();
+
+                if (detailed_output) {
+                    //#pragma omp critical(write_details)
+                    {
+                        for (size_t i=next_det_to_write+det_outputs.size(); i<=loc_i; ++i)
+                            det_outputs.push_back( {false, string()} );
+                        det_outputs[loc_i - next_det_to_write] = {true, move(loc_proc.details_out())};
+
+                        while (!det_outputs.empty() && det_outputs.front().first) {
+                            *o_details_f << det_outputs.front().second;
+                            det_outputs.pop_front();
+                            ++next_det_to_write;
+                        }
+                    }
+                }
+                double clock_write_details = gettm();
+
+                clocks.clocking        += 7 * clocking;
+                clocks.reading         += clock_read       - clock_loop_start - clocking;
+                clocks.processing      += clock_process    - clock_read - clocking;
+                clocks.writing_fa      += clock_write_fa   - clock_process - clocking;
+                clocks.writing_vcf     += clock_write_vcf  - clock_write_fa - clocking;
+                clocks.writing_details += clock_write_details  - clock_write_vcf - clocking;
+            }
+
+            stats += loc_proc.stats();            
+        } //omp parallel
+    } else DOES_NOT_HAPPEN; //input_type
 
     //
     // Report statistics on the analysis.
@@ -274,19 +365,22 @@ try {
              << "  " << ph << " loci had phasing issues (" << pct(ph) << ")\n";
 
         if (stats.n_loci_w_pe_reads > 0) {
+            // Report statistics on paired-end reads.
             assert(!ignore_pe_reads);
-            size_t no_pe   = stats.n_loci_no_pe_reads() + stats.n_loci_almost_no_pe_reads;
-            size_t pe_dag  = stats.n_loci_pe_graph_not_dag;
-            size_t pe_good = stats.n_loci_usable_pe_reads();
-            cout << "  " << no_pe << " loci had no or almost no paired-end reads (" << pct(no_pe) << ")\n"
-                 << "  " << pe_dag
-                 << " loci had paired-end reads that couldn't be assembled into a contig (" << pct(pe_dag) << ")\n"
-                 << "  " << pe_good << " loci had usable paired-end reads (" << pct(pe_good) << ")\n"
-                 << stats.n_aln_reads << " reads were aligned out of " << stats.n_tot_reads << " ("
-                 << as_percentage((double) stats.n_aln_reads / (double) stats.n_tot_reads) << "); "
-                 << (double) stats.n_aln_reads / (double) pe_good << " mean reads per locus.\n"
-                 << stats.n_se_pe_loc_overlaps << " loci overlapped between SE locus and PE contig "
-                 << "(mean length of overlap: " << (double) stats.mean_se_pe_loc_overlap / (double) stats.n_se_pe_loc_overlaps << "bp).\n";
+            if (input_type == GStacksInputT::denovo) {
+                size_t no_pe   = stats.n_loci_no_pe_reads() + stats.n_loci_almost_no_pe_reads;
+                size_t pe_dag  = stats.n_loci_pe_graph_not_dag;
+                size_t pe_good = stats.n_loci_usable_pe_reads();
+                cout << "  " << no_pe << " loci had no or almost no paired-end reads (" << pct(no_pe) << ")\n"
+                    << "  " << pe_dag
+                    << " loci had paired-end reads that couldn't be assembled into a contig (" << pct(pe_dag) << ")\n"
+                    << "  " << pe_good << " loci had usable paired-end reads (" << pct(pe_good) << ")\n"
+                    << stats.n_aln_reads << " reads were aligned out of " << stats.n_tot_reads << " ("
+                    << as_percentage((double) stats.n_aln_reads / (double) stats.n_tot_reads) << "); "
+                    << (double) stats.n_aln_reads / (double) pe_good << " mean reads per locus.\n"
+                    << stats.n_se_pe_loc_overlaps << " loci overlapped between SE locus and PE contig "
+                    << "(mean length of overlap: " << (double) stats.mean_se_pe_loc_overlap / (double) stats.n_se_pe_loc_overlaps << "bp).\n";
+            }
         }
         cout << "\n";
 
