@@ -7,6 +7,8 @@
 #include "locus.h"
 #include "Vcf.h"
 
+void build_mpopi(MetaPopInfo& mpopi, map<string, size_t>& rg_to_sample, const Bam& bam_f);
+
 class BamCLocReader {
     Bam* bam_f_;
     bool eof_;
@@ -30,19 +32,34 @@ public:
 };
 
 class BamCLocBuilder {
-    Bam* bam_f_;
-    MetaPopInfo mpopi_;
-    map<string, size_t> rg_to_sample_;
-
 public:
     BamCLocBuilder(Bam** bam_f);
     ~BamCLocBuilder() {if (bam_f_) delete bam_f_;}
 
-    const Bam* bam_f() const {return bam_f_;}
-    const MetaPopInfo& mpopi() const {return mpopi_;}
-
     // Reads one locus. Returns false on EOF.
     bool build_one_locus(CLocAlnSet& readset);    
+    
+    const MetaPopInfo& mpopi() const {return mpopi_;}
+    const Bam* bam_f() const {return bam_f_;}
+
+private:
+    static const size_t max_insert_refsize_ = 2000;
+    static const size_t min_reads_per_sample_ = 3;
+
+    Bam* bam_f_;
+    MetaPopInfo mpopi_;
+    map<string, size_t> rg_to_sample_;
+    size_t n_loci_built_;
+
+    bool eof_;
+    pair<PhyLoc,SAlnRead> next_record_;
+    bool read_and_parse_next_record(); // Calls `bam_f_->next_record()`, then sets `next_record_`. Returns false on EOF.
+
+    // Buffers to store the reads of the sliding window.
+    bool fill_window();
+    map<PhyLoc,vector<SAlnRead>> fw_reads_by_5prime_pos;
+    //std::multimap<PhyLoc,SAlnRead> pe_reads_by_5prime_pos;
+    //map<const char*,std::multimap<PhyLoc,SAlnRead>::iterator, LessCStrs> pe_reads_by_name;
 };
 
 class VcfCLocReader {
@@ -67,6 +84,80 @@ class VcfCLocReader {
 //
 
 inline
+void
+build_mpopi(
+        MetaPopInfo& mpopi,
+        map<string, size_t>& rg_to_sample,
+        const Bam& bam_f
+) {
+    assert(mpopi.samples().empty());
+    assert(rg_to_sample.empty());
+
+    vector<string> rg_ids;
+    vector<string> samples;
+    vector<int> sample_ids;
+
+    // Parse the @RG header lines.
+    const char* p = bam_f.h().text();
+    size_t line = 1;
+    try {
+        while (true) {
+            if (strncmp(p, "@RG\t", 4) == 0) {
+                // Sample line.
+                rg_ids.push_back(string());
+                samples.push_back(string());
+                sample_ids.push_back(-1);
+
+                p += 4;
+                while (*p && *p != '\n') {
+                    const char* q = p;
+                    while (*p && *p != '\n' && *p != '\t')
+                        ++p;
+
+                    if (strncmp(q, "ID:", 3) == 0) {
+                        rg_ids.back() = string(q+3, p);
+                    } else if (strncmp(q, "SM:", 3) == 0) {
+                        samples.back() = string(q+3, p);
+                    } else if (strncmp(q, "id:", 3) == 0) {
+                        char* end;
+                        sample_ids.back() = strtol(q+3, &end, 10);
+                        if (end != p)
+                            throw exception();
+                    }
+                    if (*p == '\t')
+                        ++p;
+                }
+
+                if (rg_ids.back().empty() || samples.back().empty() || sample_ids.back() == -1)
+                    throw exception();
+            }
+
+            p = strchr(p, '\n');
+            if (p == NULL)
+                break;
+            ++p;
+            ++line;
+        }
+    } catch (exception&) {
+        cerr << "Error: Malformed BAM header, at line " << line << ".\n";
+        throw;
+    }
+
+    // Initialize the MetaPopInfo.
+    mpopi.init_names(samples);
+
+    // Set the sample IDs.
+    assert(sample_ids.size() == samples.size());
+    for (size_t s=0; s<samples.size(); ++s)
+        mpopi.set_sample_id(mpopi.get_sample_index(samples[s]),sample_ids[s]);
+
+    // Initialize `rg_to_sample_`.
+    assert(rg_ids.size() == samples.size());
+    for (size_t s=0; s<mpopi.samples().size(); ++s)
+        rg_to_sample[rg_ids[s]] = mpopi.get_sample_index(samples[s]);
+}
+
+inline
 BamCLocReader::BamCLocReader(Bam** bam_f)
         : bam_f_(*bam_f),
           eof_(false),
@@ -80,70 +171,7 @@ BamCLocReader::BamCLocReader(Bam** bam_f)
     //
     // Create the MetaPopInfo object from the header.
     //
-    {
-        vector<string> rg_ids;
-        vector<string> samples;
-        vector<int> sample_ids;
-
-        // Parse the @RG header lines.
-        const char* p = bam_f_->h().text();
-        size_t line = 1;
-        try {
-            while (true) {
-                if (strncmp(p, "@RG\t", 4) == 0) {
-                    // Sample line.
-                    rg_ids.push_back(string());
-                    samples.push_back(string());
-                    sample_ids.push_back(-1);
-
-                    p += 4;
-                    while (*p && *p != '\n') {
-                        const char* q = p;
-                        while (*p && *p != '\n' && *p != '\t')
-                            ++p;
-
-                        if (strncmp(q, "ID:", 3) == 0) {
-                            rg_ids.back() = string(q+3, p);
-                        } else if (strncmp(q, "SM:", 3) == 0) {
-                            samples.back() = string(q+3, p);
-                        } else if (strncmp(q, "id:", 3) == 0) {
-                            char* end;
-                            sample_ids.back() = strtol(q+3, &end, 10);
-                            if (end != p)
-                                throw exception();
-                        }
-                        if (*p == '\t')
-                            ++p;
-                    }
-
-                    if (rg_ids.back().empty() || samples.back().empty() || sample_ids.back() == -1)
-                        throw exception();
-                }
-
-                p = strchr(p, '\n');
-                if (p == NULL)
-                    break;
-                ++p;
-                ++line;
-            }
-        } catch (exception&) {
-            cerr << "Error: Malformed BAM header, at line " << line << ".\n";
-            throw;
-        }
-
-        // Initialize the MetaPopInfo.
-        mpopi_.init_names(samples);
-
-        // Set the sample IDs.
-        assert(sample_ids.size() == samples.size());
-        for (size_t s=0; s<samples.size(); ++s)
-            mpopi_.set_sample_id(mpopi_.get_sample_index(samples[s]),sample_ids[s]);
-
-        // Initialize `rg_to_sample_`.
-        assert(rg_ids.size() == samples.size());
-        for (size_t s=0; s<mpopi_.samples().size(); ++s)
-            rg_to_sample_[rg_ids[s]] = mpopi_.get_sample_index(samples[s]);
-    }
+    build_mpopi(mpopi_, rg_to_sample_, *bam_f_);
 
     //
     // If the first locus has alignment information: this is a ref-based analysis,
@@ -258,6 +286,130 @@ bool BamCLocReader::read_one_locus(CLocReadSet& readset) {
             cerr << "Warning: Some catalog loci do not have any reads in the BAM file.\n";
         }
     }
+    return true;
+}
+
+inline
+BamCLocBuilder::BamCLocBuilder(Bam** bam_f)
+:
+    bam_f_(*bam_f),
+    n_loci_built_(0),
+    eof_(false),
+    next_record_(PhyLoc(), SAlnRead(AlnRead(Read(DNASeq4(), string()), Cigar()), SIZE_MAX))
+{
+    *bam_f = NULL;
+
+    // Create the MetaPopInfo object from the header.
+    build_mpopi(mpopi_, rg_to_sample_, *bam_f_);
+
+    // Read the very first record.
+    if (!read_and_parse_next_record()) {
+        cerr << "Error: No records in BAM file '" << bam_f_->path << "'.\n";
+        throw exception();
+    }
+}
+
+inline
+bool
+BamCLocBuilder::read_and_parse_next_record()
+{
+    if(!bam_f_->next_record())
+        return false;
+
+    const BamRecord& r = bam_f_->r();
+
+    int32_t chrom = r.chrom();
+    int32_t pos = r.pos();
+    strand_type strand = strand_plus;
+    string name = r.qname();
+    Cigar cigar = r.cigar();
+    DNASeq4 seq = r.seq();
+    size_t sample = rg_to_sample_.at(string(r.read_group()));
+
+    if (r.is_rev_compl()) {
+        pos += cigar_length_ref(cigar) - 1;
+        strand = strand_minus;
+        std::reverse(cigar.begin(), cigar.end());
+        seq = seq.rev_compl();
+    }
+
+    next_record_ = {
+        PhyLoc(bam_f_->h().chrom_str(chrom), pos, strand),
+        SAlnRead(AlnRead(Read(move(seq), move(name)), move(cigar)), sample)
+    };
+    return true;
+}
+
+inline
+bool
+BamCLocBuilder::fill_window()
+{
+    if (!eof_) {
+        while (fw_reads_by_5prime_pos.empty()
+                || (strcmp(next_record_.first.chr(), fw_reads_by_5prime_pos.begin()->first.chr()) == 0
+                    && next_record_.first.bp <= fw_reads_by_5prime_pos.begin()->first.bp + max_insert_refsize_)
+                ) {
+
+            vector<SAlnRead>& v = fw_reads_by_5prime_pos.insert(
+                    std::make_pair(next_record_.first, vector<SAlnRead>()) // (`make_pair` is necessary here until c++17.)
+                    ).first->second;
+            v.push_back(move(next_record_.second));
+
+            if (!read_and_parse_next_record()) {
+                eof_ = true;
+                break;
+            }
+        }
+    }
+
+    return !fw_reads_by_5prime_pos.empty();
+}
+
+inline
+bool
+BamCLocBuilder::build_one_locus(CLocAlnSet& aln_loc)
+{
+    aln_loc.clear();
+
+    //
+    // Find the next locus.
+    //
+    while(true) {
+        // Fill the window.
+        if (!fill_window())
+            return false;
+
+        //
+        // Apply filters to the putative locus.
+        //
+        assert(!fw_reads_by_5prime_pos.empty());
+        vector<SAlnRead>& loc_reads = fw_reads_by_5prime_pos.begin()->second;
+
+        // Remove reads from samples that have less that `min_reads_per_sample_` reads.
+        vector<size_t> n_reads_per_sample (mpopi_.samples().size(), 0);
+        for (const SAlnRead& read : loc_reads)
+            ++n_reads_per_sample[read.sample];
+        loc_reads.erase(std::remove_if(
+            loc_reads.begin(), loc_reads.end(),
+            [&n_reads_per_sample] (const SAlnRead& read) {return n_reads_per_sample[read.sample] < min_reads_per_sample_;}
+            ), loc_reads.end());
+
+        if (loc_reads.empty()) {
+            // Discard the locus; regenerate the window and retry.
+            fw_reads_by_5prime_pos.erase(fw_reads_by_5prime_pos.begin());
+            continue;
+        }
+        break;
+    }
+
+    //
+    // Build the locus object.
+    //
+    aln_loc.reinit(n_loci_built_+1, fw_reads_by_5prime_pos.begin()->first, &mpopi_);
+    for (SAlnRead& read : fw_reads_by_5prime_pos.begin()->second)
+        aln_loc.add(move(read));
+    fw_reads_by_5prime_pos.erase(fw_reads_by_5prime_pos.begin());
+    ++n_loci_built_;
     return true;
 }
 
