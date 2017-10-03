@@ -333,6 +333,13 @@ CLocAlnSet::clear() {
     reads_per_sample_.clear();
 }
 
+void CLocAlnSet::reinit(int id, const PhyLoc& aln_pos, const MetaPopInfo* mpopi) {
+    clear();
+    id_ = id;
+    aln_pos_ = aln_pos;
+    mpopi_ = mpopi;
+    reads_per_sample_.resize(mpopi->samples().size());
+}
 
 void
 CLocAlnSet::merge_paired_reads()

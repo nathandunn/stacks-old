@@ -218,8 +218,8 @@ class CLocAlnSet {
     vector<vector<size_t>> reads_per_sample_; // `at(sample)` is a vector of indexes in `reads_`.
 
 public:
-    CLocAlnSet(int id, const PhyLoc& aln_pos, const MetaPopInfo* mpopi)
-        : id_(id), aln_pos_(aln_pos), mpopi_(mpopi), reads_(), reads_per_sample_(mpopi_->samples().size())
+    CLocAlnSet()
+        : id_(-1), mpopi_(NULL)
         {}
     CLocAlnSet(CLocAlnSet&&) = default;
     CLocAlnSet& operator= (CLocAlnSet&&) = default;
@@ -233,6 +233,7 @@ public:
     const vector<size_t>& sample_reads(size_t sample) const {return reads_per_sample_.at(sample);}
 
     void clear();
+    void reinit(int id, const PhyLoc& aln_pos, const MetaPopInfo* mpopi);
     void ref(DNASeq4&& s) {ref_ = move(s);}
     void add(SAlnRead&& r);
     void merge_paired_reads();

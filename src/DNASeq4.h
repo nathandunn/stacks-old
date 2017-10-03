@@ -88,7 +88,7 @@ public:
     size_t length() const {return l_;}
     bool empty() const {return l_ == 0;}
     void set(size_t i, Nt4 nt) {i%2==0 ? v_[i/2].first(nt) : v_[i/2].second(nt);}
-    void clear() {l_ = 0; v_ = vector<DiNuc>();}
+    void clear() {l_ = 0; v_.clear();}
     void resize(size_t len);
     void reserve(size_t len) {v_.reserve(len/2+len%2);}
     void push_back(Nt4 nt) {++l_; if (l_%2) v_.push_back(DiNuc(nt,Nt4::$)); else v_.back().second(nt);}
