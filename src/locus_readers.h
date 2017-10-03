@@ -29,6 +29,22 @@ public:
     bool read_one_locus(CLocReadSet& readset);
 };
 
+class BamCLocBuilder {
+    Bam* bam_f_;
+    MetaPopInfo mpopi_;
+    map<string, size_t> rg_to_sample_;
+
+public:
+    BamCLocBuilder(Bam** bam_f);
+    ~BamCLocBuilder() {if (bam_f_) delete bam_f_;}
+
+    const Bam* bam_f() const {return bam_f_;}
+    const MetaPopInfo& mpopi() const {return mpopi_;}
+
+    // Reads one locus. Returns false on EOF.
+    bool build_one_locus(CLocAlnSet& readset);    
+};
+
 class VcfCLocReader {
     VcfParser vcf_f_;
     VcfRecord next_rec_;
