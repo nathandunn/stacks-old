@@ -26,8 +26,6 @@
 // reads that have been aligned to a reference genome.
 //
 
-#ifdef HAVE_BAM
-
 #include <algorithm>
 #include <string>
 #include <vector>
@@ -549,19 +547,5 @@ void BamRecord::skip_one_aux(const uint8_t* ptr) {
         throw exception();
     }
 }
-
-#else  // If HAVE_BAM is undefined and BAM library is not present.
-
-#include "input.h"
-
-class Bam: public Input {
- public:
-    Bam(const char *path) : Input() { cerr << "BAM support was not enabled when Stacks was compiled.\n"; };
-    ~Bam() {};
-    Seq *next_seq()      { return NULL; };
-    int  next_seq(Seq &) { return 0; };
-};
-
-#endif // HAVE_BAM
 
 #endif // __BAMI_H__
