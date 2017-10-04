@@ -2003,10 +2003,6 @@ try {
              << "' is seen as a positional argument. Expected no positional arguments.\n";
         bad_args();
     }
-    if (in_dir.empty()) {
-        cerr << "Error: An input directory must be provided (-P).\n";
-        bad_args();
-    }
 
     if (in_dir.empty() && in_bam.empty()) {
         cerr << "Error: Please specify -P or -B.\n";
@@ -2039,7 +2035,7 @@ try {
     // Process arguments.
     input_type = in_dir.empty() ? GStacksInputT::refbased : GStacksInputT::denovo;
 
-    if (input_type == GStacksInputT::refbased) {
+    if (input_type == GStacksInputT::denovo) {
         if (in_dir.back() != '/')
             in_dir += '/';
         if (batch_id < 0) {
