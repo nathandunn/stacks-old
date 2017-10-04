@@ -75,6 +75,10 @@ bool compare_pair_snp(pair<string, SNP *>, pair<string, SNP *>);
 bool compare_pair_haplotype(pair<string, double>, pair<string, double>);
 bool compare_pair_haplotype_rev(pair<string, double>, pair<string, double>);
 bool compare_str_len(string, string);
+struct LessCStrs
+{
+   bool operator() (const char* str1, const char* str2) const {return strcmp(str1, str2) < 0 ;}
+} ;
 
 //
 // Comparison classes for STL sets
