@@ -136,8 +136,6 @@ try {
     //
     ProcessingStats stats {};
     cout << "Processing all loci...\n" << flush;
-    const size_t n_loci = bam_f_ptr->h().n_ref_chroms();
-    ProgressMeter progress (cout, n_loci);
 
     // For parallelization.
     int omp_return = 0;
@@ -165,6 +163,9 @@ try {
         for(auto& s : bam_cloc_reader.mpopi().samples())
             vcf_header.add_sample(s.name);
         o_vcf_f.reset(new VcfWriter(o_prefix + ".vcf.gz", move(vcf_header)));    
+    
+        const size_t n_loci = bam_f_ptr->h().n_ref_chroms();
+        ProgressMeter progress (cout, n_loci);
     
         #pragma omp parallel
         {
@@ -323,7 +324,6 @@ try {
                             o_vcf_f->file() << vcf_outputs.front().second;
                             vcf_outputs.pop_front();
                             ++next_vcf_to_write;
-                            ++progress;
                         } while (!vcf_outputs.empty() && vcf_outputs.front().first);
                         actually_writing_vcf += gettm() - start_writing - clocking;
                     }
@@ -409,8 +409,7 @@ try {
         ostream os (cout.rdbuf());
         os.exceptions(os.exceptions() | ios::badbit);
         os << std::fixed << std::setprecision(2);
-        os << "\n"
-           << "BEGIN clockings\n"
+        os << "BEGIN clockings\n"
            << "Num. threads: " << num_threads << "\n"
            << "Parallel time: " << total_time << "\n"
            << "Average thread time spent...\n"
@@ -422,8 +421,8 @@ try {
            << std::setw(8) << totals.clocking  << "  clocking (" << as_percentage(totals.clocking / total_time) << ")\n"
            << std::setw(8) << totals.sum() << "  total (" << as_percentage(totals.sum() / total_time) << ")\n"
            << "Time spent actually_writing_vcf: " << actually_writing_vcf << " (" << as_percentage(actually_writing_vcf / total_time) << ")\n"
-           << "VCFwrite block size: mean=" << (double) n_loci / n_writes << "(n=" << n_writes << "); max=" << max_size_before_write << "\n"
-           << "END clockings\n"
+           << "VCFwrite block size: mean=" << (double) stats.n_nonempty_loci / n_writes << "(n=" << n_writes << "); max=" << max_size_before_write << "\n"
+           << "END clockings\n\n"
            ;
     }
 
@@ -2067,9 +2066,9 @@ try {
 
 void report_options(ostream& os) {
     os << "Configuration for this run:\n"
-       << "  Input mode: '" << (input_type == GStacksInputT::denovo ? "de novo" : "reference-based") << "'\n"
+       << "  Input mode: " << (input_type == GStacksInputT::denovo ? "de novo" : "reference-based") << "\n"
        << "  Input file: '" << in_bam << "'\n"
-       << "  Output prefix: " << o_prefix << "\n"
+       << "  Output to: '" << o_prefix << ".*'\n"
        << "  Model: " << *model << "\n";
 
     if (ignore_pe_reads)
