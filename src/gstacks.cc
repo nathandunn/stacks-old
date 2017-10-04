@@ -1,3 +1,22 @@
+// -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
+//
+// Copyright 2017, Julian Catchen <jcatchen@illinois.edu>
+//
+// This file is part of Stacks.
+//
+// Stacks is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Stacks is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Stacks.  If not, see <http://www.gnu.org/licenses/>.
+//
 #include <getopt.h>
 #include <zlib.h>
 
@@ -582,7 +601,7 @@ LocusProcessor::align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 
     const char *q      = query.c_str();
     const char *q_stop = q + query.length();
     size_t      q_pos  = 0;
-    size_t      id     = 1;
+    size_t      id     = 0;
     char c[id_len];
 
     do {
@@ -619,119 +638,91 @@ LocusProcessor::align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 
     }
 
     //
-    // Generate a list of all possible alignment subsets that include all query fragments.
+    // 1. Sort the alignment fragments so they are primarily ordered by subject position, secondarily by query position.
     //
-    set<uint>    ids_seen, ids_dropped;
-    vector<uint> aln_subset, cur_subset, best_aln_subset;
-    uint         max_depth = 0;
-    double       max_cov   = 0.0;
-    double       span      = 0.0;
+    sort(alns.begin(), alns.end(), [](STAln a, STAln b)
+         {
+            if (a.subj_pos == b.subj_pos)
+                return a.query_pos < b.query_pos;
+            else
+                return a.subj_pos < b.subj_pos;
+         });
 
+    int    gap_len, end_pos;
+    double score, scale;
+    bool   term;
+    vector<size_t> term_nodes;
     //
-    // Bucket alignment fragments from the same query region.
+    // 2. Traverse the list of fragments and add links to reachable nodes, recording the score.
+    //    2.1. A successor node is reachable from the predecessor node if both the query and subject
+    //         positions are advanced relative to the predecessor, and there is no sequence overlap
+    //         between the two nodes.
+    //    2.2. We weight the score by the number of 'gap' nucleotides between the two fragments to
+    //         penalize fragments that are further away.
+    //    2.3  Record the maximal link in the graph.
+    //    2.4. Determine if a node is a terminal node.
     //
-    vector<vector<uint> > valid_subsets(alns.back().id, vector<uint>());
+    for (uint i = 0; i < alns.size(); i++) {
+        end_pos = alns[i].subj_pos + alns[i].aln_len - 1;
+        term    = true;
 
-    for (uint i = 0; i < alns.size(); i++)
-        valid_subsets[alns[i].id - 1].push_back(i);
-    //
-    // Determine the fragment with the maximum number of alignments.
-    //
-    for (uint i = 0; i < valid_subsets.size(); i++)
-        if (valid_subsets[i].size() > max_depth)
-            max_depth = valid_subsets[i].size();
-    //
-    // Generate all possible full length subsets.
-    //
-    vector<vector<uint> > aln_subsets, b;
-    for (uint i = 0; i < valid_subsets.size(); i++) {
+        assert(end_pos > 0);
 
-        for (uint j = 0; j < valid_subsets[i].size(); j++) {
+        for (uint j = i + 1; j < alns.size(); j++) {
+            if (alns[j].query_pos > alns[i].query_pos &&
+                alns[j].subj_pos  > alns[i].subj_pos  &&
+                alns[j].subj_pos  > (uint) end_pos) {
 
-            if (aln_subsets.size() == 0) {
-                b.push_back(vector<uint>());
-                b.back().push_back(valid_subsets[i][j]);
-            } else {
-                for (uint k = 0; k < aln_subsets.size(); k++) {
-                    b.push_back(aln_subsets[k]);
-                    b.back().push_back(valid_subsets[i][j]);
-                }
+                term    = false;
+                gap_len = alns[j].subj_pos - end_pos - 1;
+                scale   = gap_len > (int) query.length() ? 1 : alns[i].aln_len * ((double) gap_len / (double) query.length());
+                score   = alns[i].aln_len - scale; // Raw score.
+                score  += alns[i].max._score;      // Score adjusted for the highest incoming node.
+
+                assert(gap_len >= 0);
+                assert(score   >= 0);
+
+                alns[j].links.push_back(STLink(i, score));
+                if (alns[j].max._index == j || score > alns[j].max._score)
+                    alns[j].max = STLink(i, score);
             }
         }
-        aln_subsets = b;
-        b.clear();
+        if (term)
+            term_nodes.push_back(i);
     }
 
-    for (uint i = 0; i < aln_subsets.size(); i++) {
-        //
-        // Iterate over each combination of the full length subset.
-        //
-        uint subset_size = aln_subsets.front().size();
-        uint num_subsets = pow(2, subset_size);
-
-        for (uint j = 1; j < num_subsets; j++) {
-
-            double cov = 0.0;
-
-            for (uint k = 0; k < subset_size; k++)
-                if (j & (1 << k)) {
-                    aln_subset.push_back(aln_subsets[i][k]);
-                    cov += alns[aln_subset.back()].aln_len;
-                }
-
-            //
-            // Are the alignment subset's fragments in the proper order in the subject (along the alignment diagonal)?
-            //
-            uint cur     = 0;
-            uint next    = cur + 1;
-            bool ordered = true;
-
-            while (next < aln_subset.size()) {
-                if ( (alns[aln_subset[cur]].subj_pos + alns[aln_subset[cur]].aln_len) > alns[aln_subset[next]].subj_pos ) {
-                    ordered = false;
-                    break;
-                }
-                cur++;
-                next++;
-            }
-
-            if (ordered) {
-                //
-                // If there are enough alignment fragments in order, calculate:
-                //    1) the coverage of the query sequence, and
-                //    2) weight the coverage by the ratio of the length of the query / the length of the subject coverage.
-                //        - if the span of the subject alignments is less than the length of the query, set the weight to 1 to
-                //          avoid promoting fewer alignment fragments.
-                //
-                span = (alns[aln_subset.back()].subj_pos + alns[aln_subset.back()].aln_len) - alns[aln_subset.front()].subj_pos + 1;
-                span = span < (double) query.length() ? 1 : span / (double) query.length();
-                cov  = cov / (double) query.length();
-                cov  = cov * (1 / span);
-
-                if (cov > max_cov) {
-                    best_aln_subset = aln_subset;
-                    max_cov         = cov;
-                }
-            }
-
-            aln_subset.clear();
+    //
+    // 3. Find the terminal node with the highest score. 
+    //
+    double max_score = alns[term_nodes.front()].max._score;
+    size_t max_index = term_nodes.front(); 
+    for (uint i = 1; i < term_nodes.size(); i++) {
+        if (alns[term_nodes[i]].max._score > max_score) {
+            max_index = term_nodes[i];
+            max_score = alns[term_nodes[i]].max._score;
         }
     }
 
     //
-    // No useable alignment found.
+    // 4. Backtrack to get the optimal path.
     //
-    if (best_aln_subset.size() == 0)
-        return 0;
+    vector<size_t> optimal;
+    uint n = max_index;
+    while (alns[n].links.size() > 0) {
+        optimal.push_back(n);
+        n = alns[n].max._index;
+    }
+    optimal.push_back(n);
+    
+    assert(optimal.size() > 0);
 
     vector<STAln> final_alns;
-    for (uint i = 0; i < best_aln_subset.size(); i++)
-        final_alns.push_back(alns[best_aln_subset[i]]);
+    for (uint i = 0; i < optimal.size(); i++)
+        final_alns.push_back(alns[optimal[i]]);
 
     g_aln->init(query.length(), st->seq_len(), true);
     if (g_aln->align_constrained(query, st->seq().str(), final_alns)) {
-        aln_res         = g_aln->result();
-        aln_res.pct_id = max_cov;
+        aln_res = g_aln->result();
     }
 
     return 1;
