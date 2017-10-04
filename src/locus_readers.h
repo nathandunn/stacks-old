@@ -58,8 +58,8 @@ private:
     // Buffers to store the reads of the sliding window.
     bool fill_window();
     map<PhyLoc,vector<SAlnRead>> fw_reads_by_5prime_pos;
-    //std::multimap<PhyLoc,SAlnRead> pe_reads_by_5prime_pos;
-    //map<const char*,std::multimap<PhyLoc,SAlnRead>::iterator, LessCStrs> pe_reads_by_name;
+    std::multimap<PhyLoc,SAlnRead> pe_reads_by_5prime_pos;
+    map<const char*,std::multimap<PhyLoc,SAlnRead>::iterator, LessCStrs> pe_reads_by_name;
 };
 
 class VcfCLocReader {
@@ -326,6 +326,12 @@ BamCLocBuilder::read_and_parse_next_record()
     DNASeq4 seq = r.seq();
     size_t sample = rg_to_sample_.at(string(r.read_group()));
 
+    if (r.is_read1())
+        name += "/1";
+    else if (r.is_read2())
+        name += "/2";
+    cigar_simplify_to_MDI(cigar);
+        
     if (r.is_rev_compl()) {
         pos += cigar_length_ref(cigar) - 1;
         strand = strand_minus;
@@ -346,20 +352,55 @@ BamCLocBuilder::fill_window()
 {
     if (!eof_) {
         while (fw_reads_by_5prime_pos.empty()
-                || (strcmp(next_record_.first.chr(), fw_reads_by_5prime_pos.begin()->first.chr()) == 0
-                    && next_record_.first.bp <= fw_reads_by_5prime_pos.begin()->first.bp + max_insert_refsize_)
-                ) {
+                || (
+                    // This defines the sliding window. On the right side we use the left boundary
+                    // of the alignment (i.e. the BAM "pos" field) rather than the 5prime bp of the
+                    // next record--this is less stringent, and prevents abberant CIGARs to cause
+                    // issues.
+                    strcmp(next_record_.first.chr(), fw_reads_by_5prime_pos.begin()->first.chr()) == 0
+                    && bam_f_->r().pos() <= fw_reads_by_5prime_pos.begin()->first.bp + max_insert_refsize_
+                )) {
 
-            vector<SAlnRead>& v = fw_reads_by_5prime_pos.insert(
-                    std::make_pair(next_record_.first, vector<SAlnRead>()) // (`make_pair` is necessary here until c++17.)
-                    ).first->second;
-            v.push_back(move(next_record_.second));
+            if (bam_f_->r().is_read2()) {
+                auto itr = pe_reads_by_5prime_pos.insert(move(next_record_));
+                pe_reads_by_name.insert( {itr->second.name.c_str(), itr} );
+            } else {
+                assert(bam_f_->r().is_read1()); // TODO neither read1 nor read2
+                vector<SAlnRead>& v = fw_reads_by_5prime_pos.insert(
+                        std::make_pair(next_record_.first, vector<SAlnRead>()) // (`make_pair` is necessary here until c++17.)
+                        ).first->second;
+                v.push_back(move(next_record_.second));
+            }
 
             if (!read_and_parse_next_record()) {
                 eof_ = true;
                 break;
             }
         }
+    }
+
+    // Cleanup paired-end reads that are out of the window (for paired-end reads,
+    // the windows extends in both directions).
+    if (!fw_reads_by_5prime_pos.empty()) {
+        const PhyLoc& window_center = fw_reads_by_5prime_pos.begin()->first;
+        while (!pe_reads_by_5prime_pos.empty()
+                && (strcmp(pe_reads_by_5prime_pos.begin()->first.chr(), window_center.chr()) != 0
+                    || pe_reads_by_5prime_pos.begin()->first.bp + max_insert_refsize_ < window_center.bp + 1)
+                ) {
+            pe_reads_by_name.erase(pe_reads_by_5prime_pos.begin()->second.name.c_str());
+            pe_reads_by_5prime_pos.erase(pe_reads_by_5prime_pos.begin());
+        }
+        // Also check at the end of the multimap, as the BAM chromosome order isn't
+        // necessarily alphabetic (while the PhyLoc order is).
+        while (!pe_reads_by_5prime_pos.empty()
+                && strcmp(pe_reads_by_5prime_pos.rbegin()->first.chr(), window_center.chr()) != 0
+                ) {
+            pe_reads_by_name.erase(pe_reads_by_5prime_pos.rbegin()->second.name.c_str());
+            pe_reads_by_5prime_pos.erase(--pe_reads_by_5prime_pos.end());
+        }
+    } else {
+        pe_reads_by_5prime_pos.clear();
+        pe_reads_by_name.clear();
     }
 
     return !fw_reads_by_5prime_pos.empty();
@@ -374,18 +415,17 @@ BamCLocBuilder::build_one_locus(CLocAlnSet& aln_loc)
     //
     // Find the next locus.
     //
+
     while(true) {
         // Fill the window.
         if (!fill_window())
             return false;
 
-        //
         // Apply filters to the putative locus.
-        //
+        // i.e. Remove reads from samples that have less that `min_reads_per_sample_` reads.
         assert(!fw_reads_by_5prime_pos.empty());
         vector<SAlnRead>& loc_reads = fw_reads_by_5prime_pos.begin()->second;
 
-        // Remove reads from samples that have less that `min_reads_per_sample_` reads.
         vector<size_t> n_reads_per_sample (mpopi_.samples().size(), 0);
         for (const SAlnRead& read : loc_reads)
             ++n_reads_per_sample[read.sample];
@@ -405,9 +445,83 @@ BamCLocBuilder::build_one_locus(CLocAlnSet& aln_loc)
     //
     // Build the locus object.
     //
+
+    // Forward reads.
+    vector<SAlnRead> fw_reads = move(fw_reads_by_5prime_pos.begin()->second);
+
+    // Paired-end reads.
+    vector<SAlnRead> pe_reads;
+    if (!pe_reads_by_5prime_pos.empty()) {
+        const PhyLoc& fw_5prime = fw_reads_by_5prime_pos.begin()->first;
+        string pe_name;
+        for (const SAlnRead& fw_read : fw_reads) {
+            assert(fw_read.name.back() == '1');
+            pe_name = fw_read.name;
+            pe_name.back() = '2';
+            auto pe_name_itr = pe_reads_by_name.find(pe_name.c_str());
+            if (pe_name_itr != pe_reads_by_name.end()) {
+                const PhyLoc& pe_5prime = pe_name_itr->second->first;
+                SAlnRead& pe_read = pe_name_itr->second->second;
+
+                size_t fw_len = cigar_length_ref(fw_read.cigar);
+                size_t pe_len = cigar_length_ref(pe_read.cigar);
+
+                // Check that the relative positions of the reads are compatible.
+                assert(strcmp(fw_5prime.chr(), pe_5prime.chr()) == 0); // The window.
+                if (
+                        (fw_5prime.strand == strand_plus && pe_5prime.strand == strand_minus
+                            && fw_5prime.bp + std::max(fw_len, pe_len) <= pe_5prime.bp + 1
+                            && fw_5prime.bp + max_insert_refsize_ >= pe_5prime.bp + 1)
+                        ||  
+                        (fw_5prime.strand == strand_minus && pe_5prime.strand == strand_plus
+                            && pe_5prime.bp + std::max(fw_len, pe_len) <= fw_5prime.bp + 1
+                            && pe_5prime.bp + max_insert_refsize_ >= fw_5prime.bp + 1)
+                        ) {
+                    // Put the paired read in the reference of the forward reads.
+                    pe_read.seq = pe_read.seq.rev_compl();
+                    std::reverse(pe_read.cigar.begin(), pe_read.cigar.end());
+
+                    size_t extend;
+                    if (fw_5prime.strand == strand_plus)
+                        extend = pe_5prime.bp - fw_5prime.bp + 1 - pe_len;
+                    else
+                        extend = pe_5prime.bp - fw_5prime.bp + 1 - pe_len;
+                    cigar_extend_left(pe_read.cigar, extend);
+                    
+                    pe_reads.push_back(move(pe_read));
+                }
+
+                pe_reads_by_5prime_pos.erase(pe_name_itr->second);
+                pe_reads_by_name.erase(pe_name_itr);
+            }
+        }
+    }
+
+    // Determine the locus length.
+    size_t max_cig_length = 0;
+    for (const SAlnRead& read : fw_reads) {
+        size_t l = cigar_length_ref(read.cigar);
+        if (l > max_cig_length)
+            max_cig_length = l;
+    }
+    for (const SAlnRead& read : pe_reads) {
+        size_t l = cigar_length_ref(read.cigar);
+        if (l > max_cig_length)
+            max_cig_length = l;
+    }
+
+    // Build the actual object.
     aln_loc.reinit(n_loci_built_+1, fw_reads_by_5prime_pos.begin()->first, &mpopi_);
-    for (SAlnRead& read : fw_reads_by_5prime_pos.begin()->second)
+    aln_loc.ref(DNASeq4(max_cig_length));
+    for (SAlnRead& read : fw_reads) {
+        cigar_extend_right(read.cigar, max_cig_length - cigar_length_ref(read.cigar));
         aln_loc.add(move(read));
+    }
+    for (SAlnRead& read : pe_reads) {
+        cigar_extend_right(read.cigar, max_cig_length - cigar_length_ref(read.cigar));
+        aln_loc.add(move(read));
+    }
+
     fw_reads_by_5prime_pos.erase(fw_reads_by_5prime_pos.begin());
     ++n_loci_built_;
     return true;
