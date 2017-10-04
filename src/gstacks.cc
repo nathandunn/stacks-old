@@ -717,7 +717,7 @@ LocusProcessor::align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 
     assert(optimal.size() > 0);
 
     vector<STAln> final_alns;
-    for (uint i = 0; i < optimal.size(); i++)
+    for (int i = optimal.size() - 1; i >= 0; i--)
         final_alns.push_back(alns[optimal[i]]);
 
     g_aln->init(query.length(), st->seq_len(), true);
