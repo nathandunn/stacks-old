@@ -100,7 +100,7 @@ private:
     // Moves the pointer to the start of the next AUX field. Doesn't actually read
     // anything, the point is just to be able to scan until field(s) of interest.
     // Returns `ptr`.
-    static void skip_one_aux(const uint8_t* ptr);
+    static void skip_one_aux(const uint8_t** ptr);
 };
 
 class BamHeader {
@@ -480,9 +480,9 @@ const char* BamRecord::read_group() const {
     uint8_t* ptr = bam_get_aux(r_);
     while (ptr < bam_get_aux(r_) + bam_get_l_aux(r_) - 3) { // minimum field size is 4
         if (*(char*)ptr == 'R' && *(char*)(ptr+1) == 'G') {
-            return (char*)ptr+3;
+            return (const char*)ptr+3;
         } else {
-            skip_one_aux(ptr);
+            skip_one_aux((const uint8_t**)&ptr);
         }
     }
 
@@ -490,60 +490,60 @@ const char* BamRecord::read_group() const {
 }
 
 inline
-void BamRecord::skip_one_aux(const uint8_t* ptr) {
+void BamRecord::skip_one_aux(const uint8_t** ptr) {
     using namespace std;
 
     // The library doesn't provide much for handling the AUX fields.
 
     // Make sure that the tag matches [A-Za-z][A-Za-z0-9].
-    if (!isalpha(*ptr) || !isalnum(*(ptr+1))) {
+    if (!isalpha(**ptr) || !isalnum(*(*ptr+1))) {
         cerr << "Warning: Illegal BAM AUX tag '"
-             << *(char*)ptr << *(char*)(ptr+1) << "' ("
-             << *ptr << "," << *(ptr+1) << ").\n" << flush;
+             << *(const char*)*ptr << *(const char*)(*ptr+1) << "' (ASCII "
+             << **ptr << "," << *(*ptr+1) << ").\n" << flush;
     }
-    ptr += 2;
+    *ptr += 2;
 
-    char t = *(char*)ptr; // byte 3 of the field gives the type
-    ptr += 1;
+    uint8_t t = **ptr; // byte 3 of the field gives the type
+    *ptr += 1;
 
     if (t == 'i'        // int32_t
             || t == 'I' // uint32_t
             || t == 'f' // float
             ) {
-        ptr += 4;
+        *ptr += 4;
     } else if (t == 'Z' // string
             || t == 'H' // hex string
             ) {
-        ptr += strlen((char*)ptr) + 1;
+        *ptr += strlen((const char*)*ptr) + 1;
     } else if (t == 'A' // character
             || t == 'c' // int8_t
             || t == 'C' // uint8_t
             ) {
-        ptr += 1;
+        *ptr += 1;
     } else if (t == 's' // int16_t
             || t == 'S' // uint16_t
             ) {
-        ptr += 2;
+        *ptr += 2;
     } else if (t == 'B') { // array
-        ptr += 1;
-        char t2 = *(char*)ptr; // byte 4 gives the array contents type
-        ptr += 1;
-        int32_t len = *(int32_t*)ptr; // bytes 5-9 give the array length
-        ptr += 4;
+        *ptr += 1;
+        uint8_t t2 = **ptr; // byte 4 gives the array contents type
+        *ptr += 1;
+        int32_t len = *(int32_t*)*ptr; // bytes 5-8 give the array length
+        *ptr += 4;
 
         // Type should be an integer type or float.
         if (t2 == 'c' || t2 == 'C') {
-            ptr += len;
+            *ptr += len;
         } else if (t2 == 's' || t2 == 'S') {
-            ptr += 2 * len;
+            *ptr += 2 * len;
         } else if (t2 == 'i' || t2 == 'I' || t2 == 'f') {
-            ptr += 4 * len;
+            *ptr += 4 * len;
         } else {
-            cerr << "Error: Unexpected BAM AUX field array type '" << t2 << "' (#" << *(uchar*)&t2 << ").\n";
+            cerr << "Error: Unexpected BAM AUX field array type '" << (char)t2 << "' (ASCII " << t2 << ").\n";
             throw exception();
         }
     } else {
-        cerr << "Error: Unexpected BAM AUX field type '" << t << "' (#" << *(uchar*)&t << ").\n";
+        cerr << "Error: Unexpected BAM AUX field type '" << (char)t << "' (ASCII " << t << ").\n";
         throw exception();
     }
 }
