@@ -510,7 +510,7 @@ BamCLocBuilder::build_one_locus(CLocAlnSet& aln_loc)
                     if (fw_5prime.strand == strand_plus)
                         extend = pe_5prime.bp - fw_5prime.bp + 1 - pe_len;
                     else
-                        extend = pe_5prime.bp - fw_5prime.bp + 1 - pe_len;
+                        extend = fw_5prime.bp - pe_5prime.bp + 1 - pe_len;
                     cigar_extend_left(pe_read.cigar, extend);
                     
                     pe_reads.push_back(move(pe_read));
