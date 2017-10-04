@@ -33,7 +33,7 @@ public:
 
 class BamCLocBuilder {
 public:
-    BamCLocBuilder(Bam** bam_f);
+    BamCLocBuilder(Bam** bam_f, size_t min_reads_per_sample_, bool paired_mode, size_t max_insert_refsize=0);
     ~BamCLocBuilder() {if (bam_f_) delete bam_f_;}
 
     // Reads one locus. Returns false on EOF.
@@ -43,8 +43,9 @@ public:
     const Bam* bam_f() const {return bam_f_;}
 
 private:
-    static const size_t max_insert_refsize_ = 2000;
-    static const size_t min_reads_per_sample_ = 3;
+    size_t min_reads_per_sample_ = 3;
+    bool paired_mode_;
+    size_t max_insert_refsize_;
 
     Bam* bam_f_;
     MetaPopInfo mpopi_;
@@ -290,8 +291,15 @@ bool BamCLocReader::read_one_locus(CLocReadSet& readset) {
 }
 
 inline
-BamCLocBuilder::BamCLocBuilder(Bam** bam_f)
-:
+BamCLocBuilder::BamCLocBuilder(
+        Bam** bam_f,
+        size_t min_reads_per_sample,
+        bool paired_mode,
+        size_t max_insert_refsize
+) :
+    min_reads_per_sample_(min_reads_per_sample),
+    paired_mode_(paired_mode),
+    max_insert_refsize_(paired_mode ? max_insert_refsize_ : 0),
     bam_f_(*bam_f),
     n_loci_built_(0),
     eof_(false),
@@ -360,16 +368,33 @@ BamCLocBuilder::fill_window()
                     strcmp(next_record_.first.chr(), fw_reads_by_5prime_pos.begin()->first.chr()) == 0
                     && bam_f_->r().pos() <= fw_reads_by_5prime_pos.begin()->first.bp + max_insert_refsize_
                 )) {
-
-            if (bam_f_->r().is_read2()) {
-                auto itr = pe_reads_by_5prime_pos.insert(move(next_record_));
-                pe_reads_by_name.insert( {itr->second.name.c_str(), itr} );
+            
+            bool treat_as_fw;
+            const string& name = next_record_.second.name;
+            if (!paired_mode_) {
+                treat_as_fw = true;
+            } else if (name.back() == '1' && (*++name.rbegin() == '/' || *++name.rbegin() == '_')) {
+                // n.b. The SAlnRead name has been edited according to the BAM flags.
+                // We don't discriminate the case when the READ1/READ2 flags are set
+                // and the case when these flags are not set but the read names end
+                // with /1, /2.
+                treat_as_fw = true;
+            } else if (name.back() == '2' && (*++name.rbegin() == '/' || *++name.rbegin() == '_')) {
+                treat_as_fw = false;
             } else {
-                assert(bam_f_->r().is_read1()); // TODO neither read1 nor read2
+                cerr << "Error: --paired was specified but it is unclear whether BAM record '"
+                     << bam_f_->r().qname() << "' corresponds to a forward or reverse read.\n";
+                throw exception();
+            }
+
+            if (treat_as_fw) {
                 vector<SAlnRead>& v = fw_reads_by_5prime_pos.insert(
                         std::make_pair(next_record_.first, vector<SAlnRead>()) // (`make_pair` is necessary here until c++17.)
                         ).first->second;
-                v.push_back(move(next_record_.second));
+                v.push_back(move(next_record_.second));                
+            } else {
+                auto itr = pe_reads_by_5prime_pos.insert(move(next_record_));
+                pe_reads_by_name.insert( {itr->second.name.c_str(), itr} );
             }
 
             if (!read_and_parse_next_record()) {
@@ -431,7 +456,7 @@ BamCLocBuilder::build_one_locus(CLocAlnSet& aln_loc)
             ++n_reads_per_sample[read.sample];
         loc_reads.erase(std::remove_if(
             loc_reads.begin(), loc_reads.end(),
-            [&n_reads_per_sample] (const SAlnRead& read) {return n_reads_per_sample[read.sample] < min_reads_per_sample_;}
+            [&n_reads_per_sample,this] (const SAlnRead& read) {return n_reads_per_sample[read.sample] < min_reads_per_sample_;}
             ), loc_reads.end());
 
         if (loc_reads.empty()) {

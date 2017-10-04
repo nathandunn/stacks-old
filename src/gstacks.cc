@@ -21,6 +21,10 @@ string in_bam;
 string o_prefix;
 GStacksInputT input_type = GStacksInputT::unknown;
 
+size_t refbased_min_reads_per_sample = 3;
+bool   refbased_paired               = false;
+size_t refbased_max_insert_refsize   = 1000;
+
 int    num_threads       = 1;
 bool   quiet             = false;
 bool   ignore_pe_reads   = false;
@@ -258,7 +262,10 @@ try {
         progress.done();
     } else if (input_type == GStacksInputT::refbased) {
         // Initialize the CLoc reader
-        BamCLocBuilder bam_cloc_builder (&bam_f_ptr);
+        BamCLocBuilder bam_cloc_builder (&bam_f_ptr,
+                                         refbased_min_reads_per_sample,
+                                         refbased_paired,
+                                         refbased_max_insert_refsize);
 
         // Open the VCF file.
         VcfHeader vcf_header;
@@ -1794,7 +1801,7 @@ Clocks& Clocks::operator/= (double d) {
 const string help_string = string() +
         prog_name + " " + VERSION  + "\n" +
         prog_name + " -P stacks_dir\n" +
-        prog_name + " -B bam_file -O out_dir\n" +
+        prog_name + " -B bam_file -O out_dir [--paired]\n" +
         "\n"
         "De novo mode:\n"
         "  -P: input directory\n"
@@ -1808,12 +1815,13 @@ const string help_string = string() +
         "Reference-based mode:\n"
         "  -B: input BAM file\n"
         "  -O: output directory\n"
+        "  --paired: reads are paired (RAD loci will be defined by READ1 alignments)\n"
         "\n"
         "  The input BAM file should (i) be sorted by coordinate and (ii) comprise\n"
         "  all aligned reads for all samples, with reads assigned to samples using\n"
-        "  BAM \"reads groups\" (gstacks uses the SN/sample name field). Please\n"
-        "  refer to the gstacks manual page for information about how to generate\n"
-        "  such a BAM file with Samtools, and examples.\n"
+        "  BAM \"reads groups\" (gstacks uses the SN, \"sample name\" field).\n"
+        "  Please refer to the gstacks manual page for information about how to\n"
+        "  generate such a BAM file with Samtools, and examples.\n"
         "\n"
         "Shared options:\n"
         "  -t,--threads: number of threads to use (default: 1)\n"
@@ -1862,6 +1870,7 @@ try {
         {"batch-id",     required_argument, NULL,  'b'},
         {"in-bam",       required_argument, NULL,  'B'},
         {"out-dir",      required_argument, NULL,  'O'},
+        {"paired",       no_argument,       NULL,  1007},
         {"threads",      required_argument, NULL,  't'},
         {"model",        required_argument, NULL,  1006},
         {"gt-alpha",     required_argument, NULL,  1005},
@@ -1920,6 +1929,9 @@ try {
             break;
         case 'O':
             out_dir = optarg;
+            break;
+        case 1007: //paired
+            refbased_paired = true;
             break;
         case 1006: //model
             model_type = parse_model_type(optarg);
@@ -1996,16 +2008,21 @@ try {
         bad_args();
     }
 
-    if (in_dir.empty() == in_bam.empty() == true) {
+    if (in_dir.empty() && in_bam.empty()) {
         cerr << "Error: Please specify -P or -B.\n";
         bad_args();
-    } else if (in_dir.empty() == (in_bam.empty() && out_dir.empty()) == false) {
+    } else if (!in_dir.empty() && (!in_bam.empty() || !out_dir.empty())) {
         cerr << "Error: Please specify one of -P or -B/-O, not both.\n";
         bad_args();
     }
 
     if (!in_bam.empty() && out_dir.empty()) {
         cerr << "Error: Please specify an output directory (-O).\n";
+        bad_args();
+    }
+
+    if (refbased_paired && !in_dir.empty()) {
+        cerr << "Error: --paired is for the reference-based mode (-B).\n";
         bad_args();
     }
 
