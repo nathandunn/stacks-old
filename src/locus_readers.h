@@ -50,14 +50,16 @@ private:
     Bam* bam_f_;
     MetaPopInfo mpopi_;
     map<string, size_t> rg_to_sample_;
+
     size_t n_loci_built_;
 
-    bool eof_;
     pair<PhyLoc,SAlnRead> next_record_;
-    bool read_and_parse_next_record(); // Calls `bam_f_->next_record()`, then sets `next_record_`. Returns false on EOF.
+    bool treat_next_record_as_fw_;
+    bool read_and_parse_next_record(); // Calls `bam_f_->next_record()`, sets `next_record_` and `treat_next_record_as_fw_`. False on EOF.
 
     // Buffers to store the reads of the sliding window.
     bool fill_window();
+    bool eof_;
     map<PhyLoc,vector<SAlnRead>> fw_reads_by_5prime_pos;
     std::multimap<PhyLoc,SAlnRead> pe_reads_by_5prime_pos;
     map<const char*,std::multimap<PhyLoc,SAlnRead>::iterator, LessCStrs> pe_reads_by_name;
@@ -309,7 +311,8 @@ BamCLocBuilder::BamCLocBuilder(
     bam_f_(*bam_f),
     n_loci_built_(0),
     eof_(false),
-    next_record_(PhyLoc(), SAlnRead(AlnRead(Read(DNASeq4(), string()), Cigar()), SIZE_MAX))
+    next_record_(PhyLoc(), SAlnRead(AlnRead(Read(DNASeq4(), string()), Cigar()), SIZE_MAX)),
+    treat_next_record_as_fw_(false)
 {
     *bam_f = NULL;
 
@@ -329,36 +332,83 @@ inline
 bool
 BamCLocBuilder::read_and_parse_next_record()
 {
-    if(!bam_f_->next_record())
-        return false;
+    while (true) {
+        if(!bam_f_->next_record())
+            return false;
+        const BamRecord& r = bam_f_->r();
 
-    const BamRecord& r = bam_f_->r();
+        // Check if the record is primary.
+        if (!r.is_primary())
+            continue;
 
-    int32_t chrom = r.chrom();
-    int32_t pos = r.pos();
-    strand_type strand = strand_plus;
-    string name = r.qname();
-    Cigar cigar = r.cigar();
-    DNASeq4 seq = r.seq();
-    size_t sample = rg_to_sample_.at(string(r.read_group()));
+        // Parse the record.
+        int32_t chrom = r.chrom();
+        int32_t pos = r.pos();
+        strand_type strand = strand_plus;
+        string name = r.qname();
+        Cigar cigar = r.cigar();
+        DNASeq4 seq = r.seq();
+        size_t sample = rg_to_sample_.at(string(r.read_group()));
 
-    if (r.is_read1())
-        name += "/1";
-    else if (r.is_read2())
-        name += "/2";
-    cigar_simplify_to_MDI(cigar);
-        
-    if (r.is_rev_compl()) {
-        pos += cigar_length_ref(cigar) - 1;
-        strand = strand_minus;
-        std::reverse(cigar.begin(), cigar.end());
-        seq = seq.rev_compl();
+        // Check that the CIGAR doesn't contain Ns (long deletions/introns).
+        bool has_cigar_Ns = false;
+        for (auto& op : cigar) {
+            if (op.first == 'N') {
+                has_cigar_Ns = true;
+                break;
+            }
+        }
+        if (has_cigar_Ns)
+            continue;
+
+        // Correct the name that will go in the SAlnRead.
+        if (r.is_read1())
+            name += "/1";
+        else if (r.is_read2())
+            name += "/2";
+        cigar_simplify_to_MDI(cigar);
+
+        // Make the SAlnRead 5' to 3'.
+        if (r.is_rev_compl()) {
+            pos += cigar_length_ref(cigar) - 1;
+            strand = strand_minus;
+            std::reverse(cigar.begin(), cigar.end());
+            seq = seq.rev_compl();
+        }
+
+        // Assess whether this alignment should be treated as a forward read.
+        if (!paired_mode_) {
+            treat_next_record_as_fw_ = true;
+        } else if (name.length() >= 2 && name.back() == '1' && (*++name.rbegin() == '/' || *++name.rbegin() == '_')) {
+            // n.b. We don't discriminate the case when the READ1/READ2 flags are
+            // set and the case when these flags are not set but the read names end
+            // with /1, /2.
+            treat_next_record_as_fw_ = true;
+        } else if (name.length() >= 2 && name.back() == '2' && (*++name.rbegin() == '/' || *++name.rbegin() == '_')) {
+            treat_next_record_as_fw_ = false;
+        } else {
+            cerr << "Error: It is unclear whether BAM record '" << r.qname()
+                 << "' corresponds to a forward or reverse read. (While reading BAM file '"
+                 << bam_f_->path << "'in paired mode.)\n";
+            throw exception();
+        }
+
+        // Check that the cutsite (if expected) is aligned.
+        if (cigar.empty()) {
+            cerr << "Error: Empty CIGAR at BAM primary record '" << r.qname() << "'.\n";
+            throw exception();
+        }
+        if (treat_next_record_as_fw_ && cigar.front().first != 'M')
+            continue;
+
+        // Assign to `next_record_`.
+        next_record_ = {
+            PhyLoc(bam_f_->h().chrom_str(chrom), pos, strand),
+            SAlnRead(AlnRead(Read(move(seq), move(name)), move(cigar)), sample)
+        };
+
+        break;
     }
-
-    next_record_ = {
-        PhyLoc(bam_f_->h().chrom_str(chrom), pos, strand),
-        SAlnRead(AlnRead(Read(move(seq), move(name)), move(cigar)), sample)
-    };
     return true;
 }
 
@@ -379,23 +429,8 @@ BamCLocBuilder::fill_window()
             
             bool treat_as_fw;
             const string& name = next_record_.second.name;
-            if (!paired_mode_) {
-                treat_as_fw = true;
-            } else if (name.back() == '1' && (*++name.rbegin() == '/' || *++name.rbegin() == '_')) {
-                // n.b. The SAlnRead name has been edited according to the BAM flags.
-                // We don't discriminate the case when the READ1/READ2 flags are set
-                // and the case when these flags are not set but the read names end
-                // with /1, /2.
-                treat_as_fw = true;
-            } else if (name.back() == '2' && (*++name.rbegin() == '/' || *++name.rbegin() == '_')) {
-                treat_as_fw = false;
-            } else {
-                cerr << "Error: --paired was specified but it is unclear whether BAM record '"
-                     << bam_f_->r().qname() << "' corresponds to a forward or reverse read.\n";
-                throw exception();
-            }
 
-            if (treat_as_fw) {
+            if (treat_next_record_as_fw_) {
                 vector<SAlnRead>& v = fw_reads_by_5prime_pos.insert(
                         std::make_pair(next_record_.first, vector<SAlnRead>()) // (`make_pair` is necessary here until c++17.)
                         ).first->second;
