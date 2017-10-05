@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2011-2016, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2011-2017, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -24,7 +24,6 @@
 // PCR amplification.
 //
 
-#include "utils.h"
 #include "clone_filter.h"
 
 //
@@ -50,6 +49,7 @@ int      oligo_len_2   = 0;
 //
 // These variables are required for other linked objects, but we won't use them in clone_filter.
 //
+int    barcode_size;
 uint   truncate_seq;
 bool   ill_barcode;
 bool   recover;
@@ -88,6 +88,9 @@ int main (int argc, char* argv[]) {
     switch(barcode_type) {
     case null_null:
         cerr << "No oligo sequence specified, will use single and paired-end reads to determine clones.\n";
+        break;
+    case null_inline:
+        cerr << "Searching for inline oligo on paired-end read.\n";
         break;
     case null_index:
         cerr << "Searching for index oligo (i7 Illumina read).\n";
@@ -291,8 +294,8 @@ write_clonereduced_sequence(string prefix_1, string prefix_2,
                             CloneHash &clone_map, map<int, int> &clone_dist,
                             map<string, long> &counters)
 {
-    ofstream  out_fh_1,        out_fh_2,        discard_fh_1,        discard_fh_2;
-    gzFile    out_gzfh_1=NULL, out_gzfh_2=NULL, discard_gzfh_1=NULL, discard_gzfh_2=NULL;
+    ofstream  out_fh_1,   out_fh_2, discard_fh_1, discard_fh_2;
+    gzFile    out_gzfh_1, out_gzfh_2, discard_gzfh_1, discard_gzfh_2;
 
     int return_val = 1;
 
@@ -498,7 +501,7 @@ int
 process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counters, OligoHash &oligo_map)
 {
     Input    *fh_1, *fh_2;
-    RawRead     *r_1,  *r_2;
+    RawRead  *r_1,  *r_2;
     ofstream  out_fh_1,   out_fh_2, discard_fh_1, discard_fh_2;
     gzFile    out_gzfh_1, out_gzfh_2, discard_gzfh_1, discard_gzfh_2;
 
@@ -636,15 +639,19 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
     //
     // Determine how much sequence we need to trim to remove the oligo seqeunce before printing.
     //
-    int offset_1=-1, offset_2=-1;
+    int offset_1, offset_2;
     switch (barcode_type) {
+    case null_inline:
+        offset_1 = 0;
+        offset_2 = oligo_len_1;
+        break;
     case inline_null:
     case inline_index:
         offset_1 = oligo_len_1;
         offset_2 = 0;
         break;
-    case index_null:
     case null_index:
+    case index_null:
     case index_index:
         offset_1 = 0;
         offset_2 = 0;
@@ -659,6 +666,7 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
     default:
         break;
     }
+
 
     //
     // Read in the first record, initializing the Seq object s. Then
@@ -696,6 +704,9 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
         // Fetch the randomized oligo sequence from the proper position in the reads.
         //
         switch (barcode_type) {
+        case null_inline:
+            oligo_1 = r_2->inline_bc;
+            break;
         case inline_null:
             oligo_1 = r_1->inline_bc;
             break;
@@ -838,8 +849,8 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
 int
 process_reads(string prefix_1, map<string, long> &counters, OligoHash &oligo_map)
 {
-    Input   *fh_1=NULL;
-    RawRead    *r_1;
+    Input   *fh_1;
+    RawRead *r_1;
     ofstream out_fh_1, discard_fh_1;
     gzFile   out_gzfh_1, discard_gzfh_1;
 
@@ -1089,6 +1100,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"discards",      no_argument,       NULL, 'D'},
             {"paired",        no_argument,       NULL, 'P'},
             {"null_index",    no_argument,       NULL, 'U'},
+            {"null_inline",   no_argument,       NULL, 'X'},
             {"index_null",    no_argument,       NULL, 'u'},
             {"inline_null",   no_argument,       NULL, 'V'},
             {"index_index",   no_argument,       NULL, 'W'},
@@ -1111,7 +1123,7 @@ int parse_command_line(int argc, char* argv[]) {
         // getopt_long stores the option index here.
         int option_index = 0;
 
-        c = getopt_long(argc, argv, "hvDPuUVWxYZi:y:f:p:1:2:o:O:L:R:", long_options, &option_index);
+        c = getopt_long(argc, argv, "hvDPuUVWXxYZi:y:f:p:1:2:o:O:L:R:", long_options, &option_index);
 
         // Detect the end of the options.
         if (c == -1)
@@ -1173,6 +1185,9 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 'U':
             barcode_type = null_index;
+            break;
+        case 'X':
+            barcode_type = null_inline;
             break;
         case 'u':
             barcode_type = index_null;
@@ -1265,13 +1280,13 @@ int parse_command_line(int argc, char* argv[]) {
 }
 
 void version() {
-    cerr << "clone_filter " << VERSION << "\n\n";
+    std::cerr << "clone_filter " << VERSION << "\n\n";
 
     exit(1);
 }
 
 void help() {
-    cerr << "clone_filter " << VERSION << "\n"
+    std::cerr << "clone_filter " << VERSION << "\n"
               << "clone_filter [-f in_file | -p in_dir [-P] [-I] | -1 pair_1 -2 pair_2] -o out_dir [-i type] [-y type] [-D] [-h]\n"
               << "  f: path to the input file if processing single-end sequences.\n"
               << "  p: path to a directory of files.\n"
@@ -1288,6 +1303,7 @@ void help() {
               << "  --retain_oligo: do not trim off the random oligo sequence (if oligo is inline).\n\n"
               << "  Oligo sequence options:\n"
               << "    --inline_null:   random oligo is inline with sequence, occurs only on single-end read (default).\n"
+              << "    --null_inline:   random oligo is inline with sequence, occurs only on the paired-end read.\n"
               << "    --null_index:    random oligo is provded in FASTQ header (Illumina i7 read if both i5 and i7 read are provided).\n"
               << "    --index_null:    random oligo is provded in FASTQ header (Illumina i5 or i7 read).\n"
               << "    --inline_inline: random oligo is inline with sequence, occurs on single and paired-end read.\n"
