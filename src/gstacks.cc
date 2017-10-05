@@ -163,10 +163,10 @@ try {
         for(auto& s : bam_cloc_reader.mpopi().samples())
             vcf_header.add_sample(s.name);
         o_vcf_f.reset(new VcfWriter(o_prefix + ".vcf.gz", move(vcf_header)));    
-    
-        const size_t n_loci = bam_f_ptr->h().n_ref_chroms();
+
+        const size_t n_loci = bam_cloc_reader.bam_f()->h().n_ref_chroms();
         ProgressMeter progress (cout, n_loci);
-    
+
         #pragma omp parallel
         {
             LocusProcessor loc_proc;
