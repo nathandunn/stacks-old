@@ -409,8 +409,10 @@ CLocAlnSet::juxtapose(CLocAlnSet&& left, CLocAlnSet&& right, long offset)
     assert(left.id() == right.id());
     assert(left.pos() == right.pos());
     assert(&left.mpopi() == &right.mpopi());
-    if (offset < 0
-            && (size_t(-offset) > left.ref().length() || size_t(-offset) > right.ref().length()))
+    if (offset < 0 && size_t(-offset) > right.ref().length())
+        // N.B. It is actually possible that `size_t(-offset) > left.ref().length()` happens
+        // legitimately: if inserts smaller than the read size have been sequenced, the paired-end
+        // contig may end upstream of the forward reads.
         DOES_NOT_HAPPEN;
 
     size_t left_ref_len = left.ref().length();
