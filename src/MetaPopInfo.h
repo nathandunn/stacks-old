@@ -10,9 +10,9 @@
 struct Sample {
     string name;
     size_t pop;
-    size_t id; // optional
+    int id; // optional
 
-    Sample(const string& n) : name(n), pop(-1), id(-1) {}
+    Sample(const string& n) : name(n), pop(SIZE_MAX), id(-1) {}
     inline bool operator<(const Sample& other) const;
 };
 
@@ -22,7 +22,7 @@ struct Pop {
     size_t last_sample;
     size_t group;
 
-    Pop(const string& n) : name(n), first_sample(-1), last_sample(-1), group(-1) {}
+    Pop(const string& n) : name(n), first_sample(SIZE_MAX), last_sample(SIZE_MAX), group(SIZE_MAX) {}
     static const string default_name;
 };
 
