@@ -483,7 +483,7 @@ inline
 const char* BamRecord::read_group() const {
     uint8_t* ptr = bam_get_aux(r_);
     while (ptr < bam_get_aux(r_) + bam_get_l_aux(r_) - 3) { // minimum field size is 4
-        if (*(char*)ptr == 'R' && *(char*)(ptr+1) == 'G') {
+        if (*ptr == 'R' && *(ptr+1) == 'G') {
             return (const char*)ptr+3;
         } else {
             skip_one_aux((const uint8_t**)&ptr);

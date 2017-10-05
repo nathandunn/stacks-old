@@ -273,7 +273,7 @@ bool BamCLocReader::read_one_locus(CLocReadSet& readset) {
             const BamRecord& rec = bam_f_->r();
             const char* rg = rec.read_group();
             if (rg == NULL) {
-                cerr << "Error: Corrupted BAM file: missing read group.\n";
+                cerr << "Error: Corrupted BAM file: missing read group for record '" << rec.qname() << "'.\n";
                 throw exception();
             }
             if (rec.is_read2())
@@ -354,7 +354,12 @@ BamCLocBuilder::read_and_parse_next_record()
         string name = r.qname();
         Cigar cigar = r.cigar();
         DNASeq4 seq = r.seq();
-        size_t sample = rg_to_sample_.at(string(r.read_group()));
+        const char* rg = r.read_group();
+        if (rg == NULL) {
+            cerr << "Error: Corrupted BAM file: missing read group for record '" << r.qname() << "'.\n";
+            throw exception();
+        }
+        size_t sample = rg_to_sample_.at(string(rg));
 
         // Check that the CIGAR doesn't contain Ns (long deletions/introns).
         bool has_cigar_Ns = false;
