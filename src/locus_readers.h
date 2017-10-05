@@ -316,10 +316,10 @@ BamCLocBuilder::BamCLocBuilder(
     max_insert_refsize_(paired_mode ? max_insert_refsize_ : 0),
     bam_f_(*bam_f),
     n_loci_built_(0),
-    eof_(false),
     next_record_(PhyLoc(), SAlnRead(AlnRead(Read(DNASeq4(), string()), Cigar()), SIZE_MAX)),
-    treat_next_record_as_fw_(false)
-{
+    treat_next_record_as_fw_(false),
+    eof_(false)
+    {
     *bam_f = NULL;
 
     // Create the MetaPopInfo object from the header. Assign sample IDs.
@@ -430,11 +430,8 @@ BamCLocBuilder::fill_window()
                     // next record--this is less stringent, and prevents abberant CIGARs to cause
                     // issues.
                     strcmp(next_record_.first.chr(), fw_reads_by_5prime_pos.begin()->first.chr()) == 0
-                    && bam_f_->r().pos() <= fw_reads_by_5prime_pos.begin()->first.bp + max_insert_refsize_
+                    && size_t(bam_f_->r().pos()) <= fw_reads_by_5prime_pos.begin()->first.bp + max_insert_refsize_
                 )) {
-            
-            bool treat_as_fw;
-            const string& name = next_record_.second.name;
 
             if (treat_next_record_as_fw_) {
                 vector<SAlnRead>& v = fw_reads_by_5prime_pos.insert(

@@ -457,6 +457,7 @@ vector<pair<char, uint>> BamRecord::cigar() const {
             break;
         default:
             cerr << "Warning: Unknown CIGAR operation (current record name is '" << bam_get_qname(r_) << "').\n";
+            op = '?';
             break;
         }
 
