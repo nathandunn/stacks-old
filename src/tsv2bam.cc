@@ -398,7 +398,7 @@ void run(const vector<int>& cloc_ids,
                                 BAM_FREAD2 | BAM_FREVERSE,
                                 target_i,
                                 0,
-                                {{'S', stack.first.length()}},
+                                {{'X', stack.first.length()}},
                                 dbg_reversed_pe_reads ? stack.first : stack.first.rev_compl(),
                                 sample_id
                                 );
