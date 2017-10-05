@@ -146,6 +146,12 @@ build_mpopi(
         throw;
     }
 
+    if (samples.empty()) {
+        cerr << "Error: Found no @RG lines (read groups/sample identifiers) in the header of BAM file '"
+             << bam_f.path << "'.\n";
+        throw exception();
+    }
+
     // Initialize the MetaPopInfo.
     mpopi.init_names(samples);
 
