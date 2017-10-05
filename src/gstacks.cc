@@ -290,6 +290,7 @@ try {
                     break;
                 double clock_read = gettm();
 
+                aln_loc.merge_paired_reads();
                 loc_proc.process(aln_loc);
                 double clock_process = gettm();
 
