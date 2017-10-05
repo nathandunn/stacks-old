@@ -77,10 +77,13 @@ public:
     // (qual)
     // (aux)
 
-    bool is_unmapped() const {return c_.flag & BAM_FUNMAP;}
-    bool is_rev_compl() const {return c_.flag & BAM_FREVERSE;}
-    bool is_read1() const {return c_.flag & BAM_FREAD1;}
-    bool is_read2() const {return c_.flag & BAM_FREAD2;}
+    bool is_unmapped()      const {return c_.flag & BAM_FUNMAP;}
+    bool is_secondary()     const {return c_.flag & BAM_FSECONDARY;}
+    bool is_supplementary() const {return c_.flag & BAM_FSUPPLEMENTARY;}
+    bool is_primary()       const {return ! (c_.flag & (BAM_FUNMAP | BAM_FSECONDARY | BAM_FSUPPLEMENTARY));}
+    bool is_rev_compl()     const {return c_.flag & BAM_FREVERSE;}
+    bool is_read1()         const {return c_.flag & BAM_FREAD1;}
+    bool is_read2()         const {return c_.flag & BAM_FREAD2;}
 
     AlnT aln_type() const;
     const char* read_group() const;
