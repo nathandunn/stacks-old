@@ -708,10 +708,8 @@ double MarukiLowModel::calc_ln_weighted_sum(double freq_MM, double freq_Mm, doub
         return log(weighted_sum);
     } else {
         // `weigted_sum` is subnormal or zero.
-        #ifdef DEBUG
         #pragma omp atomic
         ++n_underflows_;
-        #endif
         return calc_ln_weighted_sum_safe(freq_MM, freq_Mm, freq_mm, s_liks);
     }
 }
