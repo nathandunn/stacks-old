@@ -129,7 +129,7 @@ build_mpopi(
                         ++p;
                 }
 
-                if (rg_ids.back().empty() || samples.back().empty() || sample_ids.back() == -1)
+                if (rg_ids.back().empty() || samples.back().empty())
                     throw exception();
             }
 
@@ -173,6 +173,12 @@ BamCLocReader::BamCLocReader(Bam** bam_f)
     // Create the MetaPopInfo object from the header.
     //
     build_mpopi(mpopi_, rg_to_sample_, *bam_f_);
+    for (const Sample& s : mpopi_.samples()) {
+        if (s.id == -1) {
+            cerr << "Error: Sample '" << s.name << "' is missing its (integer) ID; was tsv2bam run correctly?\n";
+            throw exception();
+        }
+    }
 
     //
     // If the first locus has alignment information: this is a ref-based analysis,
@@ -307,8 +313,10 @@ BamCLocBuilder::BamCLocBuilder(
 {
     *bam_f = NULL;
 
-    // Create the MetaPopInfo object from the header.
+    // Create the MetaPopInfo object from the header. Assign sample IDs.
     build_mpopi(mpopi_, rg_to_sample_, *bam_f_);
+    for (size_t i=0; i<mpopi_.samples().size(); ++i)
+        mpopi_.set_sample_id(i, i+1);
 
     // Read the very first record.
     if (!read_and_parse_next_record()) {
