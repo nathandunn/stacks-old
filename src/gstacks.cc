@@ -650,7 +650,14 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
         this->loc_.pos = aln_loc.pos();
         this->loc_.mpopi = &aln_loc.mpopi();
         if (detailed_output)
-            this->loc_.details_ss << "BEGIN " << loc_.id << "\n";
+            this->loc_.details_ss << "BEGIN locus " << loc_.id << "\n";
+    }
+
+    if (detailed_output) {
+        loc_.details_ss << "BEGIN aln_reads\n";
+        for (const SAlnRead& read : aln_loc.reads())
+            loc_.details_ss << read.name << '\t' << loc_.mpopi->samples()[read.sample].name << '\t' << read.cigar << '\n';
+        loc_.details_ss << "END aln_reads\n";
     }
 
     if (dbg_write_alns)
@@ -684,7 +691,7 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
     write_one_locus(aln_loc, depths, calls, phase_data);
 
     if (detailed_output) {
-        loc_.details_ss << "END " << loc_.id << "\n";
+        loc_.details_ss << "END locus " << loc_.id << "\n";
         loc_.o_details = loc_.details_ss.str();
     }
 }
@@ -2055,7 +2062,7 @@ try {
     } else {
         if (out_dir.back() != '/')
             out_dir += '/';
-        o_prefix = out_dir + prog_name;
+        o_prefix = out_dir + "batch_1." + prog_name;
         check_or_mk_dir(out_dir);
     }
 
