@@ -188,25 +188,19 @@ class MarukiLowModel : public Model {
     double calc_ln_weighted_sum(double freq_MM, double freq_Mm, double freq_mm, const LikData& s_liks) const;
     double calc_ln_weighted_sum_safe(double freq_MM, double freq_Mm, double freq_mm, const LikData& s_liks) const;
 
-    #ifdef DEBUG
     mutable size_t n_underflows_; //xxx Removed after large-scale testing.
-    #endif
 
 public:
     MarukiLowModel(double gt_alpha, double var_alpha)
         : gt_alpha_(gt_alpha), gt_threshold_(qchisq(gt_alpha_,1)),
-          var_alpha_(var_alpha), var_threshold_(qchisq(var_alpha_,2)) // df=2
-    #ifndef DEBUG
+          var_alpha_(var_alpha), var_threshold_(qchisq(var_alpha_,2)), // df=2
+          n_underflows_(0)
         {}
-    #else
-          ,n_underflows_(0)
-        {}
-    ~MarukiLowModel() {cout << "DEBUG: marukilow: " << n_underflows_ << " underflows occurred.\n";}
-    #endif
 
     SiteCall call(const SiteCounts& depths) const;
     void print(ostream& os) const
         {os << to_string(modelt::marukilow) << " (var_alpha: "  << var_alpha_ << ", gt_alpha: " << gt_alpha_ << ")";}
+    size_t n_underflows() const {return n_underflows_;}
 };
 
 //
