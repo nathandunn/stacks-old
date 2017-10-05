@@ -69,12 +69,23 @@ public:
     STNode *succ(STNode *s) { this->succ_ = s; return this->succ_; }
 };
 
+class STLink {
+public:
+    size_t _index;
+    double _score;
+    STLink(size_t index, double score): _index(index), _score(score) {};
+    STLink(): _index(0), _score(0) {};
+};
+    
 class STAln {
 public:
     size_t id;
     size_t query_pos;
     size_t subj_pos;
     size_t aln_len;
+    STLink max;
+
+    vector<STLink> links;
 
     STAln() {
         this->id        = 0;
@@ -87,6 +98,13 @@ public:
         this->query_pos = q;
         this->subj_pos  = s;
         this->aln_len   = a;
+    }
+    STAln(size_t idx, size_t i, size_t q, size_t s, size_t a) {
+        this->id        = i;
+        this->query_pos = q;
+        this->subj_pos  = s;
+        this->aln_len   = a;
+        this->max       = STLink(idx, 0.0);
     }
 };
 
