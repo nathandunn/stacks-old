@@ -18,20 +18,35 @@ const string Group::default_name = "defaultgrp";
 
 void MetaPopInfo::reset_sample_map() {
     sample_indexes_.clear();
-    for (size_t i = 0; i < samples_.size(); ++i)
-        sample_indexes_.insert( {samples_[i].name, i} );
+    for (size_t i = 0; i < samples_.size(); ++i) {
+        bool rv = sample_indexes_.insert( {samples_[i].name, i} ).second;
+        if (!rv) {
+            cerr << "Error: Two or more samples have the same name '" << samples_[i].name << "'.\n";
+            throw exception();
+        }
+    }
 }
 
 void MetaPopInfo::reset_pop_map() {
     pop_indexes_.clear();
-    for (size_t i = 0; i < pops_.size(); ++i)
-        pop_indexes_.insert( {pops_[i].name, i} );
+    for (size_t i = 0; i < pops_.size(); ++i) {
+        bool rv = pop_indexes_.insert( {pops_[i].name, i} ).second;
+        if (!rv) {
+            cerr << "Error: Two or more populations have the same name '" << pops_[i].name << "'.\n";
+            throw exception();
+        }
+    }
 }
 
 void MetaPopInfo::reset_group_map() {
     group_indexes_.clear();
-    for (size_t i = 0; i < groups_.size(); ++i)
-        group_indexes_.insert( {groups_[i].name, i} );
+    for (size_t i = 0; i < groups_.size(); ++i) {
+        bool rv = group_indexes_.insert( {groups_[i].name, i} ).second;
+        if (!rv) {
+            cerr << "Error: Two or more groups have the same name '" << groups_[i].name << "'.\n";
+            throw exception();
+        }
+    }        
 }
 
 void MetaPopInfo::init_popmap(const string& pmap_path) {
