@@ -120,7 +120,8 @@ SuffixTree::align(const char *query, vector<pair<size_t, size_t> > &alns)
 
     if (active_edge == Nt4::$) {
         //
-        // Traverse the remaining paths out of active_node to determine all the alignments for this fragment.
+        // We are sitting at a node, with no active edge selected. We will traverse the remaining paths out of
+        // active_node to determine all the alignments for this fragment.
         //
         vector<size_t> dists;
 
@@ -131,7 +132,8 @@ SuffixTree::align(const char *query, vector<pair<size_t, size_t> > &alns)
 
     } else if (active_node->edge(active_edge)->succ() == NULL) {
         //
-        // Are we at a leaf node?
+        // We are on an active edge with no further nodes below it, AKA a leaf node. There are no paths to
+        // traverse below this position.
         //
         size_t aln_pos = node_pos - qcnt + 1;
         alns.push_back(make_pair(aln_pos, qcnt));
@@ -189,14 +191,15 @@ SuffixTree::find_all_leaf_dists(STNode *node, vector<size_t> &dists)
 {
     for (uint i = 0; i < NT4cnt; i++) {
         if (node->edge(i) != NULL) {
-            uint end = node->edge(i)->end() == -1 ? this->seq_.length() - 1 : node->edge(i)->end();
-            uint len = end - node->edge(i)->start() + 1;
+            size_t end = node->edge(i)->end() == -1 ? this->seq_.length() - 1 : node->edge(i)->end();
+            size_t len = end - node->edge(i)->start() + 1;
 
             if (node->edge(i)->succ() != NULL) {
-                this->find_leaf_dist(node->edge(i)->succ());
+                size_t dist = this->find_leaf_dist(node->edge(i)->succ());
 
-                for (uint j = 0; j < dists.size(); j++)
-                    dists[j] += len;
+                // for (uint j = 0; j < dists.size(); j++)
+                //     dists[j] += len;
+                dists.push_back(this->seq_.length() - 1 - dist - len);
             } else {
                 dists.push_back(this->seq_.length() - 1 - len);
             }
