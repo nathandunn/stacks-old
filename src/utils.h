@@ -29,6 +29,7 @@
 #include <utility>
 #include <string>
 
+#include <unistd.h>
 #include <dirent.h>
 
 #include <zlib.h>
@@ -144,9 +145,13 @@ void check_or_mk_dir(const string& path);
 //
 inline
 double gettm() {
+#if _POSIX_TIMERS
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return ts.tv_sec + ts.tv_nsec / 1.0e9;
+#else
+    return 0.0;
+#endif
 }
 
 //
