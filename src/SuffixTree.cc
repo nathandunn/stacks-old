@@ -126,68 +126,29 @@ SuffixTree::align(const char *query, vector<pair<size_t, size_t> > &alns)
         size_t aln_pos = node_pos - qcnt + 1;
         alns.push_back(make_pair(aln_pos, qcnt));
 
-    } else {
-	//
-	// If we are at a node, with no active edge, the current depth in the tree is 0. If we are on an
-	// active edge, then we count how many nucleotides along the edge we are to get our starting depth.
-	//
-	size_t starting_depth = active_edge == Nt4::$ ? 0 : node_stop - node_pos + 1; 
-
+    } else if (active_edge != Nt4::$ && node_pos < node_stop) {
         //
-        // We now traverse the remaining paths out of active_node to determine all the alignments for
-	// this fragment.
+        // We are in the middle of an edge. Traverse this path to the first leaf node to determine the alignment position.
+        // We calculate the alignment position by finding a path to a leaf node (the end of the sequence), then
+        // subtracting from the sequence length: 1) the distance from the last matching node, 2) the distance from
+        // the end of the node string to the location within the node string where the match ended, and 3) the length
+        // of the matching alignment; which will give us the length to the start of the alignmnet.
+        //
+        size_t aln_pos = this->seq_.length() - find_leaf_dist(active_node->edge(active_edge)->succ()) - (node_stop - node_pos) - qcnt;
+        alns.push_back(make_pair(aln_pos, qcnt));
+
+    } else {
+        //
+        // Otherwise, we now traverse the remaining paths out of active_node to determine all the alignments for
+        // this fragment.
         //
         vector<size_t> dists;
 
-        find_all_leaf_dists(active_node, dists, starting_depth);
+        find_all_leaf_dists(active_node, dists, 0);
 
         for (uint i = 0; i < dists.size(); i++)
             alns.push_back(make_pair(dists[i] - qcnt + 1, qcnt));
     }
-
-    // if (active_edge == Nt4::$) {
-    //     //
-    //     // We are sitting at a node, with no active edge selected. We will traverse the remaining paths out of
-    //     // active_node to determine all the alignments for this fragment.
-    //     //
-    //     vector<size_t> dists;
-
-    //     find_all_leaf_dists(active_node, dists, 0);
-
-    //     for (uint i = 0; i < dists.size(); i++)
-    //         alns.push_back(make_pair(dists[i] - qcnt + 1, qcnt));
-
-    // } else if (active_node->edge(active_edge)->succ() == NULL) {
-    //     //
-    //     // We are on an active edge with no further nodes below it, AKA a leaf node. There are no paths to
-    //     // traverse below this position.
-    //     //
-    //     size_t aln_pos = node_pos - qcnt + 1;
-    //     alns.push_back(make_pair(aln_pos, qcnt));
-
-    // } else if (node_pos < node_stop) {
-    //     //
-    //     // We are in the middle of an edge. Traverse this path to the first leaf node to determine the alignment position.
-    //     // We calculate the alignment position by finding a path to a leaf node (the end of the sequence), then
-    //     // subtracting from the sequence length: 1) the distance from the last matching node, 2) the distance from
-    //     // the end of the node string to the location within the node string where the match ended, and 3) the length
-    //     // of the matching alignment; which will give us the length to the start of the alignmnet.
-    //     //
-    //     size_t aln_pos = this->seq_.length() - find_leaf_dist(active_node->edge(active_edge)->succ()) - (node_stop - node_pos) - qcnt;
-    //     alns.push_back(make_pair(aln_pos, qcnt));
-
-    // } else {
-    //     //
-    //     // Traverse all the remaining paths out of the active_node's successor, using a breadth-first search, to
-    // 	// determine all the alignments for this fragment.
-    //     //
-    //     vector<size_t> dists;
-
-    //     find_all_leaf_dists(active_node->edge(active_edge)->succ(), dists, 0);
-
-    //     for (uint i = 0; i < dists.size(); i++)
-    //         alns.push_back(make_pair(dists[i] - qcnt + 1, qcnt));
-    // }
 
     return 0;
 }
