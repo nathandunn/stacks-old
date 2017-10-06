@@ -118,19 +118,7 @@ SuffixTree::align(const char *query, vector<pair<size_t, size_t> > &alns)
     if (qcnt < this->min_align_)
         return 0;
 
-    if (active_edge == Nt4::$) {
-        //
-        // We are sitting at a node, with no active edge selected. We will traverse the remaining paths out of
-        // active_node to determine all the alignments for this fragment.
-        //
-        vector<size_t> dists;
-
-        find_all_leaf_dists(active_node, dists);
-
-        for (uint i = 0; i < dists.size(); i++)
-            alns.push_back(make_pair(dists[i] - qcnt + 1, qcnt));
-
-    } else if (active_node->edge(active_edge)->succ() == NULL) {
+    if (active_edge != Nt4::$ && active_node->edge(active_edge)->succ() == NULL) {
         //
         // We are on an active edge with no further nodes below it, AKA a leaf node. There are no paths to
         // traverse below this position.
@@ -138,29 +126,68 @@ SuffixTree::align(const char *query, vector<pair<size_t, size_t> > &alns)
         size_t aln_pos = node_pos - qcnt + 1;
         alns.push_back(make_pair(aln_pos, qcnt));
 
-    } else if (node_pos < node_stop) {
-        //
-        // Otherwise, traverse this path to the first leaf node to determine the alignment position.
-        //  We calculate the alignment position by finding a path to a leaf node (the end of the sequence), then
-        //  subtracting from the sequence length: 1) the distance from the last matching node, 2) the distance from
-        //  the end of the node string to the location within the node string where the match ended, and 3) the length
-        //  of the matching alignment; which will give us the length to the start of the alignmnet.
-        //
-        size_t aln_pos = this->seq_.length() - find_leaf_dist(active_node->edge(active_edge)->succ()) - (node_stop - node_pos) - qcnt;
-        alns.push_back(make_pair(aln_pos, qcnt));
-
     } else {
+	//
+	// If we are at a node, with no active edge, the current depth in the tree is 0. If we are on an
+	// active edge, then we count how many nucleotides along the edge we are to get our starting depth.
+	//
+	size_t starting_depth = active_edge == Nt4::$ ? 0 : node_stop - node_pos + 1; 
+
         //
-        // Do the same traversal as described in the previous if/else branch, but traverse all the remaining paths
-        // out of active_node's successor to determine all the alignments for this fragment.
+        // We now traverse the remaining paths out of active_node to determine all the alignments for
+	// this fragment.
         //
         vector<size_t> dists;
 
-        find_all_leaf_dists(active_node->edge(active_edge)->succ(), dists);
+        find_all_leaf_dists(active_node, dists, starting_depth);
 
         for (uint i = 0; i < dists.size(); i++)
             alns.push_back(make_pair(dists[i] - qcnt + 1, qcnt));
     }
+
+    // if (active_edge == Nt4::$) {
+    //     //
+    //     // We are sitting at a node, with no active edge selected. We will traverse the remaining paths out of
+    //     // active_node to determine all the alignments for this fragment.
+    //     //
+    //     vector<size_t> dists;
+
+    //     find_all_leaf_dists(active_node, dists, 0);
+
+    //     for (uint i = 0; i < dists.size(); i++)
+    //         alns.push_back(make_pair(dists[i] - qcnt + 1, qcnt));
+
+    // } else if (active_node->edge(active_edge)->succ() == NULL) {
+    //     //
+    //     // We are on an active edge with no further nodes below it, AKA a leaf node. There are no paths to
+    //     // traverse below this position.
+    //     //
+    //     size_t aln_pos = node_pos - qcnt + 1;
+    //     alns.push_back(make_pair(aln_pos, qcnt));
+
+    // } else if (node_pos < node_stop) {
+    //     //
+    //     // We are in the middle of an edge. Traverse this path to the first leaf node to determine the alignment position.
+    //     // We calculate the alignment position by finding a path to a leaf node (the end of the sequence), then
+    //     // subtracting from the sequence length: 1) the distance from the last matching node, 2) the distance from
+    //     // the end of the node string to the location within the node string where the match ended, and 3) the length
+    //     // of the matching alignment; which will give us the length to the start of the alignmnet.
+    //     //
+    //     size_t aln_pos = this->seq_.length() - find_leaf_dist(active_node->edge(active_edge)->succ()) - (node_stop - node_pos) - qcnt;
+    //     alns.push_back(make_pair(aln_pos, qcnt));
+
+    // } else {
+    //     //
+    //     // Traverse all the remaining paths out of the active_node's successor, using a breadth-first search, to
+    // 	// determine all the alignments for this fragment.
+    //     //
+    //     vector<size_t> dists;
+
+    //     find_all_leaf_dists(active_node->edge(active_edge)->succ(), dists, 0);
+
+    //     for (uint i = 0; i < dists.size(); i++)
+    //         alns.push_back(make_pair(dists[i] - qcnt + 1, qcnt));
+    // }
 
     return 0;
 }
@@ -168,6 +195,9 @@ SuffixTree::align(const char *query, vector<pair<size_t, size_t> > &alns)
 size_t
 SuffixTree::find_leaf_dist(STNode *node)
 {
+    //
+    // This method will perform a depth first search and return the distance to the end of the sequence.
+    //
     uint dist = 0;
 
     for (uint i = 0; i < NT4cnt; i++) {
@@ -187,22 +217,21 @@ SuffixTree::find_leaf_dist(STNode *node)
 }
 
 size_t
-SuffixTree::find_all_leaf_dists(STNode *node, vector<size_t> &dists)
+SuffixTree::find_all_leaf_dists(STNode *node, vector<size_t> &dists, size_t cur_depth)
 {
+    //
+    // This method will perform a breadth first search and return the distances from all paths exiting out
+    // of this node.
+    //
     for (uint i = 0; i < NT4cnt; i++) {
         if (node->edge(i) != NULL) {
             size_t end = node->edge(i)->end() == -1 ? this->seq_.length() - 1 : node->edge(i)->end();
             size_t len = end - node->edge(i)->start() + 1;
 
-            if (node->edge(i)->succ() != NULL) {
-                size_t dist = this->find_leaf_dist(node->edge(i)->succ());
-
-                // for (uint j = 0; j < dists.size(); j++)
-                //     dists[j] += len;
-                dists.push_back(this->seq_.length() - 1 - dist - len);
-            } else {
-                dists.push_back(this->seq_.length() - 1 - len);
-            }
+            if (node->edge(i)->succ() != NULL) 
+                this->find_all_leaf_dists(node->edge(i)->succ(), dists, cur_depth + len);
+            else 
+                dists.push_back(this->seq_.length() - 1 - len - cur_depth);
         }
     }
 
@@ -555,5 +584,5 @@ SuffixTree::write_suffix(vector<string> &suffixes, string suffix, STNode *node)
 bool
 compare_staln(STAln a, STAln b)
 {
-    return a.subj_pos == b.subj_pos;
+    return a.subj_pos < b.subj_pos;
 }
