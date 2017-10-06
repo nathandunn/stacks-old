@@ -958,7 +958,7 @@ bool LocusProcessor::add_read_to_aln(
         GappedAln* aligner,
         SuffixTree* stree
 ) const {
-
+    
     if (!this->align_reads_to_contig(stree, aligner, r.seq, aln_res))
         return false;
 
