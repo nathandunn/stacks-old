@@ -129,7 +129,7 @@ public:
 
 private:
     size_t find_leaf_dist(STNode *);
-    size_t find_all_leaf_dists(STNode *, vector<size_t> &);
+    size_t find_all_leaf_dists(STNode *, vector<size_t> &, size_t);
     size_t write_suffix(vector<string> &, string, STNode *);
     int    forward_nodes(STNode **, Nt4 &, int &, int, int &, int);
 };
