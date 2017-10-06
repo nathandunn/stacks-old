@@ -61,7 +61,7 @@
 #define IF_NDEBUG_CATCH_ALL_EXCEPTIONS
 
 #else
-#define NDEBUG
+//#define NDEBUG // xxx Uncomment before releasing v2.1
 #define IF_NDEBUG_TRY \
     try {
 #define IF_NDEBUG_CATCH_ALL_EXCEPTIONS \
