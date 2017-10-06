@@ -85,11 +85,11 @@ const char o_aln_header[] =
     "# true_loci() { loc=$1; spl=$2; show_loc $loc | grep \"\\b$spl\\b\" | grep -v ref | cut -d: -f1 | sort -u; }\n"
     ;
 const char o_hapgraphs_header[] =
-    "# This prints observed read haplotypes:\n"
-    "# show_loc() { loc=$1; cat ${RY_DIR:-.}/batch_1.gstacks.alns | sed -n \"/^END $loc\\b/ q; /^BEGIN $loc\\b/,$ p\" | tail -n+2; }\n"
-    "# snp_cols() { loc=$1; zcat ${RY_DIR:-.}/batch_1.gstacks.vcf.gz | awk \"\\$1==$loc; \\$1>$loc {exit}\" | awk '$5!=\".\"' | cut -f2 | paste -sd ','; }\n"
-    "# show_haps() { loc=$1; cols=$2; spl=$3; show_loc $loc | grep \"\\b$spl\\b\" | cut -f3 | cut -c \"$cols\" | sort; }\n"
-    "# true_loci() { loc=$1; spl=$2; show_loc $loc | grep \"\\b$spl\\b\" | grep -v ref | cut -d: -f1 | sort -u; }\n"
+    "# dot -Tpdf -O batch_1.gstacks.hapgraphs.dot\n"
+    "# loc=371\n"
+    "# { g=batch_1.gstacks.hapgraphs.dot; sed -n '0,/^subgraph/p' $g | head -n-1; sed -n \"/^subgraph cluster_loc$loc\\b/,/^}/p\" $g; echo \\}; } | dot -Tpdf -o haps.$loc.pdf\n"
+    "graph {\n"
+    "edge[color=\"grey60\",fontsize=12,labeljust=\"l\"];\n";
     ;
 
 //
@@ -958,7 +958,7 @@ bool LocusProcessor::add_read_to_aln(
         GappedAln* aligner,
         SuffixTree* stree
 ) const {
-    
+
     if (!this->align_reads_to_contig(stree, aligner, r.seq, aln_res))
         return false;
 
