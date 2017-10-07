@@ -409,11 +409,17 @@ CLocAlnSet::juxtapose(CLocAlnSet&& left, CLocAlnSet&& right, long offset)
     assert(left.id() == right.id());
     assert(left.pos() == right.pos());
     assert(&left.mpopi() == &right.mpopi());
-    if (offset < 0 && size_t(-offset) > right.ref().length())
+    if (offset < 0 && size_t(-offset) > right.ref().length()) {
         // N.B. It is actually possible that `size_t(-offset) > left.ref().length()` happens
         // legitimately: if inserts smaller than the read size have been sequenced, the paired-end
         // contig may end upstream of the forward reads.
-        DOES_NOT_HAPPEN;
+
+        //DOES_NOT_HAPPEN;
+        // TODO it's unclear at this point if/when `size_t(-offset) > right.ref().length()`
+        // should be allowed to happen.
+        cerr << "DEBUG: locus " << left.id() << ", paired contig was too small for the offset\n";
+        return CLocAlnSet(move(left));
+    }
 
     size_t left_ref_len = left.ref().length();
     CLocAlnSet merged (move(left));
