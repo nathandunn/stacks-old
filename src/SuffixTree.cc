@@ -126,28 +126,23 @@ SuffixTree::align(const char *query, vector<pair<size_t, size_t> > &alns)
         size_t aln_pos = node_pos - qcnt + 1;
         alns.push_back(make_pair(aln_pos, qcnt));
 
-    } else if (active_edge != Nt4::$ && node_pos < node_stop) {
-        //
-        // We are in the middle of an edge. Traverse this path to the first leaf node to determine the alignment position.
-        // We calculate the alignment position by finding a path to a leaf node (the end of the sequence), then
-        // subtracting from the sequence length: 1) the distance from the last matching node, 2) the distance from
-        // the end of the node string to the location within the node string where the match ended, and 3) the length
-        // of the matching alignment; which will give us the length to the start of the alignmnet.
-        //
-        size_t aln_pos = this->seq_.length() - find_leaf_dist(active_node->edge(active_edge)->succ()) - (node_stop - node_pos) - qcnt;
-        alns.push_back(make_pair(aln_pos, qcnt));
-
     } else {
         //
-        // Otherwise, we now traverse the remaining paths out of active_node to determine all the alignments for
-        // this fragment.
+        // Otherwise, we now traverse the remaining paths out of active_node, in a breadth first traversal, 
+        // to determine all the alignments for this fragment.
         //
         vector<size_t> dists;
 
-        find_all_leaf_dists(active_node, dists, 0);
+        //
+        // If we are in the middle or at the end of an edge, record the distance to the end of the edge, and 
+        // start the traversal from the following node.
+        //
+        size_t query_start = active_edge != Nt4::$ ? node_stop - node_pos : 0;
+        
+        find_all_leaf_dists( (active_edge == Nt4::$ ? active_node : active_node->edge(active_edge)->succ()), dists, query_start);
 
         for (uint i = 0; i < dists.size(); i++)
-            alns.push_back(make_pair(dists[i] - qcnt + 1, qcnt));
+            alns.push_back(make_pair(dists[i] + query_start - qcnt + 1, qcnt));
     }
 
     return 0;

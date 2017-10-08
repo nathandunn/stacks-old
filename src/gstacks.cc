@@ -620,17 +620,18 @@ LocusProcessor::process(CLocReadSet& loc)
             for (SRead& r : loc.pe_reads()) {
                 if (detailed_output)
                     loc_.details_ss << "pe_read"
-                                << '\t' << r.name
-                                << '\t' << loc_.mpopi->samples()[r.sample].name
-                                << '\t' << r.seq << '\n';
+                                    << '\t' << r.name
+                                    << '\t' << loc_.mpopi->samples()[r.sample].name
+                                    << '\t' << r.seq << '\n';
+
                 if (add_read_to_aln(pe_aln_loc, aln_res, move(r), aligner, stree)) {
                     this->stats_.n_aln_reads++;
                     if (detailed_output)
                         loc_.details_ss << "pe_aln_local"
-                                    << '\t' << pe_aln_loc.reads().back().name
-                                    << '\t' << aln_res.subj_pos + 1
-                                    << '\t' << aln_res.cigar
-                                    << '\n';
+                                        << '\t' << pe_aln_loc.reads().back().name
+                                        << '\t' << aln_res.subj_pos + 1
+                                        << '\t' << aln_res.cigar
+                                        << '\n';
                 }
             }
             delete aligner;
