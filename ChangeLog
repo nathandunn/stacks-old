@@ -1,5 +1,21 @@
-Stacks 1.47 - tba
---------------------------
+Stacks 2.0 Beta 1 - Oct 09, 2017
+--------------------------------
+    Feature: Paired-end sequencing data can be utilized fully. In particular, when the shearing-based
+             protocol is used, the software will assemble a local contig from the paired reads across
+             the population, possibly overlap it with the forward-reads region, then align all reads to the
+             assembled contig. This new approach also fully supports double-digest protocols.
+    Feature: Haplotype calling and diploidy-violation dectection now rely on a novel, more powerful algorithm.
+    Feature: SNP and genotype-calling now uses the diploid models of Maruki and Lynch (2017).
+    Feature: The rxstacks program has been replaced with the gstacks program, and there is no need to re-run
+	     some of the earlier steps of the pipeline anymore.
+    Feature: The memory footprint of the populations program has been considerably reduced and can be scaled
+	     for any size data set.
+    Feature: The reference-based pipeline has been simplified, and now only comprises two steps: gstacks and populations.
+    Feature: Added --null_inline mode to clone_filter (and process_radtags) for previously unseen type
+             of oligo combination.
+
+Stacks 1.47 - Sept 06, 2017
+---------------------------
     Feature: Improved populations's fasta output options (especially,
              added a option to export locus consensus sequences).
     Feature: denovo_map.pl and red_map.pl now stop if a component
