@@ -266,7 +266,7 @@ public:
             delete this->_loci[i];
     };
 
-    int            init(int, string, string);
+    int            init(string, string);
     size_t         next_batch(ostream &);
     size_t         next_batch_number() { return this->_batch_num + 1; }
     int            summarize(ostream &);
@@ -316,7 +316,7 @@ private:
 
 private:
     int    init_external_loci(string, string);
-    int    init_stacks_loci(int, string, string);
+    int    init_stacks_loci(string, string);
     size_t next_batch_external_loci(ostream &);
     size_t next_batch_stacks_loci(ostream &);
 };

@@ -32,7 +32,6 @@ using namespace std;
 // Global variables to hold command-line options.
 InputMode input_mode  = InputMode::stacks2;
 int       num_threads =  1;
-int       batch_id    = -1;
 string    in_path;
 string    in_vcf_path;
 string    out_path;
@@ -152,7 +151,7 @@ int main (int argc, char* argv[]) {
     //
     BatchLocusProcessor bloc(input_mode, batch_size, &mpopi);
 
-    bloc.init(batch_id, in_path, pmap_path);
+    bloc.init(in_path, pmap_path);
     
     //
     // Report information on the structure of the populations specified.
@@ -398,7 +397,7 @@ int main (int argc, char* argv[]) {
 }
 
 int
-BatchLocusProcessor::init(int batch_id, string in_path, string pmap_path)
+BatchLocusProcessor::init(string in_path, string pmap_path)
 {
     //
     // Read the blacklist and whitelist to control which loci we load.
@@ -418,7 +417,7 @@ BatchLocusProcessor::init(int batch_id, string in_path, string pmap_path)
     if (this->_input_mode == InputMode::vcf)
         this->init_external_loci(in_vcf_path, pmap_path);
     else
-        this->init_stacks_loci(batch_id, in_path, pmap_path);
+        this->init_stacks_loci(in_path, pmap_path);
 
     return 0;
 }
@@ -446,13 +445,13 @@ BatchLocusProcessor::next_batch(ostream &log_fh)
 }
 
 int
-BatchLocusProcessor::init_stacks_loci(int batch_id, string in_path, string pmap_path)
+BatchLocusProcessor::init_stacks_loci(string in_path, string pmap_path)
 {
     //
     // Open the files.
     //
-    string catalog_fa_path  = in_path + "batch_" + to_string(batch_id) + ".gstacks.fa.gz";
-    string catalog_vcf_path = in_path + "batch_" + to_string(batch_id) + ".gstacks.vcf.gz";
+    string catalog_fa_path  = in_path + "gstacks.fa.gz";
+    string catalog_vcf_path = in_path + "gstacks.vcf.gz";
 
     this->_fasta_reader.open(catalog_fa_path);
     this->_cloc_reader.open(catalog_vcf_path);
@@ -3968,7 +3967,6 @@ parse_command_line(int argc, char* argv[])
             {"merge_sites",    no_argument,       NULL, 'D'},
             {"sigma",          required_argument, NULL, 1005},
             {"threads",        required_argument, NULL, 't'},
-            {"batch_id",       required_argument, NULL, 'b'},
             {"in_path",        required_argument, NULL, 'P'},
             {"v1",             no_argument,       NULL, 2000},
             {"out_path",       required_argument, NULL, 'O'},
@@ -4006,7 +4004,7 @@ parse_command_line(int argc, char* argv[])
         };
 
         // getopt_long stores the option index here.
-        int c = getopt_long(argc, argv, "ACDEFGHJKLNSTUV:YZ123456dghjklnva:b:c:e:f:i:m:o:p:q:r:t:u:w:B:I:M:O:P:R:Q:W:", long_options, NULL);
+        int c = getopt_long(argc, argv, "ACDEFGHJKLNSTUV:YZ123456dghjklnva:c:e:f:i:m:o:p:q:r:t:u:w:B:I:M:O:P:R:Q:W:", long_options, NULL);
 
         // Detect the end of the options.
         if (c == -1)
@@ -4064,13 +4062,6 @@ parse_command_line(int argc, char* argv[])
 
             if (max_obs_het < 0 || max_obs_het > 1.0) {
                 cerr << "Unable to parse the maximum observed heterozygosity.\n";
-                help();
-            }
-            break;
-        case 'b':
-            batch_id = is_integer(optarg);
-            if (batch_id < 0) {
-                cerr << "Batch ID (-b) must be an integer, e.g. 1, 2, 3\n";
                 help();
             }
             break;
@@ -4314,19 +4305,6 @@ parse_command_line(int argc, char* argv[])
         if (pmap_path.empty())
             cerr << "A population map was not specified, all samples will be read from '" << in_path << "' as a single popultaion.\n";
 
-        if (batch_id < 0) {
-            vector<int> cat_ids = find_catalogs(in_path);
-            if (cat_ids.size() == 1) {
-                batch_id = cat_ids[0];
-            } else if (cat_ids.empty()) {
-                cerr << "Error: Unable to find a catalog in '" << in_path << "'.\n";
-                help();
-            } else {
-                cerr << "Error: Input directory contains several catalogs, please specify -b.\n";
-                help();
-            }
-        }
-
         if (out_path.empty())
             out_path = in_path;
 
@@ -4375,12 +4353,11 @@ void help() {
               << "populations -P dir [-O dir] [-M popmap] (filters) [--fstats] [-k [--sigma=150000] [--bootstrap [-N 100]]] (output formats)\n"
               << "populations -V vcf -O dir [-M popmap] (filters) [--fstats] [-k [--sigma=150000] [--bootstrap [-N 100]]] (output formats)\n"
               << "\n"
-              << "  -P,--in_path: path to the directory containing the Stacks files.\n"
-              << "  -V,--in_vcf: path to an input VCF file.\n"
+              << "  -P,--in_path: path to a directory containing gstacks output files.\n"
+              << "  -V,--in_vcf: path to a standalone input VCF file.\n"
               << "  -O,--out_path: path to a directory where to write the output files. (Required by -V; otherwise defaults to value of -P.)\n"
               << "  -M,--popmap: path to a population map. (Format is 'SAMPLE1 \\t POP1 \\n SAMPLE2 ...'.)\n"
               << "  -t,--threads: number of threads to run in parallel sections of code.\n"
-              << "  -b,--batch_id: ID of the catalog to consider (default: guess).\n"
               << "\n"
               << "Data Filtering:\n"
               << "  -p [int]: minimum number of populations a locus must be present in to process a locus.\n"
