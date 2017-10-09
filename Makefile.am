@@ -1,4 +1,4 @@
-bin_PROGRAMS = ustacks pstacks cstacks sstacks rxstacks process_radtags process_shortreads \
+bin_PROGRAMS = ustacks pstacks cstacks sstacks process_radtags process_shortreads \
 	kmer_filter clone_filter genotypes populations phasedstacks \
 	tsv2bam gstacks
 
@@ -72,7 +72,6 @@ sstacks_SOURCES = libcore.a src/sstacks.h src/sstacks.cc
 
 populations_SOURCES = libcore.a libpop.a src/populations.h src/populations.cc
 genotypes_SOURCES   = libcore.a libpop.a src/genotypes.h src/genotypes.cc
-rxstacks_SOURCES    = libcore.a libpop.a src/rxstacks.h src/rxstacks.cc
 
 # tsv2bam & gstacks
 tsv2bam_SOURCES = libcore.a src/tsv2bam.cc
@@ -114,9 +113,6 @@ genotypes_LDADD    = libcore.a libpop.a
 populations_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
 populations_LDFLAGS  = $(OPENMP_CFLAGS)
 populations_LDADD    = $(OPENMP_CFLAGS) $(BAM_LIBS) libcore.a libpop.a
-rxstacks_CXXFLAGS = $(OPENMP_CFLAGS)
-rxstacks_LDFLAGS  = $(OPENMP_CFLAGS)
-rxstacks_LDADD    = $(OPENMP_CFLAGS) libcore.a libpop.a
 
 # tsv2bam & gstacks
 tsv2bam_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
