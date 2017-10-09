@@ -936,6 +936,7 @@ sub parse_command_line {
 	    push(@_ustacks, "-p " . $arg); 
 	    push(@_cstacks, "-p " . $arg); 
 	    push(@_sstacks, "-p " . $arg); 
+	    push(@_gstacks, "-t " . $arg); 
 	    push(@_populations, "-t " . $arg); 
 
 	} elsif ($_ =~ /^-M$/) { 
