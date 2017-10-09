@@ -276,7 +276,7 @@ sub execute_stacks {
         #    
         print $log_fh "\nsamtools merge\n----------\n";
 
-        $cmd = "samtools merge $out_path/batch_$batch_id.catalog.bam";
+        $cmd = "samtools merge $out_path/catalog.bam";
         foreach $sample (@parents, @progeny, @samples) {
             $cmd .= " $out_path/$sample->{'file'}.matches.bam";
         }
@@ -342,7 +342,7 @@ sub execute_stacks {
         printf(STDERR "Calculating population-level summary statistics\n");
         print $log_fh "\npopulations\n==========\n";
 
-        $cmd = $exe_path . "populations" . ($v1 ? " --v1" : "") . " -b $batch_id -P $out_path " . join(" ", @_populations) . " 2>&1";
+        $cmd = $exe_path . "populations" . ($v1 ? " --v1" : "") . " -P $out_path " . join(" ", @_populations) . " 2>&1";
         print STDERR  "  $cmd\n";
         print $log_fh "$cmd\n";
 

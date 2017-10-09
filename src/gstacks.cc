@@ -79,15 +79,15 @@ ofstream o_aln_f;
 ofstream o_hapgraphs_f;
 const char o_aln_header[] =
     "# This prints observed read haplotypes:\n"
-    "# show_loc() { loc=$1; cat ${RY_DIR:-.}/batch_1.gstacks.alns | sed -n \"/^END $loc\\b/ q; /^BEGIN $loc\\b/,$ p\" | tail -n+2; }\n"
-    "# snp_cols() { loc=$1; zcat ${RY_DIR:-.}/batch_1.gstacks.vcf.gz | awk \"\\$1==$loc; \\$1>$loc {exit}\" | awk '$5!=\".\"' | cut -f2 | paste -sd ','; }\n"
+    "# show_loc() { loc=$1; cat ${RY_DIR:-.}/gstacks.alns | sed -n \"/^END $loc\\b/ q; /^BEGIN $loc\\b/,$ p\" | tail -n+2; }\n"
+    "# snp_cols() { loc=$1; zcat ${RY_DIR:-.}/gstacks.vcf.gz | awk \"\\$1==$loc; \\$1>$loc {exit}\" | awk '$5!=\".\"' | cut -f2 | paste -sd ','; }\n"
     "# show_haps() { loc=$1; cols=$2; spl=$3; show_loc $loc | grep \"\\b$spl\\b\" | cut -f3 | cut -c \"$cols\" | sort; }\n"
     "# true_loci() { loc=$1; spl=$2; show_loc $loc | grep \"\\b$spl\\b\" | grep -v ref | cut -d: -f1 | sort -u; }\n"
     ;
 const char o_hapgraphs_header[] =
-    "# dot -Tpdf -O batch_1.gstacks.hapgraphs.dot\n"
+    "# dot -Tpdf -O gstacks.hapgraphs.dot\n"
     "# loc=371\n"
-    "# { g=batch_1.gstacks.hapgraphs.dot; sed -n '0,/^subgraph/p' $g | head -n-1; sed -n \"/^subgraph cluster_loc$loc\\b/,/^}/p\" $g; echo \\}; } | dot -Tpdf -o haps.$loc.pdf\n"
+    "# { g=gstacks.hapgraphs.dot; sed -n '0,/^subgraph/p' $g | head -n-1; sed -n \"/^subgraph cluster_loc$loc\\b/,/^}/p\" $g; echo \\}; } | dot -Tpdf -o haps.$loc.pdf\n"
     "graph {\n"
     "edge[color=\"grey60\",fontsize=12,labeljust=\"l\"];\n";
     ;
@@ -1804,25 +1804,25 @@ const string help_string = string() +
         "\n"
         "De novo mode:\n"
         "  -P: input directory\n"
-        "  -b: batch ID (default: guess)\n"
         "\n"
-        "  The input directory must contain a 'batch_X.catalog.bam' file, that\n"
+        "  The input directory must contain a 'catalog.bam' file, that\n"
         "  the user should generate after running ustacks, cstacks, sstacks and\n"
         "  tsv2bam with e.g.:\n"
-        "  \"samtools merge ./batch_1.catalog.bam ./*.matches.bam\"\n"
+        "  \"samtools merge ./catalog.bam ./*.matches.bam\"\n"
         "\n"
         "Reference-based mode:\n"
         "  -B: input BAM file\n"
-        "  -O: output directory\n"
         "  --paired: reads are paired (RAD loci will be defined by READ1 alignments)\n"
         "\n"
         "  The input BAM file should (i) be sorted by coordinate and (ii) comprise\n"
         "  all aligned reads for all samples, with reads assigned to samples using\n"
-        "  BAM \"reads groups\" (gstacks uses the SN, \"sample name\" field).\n"
+        "  BAM \"reads groups\" (gstacks uses the SM, \"sample name\" field).\n"
         "  Please refer to the gstacks manual page for information about how to\n"
         "  generate such a BAM file with Samtools, and examples.\n"
         "\n"
         "Shared options:\n"
+        "  -O: output directory (default: none with -B; with -P same as the input\n"
+        "      directory)\n"
         "  -t,--threads: number of threads to use (default: 1)\n"
         "  --details: write a more detailed output\n"
         "  --ignore-pe-reads: ignore paired-end reads even if present in the input\n"
@@ -1866,7 +1866,6 @@ try {
         {"help",         no_argument,       NULL,  'h'},
         {"quiet",        no_argument,       NULL,  'q'},
         {"in-dir",       required_argument, NULL,  'P'},
-        {"batch-id",     required_argument, NULL,  'b'},
         {"in-bam",       required_argument, NULL,  'B'},
         {"out-dir",      required_argument, NULL,  'O'},
         {"paired",       no_argument,       NULL,  1007},
@@ -1892,7 +1891,6 @@ try {
 
     string in_dir;
     string out_dir;
-    int batch_id = -1;
     double gt_alpha = 0.05;
     double var_alpha = 0.05;
 
@@ -1900,7 +1898,7 @@ try {
     int long_options_i;
     while (true) {
 
-        c = getopt_long(argc, argv, "hqP:b:B:O:W:t:", long_options, &long_options_i);
+        c = getopt_long(argc, argv, "hqP:B:O:W:t:", long_options, &long_options_i);
 
         if (c == -1)
             break;
@@ -1919,9 +1917,6 @@ try {
             break;
         case 'P':
             in_dir = optarg;
-            break;
-        case 'b':
-            batch_id = atoi(optarg);
             break;
         case 'B':
             in_bam = optarg;
@@ -2006,8 +2001,8 @@ try {
     if (in_dir.empty() && in_bam.empty()) {
         cerr << "Error: Please specify -P or -B.\n";
         bad_args();
-    } else if (!in_dir.empty() && (!in_bam.empty() || !out_dir.empty())) {
-        cerr << "Error: Please specify one of -P or -B/-O, not both.\n";
+    } else if (!in_dir.empty() && !in_bam.empty()) {
+        cerr << "Error: Please specify one of -P or -B, not both.\n";
         bad_args();
     }
 
@@ -2037,27 +2032,15 @@ try {
     if (input_type == GStacksInputT::denovo) {
         if (in_dir.back() != '/')
             in_dir += '/';
-        if (batch_id < 0) {
-            vector<int> cat_ids = find_catalogs(in_dir);
-            if (cat_ids.size() == 1) {
-                batch_id = cat_ids[0];
-            } else if (cat_ids.empty()) {
-                cerr << "Error: Unable to find a catalog in '" << in_dir << "'.\n";
-                bad_args();
-            } else {
-                cerr << "Error: Input directory contains several catalogs, please specify -b.\n";
-                bad_args();
-            }
-        }
-        in_bam = in_dir + "batch_" + to_string(batch_id) + ".catalog.bam";
-        o_prefix = in_dir + "batch_" + to_string(batch_id) + "." + prog_name;
-
-    } else {
-        if (out_dir.back() != '/')
-            out_dir += '/';
-        o_prefix = out_dir + "batch_1." + prog_name;
-        check_or_mk_dir(out_dir);
+        in_bam = in_dir + "catalog.bam";
+        if (out_dir.empty())
+            out_dir = in_dir;
     }
+
+    if (out_dir.back() != '/')
+        out_dir += '/';
+    o_prefix = out_dir + prog_name;
+    check_or_mk_dir(out_dir);
 
 } catch (std::invalid_argument&) {
     bad_args();
