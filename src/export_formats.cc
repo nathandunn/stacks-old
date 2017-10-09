@@ -41,6 +41,8 @@ extern bool phylip_var;
 extern bool loci_ordered;
 extern bool ordered_export;
 extern bool merge_sites;
+extern bool write_gtypes;
+extern bool expand_id;
 extern string enz;
 extern set<string> debug_flags;
 
@@ -785,6 +787,104 @@ HapDivergenceExport::write_batch_pairwise(const vector<LocBin *> &loci,
             << h->stat[4]     << "\t"
             << h->smoothed[4] << "\t"
             << h->bs[4]       << "\n";
+    }
+
+    return 0;
+}
+
+GenotypesExport::GenotypesExport() : Export(ExportType::genotypes)
+{
+    this->_path = out_path + out_prefix + (write_gtypes ? ".genotypes.tsv" : ".haplotypes.tsv");
+}
+
+int
+GenotypesExport::open(const MetaPopInfo *mpopi)
+{
+    this->_mpopi = mpopi;
+
+    this->_fh.open(this->_path.c_str(), ofstream::out);
+    if (this->_fh.fail()) {
+        cerr << "Error opening markers file '" << this->_path << "'\n";
+        exit(1);
+    }
+
+    cerr << "Raw Genotypes/Haplotypes will be written to '" << this->_path << "'\n";
+
+    return 0;
+}
+
+int
+GenotypesExport::write_header()
+{
+    this->_fh << "# Catalog Locus ID"    << "\t";
+    if (expand_id)
+        this->_fh << "\t";
+    if (write_gtypes)
+        this->_fh << "Marker\t";
+    this->_fh << "Cnt";
+
+    for (int i = 0; i < this->_mpopi->samples().size(); i++) {
+        this->_fh << "\t" << this->_mpopi->samples()[i].name;
+    }
+    this->_fh << "\n";
+
+    return 0;
+}
+
+int
+GenotypesExport::write_batch(const vector<LocBin *> &loci)
+{
+    LocBin  *loc;
+    CSLocus *cloc;
+
+    //
+    // Output each locus.
+    //
+    for (uint i = 0; i < loci.size(); i++) {
+        cloc = loci[i]->cloc;
+
+        stringstream id;
+        cloc->annotation.length() > 0 ?
+            id << cloc->id << "|" << cloc->annotation : id << cloc->id;
+
+        this->_fh << id.str();
+
+        if (expand_id) {
+            if (cloc->annotation.length() > 0)
+                id << "\t" << cloc->id << "\t" << cloc->annotation;
+            else if (strlen(cloc->loc.chr()) > 0)
+                id << "\t" << cloc->id << "\t" << cloc->loc.chr() << "_" << cloc->loc.bp +1;
+            else
+                id << "\t" << cloc->id << "\t";
+        }
+
+        if (write_gtypes)
+            this->_fh << "\t" << cloc->marker;
+
+        write_gtypes ? this->_fh << "\t" << cloc->gcnt : this->_fh << "\t" << cloc->hcnt;
+
+        Datum **d = loci[i]->d;
+        string  obshap;
+
+        for (int i = 0; i < this->_mpopi->samples().size(); i++) {
+            this->_fh << "\t";
+
+            if (d[i] == NULL)
+                this->_fh << "-";
+            else {
+                if (write_gtypes) {
+                    this->_fh << d[i]->gtype;
+                } else {
+                    obshap = "";
+                    for (uint j = 0; j < d[i]->obshap.size(); j++)
+                        obshap += string(d[i]->obshap[j]) + "/";
+                    obshap = obshap.substr(0, obshap.length()-1);
+                    this->_fh << obshap;
+                }
+            }
+        }
+
+        this->_fh << "\n";
     }
 
     return 0;

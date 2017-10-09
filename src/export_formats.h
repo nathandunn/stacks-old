@@ -30,8 +30,8 @@
 #include "ordered.h" // for "snp"
 #include "populations.h" // for "merget", "InputMode", "uncalled_haplotype()", "count_haplotypes_at_locus()"
 
-enum class ExportType {markers, sumstats, hapstats, snpdivergence, hapdivergence,
-        fasta_loci, fasta_raw, fasta_samples, structure, genepop, ordered_genepop, vcf, ordered_vcf};
+enum class ExportType {markers, genotypes, sumstats, hapstats, snpdivergence, hapdivergence,
+                       fasta_loci, fasta_raw, fasta_samples, structure, genepop, ordered_genepop, vcf, ordered_vcf};
 
 class Export {
  protected:
@@ -84,6 +84,25 @@ class MarkersExport: public Export {
  public:
     MarkersExport();
     ~MarkersExport() {};
+    int  open(const MetaPopInfo *mpopi);
+    int  write_header();
+    int  write_batch(const vector<LocBin *> &);
+    int  post_processing() { return 0; }
+    void close() {
+        this->_fh.close();
+        return;
+    }
+};
+
+class GenotypesExport: public Export {
+    //
+    // Output a list of heterozygous loci and the associated haplotype frequencies.
+    //
+    const MetaPopInfo *_mpopi;
+    
+ public:
+    GenotypesExport();
+    ~GenotypesExport() {};
     int  open(const MetaPopInfo *mpopi);
     int  write_header();
     int  write_batch(const vector<LocBin *> &);
