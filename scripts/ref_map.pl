@@ -38,7 +38,7 @@ use constant true  => 1;
 use constant false => 0;
 
 my $dry_run      = false;
-my $sql          = true;
+my $sql          = false;
 my $create_db    = false;
 my $overw_db     = false;
 my $mysql_config = "_PKGDATADIR_" . "sql/mysql.cnf";
@@ -73,7 +73,7 @@ my $cnf = (-e $ENV{"HOME"} . "/.my.cnf") ? $ENV{"HOME"} . "/.my.cnf" : $mysql_co
 #
 # Check for the existence of the necessary pipeline programs
 #
-foreach my $prog ("pstacks", "cstacks", "sstacks", "tsv2bam", "gstacks", "genotypes", "populations", "index_radtags.pl") {
+foreach my $prog ("gstacks", "populations") {
     die "Unable to find '" . $exe_path . $prog . "'.\n" if (!-e $exe_path . $prog || !-x $exe_path . $prog);
 }
 die("Unable to find 'samtools'.\n") if (! which "samtools");
@@ -126,184 +126,92 @@ sub execute_stacks {
     my $minc  = $min_cov  > 0 ? "-m $min_cov"  : "";
     my $minrc = $min_rcov > 0 ? "-m $min_rcov" : $minc;
 
-    $i         = 1;
-    $num_files = scalar(@{$parents}) + scalar(@{$progeny}) + scalar(@{$samples});
+	#
+	# Sort the input BAM files, add read groups, and merge them.
+	#
+	my $bam_d = "$out_path/bamfiles_sorted_rgs";
+	if (!-d $bam_d) {
+		mkdir($bam_d) or die("Failed to create directory '$bam_d'.\n");
+	}
+
+	# Check whether the BAM files are sorted and/or have read groups.
+	my %not_sorted;
+	my %no_readgroup;
+	foreach $sample (@samples) {
+		my $name = $sample->{'file'}; 
+		# Insert the sample in both sets.
+		$not_sorted{$name} = undef;
+		$no_readgroup{$name} = undef;
+		# Then remove it when we find the @HD, @RG lines in the BAM header.
+		my $bam_path = $sample->{'path'} . $sample->{'file'} . "." . $sample->{'suffix'};
+		open($pipe_fh, "samtools view -H $bam_path |");
+		while (<$pipe_fh>) {
+			if ($_ =~ /^\@HD\t.*SO:coordinate/) {
+				delete $not_sorted{$name};
+			} elsif ($_ =~ /^\@RG\t.*SM:/) {
+				delete $no_readgroup{$name};
+			}
+		}
+		close($pipe_fh);
+		check_return_value($?, $log_fh);		
+	}
+	# Add read groups, sort and merge the sample BAMs.
+	my $merge_cmd = "samtools merge $bam_d/all_merged.bam";
+	if (scalar(keys(%not_sorted)) == 0 and scalar(keys(%no_readgroup)) == 0) {
+		# All sample BAMs are sorted and have read groups.
+		foreach $sample (@samples) {
+			$merge_cmd .= " " . $sample->{'path'} . $sample->{'file'} . "." . $sample->{'suffix'};
+		}
+	} else {
+		# At least one sample is not sorted or is missing a read group.
+	    print STDERR "At least one sample is not sorted or doesn't have a read group; adding read groups and/or sorting BAM files...\n";
+	    print $log_fh "\nsamtools addreplacerg and/or sort\n==========\n";
+		foreach $sample (@samples) {
+			my $bam_path = $sample->{'path'} . $sample->{'file'} . "." . $sample->{'suffix'};
+			my $name = $sample->{'file'};
+			my $new_bam_path = "$bam_d/$name.rg_sorted.bam";
+			$cmd = "cat $bam_path | samtools addreplacerg -r ID:$name -r SM:$name - | samtools sort > $new_bam_path";
+		    print STDERR "  $cmd\n";
+		    print $log_fh "$cmd\n";
+			system($cmd);
+			$merge_cmd .= " $new_bam_path";
+		}
+		print STDERR "\n";
+		print $log_fh "\n";
+	}
+    print STDERR "Merging BAM files...\n  $merge_cmd\n";
+    print $log_fh "\nsamtools merge\n==========\n$merge_cmd\n";
+    system($merge_cmd);
+    check_return_value($?, $log_fh);
+
+	if (-z "$bam_d/all_merged.bam") {
+		my $msg = "\nref_map.pl: Error: Failed to add read groups and/or merge.\n";
+		print $log_fh $msg;
+		print STDERR $msg;
+		exit 1;
+	}
 
     #
-    # Assemble RAD loci in each individual.
+    # Call genotypes.
     #
-    print STDERR "Indentifying unique stacks...\n";
-    print $log_fh "\npstacks\n==========\n";
-    foreach $sample (@parents, @progeny, @samples) {
-        print $log_fh "\nSample $i of $num_files '$sample->{'file'}'\n----------\n";
+    print STDERR "Calling variants, genotypes and haplotypes...\n";
+    print $log_fh "\ngstacks\n==========\n";
 
-        if (scalar(keys %{$sample_ids}) > 0) {
-            $sample_id = $sample_ids->{$sample->{'file'}};
-        }
-
-        $path = $sample->{'path'} . $sample->{'file'} . "." . $sample->{'suffix'};
-        
-        if ($sample->{'type'} eq "sample") {
-            $cmd = $exe_path . "pstacks -t $sample->{'fmt'} -f $path -o $out_path -i $sample_id $minc "  . join(" ", @_pstacks) . " 2>&1";
-        } elsif ($sample->{'type'} eq "parent") {
-            $cmd = $exe_path . "pstacks -t $sample->{'fmt'} -f $path -o $out_path -i $sample_id $minc "  . join(" ", @_pstacks) . " 2>&1";
-        } elsif ($sample->{'type'} eq "progeny") {
-            $cmd = $exe_path . "pstacks -t $sample->{'fmt'} -f $path -o $out_path -i $sample_id $minrc " . join(" ", @_pstacks) . " 2>&1";
-        }
-        print STDERR  "  $cmd\n";
-        print $log_fh "$cmd\n";
-
-        if ($dry_run == false) {
-            open($pipe_fh, "$cmd |");
-            @results = ();
-            while (<$pipe_fh>) {
-                print $log_fh $_;
-                push(@results, $_);
-            }
-            close($pipe_fh);
-            check_return_value($?, $log_fh);
-            
-            #
-            # Pull the depth of coverage from pstacks.
-            #
-            my @lines   = grep(/mean coverage/, @results);
-            my ($depth) = ($lines[-1] =~ /^Kept \d+ loci; mean coverage is ([\d.]+) \(stdev: [\d.]+, max: [\d.]+\).$/);
-            push(@depths_of_cov, [$sample->{'file'}, $depth]);
-        }
-
-        $i++;
-        $sample_id++;
-    }
-
-    write_depths_of_cov(\@depths_of_cov, $log_fh);
-    print STDERR "\n";
-
-    #
-    # Generate catalog of RAD loci.
-    #
-    print STDERR "Generating catalog...\n";
-    print $log_fh "\ncstacks\n==========\n";
-
-    my $file_paths = "";
-    foreach $sample (@parents, @samples) {
-        $file_paths .= "-s $out_path/$sample->{'file'} ";
-    }
-
-    $cmd = $exe_path . "cstacks -g -b $batch_id -o $out_path $file_paths " . join(" ", @_cstacks) . " 2>&1";
+    $cmd = $exe_path . "gstacks -B $bam_d/all_merged.bam -O $out_path";
+	foreach (@_gstacks) {
+	    $cmd .= " " . $_;
+	}
+    $cmd .= " 2>&1";
     print STDERR  "  $cmd\n";
     print $log_fh "$cmd\n\n";
-
-    if ($dry_run == false) {
-        open($pipe_fh, "$cmd |");
-        while (<$pipe_fh>) {
-            print $log_fh $_;
-            if ($_ =~ /failed/i) { print STDERR "Catalog construction failed.\n"; exit(1); }
-        }
-        close($pipe_fh);
-        check_return_value($?, $log_fh);
-    }
-
-    #
-    # Match parents, progeny, or samples to the catalog.
-    #
-    $file_paths = "";
-    print STDERR "Matching samples to the catalog...\n";
-    print $log_fh "\nsstacks\n==========\n";
-
-    foreach $sample (@parents, @progeny, @samples) {
-        $file_paths .= "-s $out_path/$sample->{'file'} ";
-    }
-
-    $cat_file = "batch_" . $batch_id;
-    $cmd      = $exe_path . "sstacks -g -b $batch_id -c $out_path/$cat_file -o $out_path $file_paths " . join(" ", @_sstacks) . " 2>&1";
-    print STDERR  "  $cmd\n";
-    print $log_fh "$cmd\n\n";
-
-    if ($dry_run == false) {
+	if (!$dry_run) {
         open($pipe_fh, "$cmd |");
         while (<$pipe_fh>) {
             print $log_fh $_;
         }
         close($pipe_fh);
         check_return_value($?, $log_fh);
-    }
-
-    if (!$v1) {
-        #
-        # Sort the reads according by catalog locus / run tsv2bam.
-        #
-        print STDERR "Sorting reads by RAD locus...\n";
-        print $log_fh "\ntsv2bam\n==========\n";
-
-        $cmd = $exe_path . "tsv2bam -P $out_path";
-        if ($popmap_path) {
-            $cmd .= " -M $popmap_path";
-        } else {
-            foreach $sample (@parents, @progeny, @samples) {
-                $cmd .= " -s $sample->{'file'}";
-            }
-        }
-        foreach (@_tsv2bam) {
-            $cmd .= " " . $_;
-        }
-        $cmd .= " 2>&1";
-        print STDERR  "  $cmd\n";
-        print $log_fh "$cmd\n\n";
-    	if (!$dry_run) {
-            open($pipe_fh, "$cmd |");
-            while (<$pipe_fh>) {
-                print $log_fh $_;
-            }
-            close($pipe_fh);
-            check_return_value($?, $log_fh);
-    	}
-        
-        #
-        # Merge the matches.bam files / run samtools merge.
-        #
-        print $log_fh "\nsamtools merge\n----------\n";
-
-        $cmd = "samtools merge $out_path/batch_$batch_id.catalog.bam";
-        foreach $sample (@parents, @progeny, @samples) {
-            $cmd .= " $out_path/$sample->{'file'}.matches.bam";
-        }
-        foreach (@_samtools_merge) {
-            $cmd .= " " . $_;
-        }
-        $cmd .= " 2>&1";
-        print STDERR  "  $cmd\n";
-        print $log_fh "$cmd\n\n";
-    	if (!$dry_run) {
-            open($pipe_fh, "$cmd |");
-            while (<$pipe_fh>) {
-                print $log_fh $_;
-            }
-            close($pipe_fh);
-            check_return_value($?, $log_fh);
-    	}
-    	
-    	#
-    	# Call genotypes / run gstacks.
-    	#
-        print STDERR "Calling variants, genotypes and haplotypes...\n";
-        print $log_fh "\ngstacks\n==========\n";
-
-    	$cmd = $exe_path . "gstacks -P $out_path";
-    	foreach (@_gstacks) {
-    	    $cmd .= " " . $_;
-    	}
-        $cmd .= " 2>&1";
-        print STDERR  "  $cmd\n";
-        print $log_fh "$cmd\n\n";
-    	if (!$dry_run) {
-            open($pipe_fh, "$cmd |");
-            while (<$pipe_fh>) {
-                print $log_fh $_;
-            }
-            close($pipe_fh);
-            check_return_value($?, $log_fh);
-    	}
-    }
+	}
 
     if ($data_type eq "map") {
         #
@@ -397,8 +305,8 @@ sub initialize_samples {
     my ($local_gzip, $file, $prefix, $suffix, $path, $found, $i);
 
     if (scalar(@{$sample_list}) > 0 && scalar(@{$samples}) == 0) {
-        my @suffixes = ("sam", "bam", "map", "bowtie");
-        my @fmts     = ("sam", "bam", "map", "bowtie");
+        my @suffixes = ("sam", "bam");
+        my @fmts     = ("sam", "bam");
 
         #
         # If a population map was specified and no samples were provided on the command line.
@@ -840,44 +748,39 @@ sub parse_command_line {
 	$_ = shift @ARGV;
         if    ($_ =~ /^-v$/) { version(); exit 1; }
 	elsif ($_ =~ /^-h$/) { usage(); }
-	elsif ($_ =~ /^-p$/) { push(@parents, { 'path' => shift @ARGV }); }
-	elsif ($_ =~ /^-r$/) { push(@progeny, { 'path' => shift @ARGV }); }
-	elsif ($_ =~ /^-s$/) { push(@samples, { 'path' => shift @ARGV }); }
 	elsif ($_ =~ /^-d$/) { $dry_run   = true; }
 	elsif ($_ =~ /^-o$/) { $out_path  = shift @ARGV; }
-	elsif ($_ =~ /^-D$/) { $desc      = shift @ARGV; }
+	#elsif ($_ =~ /^-D$/) { $desc      = shift @ARGV; }
 	elsif ($_ =~ /^-e$/) { $exe_path  = shift @ARGV; }
-	elsif ($_ =~ /^-b$/) { $batch_id  = shift @ARGV; }
-	elsif ($_ =~ /^-i$/) { $sample_id = shift @ARGV; }
-	elsif ($_ =~ /^-a$/) { $date      = shift @ARGV; }
-	elsif ($_ =~ /^-S$/) { $sql       = false; }
-	elsif ($_ =~ /^-B$/) { $db        = shift @ARGV; }
+	#elsif ($_ =~ /^-b$/) { $batch_id  = shift @ARGV; }
+	#elsif ($_ =~ /^-i$/) { $sample_id = shift @ARGV; }
+	#elsif ($_ =~ /^-a$/) { $date      = shift @ARGV; }
+	#elsif ($_ =~ /^-S$/) { $sql       = false; }
+	#elsif ($_ =~ /^-B$/) { $db        = shift @ARGV; }
 	elsif ($_ =~ /^-m$/) { $min_cov   = shift @ARGV; }
 	elsif ($_ =~ /^-P$/) { $min_rcov  = shift @ARGV; }
-	elsif ($_ =~ /^--v1$/) { $v1  = true; }
-        elsif ($_ =~ /^--samples$/) {
-            $sample_path = shift @ARGV;
-            
-        } elsif ($_ =~ /^-O$/ || $_ =~ /^--popmap$/) {
+	elsif ($_ =~ /^--samples$/) {
+		$sample_path = shift @ARGV;
+	} elsif ($_ =~ /^-O$/ || $_ =~ /^--popmap$/) {
 	    $popmap_path = shift @ARGV;
 	    push(@_populations, "-M " . $popmap_path); 
 
-	} elsif ($_ =~ /^--create_db$/) {
-            $create_db = true;
+	#} elsif ($_ =~ /^--create_db$/) {
+    #        $create_db = true;
 
-        } elsif ($_ =~ /^--overw_db$/) {
-            $overw_db  = true;
-            $create_db = true;
+    #    } elsif ($_ =~ /^--overw_db$/) {
+    #        $overw_db  = true;
+    #        $create_db = true;
 
-        } elsif ($_ =~ /^-A$/) { 
-	    $arg = shift @ARGV;
-	    push(@_genotypes, "-t " . $arg); 
+    #    } elsif ($_ =~ /^-A$/) { 
+	#    $arg = shift @ARGV;
+	#    push(@_genotypes, "-t " . $arg); 
 
-	    $arg = lc($arg);
-	    if ($arg ne "gen" && $arg ne "cp" && $arg ne "f2" && $arg ne "bc1" && $arg ne "dh") {
-		print STDERR "Unknown genetic mapping cross specified: '$arg'\n";
-		usage();
-	    }
+	#    $arg = lc($arg);
+	#    if ($arg ne "gen" && $arg ne "cp" && $arg ne "f2" && $arg ne "bc1" && $arg ne "dh") {
+	#	print STDERR "Unknown genetic mapping cross specified: '$arg'\n";
+	#	usage();
+	#    }
 
 	} elsif ($_ =~ /^-T$/) {
 	    $arg = shift @ARGV;
@@ -906,25 +809,7 @@ sub parse_command_line {
 	    $arg = shift @ARGV;
 	    my ($prog, $opt) = ($arg =~ /^(\w+):(.+)$/);
 
-	    if ($prog eq "pstacks") {
-		push(@_pstacks, $opt); 
-
-	    } elsif ($prog eq "cstacks") {
-		push(@_cstacks, $opt); 
-
-	    } elsif ($prog eq "sstacks") {
-		push(@_sstacks, $opt); 
-
-	    } elsif ($prog eq "genotypes") {
-		push(@_genotypes, $opt); 
-
-            } elsif ($prog eq "tsv2bam") {
-                push(@_tsv2bam, $opt); 
-
-            } elsif ($prog eq "samtools_merge") {
-                push(@_samtools_merge, $opt); 
-
-            } elsif ($prog eq "gstacks") {
+	    if ($prog eq "gstacks") {
                 push(@_gstacks, $opt); 
 
 	    } elsif ($prog eq "populations") {
@@ -987,40 +872,33 @@ sub usage {
 
     print STDERR <<EOQ; 
 ref_map.pl --samples dir --popmap path -o dir (database options) [-X prog:"opts" ...]
-ref_map.pl -s path [-s path ...] -o dir (database options) [-X prog:"opts" ...]
-ref_map.pl -p path -r path -o path -A type (database options) [-X prog:"opts" ...]
 
-  Input files:
-    --samples: path to the directory containing the samples reads files.
-    --popmap: path to a population map file (format is "<name> TAB <pop>", one sample per line).
-  or
-    s: path to a file containing the reads of one sample.
-  or
-    p: path to a file containing the reads of one parent, in a mapping cross.
-    r: path to a file containing the reads of one progeny, in a mapping cross.
+General options:
+  --samples: path to the directory containing the samples BAM (or SAM) alignment files.
+  --popmap: path to a population map file (format is "<name> TAB <pop>", one sample per line).  
+  o: path to an output directory.
+  X: additional options for specific pipeline components, e.g. -X "populations: -p 3 -r 0.50"
+  T: the number of threads/CPUs to use (default: 1).
+  d: Dry run. Do not actually execute anything, just print the commands that would be executed.
 
-  General options:
-    o: path to an output directory.
-    A: for a mapping cross, specify the type; one of 'CP', 'F2', 'BC1', 'DH', or 'GEN'.
-    X: additional options for specific pipeline components, e.g. -X "populations: -p 3 -r 0.50"
-    T: the number of threads/CPUs to use (default: 1).
-    d: Dry run. Do not actually execute anything, just print the commands that would be executed.
+  A: (To be reimplemented) for a mapping cross, specify the type; one of 'CP', 'F2',
+     'BC1', 'DH', or 'GEN'.
 
-  SNP model options:
-    --alpha: significance level at which to call genotypes (for pstacks; default: 0.05).
-    For the bounded model:
-      --bound_low <num>: lower bound for epsilon, the error rate, between 0 and 1.0 (default 0.0).
-      --bound_high <num>: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1.0).
+SNP model options:
+  --alpha: significance level at which to call genotypes (for pstacks; default: 0.05).
+  For the bounded model:
+    --bound_low <num>: lower bound for epsilon, the error rate, between 0 and 1.0 (default 0.0).
+    --bound_high <num>: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1.0).
 
-  Database options:
-    S: disable database interaction.
-    B: specify an SQL database to load data into.
-    D: a description of this batch to be stored in the database.
-    i: starting sample_id, this is determined automatically if database interaction is enabled.
-    --create_db: create the database specified by '-B' and populate the tables.
-    --overw_db: delete the database before creating a new copy of it (turns on --create_db).
+Database options:
+  (To be reimplemented.)
+  S: disable database interaction.
+  B: specify an SQL database to load data into.
+  D: a description of this batch to be stored in the database.
+  i: starting sample_id, this is determined automatically if database interaction is enabled.
+  --create_db: create the database specified by '-B' and populate the tables.
+  --overw_db: delete the database before creating a new copy of it (turns on --create_db).
 
 EOQ
-
     exit 1;
 }
