@@ -52,7 +52,7 @@ my $db           = "";
 my $data_type    = "map";
 my $min_cov      = 0;
 my $min_rcov     = 0;
-my $batch_id     = -1;
+my $batch_id     = 1;
 my $sample_id    = 1;
 my $desc         = ""; # Database description of this dataset
 my $date         = ""; # Date relevent to this data, formatted for SQL: 2009-05-31
@@ -1056,9 +1056,9 @@ sub usage {
     version();
 
     print STDERR <<EOQ; 
-denovo_map.pl --samples dir --popmap path -o dir (assembly options) -b batch_id (database options) [-X prog:"opts" ...]
-denovo_map.pl -s path [-s path ...] -o dir (assembly options) -b batch_id (database options) [-X prog:"opts" ...]
-denovo_map.pl -p path -r path -o path -A type (assembly options) -b batch_id (database options) [-X prog:"opts" ...]
+denovo_map.pl --samples dir --popmap path -o dir (assembly options) (database options) [-X prog:"opts" ...]
+denovo_map.pl -s path [-s path ...] -o dir (assembly options) (database options) [-X prog:"opts" ...]
+denovo_map.pl -p path -r path -o path -A type (assembly options) (database options) [-X prog:"opts" ...]
 
   Input files:
     --samples: path to the directory containing the samples reads files.
@@ -1071,7 +1071,6 @@ denovo_map.pl -p path -r path -o path -A type (assembly options) -b batch_id (da
 
   General options:
     o: path to an output directory.
-    b: a numeric database ID for this run (e.g. 1).
     A: for a mapping cross, specify the type; one of 'CP', 'F2', 'BC1', 'DH', or 'GEN'.
     X: additional options for specific pipeline components, e.g. -X "populations: -p 3 -r 0.50".
     T: the number of threads/CPUs to use (default: 1).
