@@ -578,7 +578,7 @@ LocusProcessor::process(CLocReadSet& loc)
     this->loc_.pos =  loc.pos();
     this->loc_.mpopi   = &loc.mpopi();
     if (detailed_output)
-        loc_.details_ss << "BEGIN " << loc_.id << "\n";
+        loc_.details_ss << "BEGIN locus " << loc_.id << "\n";
 
     //
     // Build the alignment matrix.
