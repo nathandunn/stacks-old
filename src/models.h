@@ -188,7 +188,7 @@ class MarukiLowModel : public Model {
     double calc_ln_weighted_sum(double freq_MM, double freq_Mm, double freq_mm, const LikData& s_liks) const;
     double calc_ln_weighted_sum_safe(double freq_MM, double freq_Mm, double freq_mm, const LikData& s_liks) const;
 
-    mutable size_t n_underflows_; //xxx Removed after large-scale testing.
+    mutable size_t n_underflows_;
 
 public:
     MarukiLowModel(double gt_alpha, double var_alpha)
