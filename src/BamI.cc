@@ -7,8 +7,8 @@
 
 using namespace std;
 
-const size_t o = -1;
-const size_t cigar_c2i[128] = {
+const uint32_t o = UINT32_MAX;
+const uint32_t cigar_c2i[128] = {
     o,o,o,o, o,o,o,o, o,o,o,o, o,o,o,o,
     o,o,o,o, o,o,o,o, o,o,o,o, o,o,o,o,
     o,o,o,o, o,o,o,o, o,o,o,o, o,o,o,o,
@@ -152,10 +152,9 @@ void BamRecord::assign(
     p += c_.l_qname;
     //cigar
     for (const pair<char, uint>& op : cig) {
-        // Cigars are uint32_t's with the length on the 32 high bits & op on the low 4 bits.
-        *(uint32_t*)p = uint32_t(op.second) <<BAM_CIGAR_SHIFT;
-        *(uint32_t*)p |= cigar_c2i[size_t(op.first)];
-        p += c_.n_cigar*sizeof(uint32_t);
+        // Cigars are uint32_t's with the length on the 28 high bits & op on the low 4 bits.
+        *(uint32_t*)p = (uint32_t(op.second) <<BAM_CIGAR_SHIFT) | cigar_c2i[size_t(op.first)];
+        p += sizeof(uint32_t);
     }
     //seq & qual
     memcpy(p, seq.vdata(), seq.nbytes());

@@ -41,7 +41,7 @@
 // htslib doesn't define this (c.f. the use of `bam_hdr_t::cigar_tab` in sam.c).
 // However, it does define the reverse variable in sam.h:
 // `#define BAM_CIGAR_STR "MIDNSHP=XB"`
-extern const size_t cigar_c2i[128];
+extern const uint32_t cigar_c2i[128];
 
 int bam_find_start_bp(int, strand_type, const vector<pair<char, uint> > &);
 int bam_edit_gaps(vector<pair<char, uint> > &, char *);

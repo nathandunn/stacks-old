@@ -366,6 +366,7 @@ void run(const vector<int>& cloc_ids,
         const vector<int>& targets = cloc_ids;
         size_t target_i = 0;
         BamRecord rec;
+        Cigar cig;
         for (auto& loc : sorted_loci) {
             while (targets[target_i] != loc.cloc_id)
                 ++target_i;
@@ -378,12 +379,13 @@ void run(const vector<int>& cloc_ids,
 
                     const char* seq = loc.sloc->reads[j];
                     size_t seq_len = strlen(seq);
+                    cig.assign({{'M', seq_len}});
                     rec.assign(
                             name,
-                            BAM_FREAD1,
+                            BAM_FPAIRED | BAM_FREAD1,
                             target_i,
                             0,
-                            {{'M', seq_len}},
+                            cig,
                             DNASeq4(seq, seq_len),
                             sample_id
                             );
@@ -393,12 +395,13 @@ void run(const vector<int>& cloc_ids,
                 // Write the paired-end reads.
                 for (const pair<DNASeq4, vector<string>>& stack : *loc.pe_reads) {
                     for (const string& name : stack.second) {
+                        cig.assign({{'X', 1}, {'S', stack.first.length()-1}});
                         rec.assign(
                                 name,
-                                BAM_FREAD2 | BAM_FREVERSE,
+                                BAM_FPAIRED | BAM_FREAD2 | BAM_FREVERSE,
                                 target_i,
                                 0,
-                                {{'X', stack.first.length()}},
+                                cig,
                                 dbg_reversed_pe_reads ? stack.first : stack.first.rev_compl(),
                                 sample_id
                                 );
@@ -414,12 +417,13 @@ void run(const vector<int>& cloc_ids,
                     const char* name = loc.sloc->comp[j];
                     const char* seq = loc.sloc->reads[j];
                     size_t seq_len = strlen(seq);
+                    cig.assign({{'M', seq_len}});
                     rec.assign(
                             string(name),
                             0,
                             target_i,
                             0,
-                            {{'M', seq_len}},
+                            cig,
                             DNASeq4(seq, seq_len),
                             sample_id
                             );
