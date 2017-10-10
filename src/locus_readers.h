@@ -64,8 +64,8 @@ private:
     MetaPopInfo mpopi_;
     map<string, size_t> rg_to_sample_;
 
-    size_t n_loci_built_;
     BamStats stats_;
+    size_t n_loci_built_;
 
     pair<PhyLoc,SAlnRead> next_record_;
     bool treat_next_record_as_fw_;
@@ -329,8 +329,8 @@ BamCLocBuilder::BamCLocBuilder(
     paired_mode_(paired_mode),
     max_insert_refsize_(paired_mode ? max_insert_refsize_ : 0),
     bam_f_(*bam_f),
-    n_loci_built_(0),
     stats_(),
+    n_loci_built_(0),
     next_record_(PhyLoc(), SAlnRead(AlnRead(Read(DNASeq4(), string()), Cigar()), SIZE_MAX)),
     treat_next_record_as_fw_(false),
     eof_(false)
