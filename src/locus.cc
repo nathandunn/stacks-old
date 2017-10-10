@@ -417,7 +417,9 @@ CLocAlnSet::juxtapose(CLocAlnSet&& left, CLocAlnSet&& right, long offset)
         //DOES_NOT_HAPPEN;
         // TODO it's unclear at this point if/when `size_t(-offset) > right.ref().length()`
         // should be allowed to happen.
+        #ifdef DEBUG
         cerr << "DEBUG: locus " << left.id() << ", paired contig was too small for the offset\n";
+        #endif
         return CLocAlnSet(move(left));
     }
 
