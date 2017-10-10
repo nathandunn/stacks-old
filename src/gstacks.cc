@@ -547,7 +547,7 @@ void LocData::clear() {
     id = -1;
     pos.clear();
     mpopi = NULL;
-    overlapped = false;
+    ctg_status = unknown;
     o_vcf.clear();
     o_fa.clear();
     o_details.clear();
@@ -643,9 +643,11 @@ LocusProcessor::process(CLocReadSet& loc)
             else
                 overlap = this->find_locus_overlap(stree, fw_consensus);
             if (overlap > 0) {
-                this->loc_.overlapped = true;
+                this->loc_.ctg_status = LocData::overlapped;
                 this->ctg_stats_.n_overlaps++;
                 this->ctg_stats_.length_overlap_tot += overlap;
+            } else {
+                this->loc_.ctg_status = LocData::separate;
             }
 
             if (detailed_output)
@@ -1619,10 +1621,11 @@ void LocusProcessor::write_one_locus (
         fa += " n_discarded_samples=";
         fa += n_spls;
     }
-    if (loc_.overlapped)
-        // Note: When `overlapped_` is not true, it is unknown if overlapping
-        // is relevant for this locus.
-        fa += " overlapped=true";
+    switch (loc_.ctg_status) {
+    case LocData::overlapped: fa += " contig=overlapped"; break;
+    case LocData::separate:   fa += " contig=separate";   break;
+    default: break;
+    }
     fa += '\n';
     fa += ref.str();
     fa += '\n';
