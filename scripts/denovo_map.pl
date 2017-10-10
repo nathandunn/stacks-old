@@ -885,7 +885,7 @@ sub parse_command_line {
 	elsif ($_ =~ /^-p$/) { push(@parents, { 'path' => shift @ARGV }); }
 	elsif ($_ =~ /^-r$/) { push(@progeny, { 'path' => shift @ARGV }); }
 	elsif ($_ =~ /^-s$/) { push(@samples, { 'path' => shift @ARGV }); }
-	elsif ($_ =~ /^-d$/) { $dry_run   = true; }
+	elsif ($_ =~ /^-d$/ || $_ =~ /^--dry-run$/) { $dry_run   = true; }
 	elsif ($_ =~ /^-o$/) { $out_path  = shift @ARGV; }
 	elsif ($_ =~ /^-D$/) { $desc      = shift @ARGV; }
 	elsif ($_ =~ /^-e$/) { $exe_path  = shift @ARGV; }
