@@ -40,9 +40,7 @@ string in_bam;
 string o_prefix;
 GStacksInputT input_type = GStacksInputT::unknown;
 
-size_t refbased_min_reads_per_sample = 3;
-bool   refbased_paired               = false;
-size_t refbased_max_insert_refsize   = 1000;
+BamCLocBuilder::Config refbased_cfg {false, 1000, 10, 0.20, 1, false};
 
 int    num_threads       = 1;
 bool   quiet             = false;
@@ -319,10 +317,7 @@ try {
 
     } else if (input_type == GStacksInputT::refbased) {
         // Initialize the CLoc reader
-        BamCLocBuilder bam_cloc_builder (&bam_f_ptr,
-                                         refbased_min_reads_per_sample,
-                                         refbased_paired,
-                                         refbased_max_insert_refsize);
+        BamCLocBuilder bam_cloc_builder (&bam_f_ptr, refbased_cfg);
 
         // Open the VCF file.
         VcfHeader vcf_header;
@@ -1881,8 +1876,14 @@ const string help_string = string() +
         "  --gt-alpha: alpha threshold for calling genotypes (default: 0.05)\n"
         "\n"
         "Expert options:\n"
-        "  --kmer-length: kmer length for the de Bruijn graph (default: 31)\n"
+        "  (De novo mode)\n"
+        "  --kmer-length: kmer length for the de Bruijn graph (default: 31, max. 31)\n"
         "  --min-kmer-cov: minimum coverage to consider a kmer (default: 2)\n"
+        "  (Reference-based mode)\n"
+        "  --min-mapq: minimum PHRED-scaled mapping quality to consider a read (default: 10)\n"
+        "  --max-clipped: maximum soft-clipping level, in fraction of read length (default: 0.20)\n"
+        "  -m,--min-spl-reads: minimum number of reads for a sample to be considered at a locus (default: 1)\n"
+        "  --max-insert-len: maximum allowed sequencing insert length (for --paired; default: 1000)\n"
         "\n"
 #ifdef DEBUG
         "Debug options:\n"
@@ -1924,6 +1925,10 @@ try {
         {"min-kmer-cov", required_argument, NULL,  1002},
         {"ignore-pe-reads", no_argument,    NULL,  1012},
         {"details",      no_argument,       NULL,  1013},
+        {"min-mapq",     required_argument, NULL,  1014},
+        {"max-clipped",  required_argument, NULL,  1015},
+        {"min-spl-reads", required_argument, NULL, 'm'},
+        {"max-insert-len", required_argument, NULL,  1016},
         //debug options
         {"dbg-gfa",      no_argument,       NULL,  2003},
         {"dbg-alns",     no_argument,       NULL,  2004}, {"alns", no_argument, NULL, 3004},
@@ -1945,7 +1950,7 @@ try {
     int long_options_i;
     while (true) {
 
-        c = getopt_long(argc, argv, "hqP:B:O:W:t:", long_options, &long_options_i);
+        c = getopt_long(argc, argv, "hqP:B:O:W:t:m:", long_options, &long_options_i);
 
         if (c == -1)
             break;
@@ -1972,7 +1977,7 @@ try {
             out_dir = optarg;
             break;
         case 1007: //paired
-            refbased_paired = true;
+            refbased_cfg.paired = true;
             break;
         case 1006: //model
             model_type = parse_model_type(optarg);
@@ -1992,6 +1997,7 @@ try {
             break;
         case 1012: //ignore-pe-reads
             ignore_pe_reads = true;
+            refbased_cfg.ign_pe_reads = true;
             break;
         case 1001://kmer-length
             km_length = atoi(optarg);
@@ -2002,7 +2008,27 @@ try {
         case 1013://details
             detailed_output = true;
             break;
-
+        case 1014://min-mapq
+            refbased_cfg.min_mapq = stoi(optarg);
+            if (refbased_cfg.min_mapq > 255) {
+                cerr << "Error: Illegal --min-mapq value '" << optarg << "'.\n";
+                bad_args();
+            }
+            break;
+        case 1015://max-clipped
+            refbased_cfg.max_clipped = atof(optarg);
+            if (refbased_cfg.max_clipped < 0.0 || refbased_cfg.max_clipped > 1.0) {
+                cerr << "Error: Illegal --max-clipped value '" << optarg << "'.\n";
+                bad_args();
+            }
+            break;
+        case 'm'://min-spl-reads
+            refbased_cfg.min_reads_per_sample = stoi(optarg);
+            break;
+        case 1016://max-insert
+            refbased_cfg.max_insert_refsize = stoi(optarg);
+            break;
+    
         //
         // Debug options
         //
@@ -2058,7 +2084,7 @@ try {
         bad_args();
     }
 
-    if (refbased_paired && !in_dir.empty()) {
+    if (refbased_cfg.paired && !in_dir.empty()) {
         cerr << "Error: --paired is for the reference-based mode (-B).\n";
         bad_args();
     }
@@ -2096,7 +2122,11 @@ try {
 
 void report_options(ostream& os) {
     os << "Configuration for this run:\n"
-       << "  Input mode: " << (input_type == GStacksInputT::denovo ? "de novo" : "reference-based") << "\n"
+       << "  Input mode: " << (
+           input_type == GStacksInputT::denovo ?
+            "de novo"
+            : (refbased_cfg.paired ? "reference-based, paired-end" : "reference-based, single-end")
+            ) << "\n"
        << "  Input file: '" << in_bam << "'\n"
        << "  Output to: '" << o_prefix << ".*'\n"
        << "  Model: " << *model << "\n";
