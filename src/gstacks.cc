@@ -647,10 +647,11 @@ LocusProcessor::process(CLocReadSet& loc)
             }
 
             if (detailed_output)
-                loc_.details_ss << "pe_ctg"
-                            << "\tolap=" << overlap
-                            << '\t' << ctg
-                            << '\n';
+                loc_.details_ss
+                        << "fw_maj_csus\t" << fw_consensus << '\n'
+                        << "pe_contig\t" << ctg << '\n'
+                        << "olap\t" << overlap << '\n'
+                        ;
 
             this->ctg_stats_.n_tot_reads += loc.pe_reads().size();
             GappedAln  *aligner = new GappedAln(loc.pe_reads().front().seq.length(), pe_aln_loc.ref().length(), true);
