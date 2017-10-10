@@ -145,7 +145,7 @@ void check_or_mk_dir(const string& path);
 //
 inline
 double gettm() {
-#if _POSIX_MONOTONIC_CLOCU
+#if _POSIX_MONOTONIC_CLOCK
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return ts.tv_sec + ts.tv_nsec / 1.0e9;
