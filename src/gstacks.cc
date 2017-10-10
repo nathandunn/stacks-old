@@ -601,6 +601,15 @@ LocusProcessor::process(CLocReadSet& loc)
             if (loc.pe_reads().empty())
                 break;
             ++this->ctg_stats_.n_loci_w_pe_reads;
+            if (detailed_output) {
+                loc_.details_ss << "BEGIN pe_reads\n";
+                for (const SRead& r : loc.pe_reads())
+                    loc_.details_ss << "pe_read"
+                                    << '\t' << r.name
+                                    << '\t' << loc_.mpopi->samples()[r.sample].name
+                                    << '\t' << r.seq << '\n';
+                loc_.details_ss << "END pe_reads\n";
+            }
 
             // Assemble a contig.
             vector<const DNASeq4*> seqs_to_assemble;
@@ -665,12 +674,6 @@ LocusProcessor::process(CLocReadSet& loc)
             if (detailed_output)
                 loc_.details_ss << "BEGIN pe_alns\n";
             for (SRead& r : loc.pe_reads()) {
-                if (detailed_output)
-                    loc_.details_ss << "pe_read"
-                                    << '\t' << r.name
-                                    << '\t' << loc_.mpopi->samples()[r.sample].name
-                                    << '\t' << r.seq << '\n';
-
                 if (add_read_to_aln(pe_aln_loc, aln_res, move(r), aligner, stree)) {
                     this->ctg_stats_.n_aln_reads++;
                     if (detailed_output)
@@ -696,7 +699,6 @@ LocusProcessor::process(CLocReadSet& loc)
                                     << '\n';
                 loc_.details_ss << "END pe_alns\n";
             }
-
 
             aln_loc.merge_paired_reads();
 
