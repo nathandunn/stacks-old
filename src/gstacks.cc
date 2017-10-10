@@ -131,8 +131,10 @@ try {
     o_gzfasta_f = gzopen(o_gzfasta_path.c_str(), "wb");
     check_open(o_gzfasta_f, o_gzfasta_path);
 
-    if (detailed_output)
+    if (detailed_output) {
         o_details_f.reset(new VersatileWriter(o_prefix + ".details.gz"));
+        *o_details_f << "# show_loc() { loc=$1; zcat ./gstacks.details.gz | sed -rn \"/^BEGIN locus $loc\\b/,\\$ p; /^END locus $loc\\b/ q;\"; }\n";
+    }
 
     if (dbg_write_alns) {
         string o_aln_path = o_prefix + ".alns";
@@ -648,14 +650,18 @@ LocusProcessor::process(CLocReadSet& loc)
 
             if (detailed_output)
                 loc_.details_ss
-                        << "fw_maj_csus\t" << fw_consensus << '\n'
+                        << "BEGIN contig\n"
                         << "pe_contig\t" << ctg << '\n'
+                        << "fw_maj_csus\t" << fw_consensus << '\n'
                         << "olap\t" << overlap << '\n'
+                        << "END contig\n"
                         ;
 
             this->ctg_stats_.n_tot_reads += loc.pe_reads().size();
             GappedAln  *aligner = new GappedAln(loc.pe_reads().front().seq.length(), pe_aln_loc.ref().length(), true);
             AlignRes    aln_res;
+            if (detailed_output)
+                loc_.details_ss << "BEGIN pe_alns\n";
             for (SRead& r : loc.pe_reads()) {
                 if (detailed_output)
                     loc_.details_ss << "pe_read"
@@ -668,8 +674,7 @@ LocusProcessor::process(CLocReadSet& loc)
                     if (detailed_output)
                         loc_.details_ss << "pe_aln_local"
                                         << '\t' << pe_aln_loc.reads().back().name
-                                        << '\t' << aln_res.subj_pos + 1
-                                        << '\t' << aln_res.cigar
+                                        << '\t' << aln_res.subj_pos + 1 << ':' << aln_res.cigar
                                         << '\n';
                 }
             }
@@ -680,13 +685,16 @@ LocusProcessor::process(CLocReadSet& loc)
             // Merge the forward & paired-end alignments.
             //
             aln_loc = CLocAlnSet::juxtapose(move(aln_loc), move(pe_aln_loc), (overlap > 0 ? -long(overlap) : +10));
-            if (detailed_output)
+            if (detailed_output) {
                 for (auto& r : aln_loc.reads())
                     if (r.is_read2())
                         loc_.details_ss << "pe_aln_global"
                                     << '\t' << r.name
                                     << '\t' << r.cigar
                                     << '\n';
+                loc_.details_ss << "END pe_alns\n";
+            }
+
 
             aln_loc.merge_paired_reads();
 
@@ -715,10 +723,10 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
     }
 
     if (detailed_output) {
-        loc_.details_ss << "BEGIN aln_reads\n";
+        loc_.details_ss << "BEGIN aln_matrix\n";
         for (const SAlnRead& read : aln_loc.reads())
             loc_.details_ss << read.name << '\t' << loc_.mpopi->samples()[read.sample].name << '\t' << read.cigar << '\n';
-        loc_.details_ss << "END aln_reads\n";
+        loc_.details_ss << "END aln_matrix\n";
     }
 
     if (dbg_write_alns)
