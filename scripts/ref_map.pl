@@ -130,19 +130,25 @@ sub execute_stacks {
 	# Sort the input BAM files, add read groups, and merge them.
 	#
 	my $bam_d = "$out_path/bamfiles_sorted_rgs";
-	if (-d $bam_d) {
-		my $msg = "\nref_map.pl: Error: Directory '$bam_d' already exists.\n";
-		print $log_fh $msg;
-		print STDERR $msg;
-		exit 1;
-	} elsif (!mkdir($bam_d)) {
-		my $msg = "Failed to create directory '$bam_d'.\n";
-		print $log_fh $msg;
-		print STDERR $msg;
-		exit 1;
+	$cmd = "mkdir $bam_d";
+	print STDERR "  $cmd\n";
+    print $log_fh "$cmd\n\n";
+    if (!$dry_run) {
+		if (-d $bam_d) {
+			my $msg = "\nref_map.pl: Error: Directory '$bam_d' already exists.\n";
+			print $log_fh $msg;
+			print STDERR $msg;
+			exit 1;
+		} elsif (!mkdir($bam_d)) {
+			my $msg = "Failed to create directory '$bam_d'.\n";
+			print $log_fh $msg;
+			print STDERR $msg;
+			exit 1;
+		}
 	}
 
 	# Check whether the BAM files are sorted and/or have read groups.
+	print STDERR "Checking BAM headers...\n";
 	my %not_sorted;
 	my %no_readgroup;
 	foreach $sample (@samples) {
@@ -181,7 +187,9 @@ sub execute_stacks {
 			$cmd = "cat $bam_path | samtools addreplacerg -r ID:$name -r SM:$name - | samtools sort > $new_bam_path";
 		    print STDERR "  $cmd\n";
 		    print $log_fh "$cmd\n";
-			system($cmd);
+		    if (!$dry_run) {
+				system($cmd);
+			}
 			$merge_cmd .= " $new_bam_path";
 		}
 		print STDERR "\n";
@@ -189,7 +197,9 @@ sub execute_stacks {
 	}
     print STDERR "Merging BAM files...\n  $merge_cmd\n";
     print $log_fh "\nsamtools merge\n==========\n$merge_cmd\n";
-    system($merge_cmd);
+    if (!$dry_run) {
+		system($merge_cmd);
+	}
     check_return_value($?, $log_fh);
 
 	if (-z "$bam_d/all_merged.bam") {
@@ -249,7 +259,7 @@ sub execute_stacks {
         print STDERR  "  $cmd\n";
         print $log_fh "$cmd\n";
 
-        if ($dry_run == 0) {
+        if (!$dry_run) {
             open($pipe_fh, "$cmd |");
             while (<$pipe_fh>) {
                 print $log_fh $_;
@@ -756,7 +766,7 @@ sub parse_command_line {
 	$_ = shift @ARGV;
         if    ($_ =~ /^-v$/) { version(); exit 1; }
 	elsif ($_ =~ /^-h$/) { usage(); }
-	elsif ($_ =~ /^-d$/) { $dry_run   = true; }
+	elsif ($_ =~ /^-d$/ || $_ =~ /^--dry-run$/) { $dry_run = true; }
 	elsif ($_ =~ /^-o$/) { $out_path  = shift @ARGV; }
 	#elsif ($_ =~ /^-D$/) { $desc      = shift @ARGV; }
 	elsif ($_ =~ /^-e$/) { $exe_path  = shift @ARGV; }
