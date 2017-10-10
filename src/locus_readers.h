@@ -38,9 +38,22 @@ public:
 
     // Reads one locus. Returns false on EOF.
     bool build_one_locus(CLocAlnSet& readset);    
-    
+
+    struct BamStats {
+        size_t n_records;
+        size_t n_primary;
+        size_t n_primary_mapq;
+        size_t n_primary_softclipped;
+        size_t n_secondary;
+        size_t n_supplementary;
+        size_t n_unmapped;
+
+        size_t n_primary_kept() const {return n_primary - n_primary_mapq - n_primary_softclipped;}
+    };
+
     const MetaPopInfo& mpopi() const {return mpopi_;}
     const Bam* bam_f() const {return bam_f_;}
+    const BamStats& stats() const {return stats_;}
 
 private:
     size_t min_reads_per_sample_ = 3;
@@ -52,6 +65,7 @@ private:
     map<string, size_t> rg_to_sample_;
 
     size_t n_loci_built_;
+    BamStats stats_;
 
     pair<PhyLoc,SAlnRead> next_record_;
     bool treat_next_record_as_fw_;
@@ -316,6 +330,7 @@ BamCLocBuilder::BamCLocBuilder(
     max_insert_refsize_(paired_mode ? max_insert_refsize_ : 0),
     bam_f_(*bam_f),
     n_loci_built_(0),
+    stats_(),
     next_record_(PhyLoc(), SAlnRead(AlnRead(Read(DNASeq4(), string()), Cigar()), SIZE_MAX)),
     treat_next_record_as_fw_(false),
     eof_(false)
@@ -342,10 +357,27 @@ BamCLocBuilder::read_and_parse_next_record()
         if(!bam_f_->next_record())
             return false;
         const BamRecord& r = bam_f_->r();
+        ++stats_.n_records;
 
         // Check if the record is primary.
-        if (!r.is_primary())
+        if (r.is_unmapped()) {
+            ++stats_.n_unmapped;
             continue;
+        } else if (r.is_secondary()) {
+            ++stats_.n_secondary;
+            continue;
+        } else if (r.is_supplementary()) {
+            ++stats_.n_supplementary;
+            continue;
+        }
+        assert(r.is_primary());
+        ++stats_.n_primary;
+
+        // Check the MAPQ
+        if (r.mapq() < 10) {
+            ++stats_.n_primary_mapq;
+            continue;
+        }
 
         // Parse the record.
         int32_t chrom = r.chrom();
@@ -361,23 +393,22 @@ BamCLocBuilder::read_and_parse_next_record()
         }
         size_t sample = rg_to_sample_.at(string(rg));
 
-        // Check that the CIGAR doesn't contain Ns (long deletions/introns).
-        bool has_cigar_Ns = false;
-        for (auto& op : cigar) {
-            if (op.first == 'N') {
-                has_cigar_Ns = true;
-                break;
-            }
-        }
-        if (has_cigar_Ns)
+        // Check the CIGAR.
+        size_t softclipped = 0;
+        for (auto& op : cigar)
+            if (op.first == 'S')
+                softclipped += op.second;
+        if ((double) softclipped / seq.length() > 0.20) {
+            ++stats_.n_primary_softclipped;
             continue;
+        }
+        cigar_simplify_to_MDI(cigar);
 
         // Correct the name that will go in the SAlnRead.
         if (r.is_read1())
             name += "/1";
         else if (r.is_read2())
             name += "/2";
-        cigar_simplify_to_MDI(cigar);
 
         // Make the SAlnRead 5' to 3'.
         if (r.is_rev_compl()) {
@@ -409,8 +440,10 @@ BamCLocBuilder::read_and_parse_next_record()
             cerr << "Error: Empty CIGAR at BAM primary record '" << r.qname() << "'.\n";
             throw exception();
         }
-        if (treat_next_record_as_fw_ && cigar.front().first != 'M')
+        if (treat_next_record_as_fw_ && cigar.front().first != 'M') {
+            ++stats_.n_primary_softclipped;
             continue;
+        }
 
         // Assign to `next_record_`.
         next_record_ = {

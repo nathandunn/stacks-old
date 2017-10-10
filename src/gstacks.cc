@@ -417,6 +417,20 @@ try {
         } //omp parallel
         cout << '\n';
 
+        // Report statistics on the loci.
+        const BamCLocBuilder::BamStats& bam_stats = bam_cloc_builder.stats();
+        cout << "Read " << bam_stats.n_records << " BAM records:\n"
+             << "  kept " << bam_stats.n_primary_kept() << " primary alignments\n"
+             << "  skipped " << bam_stats.n_primary_mapq << " primary alignments with insufficient mapping qualities ("
+             << as_percentage((double)bam_stats.n_primary_mapq / bam_stats.n_primary) << ")\n"
+             << "  skipped " << bam_stats.n_primary_softclipped << " excessively soft-clipped primary alignments ("
+             << as_percentage((double)bam_stats.n_primary_softclipped / bam_stats.n_primary) << ")\n"
+             << "  Skipped " << bam_stats.n_secondary << " secondary alignments\n"
+             << "  Skipped " << bam_stats.n_supplementary << " supplementary alignments\n"
+             << "  Skipped " << bam_stats.n_unmapped << " unmapped reads\n"
+             << "\n"
+             ;
+
     } else DOES_NOT_HAPPEN; //input_type
 
     //
