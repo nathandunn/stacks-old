@@ -161,12 +161,11 @@ sub execute_stacks {
         foreach (@_ustacks) {
             $cmd .= " " . $_;
         }
-        $cmd .= " 2>&1";
         print STDERR  "  $cmd\n";
         print $log_fh "$cmd\n";
 
         if ($dry_run == false) {
-            open($pipe_fh, "$cmd |");
+            open($pipe_fh, "$cmd 2>&1 |");
             @results = ();
             while (<$pipe_fh>) {
                 print $log_fh $_;
@@ -201,12 +200,12 @@ sub execute_stacks {
         $file_paths .= "-s $out_path/$sample->{'file'} ";
     }
 
-    $cmd      = $exe_path . "cstacks -b $batch_id -o $out_path $file_paths " . join(" ", @_cstacks) . " 2>&1";
-    print STDERR  "  $cmd\n";
+    $cmd      = $exe_path . "cstacks -b $batch_id -o $out_path $file_paths " . join(" ", @_cstacks);
+    print STDERR  "  $cmd\n\n";
     print $log_fh "$cmd\n\n";
 
     if ($dry_run == false) {
-        open($pipe_fh, "$cmd |");
+        open($pipe_fh, "$cmd 2>&1 |");
         while (<$pipe_fh>) {
             print $log_fh $_;
             if ($_ =~ /failed/i) { print STDERR "Catalog construction failed.\n"; exit(1); }
@@ -227,12 +226,12 @@ sub execute_stacks {
     }
 
     $cat_file = "batch_" . $batch_id;
-    $cmd      = $exe_path . "sstacks -b $batch_id -c $out_path/$cat_file -o $out_path $file_paths " . join(" ", @_sstacks) . " 2>&1";
-    print STDERR  "  $cmd\n";
+    $cmd      = $exe_path . "sstacks -b $batch_id -c $out_path/$cat_file -o $out_path $file_paths " . join(" ", @_sstacks);
+    print STDERR  "  $cmd\n\n";
     print $log_fh "$cmd\n\n";
 
     if ($dry_run == false) {
-        open($pipe_fh, "$cmd |");
+        open($pipe_fh, "$cmd 2>&1 |");
         while (<$pipe_fh>) {
             print $log_fh $_;
         }
@@ -261,11 +260,10 @@ sub execute_stacks {
         foreach (@_tsv2bam) {
             $cmd .= " " . $_;
         }
-        $cmd .= " 2>&1";
         print STDERR  "  $cmd\n";
-        print $log_fh "$cmd\n\n";
+        print $log_fh "$cmd\n";
         if (!$dry_run) {
-            open($pipe_fh, "$cmd |");
+            open($pipe_fh, "$cmd 2>&1 |");
             while (<$pipe_fh>) {
                 print $log_fh $_;
             }
@@ -285,11 +283,10 @@ sub execute_stacks {
         foreach (@_samtools_merge) {
             $cmd .= " " . $_;
         }
-        $cmd .= " 2>&1";
-        print STDERR  "  $cmd\n";
+        print STDERR  "  $cmd\n\n";
         print $log_fh "$cmd\n\n";
         if (!$dry_run) {
-            open($pipe_fh, "$cmd |");
+            open($pipe_fh, "$cmd 2>&1 |");
             while (<$pipe_fh>) {
                 print $log_fh $_;
             }
@@ -307,11 +304,10 @@ sub execute_stacks {
         foreach (@_gstacks) {
             $cmd .= " " . $_;
         }
-        $cmd .= " 2>&1";
-        print STDERR  "  $cmd\n";
+        print STDERR  "  $cmd\n\n";
         print $log_fh "$cmd\n\n";
         if (!$dry_run) {
-            open($pipe_fh, "$cmd |");
+            open($pipe_fh, "$cmd 2>&1 |");
             while (<$pipe_fh>) {
                 print $log_fh $_;
             }
@@ -327,12 +323,12 @@ sub execute_stacks {
         printf(STDERR "Generating genotypes...\n");
         print $log_fh "\ngenotypes\n==========\n";
 
-        $cmd = $exe_path . "genotypes" . ($v1 ? " --v1" : "") . " -b $batch_id -P $out_path -r 1 -c -s " . join(" ", @_genotypes) . " 2>&1";
-        print STDERR  "$cmd\n";
-        print $log_fh "$cmd\n";
+        $cmd = $exe_path . "genotypes" . ($v1 ? " --v1" : "") . " -b $batch_id -P $out_path -r 1 -c -s " . join(" ", @_genotypes);
+        print STDERR  "$cmd\n\n";
+        print $log_fh "$cmd\n\n";
 
         if ($dry_run == 0) {
-            open($pipe_fh, "$cmd |");
+            open($pipe_fh, "$cmd 2>&1 |");
             while (<$pipe_fh>) {
                 print $log_fh $_;
             }
@@ -344,12 +340,12 @@ sub execute_stacks {
         printf(STDERR "Calculating population-level summary statistics\n");
         print $log_fh "\npopulations\n==========\n";
 
-        $cmd = $exe_path . "populations" . ($v1 ? " --v1" : "") . " -P $out_path " . join(" ", @_populations) . " 2>&1";
-        print STDERR  "  $cmd\n";
-        print $log_fh "$cmd\n";
+        $cmd = $exe_path . "populations" . ($v1 ? " --v1" : "") . " -P $out_path " . join(" ", @_populations);
+        print STDERR  "  $cmd\n\n";
+        print $log_fh "$cmd\n\n";
 
         if ($dry_run == 0) {
-            open($pipe_fh, "$cmd |");
+            open($pipe_fh, "$cmd 2>&1 |");
             while (<$pipe_fh>) {
                 print $log_fh $_;
             }
@@ -357,6 +353,9 @@ sub execute_stacks {
             check_return_value($?, $log_fh);
         }
     }
+    
+    print STDERR  "denovo_map.pl is done.\n";
+    print $log_fh "denovo_map.pl is done.\n";
 }
 
 sub parse_population_map {
@@ -570,9 +569,9 @@ sub initialize_samples {
     }
     }
 
-    print STDERR "Found ", scalar(@{$parents}), " parental file(s).\n" if (scalar(@{$parents}) > 0);
-    print STDERR "Found ", scalar(@{$progeny}), " progeny file(s).\n" if (scalar(@{$progeny}) > 0);
-    print STDERR "Found ", scalar(@{$samples}), " sample file(s).\n" if (scalar(@{$samples}) > 0);
+    print STDERR "Found ", scalar(@{$parents}), " parental file(s).\n\n" if (scalar(@{$parents}) > 0);
+    print STDERR "Found ", scalar(@{$progeny}), " progeny file(s).\n\n" if (scalar(@{$progeny}) > 0);
+    print STDERR "Found ", scalar(@{$samples}), " sample file(s).\n\n" if (scalar(@{$samples}) > 0);
 }
 
 sub initialize_database {
