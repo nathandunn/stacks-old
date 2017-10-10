@@ -300,18 +300,15 @@ try {
                 << "  " << no_pe << " loci had no or almost no paired-end reads (" << pct(no_pe) << ")\n"
                 << "  " << pe_ndag << " loci had paired-end reads that couldn't be assembled into a contig ("
                 << pct(pe_ndag) << ")\n"
-                << "  for the remaining " << pe_ctg << " loci (" << pct(pe_ctg) << "), a paired-end contig was assembled\n"
-                << "  average contig size was " << ctg_stats.ctg_avg_length() << " bp\n"
-                << "  out of " << ctg_stats.n_tot_reads << " paired-end reads in these loci (mean "
-                << (double) ctg_stats.n_aln_reads / pe_ctg << " reads per locus)\n"
+                << "  For the remaining " << pe_ctg << " loci (" << pct(pe_ctg) << "), a paired-end contig was assembled;\n"
+                << "  Average contig size was " << ctg_stats.ctg_avg_length() << " bp;\n"
+                << "  Out of " << ctg_stats.n_tot_reads << " paired-end reads in these loci (mean "
+                << (double) ctg_stats.n_aln_reads / pe_ctg << " reads per locus);\n"
                 << "  " << ctg_stats.n_aln_reads << " were successfuly aligned ("
-                << as_percentage((double) ctg_stats.n_aln_reads / ctg_stats.n_tot_reads) << ")\n"
-                #ifdef DEBUG
-                // TODO FIXME
+                << as_percentage((double) ctg_stats.n_aln_reads / ctg_stats.n_tot_reads) << ");\n"
                 << "  " << ctg_stats.n_overlaps << " paired-end contigs overlapped the forward region ("
                 << as_percentage((double) ctg_stats.n_overlaps / ctg_stats.n_loci_ctg()) << "; mean overlap: "
-                << ctg_stats.mean_olap_length() << "bp)\n"
-                #endif
+                << ctg_stats.mean_olap_length() << "bp).\n"
                 << "\n";
         }
 
