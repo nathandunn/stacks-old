@@ -138,13 +138,14 @@ public:
     PhyLoc pos;
     const MetaPopInfo* mpopi;
 
-    bool overlapped;
+    enum ContigStatus {unknown, separate, overlapped};
+    ContigStatus ctg_status = unknown;
 
     string o_vcf;
     string o_fa;
     string o_details;
     stringstream details_ss;
-    
+
     void clear();
 };
 
