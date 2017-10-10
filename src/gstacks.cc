@@ -153,8 +153,7 @@ try {
     //
     // Process every locus
     //
-    ProcessingStats stats {};
-    cout << "Processing all loci...\n" << flush;
+    GenotypeStats gt_stats {};
 
     // For parallelization.
     int omp_return = 0;
@@ -182,6 +181,9 @@ try {
         for(auto& s : bam_cloc_reader.mpopi().samples())
             vcf_header.add_sample(s.name);
         o_vcf_f.reset(new VcfWriter(o_prefix + ".vcf.gz", move(vcf_header)));    
+
+        cout << "Processing all loci...\n" << flush;
+        ContigStats ctg_stats {};
 
         const size_t n_loci = bam_cloc_reader.bam_f()->h().n_ref_chroms();
         ProgressMeter progress (cout, n_loci);
@@ -274,12 +276,47 @@ try {
                 }
             }
 
-            #pragma omp critical
-            stats += loc_proc.stats();
+            #pragma omp critical(stats)
+            {
+                ctg_stats += loc_proc.ctg_stats();
+                gt_stats  += loc_proc.gt_stats();
+            }
         }
         if (omp_return != 0)
             return omp_return;
         progress.done();
+        cout << '\n';
+        assert(gt_stats.n_genotyped_loci == ctg_stats.n_nonempty_loci);
+
+        // Report assembly statistics.
+        if (ctg_stats.n_loci_w_pe_reads > 0) {
+            assert(!ignore_pe_reads);
+            size_t no_pe   = ctg_stats.n_loci_no_pe_reads() + ctg_stats.n_loci_almost_no_pe_reads;
+            size_t pe_ndag  = ctg_stats.n_loci_pe_graph_not_dag;
+            size_t pe_ctg = ctg_stats.n_loci_ctg();
+            auto pct = [&ctg_stats](size_t n) { return as_percentage((double) n / ctg_stats.n_nonempty_loci); };
+
+            ostream os (cout.rdbuf());
+            os << std::fixed << std::setprecision(1);
+            os << "Attempted to assemble and align paired-end reads for " << ctg_stats.n_nonempty_loci << " loci:\n"
+                << "  " << no_pe << " loci had no or almost no paired-end reads (" << pct(no_pe) << ")\n"
+                << "  " << pe_ndag << " loci had paired-end reads that couldn't be assembled into a contig ("
+                << pct(pe_ndag) << ")\n"
+                << "  for the remaining " << pe_ctg << " loci (" << pct(pe_ctg) << "), a paired-end contig was assembled\n"
+                << "  average contig size was " << ctg_stats.ctg_avg_length() << " bp\n"
+                << "  out of " << ctg_stats.n_tot_reads << " paired-end reads in these loci (mean "
+                << (double) ctg_stats.n_aln_reads / pe_ctg << " reads per locus)\n"
+                << "  " << ctg_stats.n_aln_reads << " were successfuly aligned ("
+                << as_percentage((double) ctg_stats.n_aln_reads / ctg_stats.n_tot_reads) << ")\n"
+                #ifdef DEBUG
+                // TODO FIXME
+                << "  " << ctg_stats.n_overlaps << " paired-end contigs overlapped the forward region ("
+                << as_percentage((double) ctg_stats.n_overlaps / ctg_stats.n_loci_ctg()) << "; mean overlap: "
+                << ctg_stats.mean_olap_length() << "bp)\n"
+                #endif
+                << "\n";
+        }
+
     } else if (input_type == GStacksInputT::refbased) {
         // Initialize the CLoc reader
         BamCLocBuilder bam_cloc_builder (&bam_f_ptr,
@@ -293,6 +330,8 @@ try {
         for(auto& s : bam_cloc_builder.mpopi().samples())
             vcf_header.add_sample(s.name);
         o_vcf_f.reset(new VcfWriter(o_prefix + ".vcf.gz", move(vcf_header)));    
+
+        cout << "Processing all loci...\n" << flush;
 
         //#pragma omp parallel
         {
@@ -374,46 +413,27 @@ try {
                 clocks.writing_details += clock_write_details  - clock_write_vcf - clocking;
             }
 
-            stats += loc_proc.stats();            
+            gt_stats += loc_proc.gt_stats();
         } //omp parallel
+        cout << '\n';
+
     } else DOES_NOT_HAPPEN; //input_type
 
     //
     // Report statistics on the analysis.
     //
     {
-        size_t tot = stats.n_nonempty_loci;
-        size_t ph  = stats.n_loci_phasing_issues();
+        size_t tot = gt_stats.n_genotyped_loci;
+        size_t ph  = gt_stats.n_loci_phasing_issues();
         auto   pct = [tot](size_t n) { return as_percentage((double) n / tot); };
 
-        cout << "\n"
-             << "Processed " << tot << " loci:\n"
+        cout << "Genotyped " << tot << " loci:\n"
              << "  (All loci are always conserved)\n"
-             << "  " << ph << " loci had phasing issues (" << pct(ph) << ")\n";
-
-        if (stats.n_loci_w_pe_reads > 0) {
-            // Report statistics on paired-end reads.
-            assert(!ignore_pe_reads);
-            if (input_type == GStacksInputT::denovo) {
-                size_t no_pe   = stats.n_loci_no_pe_reads() + stats.n_loci_almost_no_pe_reads;
-                size_t pe_dag  = stats.n_loci_pe_graph_not_dag;
-                size_t pe_good = stats.n_loci_usable_pe_reads();
-                cout << "  " << no_pe << " loci had no or almost no paired-end reads (" << pct(no_pe) << ")\n"
-                    << "  " << pe_dag
-                    << " loci had paired-end reads that couldn't be assembled into a contig (" << pct(pe_dag) << ")\n"
-                    << "  " << pe_good << " loci had usable paired-end reads (" << pct(pe_good) << ")\n"
-                    << stats.n_aln_reads << " reads were aligned out of " << stats.n_tot_reads << " ("
-                    << as_percentage((double) stats.n_aln_reads / (double) stats.n_tot_reads) << "); "
-                    << (double) stats.n_aln_reads / (double) pe_good << " mean reads per locus.\n"
-                    << stats.n_se_pe_loc_overlaps << " loci overlapped between SE locus and PE contig "
-                    << "(mean length of overlap: " << (double) stats.mean_se_pe_loc_overlap / (double) stats.n_se_pe_loc_overlaps << "bp).\n";
-            }
-        }
-        cout << "\n";
+             << "  one or more samples were excluded in " << ph << " loci (" << pct(ph) << ") because of phasing issues\n\n";
 
         logger->l << "BEGIN badly_phased\n"
                   << "n_tot_samples\tn_bad_samples\tn_loci\n";
-        for (auto& elem : stats.n_badly_phased_samples)
+        for (auto& elem : gt_stats.n_badly_phased_samples)
             logger->l << elem.first.second << '\t' << elem.first.first << '\t' << elem.second << '\n';
         logger->l << "END badly_phased\n\n";
     }
@@ -431,7 +451,7 @@ try {
         Clocks totals = std::accumulate(clocks_all.begin(), clocks_all.end(), Clocks());
         totals /= num_threads;
         double total_time = clock_parallel_end - clock_parallel_start;
-        ostream os (cout.rdbuf());
+        ostream os (logger->l.rdbuf());
         os.exceptions(os.exceptions() | ios::badbit);
         os << std::fixed << std::setprecision(2);
         os << "BEGIN clockings\n"
@@ -446,7 +466,7 @@ try {
            << std::setw(8) << totals.clocking  << "  clocking (" << as_percentage(totals.clocking / total_time) << ")\n"
            << std::setw(8) << totals.sum() << "  total (" << as_percentage(totals.sum() / total_time) << ")\n"
            << "Time spent actually_writing_vcf: " << actually_writing_vcf << " (" << as_percentage(actually_writing_vcf / total_time) << ")\n"
-           << "VCFwrite block size: mean=" << (double) stats.n_nonempty_loci / n_writes << "(n=" << n_writes << "); max=" << max_size_before_write << "\n"
+           << "VCFwrite block size: mean=" << (double) gt_stats.n_genotyped_loci / n_writes << "(n=" << n_writes << "); max=" << max_size_before_write << "\n"
            << "END clockings\n\n"
            ;
     }
@@ -485,22 +505,28 @@ void SnpAlleleCooccurrenceCounter::clear() {
 }
 
 //
-// ProcessingStats
+// GenotypeStats & ContigStats
 // ===============
 //
 
-ProcessingStats& ProcessingStats::operator+= (const ProcessingStats& other) {
+GenotypeStats& GenotypeStats::operator+= (const GenotypeStats& other) {
+    this->n_genotyped_loci           += other.n_genotyped_loci;
+    for (auto count : other.n_badly_phased_samples)
+        this->n_badly_phased_samples[count.first] += count.second;
+
+    return *this;
+}
+
+ContigStats& ContigStats::operator+= (const ContigStats& other) {
     this->n_nonempty_loci           += other.n_nonempty_loci;
     this->n_loci_w_pe_reads         += other.n_loci_w_pe_reads;
     this->n_loci_almost_no_pe_reads += other.n_loci_almost_no_pe_reads;
     this->n_loci_pe_graph_not_dag   += other.n_loci_pe_graph_not_dag;
+    this->length_ctg_tot            += other.length_ctg_tot;
     this->n_aln_reads               += other.n_aln_reads;
     this->n_tot_reads               += other.n_tot_reads;
-    this->n_se_pe_loc_overlaps      += other.n_se_pe_loc_overlaps;
-    this->mean_se_pe_loc_overlap    += other.mean_se_pe_loc_overlap;
-
-    for (auto count : other.n_badly_phased_samples)
-        this->n_badly_phased_samples[count.first] += count.second;
+    this->n_overlaps                += other.n_overlaps;
+    this->length_overlap_tot        += other.length_overlap_tot;
 
     return *this;
 }
@@ -531,7 +557,7 @@ LocusProcessor::process(CLocReadSet& loc)
 {
     if (loc.reads().empty())
         return;
-    ++stats_.n_nonempty_loci;
+    ++ctg_stats_.n_nonempty_loci;
 
     this->loc_.clear();
     this->loc_.id  =  loc.id();
@@ -566,7 +592,7 @@ LocusProcessor::process(CLocReadSet& loc)
                 break;
             if (loc.pe_reads().empty())
                 break;
-            ++this->stats_.n_loci_w_pe_reads;
+            ++this->ctg_stats_.n_loci_w_pe_reads;
 
             // Assemble a contig.
             vector<const DNASeq4*> seqs_to_assemble;
@@ -577,6 +603,7 @@ LocusProcessor::process(CLocReadSet& loc)
 
             if (ctg.empty())
                 break;
+            ctg_stats_.length_ctg_tot += ctg.length();
 
             // Align each read to the contig.
             CLocAlnSet pe_aln_loc;
@@ -609,8 +636,8 @@ LocusProcessor::process(CLocReadSet& loc)
                 overlap = this->find_locus_overlap(stree, fw_consensus);
             if (overlap > 0) {
                 this->loc_.overlapped = true;
-                this->stats_.n_se_pe_loc_overlaps++;
-                this->stats_.mean_se_pe_loc_overlap += overlap;
+                this->ctg_stats_.n_overlaps++;
+                this->ctg_stats_.length_overlap_tot += overlap;
             }
 
             if (detailed_output)
@@ -619,7 +646,7 @@ LocusProcessor::process(CLocReadSet& loc)
                             << '\t' << ctg
                             << '\n';
 
-            this->stats_.n_tot_reads += loc.pe_reads().size();
+            this->ctg_stats_.n_tot_reads += loc.pe_reads().size();
             GappedAln  *aligner = new GappedAln(loc.pe_reads().front().seq.length(), pe_aln_loc.ref().length(), true);
             AlignRes    aln_res;
             for (SRead& r : loc.pe_reads()) {
@@ -630,7 +657,7 @@ LocusProcessor::process(CLocReadSet& loc)
                                     << '\t' << r.seq << '\n';
 
                 if (add_read_to_aln(pe_aln_loc, aln_res, move(r), aligner, stree)) {
-                    this->stats_.n_aln_reads++;
+                    this->ctg_stats_.n_aln_reads++;
                     if (detailed_output)
                         loc_.details_ss << "pe_aln_local"
                                         << '\t' << pe_aln_loc.reads().back().name
@@ -666,11 +693,12 @@ LocusProcessor::process(CLocReadSet& loc)
 void
 LocusProcessor::process(CLocAlnSet& aln_loc)
 {
+    //assert(!aln_loc.reads().empty()); //TODO Add this in the private versions.
+    ++gt_stats_.n_genotyped_loci;
     if (input_type == GStacksInputT::denovo) {
         // Called from process(CLocReadSet&).
         assert(this->loc_.id == aln_loc.id());
     } else {
-        ++stats_.n_nonempty_loci;
         this->loc_.clear();
         this->loc_.id = aln_loc.id();
         this->loc_.pos = aln_loc.pos();
@@ -711,7 +739,7 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
         set<size_t> inconsistent_samples;
         phase_data = phase_hets(calls, aln_loc, inconsistent_samples);
         if (!inconsistent_samples.empty())
-            ++stats_.n_badly_phased_samples[ {inconsistent_samples.size(), aln_loc.n_samples()} ];
+            ++gt_stats_.n_badly_phased_samples[ {inconsistent_samples.size(), aln_loc.n_samples()} ];
     }
 
     write_one_locus(aln_loc, depths, calls, phase_data);
@@ -938,7 +966,7 @@ LocusProcessor::assemble_contig(const vector<const DNASeq4*>& seqs)
 
     graph.rebuild(seqs, min_km_count);
     if (graph.empty()) {
-        ++stats_.n_loci_almost_no_pe_reads;
+        ++ctg_stats_.n_loci_almost_no_pe_reads;
         return string();
     }
 
@@ -950,7 +978,7 @@ LocusProcessor::assemble_contig(const vector<const DNASeq4*>& seqs)
     vector<const SPath*> best_path;
     if (!graph.find_best_path(best_path)) {
         // Not a DAG.
-        ++stats_.n_loci_pe_graph_not_dag;
+        ++ctg_stats_.n_loci_pe_graph_not_dag;
         return string();
     }
 
@@ -1765,7 +1793,7 @@ void LocusProcessor::using_true_reference(CLocAlnSet& aln_loc, CLocReadSet&& loc
         AlignRes aln_res;
         for (SRead& r : pe_reads)
             if(add_read_to_aln(aln_loc, aln_res, move(r), &aligner, &stree))
-                ++stats_.n_aln_reads;
+                ++ctg_stats_.n_aln_reads;
         if (detailed_output)
             for (auto& r : aln_loc.reads())
                 if (r.is_read2())
