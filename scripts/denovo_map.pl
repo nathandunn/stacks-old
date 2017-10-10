@@ -276,7 +276,7 @@ sub execute_stacks {
         #    
         print $log_fh "\nsamtools merge\n----------\n";
 
-        $cmd = "samtools merge $out_path/catalog.bam";
+        $cmd = "samtools merge -f $out_path/catalog.bam";
         foreach $sample (@parents, @progeny, @samples) {
             $cmd .= " $out_path/$sample->{'file'}.matches.bam";
         }

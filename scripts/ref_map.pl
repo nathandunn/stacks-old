@@ -130,8 +130,16 @@ sub execute_stacks {
 	# Sort the input BAM files, add read groups, and merge them.
 	#
 	my $bam_d = "$out_path/bamfiles_sorted_rgs";
-	if (!-d $bam_d) {
-		mkdir($bam_d) or die("Failed to create directory '$bam_d'.\n");
+	if (-d $bam_d) {
+		my $msg = "\nref_map.pl: Error: Directory '$bam_d' already exists.\n";
+		print $log_fh $msg;
+		print STDERR $msg;
+		exit 1;
+	} elsif (!mkdir($bam_d)) {
+		my $msg = "Failed to create directory '$bam_d'.\n";
+		print $log_fh $msg;
+		print STDERR $msg;
+		exit 1;
 	}
 
 	# Check whether the BAM files are sorted and/or have read groups.
