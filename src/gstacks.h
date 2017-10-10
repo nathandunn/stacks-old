@@ -85,28 +85,46 @@ public:
 };
 
 //
-// ProcessingStats
+// GenotypeStats
 // ----------
-// Statistics produced by `LocusProcessor::process()`.
+// Statistics produced by `LocusProcessor::process()` regarding genotyping
+// and haplotyping.
 //
-class ProcessingStats {
+class GenotypeStats {
+public:
+    size_t n_genotyped_loci;
+
+    map<pair<size_t,size_t>,size_t> n_badly_phased_samples; // { {n_bad_samples, n_tot_samples} : count }
+    size_t n_loci_phasing_issues()  const { size_t n = 0; for (auto& e: n_badly_phased_samples) n+=e.second; return n; }
+
+    GenotypeStats& operator+= (const GenotypeStats& other);
+};
+
+//
+// ContigStats
+// ----------
+// Statistics produced by `LocusProcessor::process()` when doing de novo assembly/alignment.
+//
+class ContigStats {
 public:
     size_t n_nonempty_loci;
     size_t n_loci_w_pe_reads;
     size_t n_loci_almost_no_pe_reads;
     size_t n_loci_pe_graph_not_dag;
+    size_t length_ctg_tot;
+
     size_t n_aln_reads;
     size_t n_tot_reads;
-    size_t n_se_pe_loc_overlaps;
-    size_t mean_se_pe_loc_overlap;
 
-    map<pair<size_t,size_t>,size_t> n_badly_phased_samples; // { {n_bad_samples, n_tot_samples} : count }
+    size_t n_overlaps;
+    size_t length_overlap_tot;
 
-    size_t n_loci_phasing_issues()  const { size_t n = 0; for (auto& e: n_badly_phased_samples) n+=e.second; return n; }
-    size_t n_loci_no_pe_reads()     const { return n_nonempty_loci - n_loci_w_pe_reads; }
-    size_t n_loci_usable_pe_reads() const { return n_loci_w_pe_reads - n_loci_almost_no_pe_reads - n_loci_pe_graph_not_dag; }
+    size_t n_loci_no_pe_reads() const { return n_nonempty_loci - n_loci_w_pe_reads; }
+    size_t n_loci_ctg() const { return n_loci_w_pe_reads - n_loci_almost_no_pe_reads - n_loci_pe_graph_not_dag; }
+    double ctg_avg_length() const {return (double) length_ctg_tot / n_loci_ctg();}
+    double mean_olap_length() const {return (double) length_overlap_tot / n_overlaps;}
 
-    ProcessingStats& operator+= (const ProcessingStats& other);
+    ContigStats& operator+= (const ContigStats& other);
 };
 
 //
@@ -137,20 +155,22 @@ public:
 //
 class LocusProcessor {
 public:
-    LocusProcessor() : stats_(), loc_() {}
+    LocusProcessor() : gt_stats_(), ctg_stats_(), loc_() {}
 
     // Process a locus.
     void process(CLocReadSet& loc);
     void process(CLocAlnSet& aln_loc);
 
     // Access the output. Statistics & movable fasta/vcf per-locus text outputs.
-    const ProcessingStats& stats() const {return stats_;}
+    const GenotypeStats& gt_stats() const {return gt_stats_;}
+    const ContigStats& ctg_stats() const {return ctg_stats_;}
     string& vcf_out() {return loc_.o_vcf;}
     string& fasta_out() {return loc_.o_fa;}
     string& details_out() {return loc_.o_details;}
 
 private:
-    ProcessingStats stats_;
+    GenotypeStats gt_stats_;
+    ContigStats ctg_stats_;
     mutable LocData loc_;
 
     string assemble_contig(const vector<const DNASeq4*>& seqs);
