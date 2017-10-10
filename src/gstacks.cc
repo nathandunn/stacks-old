@@ -418,6 +418,11 @@ try {
         logger->l << "END badly_phased\n\n";
     }
 
+    #ifdef DEBUG
+    if (typeid(*model) == typeid(MarukiLowModel&))
+        cerr << "DEBUG: marukilow: " << ((const MarukiLowModel&)*model).n_underflows() << " underflows occurred.\n\n";
+    #endif
+
     //
     // Report clockings.
     //
