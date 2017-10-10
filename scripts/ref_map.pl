@@ -110,7 +110,7 @@ sub check_return_value {
     # terminated by a signal, and by `$? >> 8` if it exited normally.
     my ($rv, $log_fh) = @_;
     if ($rv != 0) {
-        my $msg = "\nref_map.pl: Aborted because the last command failed. (" . ($rv & 255 ? $rv : $rv >> 8) . ")\n";
+        my $msg = "ref_map.pl: Aborted because the last command failed. (" . ($rv & 255 ? $rv : $rv >> 8) . ")\n";
         print $log_fh $msg;
         print STDERR $msg;
         exit 1;
@@ -131,16 +131,16 @@ sub execute_stacks {
     #
     my $bam_d = "$out_path/bamfiles_sorted_rgs";
     $cmd = "mkdir $bam_d";
-    print STDERR "  $cmd\n";
+    print STDERR "Creating a directory where to merge BAM files...\n  $cmd\n\n";
     print $log_fh "$cmd\n\n";
     if (!$dry_run) {
     	if (-d $bam_d) {
-    		my $msg = "\nref_map.pl: Error: Directory '$bam_d' already exists.\n";
+    		my $msg = "ref_map.pl: Error: Directory '$bam_d' already exists.\n";
     		print $log_fh $msg;
     		print STDERR $msg;
     		exit 1;
     	} elsif (!mkdir($bam_d)) {
-    		my $msg = "Failed to create directory '$bam_d'.\n";
+    		my $msg = "ref_map.pl: Error: Failed to create directory '$bam_d'.\n";
     		print $log_fh $msg;
     		print STDERR $msg;
     		exit 1;
@@ -195,7 +195,7 @@ sub execute_stacks {
     	print STDERR "\n";
     	print $log_fh "\n";
     }
-    print STDERR "Merging BAM files...\n  $merge_cmd\n";
+    print STDERR "Merging BAM files...\n  $merge_cmd\n\n";
     print $log_fh "\nsamtools merge\n==========\n$merge_cmd\n";
     if (!$dry_run) {
     	system($merge_cmd);
@@ -219,11 +219,10 @@ sub execute_stacks {
     foreach (@_gstacks) {
         $cmd .= " " . $_;
     }
-    $cmd .= " 2>&1";
-    print STDERR  "  $cmd\n";
+    print STDERR  "  $cmd\n\n";
     print $log_fh "$cmd\n\n";
     if (!$dry_run) {
-        open($pipe_fh, "$cmd |");
+        open($pipe_fh, "$cmd 2>&1 |");
         while (<$pipe_fh>) {
             print $log_fh $_;
         }
@@ -238,12 +237,12 @@ sub execute_stacks {
         printf(STDERR "Generating genotypes...\n");
         print $log_fh "\ngenotypes\n==========\n";
 
-        $cmd = $exe_path . "genotypes" . ($v1 ? " --v1" : "") . " -b $batch_id -P $out_path -r 1 -c -s " . join(" ", @_genotypes) . " 2>&1";
-        print STDERR  "$cmd\n";
-        print $log_fh "$cmd\n";
+        $cmd = $exe_path . "genotypes" . ($v1 ? " --v1" : "") . " -b $batch_id -P $out_path -r 1 -c -s " . join(" ", @_genotypes);
+        print STDERR  "$cmd\n\n";
+        print $log_fh "$cmd\n\n";
 
         if ($dry_run == 0) {
-            open($pipe_fh, "$cmd |");
+            open($pipe_fh, "$cmd 2>&1 |");
             while (<$pipe_fh>) {
                 print $log_fh $_;
             }
@@ -255,12 +254,12 @@ sub execute_stacks {
         printf(STDERR "Calculating population-level summary statistics\n");
         print $log_fh "\npopulations\n==========\n";
 
-        $cmd = $exe_path . "populations" . ($v1 ? " --v1" : "") . " -P $out_path " . join(" ", @_populations) . " 2>&1";
-        print STDERR  "  $cmd\n";
-        print $log_fh "$cmd\n";
+        $cmd = $exe_path . "populations" . ($v1 ? " --v1" : "") . " -P $out_path " . join(" ", @_populations);
+        print STDERR  "  $cmd\n\n";
+        print $log_fh "$cmd\n\n";
 
         if (!$dry_run) {
-            open($pipe_fh, "$cmd |");
+            open($pipe_fh, "$cmd 2>&1 |");
             while (<$pipe_fh>) {
                 print $log_fh $_;
             }
@@ -268,6 +267,9 @@ sub execute_stacks {
             check_return_value($?, $log_fh);
         }
     }
+    
+    print STDERR  "ref_map.pl is done.\n";
+    print $log_fh "ref_map.pl is done.\n";
 }
 
 sub parse_population_map {
@@ -456,9 +458,9 @@ sub initialize_samples {
     }
     }
 
-    print STDERR "Found ", scalar(@{$parents}), " parental file(s).\n" if (scalar(@{$parents}) > 0);
-    print STDERR "Found ", scalar(@{$progeny}), " progeny file(s).\n" if (scalar(@{$progeny}) > 0);
-    print STDERR "Found ", scalar(@{$samples}), " sample file(s).\n" if (scalar(@{$samples}) > 0);
+    print STDERR "Found ", scalar(@{$parents}), " parental file(s).\n\n" if (scalar(@{$parents}) > 0);
+    print STDERR "Found ", scalar(@{$progeny}), " progeny file(s).\n\n" if (scalar(@{$progeny}) > 0);
+    print STDERR "Found ", scalar(@{$samples}), " sample file(s).\n\n" if (scalar(@{$samples}) > 0);
 }
 
 sub initialize_database {
