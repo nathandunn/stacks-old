@@ -19,7 +19,7 @@
 #
 
 #
-# Process the data for a genetic map: build stacks in parents and progeny, 
+# Process the data for a genetic map: build stacks in parents and progeny,
 # create a catalog from the parents, and match progeny against the catatlog.
 # Call genotypes, and load all data into an MySQL database along the way.
 #
@@ -92,7 +92,7 @@ initialize_samples(\@parents, \@progeny, \@samples, \@sample_list, \%pop_ids, \%
 $log = "$out_path/ref_map.log";
 open($log_fh, ">$log") or die("Unable to open log file '$log'; $!\n");
 
-print $log_fh 
+print $log_fh
     "ref_map.pl version ", stacks_version, " started at ", strftime("%Y-%m-%d %H:%M:%S", (localtime(time))), "\n",
     $cmd_str, "\n";
 
@@ -106,7 +106,7 @@ print $log_fh "\nref_map.pl completed at ", strftime("%Y-%m-%d %H:%M:%S", (local
 close($log_fh);
 
 sub check_return_value {
-    # $? is a 16 bit int. Exit code is given by `$? & 255` if the process was 
+    # $? is a 16 bit int. Exit code is given by `$? & 255` if the process was
     # terminated by a signal, and by `$? >> 8` if it exited normally.
     my ($rv, $log_fh) = @_;
     if ($rv != 0) {
@@ -119,95 +119,95 @@ sub check_return_value {
 
 sub execute_stacks {
     my ($log_fh, $sample_id, $parents, $progeny, $samples, $sample_ids) = @_;
-    
+
     my (@results, @depths_of_cov);
     my ($pop_cnt, $sample, $num_files, $i, $cmd, $pipe_fh, $path, $cat_file);
 
     my $minc  = $min_cov  > 0 ? "-m $min_cov"  : "";
     my $minrc = $min_rcov > 0 ? "-m $min_rcov" : $minc;
 
-	#
-	# Sort the input BAM files, add read groups, and merge them.
-	#
-	my $bam_d = "$out_path/bamfiles_sorted_rgs";
-	$cmd = "mkdir $bam_d";
-	print STDERR "  $cmd\n";
+    #
+    # Sort the input BAM files, add read groups, and merge them.
+    #
+    my $bam_d = "$out_path/bamfiles_sorted_rgs";
+    $cmd = "mkdir $bam_d";
+    print STDERR "  $cmd\n";
     print $log_fh "$cmd\n\n";
     if (!$dry_run) {
-		if (-d $bam_d) {
-			my $msg = "\nref_map.pl: Error: Directory '$bam_d' already exists.\n";
-			print $log_fh $msg;
-			print STDERR $msg;
-			exit 1;
-		} elsif (!mkdir($bam_d)) {
-			my $msg = "Failed to create directory '$bam_d'.\n";
-			print $log_fh $msg;
-			print STDERR $msg;
-			exit 1;
-		}
-	}
+    	if (-d $bam_d) {
+    		my $msg = "\nref_map.pl: Error: Directory '$bam_d' already exists.\n";
+    		print $log_fh $msg;
+    		print STDERR $msg;
+    		exit 1;
+    	} elsif (!mkdir($bam_d)) {
+    		my $msg = "Failed to create directory '$bam_d'.\n";
+    		print $log_fh $msg;
+    		print STDERR $msg;
+    		exit 1;
+    	}
+    }
 
-	# Check whether the BAM files are sorted and/or have read groups.
-	print STDERR "Checking BAM headers...\n";
-	my %not_sorted;
-	my %no_readgroup;
-	foreach $sample (@samples) {
-		my $name = $sample->{'file'}; 
-		# Insert the sample in both sets.
-		$not_sorted{$name} = undef;
-		$no_readgroup{$name} = undef;
-		# Then remove it when we find the @HD, @RG lines in the BAM header.
-		my $bam_path = $sample->{'path'} . $sample->{'file'} . "." . $sample->{'suffix'};
-		open($pipe_fh, "samtools view -H $bam_path |");
-		while (<$pipe_fh>) {
-			if ($_ =~ /^\@HD\t.*SO:coordinate/) {
-				delete $not_sorted{$name};
-			} elsif ($_ =~ /^\@RG\t.*SM:/) {
-				delete $no_readgroup{$name};
-			}
-		}
-		close($pipe_fh);
-		check_return_value($?, $log_fh);		
-	}
-	# Add read groups, sort and merge the sample BAMs.
-	my $merge_cmd = "samtools merge $bam_d/all_merged.bam";
-	if (scalar(keys(%not_sorted)) == 0 and scalar(keys(%no_readgroup)) == 0) {
-		# All sample BAMs are sorted and have read groups.
-		foreach $sample (@samples) {
-			$merge_cmd .= " " . $sample->{'path'} . $sample->{'file'} . "." . $sample->{'suffix'};
-		}
-	} else {
-		# At least one sample is not sorted or is missing a read group.
-	    print STDERR "At least one sample is not sorted or doesn't have a read group; adding read groups and/or sorting BAM files...\n";
-	    print $log_fh "\nsamtools addreplacerg and/or sort\n==========\n";
-		foreach $sample (@samples) {
-			my $bam_path = $sample->{'path'} . $sample->{'file'} . "." . $sample->{'suffix'};
-			my $name = $sample->{'file'};
-			my $new_bam_path = "$bam_d/$name.rg_sorted.bam";
-			$cmd = "cat $bam_path | samtools addreplacerg -r ID:$name -r SM:$name - | samtools sort > $new_bam_path";
-		    print STDERR "  $cmd\n";
-		    print $log_fh "$cmd\n";
-		    if (!$dry_run) {
-				system($cmd);
-			}
-			$merge_cmd .= " $new_bam_path";
-		}
-		print STDERR "\n";
-		print $log_fh "\n";
-	}
+    # Check whether the BAM files are sorted and/or have read groups.
+    print STDERR "Checking BAM headers...\n";
+    my %not_sorted;
+    my %no_readgroup;
+    foreach $sample (@samples) {
+    	my $name = $sample->{'file'};
+    	# Insert the sample in both sets.
+    	$not_sorted{$name} = undef;
+    	$no_readgroup{$name} = undef;
+    	# Then remove it when we find the @HD, @RG lines in the BAM header.
+    	my $bam_path = $sample->{'path'} . $sample->{'file'} . "." . $sample->{'suffix'};
+    	open($pipe_fh, "samtools view -H $bam_path |");
+    	while (<$pipe_fh>) {
+    		if ($_ =~ /^\@HD\t.*SO:coordinate/) {
+    			delete $not_sorted{$name};
+    		} elsif ($_ =~ /^\@RG\t.*SM:/) {
+    			delete $no_readgroup{$name};
+    		}
+    	}
+    	close($pipe_fh);
+    	check_return_value($?, $log_fh);		
+    }
+    # Add read groups, sort and merge the sample BAMs.
+    my $merge_cmd = "samtools merge $bam_d/all_merged.bam";
+    if (scalar(keys(%not_sorted)) == 0 and scalar(keys(%no_readgroup)) == 0) {
+    	# All sample BAMs are sorted and have read groups.
+    	foreach $sample (@samples) {
+    		$merge_cmd .= " " . $sample->{'path'} . $sample->{'file'} . "." . $sample->{'suffix'};
+    	}
+    } else {
+    	# At least one sample is not sorted or is missing a read group.
+        print STDERR "At least one sample is not sorted or doesn't have a read group; adding read groups and/or sorting BAM files...\n";
+        print $log_fh "\nsamtools addreplacerg and/or sort\n==========\n";
+    	foreach $sample (@samples) {
+    		my $bam_path = $sample->{'path'} . $sample->{'file'} . "." . $sample->{'suffix'};
+    		my $name = $sample->{'file'};
+    		my $new_bam_path = "$bam_d/$name.rg_sorted.bam";
+    		$cmd = "cat $bam_path | samtools addreplacerg -r ID:$name -r SM:$name - | samtools sort > $new_bam_path";
+    	    print STDERR "  $cmd\n";
+    	    print $log_fh "$cmd\n";
+    	    if (!$dry_run) {
+    			system($cmd);
+    		}
+    		$merge_cmd .= " $new_bam_path";
+    	}
+    	print STDERR "\n";
+    	print $log_fh "\n";
+    }
     print STDERR "Merging BAM files...\n  $merge_cmd\n";
     print $log_fh "\nsamtools merge\n==========\n$merge_cmd\n";
     if (!$dry_run) {
-		system($merge_cmd);
-	}
+    	system($merge_cmd);
+    }
     check_return_value($?, $log_fh);
 
-	if (-z "$bam_d/all_merged.bam") {
-		my $msg = "\nref_map.pl: Error: Failed to add read groups and/or merge.\n";
-		print $log_fh $msg;
-		print STDERR $msg;
-		exit 1;
-	}
+    if (-z "$bam_d/all_merged.bam") {
+    	my $msg = "\nref_map.pl: Error: Failed to add read groups and/or merge.\n";
+    	print $log_fh $msg;
+    	print STDERR $msg;
+    	exit 1;
+    }
 
     #
     # Call genotypes.
@@ -216,20 +216,20 @@ sub execute_stacks {
     print $log_fh "\ngstacks\n==========\n";
 
     $cmd = $exe_path . "gstacks -B $bam_d/all_merged.bam -O $out_path";
-	foreach (@_gstacks) {
-	    $cmd .= " " . $_;
-	}
+    foreach (@_gstacks) {
+        $cmd .= " " . $_;
+    }
     $cmd .= " 2>&1";
     print STDERR  "  $cmd\n";
     print $log_fh "$cmd\n\n";
-	if (!$dry_run) {
+    if (!$dry_run) {
         open($pipe_fh, "$cmd |");
         while (<$pipe_fh>) {
             print $log_fh $_;
         }
         close($pipe_fh);
         check_return_value($?, $log_fh);
-	}
+    }
 
     if ($data_type eq "map") {
         #
@@ -276,33 +276,33 @@ sub parse_population_map {
     my ($fh, @parts, $line, $sample);
 
     return if (length($popmap_path) == 0);
-    
+
     open($fh, "<$popmap_path") or die("Unable to open population map, '$popmap_path', $!\n");
 
     while ($line = <$fh>) {
-	chomp $line;
+    chomp $line;
 
         next if ($line =~ /^\s*#/);
-        
-	@parts = split(/\t/, $line);
 
-	if (scalar(@parts) > 3) {
-	    die("Unable to parse population map, '$popmap_path' (map should contain no more than three columns).\n");
-	}
+    @parts = split(/\t/, $line);
+
+    if (scalar(@parts) > 3) {
+        die("Unable to parse population map, '$popmap_path' (map should contain no more than three columns).\n");
+    }
 
         push(@{$sample_list}, $parts[0]);
 
-	$pop_ids->{$parts[0]} = $parts[1];
-	$pops->{$parts[1]}++;
-        
-	if (scalar(@parts) > 2) {
-	    $grp_ids->{$parts[0]} = $parts[2];
-	    $grps->{$parts[2]}++;
-	}
+    $pop_ids->{$parts[0]} = $parts[1];
+    $pops->{$parts[1]}++;
+
+    if (scalar(@parts) > 2) {
+        $grp_ids->{$parts[0]} = $parts[2];
+        $grps->{$parts[2]}++;
+    }
     }
 
     if (scalar(keys %{$grps}) == 0) {
-	$grps->{"1"}++;
+    $grps->{"1"}++;
 
         foreach $sample (@{$sample_list}) {
             $grp_ids->{$sample} = "1";
@@ -331,7 +331,7 @@ sub initialize_samples {
         #
         foreach $sample (@{$sample_list}) {
             $found = false;
-            
+
             for ($i = 0; $i < scalar(@suffixes); $i++) {
                 $path = $sample_path . $sample . "." . $suffixes[$i];
                 if (-e $path) {
@@ -354,7 +354,7 @@ sub initialize_samples {
                 die("Error: Failed to open '$sample_path$sample.(bam|sam|etc.)'.\n");
             }
         }
-        
+
     } else {
         #
         # Process any samples were specified on the command line.
@@ -375,18 +375,18 @@ sub initialize_samples {
             $sample->{'path'} = $path;
             $sample->{'file'} = $file;
 
-	    if ($suffix =~ /^bam$/) {
-		$sample->{'fmt'} = "bam";
-		$gzip            = true;
-	    } elsif ($suffix =~ /^sam$/) {
-		$sample->{'fmt'} = "sam";
-	    } elsif ($suffix =~ /^map$/) {
-		$sample->{'fmt'} = "map";
-	    } elsif ($suffix =~ /^bowtie$/) {
-		$sample->{'fmt'} = "bowtie";
-	    } else {
-		die("Unknown input file type for file '" . $sample->{'path'} . "'.\n");
-	    }
+        if ($suffix =~ /^bam$/) {
+    	$sample->{'fmt'} = "bam";
+    	$gzip            = true;
+        } elsif ($suffix =~ /^sam$/) {
+    	$sample->{'fmt'} = "sam";
+        } elsif ($suffix =~ /^map$/) {
+    	$sample->{'fmt'} = "map";
+        } elsif ($suffix =~ /^bowtie$/) {
+    	$sample->{'fmt'} = "bowtie";
+        } else {
+    	die("Unknown input file type for file '" . $sample->{'path'} . "'.\n");
+        }
 
             $path = $sample->{'path'} . $sample->{'file'} . "." . $sample->{'suffix'};
 
@@ -412,7 +412,7 @@ sub initialize_samples {
     if (scalar(@{$sample_list}) > 0) {
 
         my %sample_hash;
-        
+
         foreach $sample (@{$samples}) {
             $sample_hash{$sample->{'file'}}++;
 
@@ -448,12 +448,12 @@ sub initialize_samples {
     #
     my (%files, $file);
     foreach $file (@{$parents}, @{$progeny}, @{$samples}) {
-	$files{$file}++;
+    $files{$file}++;
     }
     foreach $file (keys %files) {
-	if ($files{$file} > 1) {
-	    die("A duplicate file was specified which may create undefined results, '$file'\n");
-	}
+    if ($files{$file} > 1) {
+        die("A duplicate file was specified which may create undefined results, '$file'\n");
+    }
     }
 
     print STDERR "Found ", scalar(@{$parents}), " parental file(s).\n" if (scalar(@{$parents}) > 0);
@@ -494,9 +494,9 @@ sub initialize_database {
     }
 
     #
-    # Set the SQL Batch ID for this set of loci, along with description and date of 
+    # Set the SQL Batch ID for this set of loci, along with description and date of
     # sequencing. Insert this batch data into the database.
-    # 
+    #
     `mysql --defaults-file=$cnf $db -e "INSERT INTO batches SET id=$batch_id, description='$desc', date='$date', type='$data_type'"` if ($dry_run == false);
 
     print $log_fh "mysql --defaults-file=$cnf $db -e \"INSERT INTO batches SET id=$batch_id, description='$desc', date='$date', type='$data_type'\"\n";
@@ -507,18 +507,18 @@ sub initialize_database {
 
     foreach $sample (@{$parents}, @{$progeny}, @{$samples}) {
 
-	if ($dry_run == false) {
-	    `mysql --defaults-file=$cnf $db -e "INSERT INTO samples SET sample_id=$i, batch_id=$batch_id, type='$sample->{'type'}', file='$sample->{'file'}', pop_id='$sample->{'pop_id'}', group_id='$sample->{'grp_id'}'"`;
-	    @results = `mysql --defaults-file=$cnf $db -N -B -e "SELECT id FROM samples WHERE sample_id=$i AND batch_id=$batch_id AND type='$sample->{'type'}' AND file='$sample->{'file'}'"`;
-	    chomp $results[0];
-	    $sample_id = $results[0];
+    if ($dry_run == false) {
+        `mysql --defaults-file=$cnf $db -e "INSERT INTO samples SET sample_id=$i, batch_id=$batch_id, type='$sample->{'type'}', file='$sample->{'file'}', pop_id='$sample->{'pop_id'}', group_id='$sample->{'grp_id'}'"`;
+        @results = `mysql --defaults-file=$cnf $db -N -B -e "SELECT id FROM samples WHERE sample_id=$i AND batch_id=$batch_id AND type='$sample->{'type'}' AND file='$sample->{'file'}'"`;
+        chomp $results[0];
+        $sample_id = $results[0];
 
             #
             # Save the sample ID to use when running pstacks.
             #
             $sample_ids->{$sample->{'file'}} = $sample_id;
-	}
-	print $log_fh "mysql --defaults-file=$cnf $db -e \"INSERT INTO samples SET sample_id=$i, batch_id=$batch_id, type='$sample->{'type'}', file='$sample->{'file'}', pop_id='$sample->{'pop_id'}', group_id='$sample->{'grp_id'}'\"\n";
+    }
+    print $log_fh "mysql --defaults-file=$cnf $db -e \"INSERT INTO samples SET sample_id=$i, batch_id=$batch_id, type='$sample->{'type'}', file='$sample->{'file'}', pop_id='$sample->{'pop_id'}', group_id='$sample->{'grp_id'}'\"\n";
 
         $i++;
     }
@@ -532,7 +532,7 @@ sub load_sql_data {
     my ($pop_cnt, $sample, $num_files, $i, $file);
 
     print STDERR "\nComputation is complete, loading results to the database '$db'.\n";
-    
+
     my $pop_cnt = scalar(keys %{$pops});
 
     $i         = 1;
@@ -563,7 +563,7 @@ sub load_sql_data {
             import_sql_file($log_fh, $file, "alleles", 1);
         }
         print STDERR "done.\n";
-        
+
         $i++;
     }
 
@@ -599,19 +599,19 @@ sub load_sql_data {
     $i = 1;
     foreach $sample (@{$parents}, @{$progeny}, @{$samples}) {
 
-	printf(STDERR "Loading sstacks output to $db; file % 3s of % 3s [%s]...", $i, $num_files, $sample->{'file'});
+    printf(STDERR "Loading sstacks output to $db; file % 3s of % 3s [%s]...", $i, $num_files, $sample->{'file'});
 
-	if ($gzip == true) {
-	    $file = "$out_path/" . $sample->{'file'} . ".matches.tsv.gz";
-	    import_gzsql_file($log_fh, $file, "matches", 1);
+    if ($gzip == true) {
+        $file = "$out_path/" . $sample->{'file'} . ".matches.tsv.gz";
+        import_gzsql_file($log_fh, $file, "matches", 1);
 
-	} else {
-	    $file = "$out_path/" . $sample->{'file'} . ".matches.tsv";
-	    import_sql_file($log_fh, $file, "matches", 1);
-	}
+    } else {
+        $file = "$out_path/" . $sample->{'file'} . ".matches.tsv";
+        import_sql_file($log_fh, $file, "matches", 1);
+    }
         print STDERR "done.\n";
 
-	$i++;
+    $i++;
     }
 
     if ($data_type eq "map") {
@@ -623,7 +623,7 @@ sub load_sql_data {
 
         $file = "$out_path/batch_" . $batch_id . ".genotypes_1.txt";
         import_sql_file($log_fh, $file, "catalog_genotypes", 1);
-        
+
     } else {
         #
         # Load the outputs generated by populations to the database.
@@ -692,10 +692,10 @@ sub write_results {
     my $line;
 
     foreach $line (@{$results}) {
-	if ($line =~ /\r/) { 
-	    $line =~ s/^.+\r(.*\n)$/\1/; 
-	}
-	print $log_fh $line;
+    if ($line =~ /\r/) {
+        $line =~ s/^.+\r(.*\n)$/\1/;
+    }
+    print $log_fh $line;
     }
 }
 
@@ -706,8 +706,8 @@ sub write_depths_of_cov {
     print $log_fh "\nDepths of Coverage for Processed Samples:\n";
 
     foreach $a (@{$depths}) {
-	print STDERR  $a->[0], ": ", $a->[1], "x\n";
-	print $log_fh $a->[0], ": ", $a->[1], "x\n";
+    print STDERR  $a->[0], ": ", $a->[1], "x\n";
+    print $log_fh $a->[0], ": ", $a->[1], "x\n";
     }
 }
 
@@ -721,7 +721,7 @@ sub import_sql_file {
     @results = `mysql --defaults-file=$cnf $db -e "LOAD DATA LOCAL INFILE '$file' INTO TABLE $table $ignore"` if ($sql == true && $dry_run == false);
 
     if ($sql == true) {
-	print $log_fh "mysql --defaults-file=$cnf $db -e \"LOAD DATA LOCAL INFILE '$file' INTO TABLE $table $ignore\"\n", @results;
+    print $log_fh "mysql --defaults-file=$cnf $db -e \"LOAD DATA LOCAL INFILE '$file' INTO TABLE $table $ignore\"\n", @results;
     }
 }
 
@@ -738,8 +738,8 @@ sub import_gzsql_file {
     my $tmpdir     = File::Spec->tmpdir();
     my $named_pipe = mktemp($tmpdir . "/denovo_map_XXXXXX");
     if ($sql == true && $dry_run == false) {
-	mkfifo($named_pipe, 0700) || die("Unable to create named pipe for loading gzipped data: $named_pipe, $!");
-	print $log_fh "Streaming $file into named pipe $named_pipe.\n";
+    mkfifo($named_pipe, 0700) || die("Unable to create named pipe for loading gzipped data: $named_pipe, $!");
+    print $log_fh "Streaming $file into named pipe $named_pipe.\n";
     }
 
     #
@@ -750,7 +750,7 @@ sub import_gzsql_file {
     @results = `mysql --defaults-file=$cnf $db -e "LOAD DATA LOCAL INFILE '$named_pipe' INTO TABLE $table $ignore"` if ($sql == true && $dry_run == false);
 
     if ($sql == 1) {
-	print $log_fh "mysql --defaults-file=$cnf $db -e \"LOAD DATA LOCAL INFILE '$named_pipe' INTO TABLE $table $ignore\"\n", @results;
+    print $log_fh "mysql --defaults-file=$cnf $db -e \"LOAD DATA LOCAL INFILE '$named_pipe' INTO TABLE $table $ignore\"\n", @results;
     }
 
     #
@@ -763,121 +763,121 @@ sub parse_command_line {
     my ($arg);
 
     while (@ARGV) {
-	$_ = shift @ARGV;
+    $_ = shift @ARGV;
         if    ($_ =~ /^-v$/) { version(); exit 1; }
-	elsif ($_ =~ /^-h$/) { usage(); }
-	elsif ($_ =~ /^-d$/ || $_ =~ /^--dry-run$/) { $dry_run = true; }
-	elsif ($_ =~ /^-o$/) { $out_path  = shift @ARGV; }
-	#elsif ($_ =~ /^-D$/) { $desc      = shift @ARGV; }
-	elsif ($_ =~ /^-e$/) { $exe_path  = shift @ARGV; }
-	#elsif ($_ =~ /^-b$/) { $batch_id  = shift @ARGV; }
-	#elsif ($_ =~ /^-i$/) { $sample_id = shift @ARGV; }
-	#elsif ($_ =~ /^-a$/) { $date      = shift @ARGV; }
-	#elsif ($_ =~ /^-S$/) { $sql       = false; }
-	#elsif ($_ =~ /^-B$/) { $db        = shift @ARGV; }
-	elsif ($_ =~ /^-m$/) { $min_cov   = shift @ARGV; }
-	elsif ($_ =~ /^-P$/) { $min_rcov  = shift @ARGV; }
-	elsif ($_ =~ /^--samples$/) {
-		$sample_path = shift @ARGV;
-	} elsif ($_ =~ /^-O$/ || $_ =~ /^--popmap$/) {
-	    $popmap_path = shift @ARGV;
-	    push(@_populations, "-M " . $popmap_path); 
+    elsif ($_ =~ /^-h$/) { usage(); }
+    elsif ($_ =~ /^-d$/ || $_ =~ /^--dry-run$/) { $dry_run = true; }
+    elsif ($_ =~ /^-o$/) { $out_path  = shift @ARGV; }
+    #elsif ($_ =~ /^-D$/) { $desc      = shift @ARGV; }
+    elsif ($_ =~ /^-e$/) { $exe_path  = shift @ARGV; }
+    #elsif ($_ =~ /^-b$/) { $batch_id  = shift @ARGV; }
+    #elsif ($_ =~ /^-i$/) { $sample_id = shift @ARGV; }
+    #elsif ($_ =~ /^-a$/) { $date      = shift @ARGV; }
+    #elsif ($_ =~ /^-S$/) { $sql       = false; }
+    #elsif ($_ =~ /^-B$/) { $db        = shift @ARGV; }
+    elsif ($_ =~ /^-m$/) { $min_cov   = shift @ARGV; }
+    elsif ($_ =~ /^-P$/) { $min_rcov  = shift @ARGV; }
+    elsif ($_ =~ /^--samples$/) {
+    	$sample_path = shift @ARGV;
+    } elsif ($_ =~ /^-O$/ || $_ =~ /^--popmap$/) {
+        $popmap_path = shift @ARGV;
+        push(@_populations, "-M " . $popmap_path);
 
-	#} elsif ($_ =~ /^--create_db$/) {
+    #} elsif ($_ =~ /^--create_db$/) {
     #        $create_db = true;
 
     #    } elsif ($_ =~ /^--overw_db$/) {
     #        $overw_db  = true;
     #        $create_db = true;
 
-    #    } elsif ($_ =~ /^-A$/) { 
-	#    $arg = shift @ARGV;
-	#    push(@_genotypes, "-t " . $arg); 
+    #    } elsif ($_ =~ /^-A$/) {
+    #    $arg = shift @ARGV;
+    #    push(@_genotypes, "-t " . $arg);
 
-	#    $arg = lc($arg);
-	#    if ($arg ne "gen" && $arg ne "cp" && $arg ne "f2" && $arg ne "bc1" && $arg ne "dh") {
-	#	print STDERR "Unknown genetic mapping cross specified: '$arg'\n";
-	#	usage();
-	#    }
+    #    $arg = lc($arg);
+    #    if ($arg ne "gen" && $arg ne "cp" && $arg ne "f2" && $arg ne "bc1" && $arg ne "dh") {
+    #	print STDERR "Unknown genetic mapping cross specified: '$arg'\n";
+    #	usage();
+    #    }
 
-	} elsif ($_ =~ /^-T$/) {
-	    $arg = shift @ARGV;
-	    push(@_pstacks, "-p " . $arg); 
-	    push(@_cstacks, "-p " . $arg); 
-	    push(@_sstacks, "-p " . $arg); 
-	    push(@_populations, "-t " . $arg); 
+    } elsif ($_ =~ /^-T$/) {
+        $arg = shift @ARGV;
+        push(@_pstacks, "-p " . $arg);
+        push(@_cstacks, "-p " . $arg);
+        push(@_sstacks, "-p " . $arg);
+        push(@_populations, "-t " . $arg);
 
-	} elsif ($_ =~ /^--bound_low$/) { 
-	    push(@_pstacks, "--bound_low " . shift @ARGV); 
-	    push(@_pstacks, "--model_type bounded");
+    } elsif ($_ =~ /^--bound_low$/) {
+        push(@_pstacks, "--bound_low " . shift @ARGV);
+        push(@_pstacks, "--model_type bounded");
 
-	} elsif ($_ =~ /^--bound_high$/) { 
-	    push(@_pstacks, "--bound_high " . shift @ARGV); 
-	    push(@_pstacks, "--model_type bounded");
+    } elsif ($_ =~ /^--bound_high$/) {
+        push(@_pstacks, "--bound_high " . shift @ARGV);
+        push(@_pstacks, "--model_type bounded");
 
-	} elsif ($_ =~ /^--alpha$/) { 
-	    push(@_pstacks, "--alpha " . shift @ARGV); 
+    } elsif ($_ =~ /^--alpha$/) {
+        push(@_pstacks, "--alpha " . shift @ARGV);
 
-	} elsif ($_ =~ /^-X$/) {
-	    #
-	    # Pass an arbitrary command-line option to a pipeline program.
-	    #
-	    # Command line option must be of the form '-X "program:option"'
-	    #
-	    $arg = shift @ARGV;
-	    my ($prog, $opt) = ($arg =~ /^(\w+):(.+)$/);
+    } elsif ($_ =~ /^-X$/) {
+        #
+        # Pass an arbitrary command-line option to a pipeline program.
+        #
+        # Command line option must be of the form '-X "program:option"'
+        #
+        $arg = shift @ARGV;
+        my ($prog, $opt) = ($arg =~ /^(\w+):(.+)$/);
 
-	    if ($prog eq "gstacks") {
-                push(@_gstacks, $opt); 
+        if ($prog eq "gstacks") {
+                push(@_gstacks, $opt);
 
-	    } elsif ($prog eq "populations") {
-		push(@_populations, $opt); 
-	    } else {
-		print STDERR "Unknown pipeline program, '$arg'\n";
-		usage();
-	    }
-	}
-	else {
-	    print STDERR "Unknown command line option: '$_'\n";
-	    usage();
-	}
+        } elsif ($prog eq "populations") {
+    	push(@_populations, $opt);
+        } else {
+    	print STDERR "Unknown pipeline program, '$arg'\n";
+    	usage();
+        }
+    }
+    else {
+        print STDERR "Unknown command line option: '$_'\n";
+        usage();
+    }
     }
 
     $exe_path = $exe_path . "/"          if (substr($exe_path, -1) ne "/");
     $out_path = substr($out_path, 0, -1) if (substr($out_path, -1) eq "/");
 
     if ($batch_id !~ /^\d+$/ || $batch_id < 0) {
-	print STDERR "You must specify a batch ID and it must be an integer (e.g. 1, 2, 3).\n";
-	usage();
+    print STDERR "You must specify a batch ID and it must be an integer (e.g. 1, 2, 3).\n";
+    usage();
     }
 
     if ($sql == true && length($date) == 0) {
-	$date = strftime("%Y-%m-%d", (localtime(time)));
+    $date = strftime("%Y-%m-%d", (localtime(time)));
     }
 
     if (scalar(@parents) > 0 && scalar(@samples) > 0) {
-	print STDERR "You must specify either parent or sample files, but not both.\n";
-	usage();
+    print STDERR "You must specify either parent or sample files, but not both.\n";
+    usage();
     }
 
     if (scalar(@parents) == 0 && scalar(@samples) == 0 && length($popmap_path) == 0) {
-	print STDERR "You must specify at least one parent or sample file.\n";
-	usage();
+    print STDERR "You must specify at least one parent or sample file.\n";
+    usage();
     }
 
     if (scalar(@parents) == 0 && scalar(@samples) == 0 && length($popmap_path) > 0 && length($sample_path) == 0) {
-	print STDERR "If you are using a population map to specify samples, you must specify the path to the directory containing the samples (--samples).\n";
-	usage();
+    print STDERR "If you are using a population map to specify samples, you must specify the path to the directory containing the samples (--samples).\n";
+    usage();
     }
 
     if (length($sample_path) > 0) {
         $sample_path .= "/" if (substr($sample_path, -1) ne "/");
     }
-    
+
     if (scalar(@samples) > 0 || length($popmap_path) > 0) {
-	$data_type = "population";
+    $data_type = "population";
     } else {
-	$data_type = "map";
+    $data_type = "map";
     }
 }
 
@@ -888,12 +888,12 @@ sub version {
 sub usage {
     version();
 
-    print STDERR <<EOQ; 
+    print STDERR <<EOQ;
 ref_map.pl --samples dir --popmap path -o dir (database options) [-X prog:"opts" ...]
 
 General options:
   --samples: path to the directory containing the samples BAM (or SAM) alignment files.
-  --popmap: path to a population map file (format is "<name> TAB <pop>", one sample per line).  
+  --popmap: path to a population map file (format is "<name> TAB <pop>", one sample per line).
   o: path to an output directory.
   X: additional options for specific pipeline components, e.g. -X "populations: -p 3 -r 0.50"
   T: the number of threads/CPUs to use (default: 1).
