@@ -33,11 +33,14 @@ public:
 
 class BamCLocBuilder {
 public:
-    BamCLocBuilder(Bam** bam_f, size_t min_reads_per_sample_, bool paired_mode, size_t max_insert_refsize=0);
-    ~BamCLocBuilder() {if (bam_f_) delete bam_f_;}
-
-    // Reads one locus. Returns false on EOF.
-    bool build_one_locus(CLocAlnSet& readset);    
+    struct Config {
+        bool paired;
+        size_t max_insert_refsize;
+        size_t min_mapq;
+        double max_clipped;
+        size_t min_reads_per_sample;
+        bool ign_pe_reads;
+    };
 
     struct BamStats {
         size_t n_records;
@@ -51,14 +54,18 @@ public:
         size_t n_primary_kept() const {return n_primary - n_primary_mapq - n_primary_softclipped;}
     };
 
+    BamCLocBuilder(Bam** bam_f, const Config& cfg);
+    ~BamCLocBuilder() {if (bam_f_) delete bam_f_;}
+
+    // Reads one locus. Returns false on EOF.
+    bool build_one_locus(CLocAlnSet& readset);    
+
     const MetaPopInfo& mpopi() const {return mpopi_;}
     const Bam* bam_f() const {return bam_f_;}
     const BamStats& stats() const {return stats_;}
 
 private:
-    size_t min_reads_per_sample_ = 3;
-    bool paired_mode_;
-    size_t max_insert_refsize_;
+    Config cfg_;
 
     Bam* bam_f_;
     MetaPopInfo mpopi_;
@@ -321,13 +328,9 @@ bool BamCLocReader::read_one_locus(CLocReadSet& readset) {
 inline
 BamCLocBuilder::BamCLocBuilder(
         Bam** bam_f,
-        size_t min_reads_per_sample,
-        bool paired_mode,
-        size_t max_insert_refsize
+        const Config& cfg
 ) :
-    min_reads_per_sample_(min_reads_per_sample),
-    paired_mode_(paired_mode),
-    max_insert_refsize_(paired_mode ? max_insert_refsize_ : 0),
+    cfg_(cfg),
     bam_f_(*bam_f),
     stats_(),
     n_loci_built_(0),
@@ -336,6 +339,9 @@ BamCLocBuilder::BamCLocBuilder(
     eof_(false)
     {
     *bam_f = NULL;
+
+    if (!cfg_.paired)
+        cfg_.max_insert_refsize = 0;
 
     // Create the MetaPopInfo object from the header. Assign sample IDs.
     build_mpopi(mpopi_, rg_to_sample_, *bam_f_);
@@ -357,6 +363,9 @@ BamCLocBuilder::read_and_parse_next_record()
         if(!bam_f_->next_record())
             return false;
         const BamRecord& r = bam_f_->r();
+        if (cfg_.ign_pe_reads && r.is_read2())
+            continue;
+
         ++stats_.n_records;
 
         // Check if the record is primary.
@@ -374,7 +383,7 @@ BamCLocBuilder::read_and_parse_next_record()
         ++stats_.n_primary;
 
         // Check the MAPQ
-        if (r.mapq() < 10) {
+        if (r.mapq() < cfg_.min_mapq) {
             ++stats_.n_primary_mapq;
             continue;
         }
@@ -398,7 +407,7 @@ BamCLocBuilder::read_and_parse_next_record()
         for (auto& op : cigar)
             if (op.first == 'S')
                 softclipped += op.second;
-        if ((double) softclipped / seq.length() > 0.20) {
+        if ((double) softclipped / seq.length() > cfg_.max_clipped) {
             ++stats_.n_primary_softclipped;
             continue;
         }
@@ -419,7 +428,7 @@ BamCLocBuilder::read_and_parse_next_record()
         }
 
         // Assess whether this alignment should be treated as a forward read.
-        if (!paired_mode_) {
+        if (!cfg_.paired) {
             treat_next_record_as_fw_ = true;
         } else if (name.length() >= 2 && name.back() == '1' && (*++name.rbegin() == '/' || *++name.rbegin() == '_')) {
             // n.b. We don't discriminate the case when the READ1/READ2 flags are
@@ -468,7 +477,7 @@ BamCLocBuilder::fill_window()
                     // next record--this is less stringent, and prevents abberant CIGARs to cause
                     // issues.
                     strcmp(next_record_.first.chr(), fw_reads_by_5prime_pos.begin()->first.chr()) == 0
-                    && size_t(bam_f_->r().pos()) <= fw_reads_by_5prime_pos.begin()->first.bp + max_insert_refsize_
+                    && size_t(bam_f_->r().pos()) <= fw_reads_by_5prime_pos.begin()->first.bp + cfg_.max_insert_refsize
                 )) {
 
             if (treat_next_record_as_fw_) {
@@ -494,7 +503,7 @@ BamCLocBuilder::fill_window()
         const PhyLoc& window_center = fw_reads_by_5prime_pos.begin()->first;
         while (!pe_reads_by_5prime_pos.empty()
                 && (strcmp(pe_reads_by_5prime_pos.begin()->first.chr(), window_center.chr()) != 0
-                    || pe_reads_by_5prime_pos.begin()->first.bp + max_insert_refsize_ < window_center.bp + 1)
+                    || pe_reads_by_5prime_pos.begin()->first.bp + cfg_.max_insert_refsize < window_center.bp + 1)
                 ) {
             pe_reads_by_name.erase(pe_reads_by_5prime_pos.begin()->second.name.c_str());
             pe_reads_by_5prime_pos.erase(pe_reads_by_5prime_pos.begin());
@@ -531,7 +540,7 @@ BamCLocBuilder::build_one_locus(CLocAlnSet& aln_loc)
             return false;
 
         // Apply filters to the putative locus.
-        // i.e. Remove reads from samples that have less that `min_reads_per_sample_` reads.
+        // i.e. Remove reads from samples that have less than `cfg_.min_reads_per_sample` reads.
         assert(!fw_reads_by_5prime_pos.empty());
         vector<SAlnRead>& loc_reads = fw_reads_by_5prime_pos.begin()->second;
 
@@ -540,7 +549,7 @@ BamCLocBuilder::build_one_locus(CLocAlnSet& aln_loc)
             ++n_reads_per_sample[read.sample];
         loc_reads.erase(std::remove_if(
             loc_reads.begin(), loc_reads.end(),
-            [&n_reads_per_sample,this] (const SAlnRead& read) {return n_reads_per_sample[read.sample] < min_reads_per_sample_;}
+            [&n_reads_per_sample,this] (const SAlnRead& read) {return n_reads_per_sample[read.sample] < cfg_.min_reads_per_sample;}
             ), loc_reads.end());
 
         if (loc_reads.empty()) {
@@ -580,11 +589,11 @@ BamCLocBuilder::build_one_locus(CLocAlnSet& aln_loc)
                 if (
                         (fw_5prime.strand == strand_plus && pe_5prime.strand == strand_minus
                             && fw_5prime.bp + std::max(fw_len, pe_len) <= pe_5prime.bp + 1
-                            && fw_5prime.bp + max_insert_refsize_ >= pe_5prime.bp + 1)
+                            && fw_5prime.bp + cfg_.max_insert_refsize >= pe_5prime.bp + 1)
                         ||  
                         (fw_5prime.strand == strand_minus && pe_5prime.strand == strand_plus
                             && pe_5prime.bp + std::max(fw_len, pe_len) <= fw_5prime.bp + 1
-                            && pe_5prime.bp + max_insert_refsize_ >= fw_5prime.bp + 1)
+                            && pe_5prime.bp + cfg_.max_insert_refsize >= fw_5prime.bp + 1)
                         ) {
                     // Put the paired read in the reference of the forward reads.
                     pe_read.seq = pe_read.seq.rev_compl();
