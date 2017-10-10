@@ -25,6 +25,7 @@
 #include <cerrno>
 #include <climits>
 #include <cmath>
+#include <ctime>
 #include <iostream>
 #include <utility>
 #include <string>
@@ -145,10 +146,12 @@ void check_or_mk_dir(const string& path);
 //
 inline
 double gettm() {
-#if _POSIX_MONOTONIC_CLOCK
+#if defined _POSIX_MONOTONIC_CLOCK && _POSIX_MONOTONIC_CLOCK >= 0
     struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return ts.tv_sec + ts.tv_nsec / 1.0e9;
+    if(clock_gettime(CLOCK_MONOTONIC, &ts) == 0)
+        return ts.tv_sec + ts.tv_nsec / 1.0e9;
+    else
+        return 0.0;
 #else
     return 0.0;
 #endif
