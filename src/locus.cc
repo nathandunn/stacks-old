@@ -409,22 +409,37 @@ CLocAlnSet::juxtapose(CLocAlnSet&& left, CLocAlnSet&& right, long offset)
     assert(left.id() == right.id());
     assert(left.pos() == right.pos());
     assert(&left.mpopi() == &right.mpopi());
-    if (offset < 0 && size_t(-offset) > right.ref().length()) {
-        // N.B. It is actually possible that `size_t(-offset) > left.ref().length()` happens
-        // legitimately: if inserts smaller than the read size have been sequenced, the paired-end
-        // contig may end upstream of the forward reads.
-
-        //DOES_NOT_HAPPEN;
-        // TODO it's unclear at this point if/when `size_t(-offset) > right.ref().length()`
-        // should be allowed to happen.
-        #ifdef DEBUG
-        cerr << "DEBUG: locus " << left.id() << ", paired contig was too small for the offset\n";
-        #endif
-        return CLocAlnSet(move(left));
-    }
 
     size_t left_ref_len = left.ref().length();
     CLocAlnSet merged (move(left));
+
+    //
+    // N.B. Oct. 2017:
+    //
+    // It actually possible that
+    // ``` size_t(-offset) > left.ref().length() ```
+    // happens legitimately: if inserts smaller than the read size have been
+    // sequenced, the paired-end contig may end upstream of the forward reads,
+    // in the barcode/adapter region. In this case, we don't do anything special,
+    // as with the current approach the left of the paired-end contig (the
+    // `right` matrix) is trimmed anyway.
+    //
+    // Similarly, it is possible that
+    // ``` size_t(-offset) > right.ref().length() ```
+    // happens legitimately, for the same reason. In this case, we just move the
+    // paired-end reads to the FW object, soft-clipping them entirely.
+    //
+    // At the moment, we don't do any special trimming of the small-insert reads.
+    //
+    if (offset < 0 && size_t(-offset) > right.ref().length()) {
+        for (SAlnRead& r : right.reads_) {
+            r.cigar.assign({{'D', merged.ref().length()}, {'I', r.seq.length()}});
+            merged.add(move(r));
+        }
+        left.clear();
+        right.clear();
+        return merged;
+    }
 
     // Extend the reference sequence.
     if (offset >= 0) {
@@ -460,5 +475,7 @@ CLocAlnSet::juxtapose(CLocAlnSet&& left, CLocAlnSet&& right, long offset)
     right.reads_ = vector<SAlnRead>();
     right.reads_per_sample_ = vector<vector<size_t>>(right.mpopi().samples().size());
 
+    left.clear();
+    right.clear();
     return merged;
 }

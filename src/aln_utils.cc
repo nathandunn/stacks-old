@@ -391,11 +391,11 @@ std::tuple<uint,uint,uint> cigar_lengths(const Cigar& cigar) {
             seq_len += op->second;
             break;
         case 'I':
+        case 'S':
             // Consume seq.
             seq_len += op->second;
             break;
         case 'D':
-        case 'S':
         case 'N':
         case 'H':
         case 'P':
@@ -418,13 +418,22 @@ void cigar_simplify_to_MDI(Cigar& cig) {
     // Replace operations with the relevant equivalent in "MDI".
     for (auto& op : cig) {
         switch (op.first) {
+        case 'M':
+        case 'D':
+        case 'I':
+            break;
         case '=':
-        case 'X': op.first = 'M'; break;
-        case 'S': op.first = 'I'; break;
+        case 'X':
+            op.first = 'M'; break;
+        case 'S':
+            op.first = 'I'; break;
         case 'N':
-        case 'H': op.first = 'D'; break;
-        default: break;
-        case 'P': op.first = '\0'; break;
+        case 'H':
+        case 'P':
+            op.first = 'D'; break;
+        default:
+            DOES_NOT_HAPPEN;
+            break;
         }
     }
 
