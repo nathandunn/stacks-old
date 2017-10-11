@@ -111,7 +111,7 @@ public:
 class SuffixTree {
     DNASeq4 seq_;
     STNode *root;
-    const size_t min_align_ = 7;
+    const size_t min_align_ = 11;
 
 public:
     SuffixTree(DNASeq4 s): seq_(s)  { this->root = new STNode(1); }
