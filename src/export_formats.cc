@@ -1,3 +1,4 @@
+
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
 // Copyright 2012-2017, Julian Catchen <jcatchen@illinois.edu>
@@ -19,9 +20,6 @@
 //
 #include <algorithm>
 #include <vector>
-#include <unistd.h>
-#include <ext/stdio_filebuf.h>
-using __gnu_cxx::stdio_filebuf;
 
 #include "ordered.h"
 #include "sql_utilities.h"
@@ -33,21 +31,21 @@ using __gnu_cxx::stdio_filebuf;
 
 using namespace std;
 
-extern InputMode input_mode;
-extern int batch_id;
-extern string in_path;
-extern string out_path;
-extern string out_prefix;
-extern bool phylip_var;
-extern bool loci_ordered;
-extern bool ordered_export;
-extern bool merge_sites;
-extern bool write_gtypes;
-extern bool expand_id;
-extern string enz;
+extern InputMode   input_mode;
+extern int         batch_id;
+extern string      in_path;
+extern string      out_path;
+extern string      out_prefix;
+extern bool        phylip_var;
+extern bool        loci_ordered;
+extern bool        ordered_export;
+extern bool        merge_sites;
+extern bool        write_gtypes;
+extern bool        expand_id;
+extern string      enz;
 extern set<string> debug_flags;
 
-extern MetaPopInfo mpopi;
+extern MetaPopInfo      mpopi;
 extern map<string, int> renz_olap;
 
 int
@@ -1568,14 +1566,8 @@ GenePopExport::open(const MetaPopInfo *mpopi)
     //
     // Open a temporary file.
     //
-    stdio_filebuf<char> *buf;
-    char                 id[id_len];
-
-    snprintf(id, id_len, "%s%s.XXXXXX", out_path.c_str(), out_prefix.c_str());
-    this->_fd       =  mkstemp(id);
-    this->_tmp_path = id;
-    buf             = new stdio_filebuf<char>(this->_fd, std::ios::out);
-    this->_tmpfh    = new ostream(buf);
+    this->_tmp_path = out_path + out_prefix + ".genepop.part";
+    this->_tmpfh.open(this->_tmp_path);
 
     cerr << "Polymorphic sites in GenePop format will be written to '" << this->_path << "'\n";
 
@@ -1588,12 +1580,12 @@ GenePopExport::write_header()
     for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
         const Pop& pop = this->_mpopi->pops()[p];
         for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
-            *this->_tmpfh << mpopi.samples()[j].name;
+            this->_tmpfh << mpopi.samples()[j].name;
             if (j < this->_mpopi->samples().size() - 1)
-                *this->_tmpfh << "\t";
+                this->_tmpfh << "\t";
         }
     }
-    *this->_tmpfh << "\n";
+    this->_tmpfh << "\n";
 
     return 0;
 }
@@ -1601,6 +1593,7 @@ GenePopExport::write_header()
 int
 OrderableExport::write_batch(const vector<LocBin*> &loci)
 {
+
     if (ordered_export) {
         //
         // We need to order the SNPs to take into account overlapping loci.
@@ -1626,7 +1619,7 @@ OrderableExport::write_batch(const vector<LocBin*> &loci)
 
             this->write_site(loc->cloc, loc->s, loc->d, col, snp_index);
         }
-
+        
     } else {
         for (uint k = 0; k < loci.size(); k++) {
             const LocBin* loc = loci[k];
@@ -1644,6 +1637,7 @@ OrderableExport::write_batch(const vector<LocBin*> &loci)
             }
         }
     }
+    
     return 0;
 }
 
@@ -1659,31 +1653,31 @@ GenePopExport::write_site(const CSLocus *loc, const LocPopSum *lps, Datum const*
     const LocSum *s;
     char p_allele, q_allele;
 
-    *this->_tmpfh << loc->id << "_" << col;
+    this->_tmpfh << loc->id << "_" << col;
 
     for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
         const Pop& pop = this->_mpopi->pops()[p];
         s = lps->per_pop(p);
 
         for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
-
+                    
             if (s->nucs[col].incompatible_site ||
                 s->nucs[col].filtered_site) {
                 //
                 // This site contains more than two alleles in this population or was filtered
                 // due to a minor allele frequency that is too low.
                 //
-                *this->_tmpfh << "\t0000";
+                this->_tmpfh << "\t0000";
             } else if (d[j] == NULL || col >= uint(d[j]->len)) {
                 //
                 // Data does not exist.
                 //
-                *this->_tmpfh << "\t0000";
+                this->_tmpfh << "\t0000";
             } else if (d[j]->model[col] == 'U') {
                 //
                 // Data exists, but the model call was uncertain.
                 //
-                *this->_tmpfh << "\t0000";
+                this->_tmpfh << "\t0000";
             } else {
                 //
                 // Tally up the nucleotide calls.
@@ -1692,20 +1686,20 @@ GenePopExport::write_site(const CSLocus *loc, const LocPopSum *lps, Datum const*
 
                 if (p_allele == 0 && q_allele == 0) {
                     // More than two potential alleles.
-                    *this->_tmpfh << "\t0000";
+                    this->_tmpfh << "\t0000";
                 } else if (p_allele == 0) {
-                    *this->_tmpfh << "\t" << nuc_map[q_allele] << nuc_map[q_allele];
+                    this->_tmpfh << "\t" << nuc_map[q_allele] << nuc_map[q_allele];
 
                 } else if (q_allele == 0) {
-                    *this->_tmpfh << "\t" << nuc_map[p_allele] << nuc_map[p_allele];
+                    this->_tmpfh << "\t" << nuc_map[p_allele] << nuc_map[p_allele];
 
                 } else {
-                    *this->_tmpfh << "\t" << nuc_map[p_allele] << nuc_map[q_allele];
+                    this->_tmpfh << "\t" << nuc_map[p_allele] << nuc_map[q_allele];
                 }
             }
         }
     }
-    *this->_tmpfh << "\n";    
+    this->_tmpfh << "\n";
     return 0;
 }
 
@@ -1782,14 +1776,12 @@ GenePopExport::close()
     //
     this->_intmpfh.close();
 
-    ::close(this->_fd);
-    delete this->_tmpfh;
+    this->_tmpfh.close();
     remove(this->_tmp_path.c_str());
 
     this->_fh.close();
     return;
 }
-
 int
 VcfExport::open(const MetaPopInfo *mpopi)
 {
@@ -1881,143 +1873,6 @@ int VcfExport::write_site(
     return 0;
 }
 
-/*
-int
-write_genepop_ordered(map<int, CSLocus *> &catalog,
-                      PopMap<CSLocus> *pmap,
-                      PopSum<CSLocus> *psum,
-                      ofstream &log_fh)
-{
-    //
-    // Write a GenePop file as defined here: http://kimura.univ-montp2.fr/~rousset/Genepop.htm
-    //
-    string file = out_path + out_prefix + ".genepop";
-
-    cerr << "Writing population data to GenePop file '" << file << "'\n";
-
-    ofstream fh(file.c_str(), ofstream::out);
-
-    if (fh.fail()) {
-        cerr << "Error opening GenePop file '" << file << "'\n";
-        exit(1);
-    }
-
-    //
-    // Obtain the current date.
-    //
-    time_t     rawtime;
-    struct tm *timeinfo;
-    char       date[32];
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(date, 32, "%B %d, %Y", timeinfo);
-
-    //
-    // Output the header line.
-    //
-    fh << "Stacks version " << VERSION << "; Genepop version 4.1.3; " << date << "\n";
-
-    map<string, vector<NucTally *> > genome_sites;
-    map<string, vector<CSLocus *> >::const_iterator it;
-    CSLocus  *loc;
-    Datum   **d;
-    LocSum  **s;
-    uint     col, snp_index;
-    char     p_allele, q_allele;
-
-    //
-    // We need to order the SNPs to take into account overlapping loci.
-    //
-    OLocTally<NucTally> *ord = new OLocTally<NucTally>(log_fh);
-
-    //
-    // Output all the loci on the second line, comma-separated.
-    //
-    int chrs = pmap->ordered_loci().size();
-    int cnt  = 0;
-    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
-        vector<NucTally *> &sites = genome_sites[it->first];
-        //ord->order(sites, it->second);
-        cnt++;
-
-        for (uint pos = 0; pos < sites.size(); pos++) {
-            fh << sites[pos]->loc_id << "_" << sites[pos]->col;
-            if (cnt < chrs || pos < sites.size() - 1) fh << ",";
-        }
-    }
-    fh << "\n";
-
-    map<char, string> nuc_map;
-    nuc_map['A'] = "01";
-    nuc_map['C'] = "02";
-    nuc_map['G'] = "03";
-    nuc_map['T'] = "04";
-
-    for (size_t p=0; p<mpopi.pops().size(); ++p) {
-        const Pop& pop = mpopi.pops()[p];
-
-        fh << "pop\n";
-        for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
-
-            fh << mpopi.samples()[j].name << ",";
-
-            for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
-                vector<NucTally *> &sites = genome_sites[it->first];
-
-                for (uint pos = 0; pos < sites.size(); pos++) {
-                    loc = catalog[sites[pos]->loc_id];
-                    s   = psum->locus(loc->id);
-                    d   = pmap->locus(loc->id);
-                    col = sites[pos]->col;
-
-                    if (s[p]->nucs[col].incompatible_site ||
-                        s[p]->nucs[col].filtered_site) {
-                        //
-                        // This site contains more than two alleles in this population or was filtered
-                        // due to a minor allele frequency that is too low.
-                        //
-                        fh << "\t0000";
-                    } else if (d[j] == NULL || col >= uint(d[j]->len)) {
-                        //
-                        // Data does not exist.
-                        //
-                        fh << "\t0000";
-                    } else if (d[j]->model[col] == 'U') {
-                        //
-                        // Data exists, but the model call was uncertain.
-                        //
-                        fh << "\t0000";
-                    } else {
-                        snp_index = loc->snp_index(col);
-                        //
-                        // Tally up the nucleotide calls.
-                        //
-                        tally_observed_haplotypes(d[j]->obshap, snp_index, p_allele, q_allele);
-
-                        if (p_allele == 0 && q_allele == 0) {
-                            // More than two potential alleles.
-                            fh << "\t0000";
-                        } else if (p_allele == 0) {
-                            fh << "\t" << nuc_map[q_allele] << nuc_map[q_allele];
-
-                        } else if (q_allele == 0) {
-                            fh << "\t" << nuc_map[p_allele] << nuc_map[p_allele];
-
-                        } else {
-                            fh << "\t" << nuc_map[p_allele] << nuc_map[q_allele];
-                        }
-                    }
-                }
-            }
-            fh << "\n";
-        }
-    }
-
-    fh.close();
-
-    return 0;
-}
-*/
 /*
 int
 write_structure(map<int, CSLocus *> &catalog,

@@ -17,23 +17,15 @@ external software.
      Stacks, you can install GCC by hand, or using a package system such as 
      Homebrew (http://brew.sh/) or MacPorts (http://www.macports.org/).
 
+1. Install optional components for wrapper programs:
+
 Several Perl scripts are distributed with Stacks to run the pipeline components and
 upload pipeline output to the MySQL database serer. For these to work, you must have
 the Perl DBI module installed with the MySQL driver. Most Linux distributions will
 include the Perl DBI module, but if not Perl modules are easily installed with the
 cpan tool.
 
-1. Install optional components:
-
-If you would like to lower memory usage install Google's SparseHash class.
-
-    http://code.google.com/p/sparsehash/
-
-If you are running a version of Linux, the above software can be installed via the 
-package manager. If you are using Ubuntu, you can install the following packages:
-
 % sudo apt-get install libdbd-mysql-perl
-% sudo apt-get install libsparsehash-dev
 
 A similar set of commands can be executed on Debian using apt-get, or on a RedHat derived Linux
 system using yum, or another package manager on other Linux distributions.
