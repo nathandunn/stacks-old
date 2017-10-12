@@ -38,6 +38,7 @@ Locus::snp_index(uint col) const
     for (uint i = 0; i < this->snps.size(); i++)
         if (this->snps[i]->col == col)
             return i;
+    DOES_NOT_HAPPEN;
     return -1;
 }
 

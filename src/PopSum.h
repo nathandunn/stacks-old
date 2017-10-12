@@ -290,11 +290,11 @@ public:
     int             sum_pops(const CSLocus *, const Datum **, const MetaPopInfo&, bool, ostream &);
     int             tally_metapop(const CSLocus *);
     int             calc_hapstats(const CSLocus *, const Datum **, const MetaPopInfo&);
-    const LocSum  **all_pops() const                   { return (const LocSum **) this->_per_pop; }
-    const LocSum   *per_pop(size_t pop_index) const    { return this->_per_pop[pop_index]; }
-    const LocTally *meta_pop()                         { return this->_meta_pop; }
-    const LocStat  *hapstats_per_pop(size_t pop_index) { return this->_hapstats_per_pop[pop_index]; }
-    size_t          pop_cnt()                          { return this->_pop_cnt; }
+    const LocSum  **all_pops()                         { return (const LocSum **) this->_per_pop; }
+    const LocSum   *per_pop(size_t pop_index)          const { return this->_per_pop[pop_index]; }
+    const LocTally *meta_pop()                         const { return this->_meta_pop; }
+    const LocStat  *hapstats_per_pop(size_t pop_index) const { return this->_hapstats_per_pop[pop_index]; }
+    size_t          pop_cnt()                          const { return this->_pop_cnt; }
     static double   pi(double, double, double);
     static double   binomial_coeff(double, double);
 

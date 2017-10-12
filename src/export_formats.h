@@ -52,6 +52,15 @@ class Export {
     int transpose(ifstream &ifh, vector<string> &transposed);
 };
 
+class OrderableExport : public Export {
+ public:
+    OrderableExport(ExportType t) : Export(t) {}
+    int write_batch(const vector<LocBin*>& loci);
+
+ protected:
+    virtual int write_site(const CSLocus* cloc, const LocPopSum* psum, Datum const*const* datums, size_t col, size_t index) = 0;
+};
+
 class GenPos {
  public:
     uint     id;
@@ -204,7 +213,7 @@ class HapDivergenceExport: public Export {
     }
 };
 
-class GenePopExport: public Export {
+class GenePopExport: public OrderableExport {
     //
     // Output a list of heterozygous loci and the associated haplotype frequencies.
     //
@@ -219,12 +228,11 @@ class GenePopExport: public Export {
     ~GenePopExport() {};
     int  open(const MetaPopInfo *mpopi);
     int  write_header();
-    int  write_batch(const vector<LocBin *> &);
     int  post_processing();
     void close();
 
  private:
-    int  write_site(const CSLocus *, const LocPopSum *, const Datum **, size_t, size_t);
+    int write_site(const CSLocus* cloc, const LocPopSum* psum, Datum const*const* datums, size_t col, size_t index);
 };
 
 class OrderedGenePopExport: public Export {
@@ -302,6 +310,23 @@ class FastaSamplesExport: public Export {
     }
 };
 
+class VcfExport: public OrderableExport {
+    const MetaPopInfo*_mpopi;
+    VcfWriter* _writer;
+
+ public:
+    VcfExport() : OrderableExport(ExportType::vcf), _mpopi(NULL), _writer(NULL) {}
+    ~VcfExport() { delete this->_writer; }
+    int open(const MetaPopInfo *mpopi);
+
+    int  write_header() { return 0; }
+    int  post_processing() { return 0; }
+    void close() {}
+
+ private:
+    int write_site(const CSLocus* cloc, const LocPopSum* psum, Datum const*const* datums, size_t col, size_t index);
+};
+
 /*
 int write_generic(map<int, CSLocus *> &, PopMap<CSLocus> *, bool);
 int write_genomic(map<int, CSLocus *> &, PopMap<CSLocus> *);
@@ -323,7 +348,7 @@ int write_phylip(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
 int write_fullseq_phylip(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
 */
 
-int find_datum_allele_depths(Datum *, int, char, char, int &, int &);
+int find_datum_allele_depths(const Datum*, int, char, char, int &, int &);
 int tally_observed_haplotypes(const vector<char *> &, int, char &, char &);
 int tally_haplotype_freq(CSLocus *, Datum **, uint, int &, double &, string &);
 
