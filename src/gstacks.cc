@@ -52,8 +52,9 @@ bool   detailed_output   = false;
 modelt model_type = marukilow;
 unique_ptr<const Model> model;
 
-size_t km_length    = 31;
-size_t min_km_count = 2;
+size_t km_length         = 31;
+size_t min_km_count      = 2;
+size_t max_fragment_alns = 2;
 
 bool   dbg_no_overlaps     = false;
 bool   dbg_no_haplotypes   = false;
@@ -192,7 +193,15 @@ try {
         {
             LocusProcessor loc_proc;
             CLocReadSet loc (bam_cloc_reader.mpopi());
-            Clocks& clocks = clocks_all[omp_get_thread_num()];
+
+            #ifdef _OPENMP
+            size_t thread_id = omp_get_thread_num();
+            #else
+            size_t thread_id = 0;
+            #endif
+            
+            Clocks& clocks = clocks_all[thread_id];
+
             #pragma omp for schedule(dynamic)
             for (size_t i=0; i<n_loci; ++i) {
                 if (omp_return != 0)
@@ -299,19 +308,19 @@ try {
             ostream os (cout.rdbuf());
             os << std::fixed << std::setprecision(1);
             os << "Attempted to assemble and align paired-end reads for " << ctg_stats.n_nonempty_loci << " loci:\n"
-                << "  " << no_pe << " loci had no or almost no paired-end reads (" << pct(no_pe) << ")\n"
-                << "  " << pe_ndag << " loci had paired-end reads that couldn't be assembled into a contig ("
-                << pct(pe_ndag) << ")\n"
-                << "  For the remaining " << pe_ctg << " loci (" << pct(pe_ctg) << "), a paired-end contig was assembled;\n"
-                << "  Average contig size was " << ctg_stats.ctg_avg_length() << " bp;\n"
-                << "  Out of " << ctg_stats.n_tot_reads << " paired-end reads in these loci (mean "
-                << (double) ctg_stats.n_aln_reads / pe_ctg << " reads per locus);\n"
-                << "  " << ctg_stats.n_aln_reads << " were successfuly aligned ("
-                << as_percentage((double) ctg_stats.n_aln_reads / ctg_stats.n_tot_reads) << ");\n"
-                << "  " << ctg_stats.n_overlaps << " paired-end contigs overlapped the forward region ("
-                << as_percentage((double) ctg_stats.n_overlaps / ctg_stats.n_loci_ctg()) << "; mean overlap: "
-                << ctg_stats.mean_olap_length() << "bp).\n"
-                << "\n";
+               << "  " << no_pe << " loci had no or almost no paired-end reads (" << pct(no_pe) << ");\n"
+               << "  " << pe_ndag << " loci had paired-end reads that couldn't be assembled into a contig ("
+               << pct(pe_ndag) << ");\n"
+               << "  For the remaining " << pe_ctg << " loci (" << pct(pe_ctg) << "), a paired-end contig was assembled;\n"
+               << "  Average contig size was " << ctg_stats.ctg_avg_length() << " bp;\n"
+               << "  Out of " << ctg_stats.n_tot_reads << " paired-end reads in these loci (mean "
+               << (double) ctg_stats.n_aln_reads / pe_ctg << " reads per locus),\n"
+               << "    " << ctg_stats.n_aln_reads << " were successfuly aligned ("
+               << as_percentage((double) ctg_stats.n_aln_reads / ctg_stats.n_tot_reads) << ");\n"
+               << "  " << ctg_stats.n_overlaps << " paired-end contigs overlapped the forward region ("
+               << as_percentage((double) ctg_stats.n_overlaps / ctg_stats.n_loci_ctg()) << "; mean overlap: "
+               << ctg_stats.mean_olap_length() << "bp).\n"
+               << "\n";
         }
 
     } else if (input_type == GStacksInputT::refbased) {
@@ -634,6 +643,12 @@ LocusProcessor::process(CLocReadSet& loc)
             stree->build_tree();
 
             //
+            // Initialize a gapped alignment obect for use in SE/PE contig overlap and read alignmnets.
+            //
+            GappedAln  *aligner = new GappedAln(loc.pe_reads().front().seq.length(), pe_aln_loc.ref().length(), true);
+            AlignRes    aln_res;
+
+            //
             // Determine if there is overlap -- and how much -- between the SE and PE contigs.
             //   We will query the PE contig suffix tree using the SE consensus sequence.
             //
@@ -646,11 +661,14 @@ LocusProcessor::process(CLocReadSet& loc)
                 fw_consensus.set(i, best_nt.first > 0 ? best_nt.second : Nt4::n);
             }
             assert(i == fw_consensus.length());
-            int overlap;
+
+            int    overlap;
+            string overlap_cigar;
             if (dbg_no_overlaps)
                 overlap = 0;
             else
-                overlap = this->find_locus_overlap(stree, fw_consensus);
+                overlap = this->find_locus_overlap(stree, aligner, fw_consensus, overlap_cigar);
+
             if (overlap > 0) {
                 this->loc_.ctg_status = LocData::overlapped;
                 this->ctg_stats_.n_overlaps++;
@@ -662,17 +680,18 @@ LocusProcessor::process(CLocReadSet& loc)
             if (detailed_output)
                 loc_.details_ss
                         << "BEGIN contig\n"
-                        << "pe_contig\t" << ctg << '\n'
-                        << "fw_maj_csus\t" << fw_consensus << '\n'
-                        << "olap\t" << overlap << '\n'
+                        << "pe_contig\t"     << ctg << '\n'
+                        << "fw_consensus\t"  << fw_consensus << '\n'
+                        << "overlap\t"       << overlap << '\n'
+                        << "overlap CIGAR\t" << overlap_cigar << "\n"
                         << "END contig\n"
                         ;
 
             this->ctg_stats_.n_tot_reads += loc.pe_reads().size();
-            GappedAln  *aligner = new GappedAln(loc.pe_reads().front().seq.length(), pe_aln_loc.ref().length(), true);
-            AlignRes    aln_res;
+
             if (detailed_output)
                 loc_.details_ss << "BEGIN pe_alns\n";
+ 
             for (SRead& r : loc.pe_reads()) {
                 if (add_read_to_aln(pe_aln_loc, aln_res, move(r), aligner, stree)) {
                     this->ctg_stats_.n_aln_reads++;
@@ -772,7 +791,7 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
 int
 LocusProcessor::align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 enc_query, AlignRes &aln_res) const
 {
-    vector<STAln> alns;
+    vector<STAln> alns, final_alns;
     vector<pair<size_t, size_t> > step_alns;
     string      query  = enc_query.str();
     const char *q      = query.c_str();
@@ -788,7 +807,7 @@ LocusProcessor::align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 
 
         st->align(q, step_alns);
 
-        if (step_alns.size() == 0) {
+        if (step_alns.size() == 0 || step_alns.size() > max_fragment_alns) {
             q++;
         } else {
             for (uint i = 0; i < step_alns.size(); i++)
@@ -814,6 +833,22 @@ LocusProcessor::align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 
         return 1;
     }
 
+    //
+    // Find a consistent set of suffix tree alignments, ordered in a directed, acyclic grapgh (DAG).
+    //
+    this->suffix_tree_hits_to_dag(query.length(), alns, final_alns);
+
+    g_aln->init(query.length(), st->seq_len(), true);
+    if (g_aln->align_constrained(query, st->seq().str(), final_alns)) {
+        aln_res = g_aln->result();
+    }
+
+    return 1;
+}
+
+int
+LocusProcessor::suffix_tree_hits_to_dag(size_t query_len, vector<STAln> &alns, vector<STAln> &final_alns) const
+{
     //
     // 1. Sort the alignment fragments so they are primarily ordered by subject position, secondarily by query position.
     //
@@ -852,7 +887,7 @@ LocusProcessor::align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 
 
                 term    = false;
                 gap_len = alns[j].subj_pos - end_pos - 1;
-                scale   = gap_len > (int) query.length() ? 1 : alns[i].aln_len * ((double) gap_len / (double) query.length());
+                scale   = gap_len > (int) query_len ? 1 : alns[i].aln_len * ((double) gap_len / (double) query_len);
                 score   = alns[i].aln_len - scale; // Raw score.
                 score  += alns[i].max._score;      // Score adjusted for the highest incoming node.
 
@@ -884,32 +919,44 @@ LocusProcessor::align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 
     // 4. Backtrack to get the optimal path.
     //
     vector<size_t> optimal;
-    uint n = max_index;
-    while (alns[n].links.size() > 0) {
+
+    if (max_score == 0 && max_index == 0) {
+        //
+        // None of the fragments were connected in the DAG, select the largest fragment.
+        //
+        max_score = alns[term_nodes.front()].aln_len;
+        max_index = term_nodes.front();
+        for (uint i = 1; i < term_nodes.size(); i++)
+            if (alns[i].aln_len > max_score) {
+                max_index = term_nodes[i];
+                max_score = alns[term_nodes[i]].aln_len;
+            }
+        optimal.push_back(max_index);
+                
+    } else {
+
+        uint n = max_index;
+        while (alns[n].links.size() > 0) {
+            optimal.push_back(n);
+            n = alns[n].max._index;
+        }
         optimal.push_back(n);
-        n = alns[n].max._index;
-    }
-    optimal.push_back(n);
-    
+    }    
     assert(optimal.size() > 0);
 
-    vector<STAln> final_alns;
+    final_alns.clear();
     for (int i = optimal.size() - 1; i >= 0; i--)
         final_alns.push_back(alns[optimal[i]]);
 
-    g_aln->init(query.length(), st->seq_len(), true);
-    if (g_aln->align_constrained(query, st->seq().str(), final_alns)) {
-        aln_res = g_aln->result();
-    }
-
-    return 1;
+    return 0;
 }
 
 int
-LocusProcessor::find_locus_overlap(SuffixTree *stree, DNASeq4 se_consensus) const
+LocusProcessor::find_locus_overlap(SuffixTree *stree, GappedAln *g_aln, DNASeq4 se_consensus, string &overlap_cigar) const
 {
-    vector<STAln> alns;
+    vector<STAln> alns, final_alns;
     vector<pair<size_t, size_t> > step_alns;
+    AlignRes aln_res;
 
     string      query  = se_consensus.str();
     const char *q      = query.c_str();
@@ -925,7 +972,7 @@ LocusProcessor::find_locus_overlap(SuffixTree *stree, DNASeq4 se_consensus) cons
 
         stree->align(q, step_alns);
 
-        if (step_alns.size() == 0) {
+        if (step_alns.size() == 0 || step_alns.size() > max_fragment_alns) {
             q++;
         } else {
             for (uint i = 0; i < step_alns.size(); i++)
@@ -935,47 +982,63 @@ LocusProcessor::find_locus_overlap(SuffixTree *stree, DNASeq4 se_consensus) cons
         }
     } while (q < q_stop);
 
-    //
-    // Alignments are naturally ordered from start to end of query, so traverse the list in
-    // reverse order to look for matches at the end of the query sequence.
-    //
-    size_t query_stop;
-    for (int i = (int) alns.size() - 1; i >= 0; i--) {
+    if (alns.size() == 0) {
         //
-        // Matching fragment must be within min_aln to the end of the query,
-        // and within min_aln from the start of the PE contig.
+        // If no alignments have been found, search the tails of the query and subject for any overlap
+        // that is too small to be picked up by the SuffixTree.
         //
-        query_stop = alns[i].query_pos + alns[i].aln_len - 1;
-        if (query_stop >= (query.length() - 1 - stree->min_aln()) &&
-            alns[i].subj_pos <= stree->min_aln()) {
-            int overlap = query.length() - alns[i].query_pos + alns[i].subj_pos;
+        int    min_olap = (int) stree->min_aln() > min_se_pe_overlap ? stree->min_aln() : min_se_pe_overlap;
+        string pe_ctg   = stree->seq().str().substr(0, min_olap);
+        p = pe_ctg.c_str();
+        q = query.c_str() + (query.length() - min_olap);
 
-            // cerr << "SE: ..." << query.substr(75, 75) << "\n"
-            //      << "PE: " << stree->seq().str().substr(0, 75) << "...\n";
-            // cerr << "  i: " << i << "; Query pos: " << alns[i].query_pos << " - " <<  alns[i].query_pos + alns[i].aln_len - 1 << ", "
-            //      << "subj pos: " << alns[i].subj_pos << "; aln len: " << alns[i].aln_len << "\n"
-            //      << "overlap: " << overlap << "\n";
-            return overlap;
+        while (min_olap >= min_se_pe_overlap && *q != '\0') {
+            if (strncmp(q, p, min_olap) == 0)
+                return min_olap;
+            min_olap--;
+            q++;
         }
+
+        return 0;
     }
 
     //
-    // If no alignments have been found, search the tails of the query and subject for any overlap
-    // that is too small to be picked up by the SuffixTree.
+    // Perfect alignmnet to the suffix tree that occupies the end of the
+    // query and the beginning of the subject. Return result.
     //
-    int    min_olap = (int) stree->min_aln() > min_se_pe_overlap ? stree->min_aln() : min_se_pe_overlap;
-    string pe_ctg   = stree->seq().str().substr(0, min_olap);
-    p = pe_ctg.c_str();
-    q = query.c_str() + (query.length() - min_olap);
+    if (alns.size() == 1) {
+        size_t query_stop = alns.front().query_pos + alns.front().aln_len - 1;
 
-    while (min_olap >= min_se_pe_overlap && *q != '\0') {
-        if (strncmp(q, p, min_olap) == 0)
-            return min_olap;
-        min_olap--;
-        q++;
+        if (query_stop == (query.length() - 1) && alns.front().subj_pos == 0)
+            return alns.front().aln_len;
     }
 
-    return 0;
+    //
+    // Otherwise, find a consistent set of suffix tree alignments, ordered in a directed, acyclic grapgh (DAG).
+    //
+    this->suffix_tree_hits_to_dag(query.length(), alns, final_alns);
+
+    //
+    // Create a gapped alignment to determine the exact overlap.
+    //
+    g_aln->init(query.length(), stree->seq_len(), true);
+    if (g_aln->align_constrained(query, stree->seq().str(), final_alns)) {
+        aln_res       = g_aln->result();
+        overlap_cigar = aln_res.cigar;
+    }
+
+    Cigar cigar;
+    parse_cigar(aln_res.cigar.c_str(), cigar, true);
+
+    //
+    // If the first element in the CIGAR is a soft-masked region, ignore it.
+    //
+    size_t offset = 0;
+    if (cigar.front().first != 'S') {
+        offset = aln_res.subj_pos;
+    }
+
+    return offset + cigar_length_ref(cigar);
 }
 
 string
