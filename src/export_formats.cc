@@ -378,11 +378,7 @@ SnpDivergenceExport::write_header()
 
     uint i = 0;
     for (uint pop_1 = 0; pop_1 < this->_mpopi->pops().size(); pop_1++) {
-        const Pop& pop_1p = this->_mpopi->pops()[pop_1];
-        
         for (uint pop_2 = pop_1 + 1; pop_2 < this->_mpopi->pops().size(); pop_2++) {
-            const Pop& pop_2p = this->_mpopi->pops()[pop_2];
-
             fh = this->_fhs[i];
 
             *fh << "# Locus ID" << "\t"
@@ -573,11 +569,7 @@ HapDivergenceExport::write_header()
 
     uint i = 0;
     for (uint pop_1 = 0; pop_1 < this->_mpopi->pops().size(); pop_1++) {
-        const Pop& pop_1p = this->_mpopi->pops()[pop_1];
-        
         for (uint pop_2 = pop_1 + 1; pop_2 < this->_mpopi->pops().size(); pop_2++) {
-            const Pop& pop_2p = this->_mpopi->pops()[pop_2];
-
             vector<int> subpop_ids;
             subpop_ids.push_back(pop_1);
             subpop_ids.push_back(pop_2);
@@ -823,7 +815,7 @@ GenotypesExport::write_header()
         this->_fh << "Marker\t";
     this->_fh << "Cnt";
 
-    for (int i = 0; i < this->_mpopi->samples().size(); i++) {
+    for (size_t i = 0; i < this->_mpopi->samples().size(); i++) {
         this->_fh << "\t" << this->_mpopi->samples()[i].name;
     }
     this->_fh << "\n";
@@ -834,7 +826,6 @@ GenotypesExport::write_header()
 int
 GenotypesExport::write_batch(const vector<LocBin *> &loci)
 {
-    LocBin  *loc;
     CSLocus *cloc;
 
     //
@@ -866,7 +857,7 @@ GenotypesExport::write_batch(const vector<LocBin *> &loci)
         Datum **d = loci[i]->d;
         string  obshap;
 
-        for (int i = 0; i < this->_mpopi->samples().size(); i++) {
+        for (size_t i = 0; i < this->_mpopi->samples().size(); i++) {
             this->_fh << "\t";
 
             if (d[i] == NULL)
