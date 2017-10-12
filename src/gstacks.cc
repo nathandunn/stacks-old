@@ -193,7 +193,15 @@ try {
         {
             LocusProcessor loc_proc;
             CLocReadSet loc (bam_cloc_reader.mpopi());
-            Clocks& clocks = clocks_all[omp_get_thread_num()];
+
+            #ifdef _OPENMP
+            size_t thread_id = omp_set_num_threads(num_threads);
+            #else
+            size_t thread_id = 0;
+            #endif
+            
+            Clocks& clocks = clocks_all[thread_id];
+
             #pragma omp for schedule(dynamic)
             for (size_t i=0; i<n_loci; ++i) {
                 if (omp_return != 0)
