@@ -1,3 +1,8 @@
+Stacks 2.0 Beta 2 - 
+--------------------------------
+    Bugfix: Improved overlapping code in gstacks to merge more single and paired-end contigs together.
+
+
 Stacks 2.0 Beta 1 - Oct 09, 2017
 --------------------------------
     Feature: Paired-end sequencing data can be utilized fully. In particular, when the shearing-based
