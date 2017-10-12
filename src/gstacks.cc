@@ -52,8 +52,9 @@ bool   detailed_output   = false;
 modelt model_type = marukilow;
 unique_ptr<const Model> model;
 
-size_t km_length    = 31;
-size_t min_km_count = 2;
+size_t km_length         = 31;
+size_t min_km_count      = 2;
+size_t max_fragment_alns = 2;
 
 bool   dbg_no_overlaps     = false;
 bool   dbg_no_haplotypes   = false;
@@ -299,19 +300,19 @@ try {
             ostream os (cout.rdbuf());
             os << std::fixed << std::setprecision(1);
             os << "Attempted to assemble and align paired-end reads for " << ctg_stats.n_nonempty_loci << " loci:\n"
-                << "  " << no_pe << " loci had no or almost no paired-end reads (" << pct(no_pe) << ")\n"
-                << "  " << pe_ndag << " loci had paired-end reads that couldn't be assembled into a contig ("
-                << pct(pe_ndag) << ")\n"
-                << "  For the remaining " << pe_ctg << " loci (" << pct(pe_ctg) << "), a paired-end contig was assembled;\n"
-                << "  Average contig size was " << ctg_stats.ctg_avg_length() << " bp;\n"
-                << "  Out of " << ctg_stats.n_tot_reads << " paired-end reads in these loci (mean "
-                << (double) ctg_stats.n_aln_reads / pe_ctg << " reads per locus);\n"
-                << "  " << ctg_stats.n_aln_reads << " were successfuly aligned ("
-                << as_percentage((double) ctg_stats.n_aln_reads / ctg_stats.n_tot_reads) << ");\n"
-                << "  " << ctg_stats.n_overlaps << " paired-end contigs overlapped the forward region ("
-                << as_percentage((double) ctg_stats.n_overlaps / ctg_stats.n_loci_ctg()) << "; mean overlap: "
-                << ctg_stats.mean_olap_length() << "bp).\n"
-                << "\n";
+               << "  " << no_pe << " loci had no or almost no paired-end reads (" << pct(no_pe) << ");\n"
+               << "  " << pe_ndag << " loci had paired-end reads that couldn't be assembled into a contig ("
+               << pct(pe_ndag) << ");\n"
+               << "  For the remaining " << pe_ctg << " loci (" << pct(pe_ctg) << "), a paired-end contig was assembled;\n"
+               << "  Average contig size was " << ctg_stats.ctg_avg_length() << " bp;\n"
+               << "  Out of " << ctg_stats.n_tot_reads << " paired-end reads in these loci (mean "
+               << (double) ctg_stats.n_aln_reads / pe_ctg << " reads per locus),\n"
+               << "    " << ctg_stats.n_aln_reads << " were successfuly aligned ("
+               << as_percentage((double) ctg_stats.n_aln_reads / ctg_stats.n_tot_reads) << ");\n"
+               << "  " << ctg_stats.n_overlaps << " paired-end contigs overlapped the forward region ("
+               << as_percentage((double) ctg_stats.n_overlaps / ctg_stats.n_loci_ctg()) << "; mean overlap: "
+               << ctg_stats.mean_olap_length() << "bp).\n"
+               << "\n";
         }
 
     } else if (input_type == GStacksInputT::refbased) {
@@ -798,7 +799,7 @@ LocusProcessor::align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 
 
         st->align(q, step_alns);
 
-        if (step_alns.size() == 0) {
+        if (step_alns.size() == 0 || step_alns.size() > max_fragment_alns) {
             q++;
         } else {
             for (uint i = 0; i < step_alns.size(); i++)
@@ -963,7 +964,7 @@ LocusProcessor::find_locus_overlap(SuffixTree *stree, GappedAln *g_aln, DNASeq4 
 
         stree->align(q, step_alns);
 
-        if (step_alns.size() == 0) {
+        if (step_alns.size() == 0 || step_alns.size() > max_fragment_alns) {
             q++;
         } else {
             for (uint i = 0; i < step_alns.size(); i++)
