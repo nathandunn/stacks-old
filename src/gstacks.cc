@@ -195,7 +195,7 @@ try {
             CLocReadSet loc (bam_cloc_reader.mpopi());
 
             #ifdef _OPENMP
-            size_t thread_id = omp_set_num_threads(num_threads);
+            size_t thread_id = omp_get_thread_num();
             #else
             size_t thread_id = 0;
             #endif
