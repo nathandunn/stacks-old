@@ -27,6 +27,7 @@ using __gnu_cxx::stdio_filebuf;
 #include "sql_utilities.h"
 #include "MetaPopInfo.h"
 #include "nucleotides.h"
+#include "Vcf.h"
 
 #include "export_formats.h"
 
@@ -1552,7 +1553,7 @@ write_vcf_haplotypes(map<int, CSLocus *> &catalog,
 }
 */
 
-GenePopExport::GenePopExport() : Export(ExportType::genepop) {}
+GenePopExport::GenePopExport() : OrderableExport(ExportType::genepop) {}
 
 int
 GenePopExport::open(const MetaPopInfo *mpopi)
@@ -1598,17 +1599,15 @@ GenePopExport::write_header()
 }
 
 int
-GenePopExport::write_batch(const vector<LocBin *> &loci)
+OrderableExport::write_batch(const vector<LocBin*> &loci)
 {
-    LocBin *loc;
-
     if (ordered_export) {
         //
         // We need to order the SNPs to take into account overlapping loci.
         //
         vector<const NucTally *> sites;
-        OLocTally<NucTally> *ord = new OLocTally<NucTally>();
-        ord->order(sites, loci);
+        OLocTally<NucTally> ord;
+        ord.order(sites, loci);
 
         uint k = 0;
         for (uint pos = 0; pos < sites.size(); pos++) {
@@ -1617,28 +1616,23 @@ GenePopExport::write_batch(const vector<LocBin *> &loci)
             //
             // Advance through the loci list until we find the proper locus.
             //
-            while (k < loci.size() && loci[k]->cloc->id != loc_id) k++;
+            while (k < loci.size() && loci[k]->cloc->id != loc_id)
+                k++;
+            assert(loci[k]->cloc->id == loc_id);
 
-            assert(k < loci.size() && loci[k]->cloc->id == loc_id);
-            loc  = loci[k];
+            const LocBin* loc  = loci[k];
             size_t col       = sites[pos]->col;
             size_t snp_index = loc->cloc->snp_index(col);
 
-            this->write_site(loc->cloc, (const LocPopSum *) loc->s, (const Datum **) loc->d, col, snp_index);
+            this->write_site(loc->cloc, loc->s, loc->d, col, snp_index);
         }
-        
-        delete ord;
 
     } else {
-        const CSLocus  *cloc;
-        const Datum   **d;
-        const LocTally *t;
-
         for (uint k = 0; k < loci.size(); k++) {
-            loc  = loci[k];
-            cloc = loc->cloc;
-            d    = (const Datum **) loc->d;
-            t    = loc->s->meta_pop();
+            const LocBin* loc = loci[k];
+            const CSLocus* cloc = loc->cloc;
+            Datum const*const* d = loc->d;
+            const LocTally* t = loc->s->meta_pop();
 
             for (uint snp_index = 0; snp_index < cloc->snps.size(); snp_index++) {
                 uint col = cloc->snps[snp_index]->col;
@@ -1650,12 +1644,11 @@ GenePopExport::write_batch(const vector<LocBin *> &loci)
             }
         }
     }
-    
     return 0;
 }
 
 int
-GenePopExport::write_site(const CSLocus *loc, const LocPopSum *lps, const Datum **d, size_t col, size_t snp_index)
+GenePopExport::write_site(const CSLocus *loc, const LocPopSum *lps, Datum const*const* d, size_t col, size_t snp_index)
 {
     map<char, string> nuc_map;
     nuc_map['A'] = "01";
@@ -1673,7 +1666,7 @@ GenePopExport::write_site(const CSLocus *loc, const LocPopSum *lps, const Datum 
         s = lps->per_pop(p);
 
         for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
-                    
+
             if (s->nucs[col].incompatible_site ||
                 s->nucs[col].filtered_site) {
                 //
@@ -1796,6 +1789,98 @@ GenePopExport::close()
     this->_fh.close();
     return;
 }
+
+int
+VcfExport::open(const MetaPopInfo *mpopi)
+{
+    this->_path = out_path + out_prefix + ".vcf";
+    cerr << "SNPs and calls will be written in VCF format to '" << this->_path << "'\n";
+
+    this->_mpopi = mpopi;
+
+    VcfHeader header;
+    header.add_std_meta();
+    header.add_meta(VcfMeta::predefs::info_locori);
+    for(auto& s : this->_mpopi->samples())
+        header.add_sample(s.name);
+
+    this->_writer = new VcfWriter(this->_path, move(header));
+
+    return 0;
+}
+
+int VcfExport::write_site(
+        const CSLocus* cloc,
+        const LocPopSum* psum,
+        Datum const*const* d,
+        size_t col,
+        size_t index
+) {
+    const LocTally* t = psum->meta_pop();
+
+    const char ref = t->nucs[col].p_allele;
+    const char alt = t->nucs[col].q_allele;
+    char freq_alt[32];
+    sprintf(freq_alt, "%0.3f", 1 - t->nucs[col].p_freq);
+
+    VcfRecord rec;
+    rec.append_chrom(string(cloc->loc.chr()));
+    rec.append_pos(cloc->sort_bp(col) + 1);
+    rec.append_id(to_string(cloc->id) + "_" + to_string(col));
+    rec.append_allele(Nt2(cloc->loc.strand == strand_plus ? ref : reverse(ref)));
+    rec.append_allele(Nt2(cloc->loc.strand == strand_plus ? alt : reverse(alt)));
+    rec.append_qual(".");
+    rec.append_filters("PASS");
+    rec.append_info(string("NS=") + to_string(t->nucs[col].num_indv));
+    rec.append_info(string("AF=") + freq_alt);
+    rec.append_info(string("locori=") + (cloc->loc.strand == strand_plus ? "p" : "m"));
+    rec.append_format("GT");
+    rec.append_format("DP");
+    rec.append_format("AD");
+
+    for (size_t s=0; s<this->_mpopi->samples().size(); s++) {
+        stringstream sample;
+
+        if (d[s] == NULL || col >= uint(d[s]->len)) {
+            // Data does not exist.
+            sample << "./.:0:.,.";
+        } else if (d[s]->model[col] == 'U') {
+            // Data exists, but the model call was uncertain.
+            sample << "./.:" << d[s]->tot_depth << ":.,.";
+        } else {
+            char allele1, allele2;
+            tally_observed_haplotypes(d[s]->obshap, index, allele1, allele2);
+
+            if (allele1 == 0) {
+                // More than two alleles in this sample
+                sample << "./.:" << d[s]->tot_depth << ":.,.";
+            } else {
+                // Write the genotype.
+
+                int dp1, dp2;
+                find_datum_allele_depths(d[s], index, allele1, allele2, dp1, dp2);
+
+                if (allele2 == 0) {
+                    // homozygote
+                    if (allele1 == ref) {
+                        sample << "0/0:" << d[s]->tot_depth << ":" << dp1 << "," << dp2;
+                    } else {
+                        sample << "1/1:" << d[s]->tot_depth << ":" << dp2 << "," << dp1;
+                    }
+                } else {
+                    // heterozygote
+                    sample << "0/1:" << d[s]->tot_depth
+                           << ":" << (allele1 == ref ? dp1 : dp2) << "," << (allele1 == ref ? dp2 : dp1);
+                }
+            }
+        }
+        rec.append_sample(sample.str());
+    }
+    this->_writer->write_record(rec);
+
+    return 0;
+}
+
 /*
 int
 write_genepop_ordered(map<int, CSLocus *> &catalog,
@@ -4015,7 +4100,7 @@ write_fullseq_phylip(map<int, CSLocus *> &catalog,
  * Calculate the SNP-wise allelic depths by adding up the haplotype depths.
  */
 int
-find_datum_allele_depths(Datum *d, int snp_index, char allele1, char allele2, int &dp1, int &dp2)
+find_datum_allele_depths(const Datum *d, int snp_index, char allele1, char allele2, int &dp1, int &dp2)
 {
     dp1 = 0;
     dp2 = 0;

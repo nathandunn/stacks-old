@@ -4047,7 +4047,7 @@ parse_command_line(int argc, char* argv[])
             ordered_export = true;
             break;
         case 1004:
-            vcf_out = true;
+            exports.push_back(new VcfExport());
             break;
         case 'n':
             vcf_haplo_out = true;
