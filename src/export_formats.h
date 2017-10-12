@@ -209,9 +209,8 @@ class GenePopExport: public Export {
     // Output a list of heterozygous loci and the associated haplotype frequencies.
     //
     const MetaPopInfo *_mpopi;
-    int      _fd;
     string   _tmp_path;
-    ostream *_tmpfh;
+    ofstream _tmpfh;
     ifstream _intmpfh;
 
  public:
@@ -225,24 +224,6 @@ class GenePopExport: public Export {
 
  private:
     int  write_site(const CSLocus *, const LocPopSum *, const Datum **, size_t, size_t);
-};
-
-class OrderedGenePopExport: public Export {
-    //
-    // Output a list of heterozygous loci and the associated haplotype frequencies.
-    //
-    const MetaPopInfo *_mpopi;
-    string   _tmp_path;
-    ofstream _tmpfh;
-
- public:
-    OrderedGenePopExport();
-    ~OrderedGenePopExport() {};
-    int  open(const MetaPopInfo *mpopi);
-    int  write_header() { return 0; }
-    int  write_batch(const vector<LocBin *> &);
-    int  post_processing();
-    void close();
 };
 
 class FastaLociExport: public Export {
