@@ -261,7 +261,7 @@ OPopPair<StatT>::order(vector<const StatT *> &sites, map<uint, uint> &sites_key,
     this->incompatible_loci = 0;
     this->multiple_loci     = 0;
 
-    uint pop_1, pop_2;
+    uint pop_1=UINT_MAX, pop_2=UINT_MAX;
     for (uint i = 0; i < div.size(); i++) {
         cloc_len = strlen(sorted_loci[i]->cloc->con);
         pair     = div[i];
@@ -276,6 +276,7 @@ OPopPair<StatT>::order(vector<const StatT *> &sites, map<uint, uint> &sites_key,
         }
         if (found == true) break;
     }
+    assert(found);
 
     this->init_sites(sites, sites_key, sorted_loci, pop_1, pop_2);
 

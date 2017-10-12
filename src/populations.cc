@@ -174,8 +174,8 @@ int main (int argc, char* argv[]) {
     exports.push_back(new SumstatsExport());
     exports.push_back(new HapstatsExport());
 
-    SnpDivergenceExport *sdiv_exp;
-    HapDivergenceExport *hdiv_exp;
+    SnpDivergenceExport *sdiv_exp = NULL;
+    HapDivergenceExport *hdiv_exp = NULL;
     if (calc_fstats) {
         sdiv_exp = new SnpDivergenceExport();
         exports.push_back(sdiv_exp);
