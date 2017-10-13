@@ -195,12 +195,10 @@ try {
             CLocReadSet loc (bam_cloc_reader.mpopi());
 
             #ifdef _OPENMP
-            size_t thread_id = omp_get_thread_num();
+            Clocks& clocks = clocks_all[omp_get_thread_num()];
             #else
-            size_t thread_id = 0;
+            Clocks& clocks = clocks_all.front();
             #endif
-            
-            Clocks& clocks = clocks_all[thread_id];
 
             #pragma omp for schedule(dynamic)
             for (size_t i=0; i<n_loci; ++i) {
@@ -590,7 +588,7 @@ LocusProcessor::process(CLocReadSet& loc)
     // Build the alignment matrix.
     //
     CLocAlnSet aln_loc;
-    aln_loc.reinit(loc.id(), loc.pos(), &loc.mpopi());
+    aln_loc.reinit(loc_.id, loc_.pos, loc_.mpopi);
 
     if (dbg_true_alns) {
         from_true_alignments(aln_loc, move(loc), true);
@@ -603,6 +601,16 @@ LocusProcessor::process(CLocReadSet& loc)
         aln_loc.ref(DNASeq4(loc.reads().at(0).seq.length())); // Just N's.
         for (SRead& r : loc.reads())
             aln_loc.add(SAlnRead(Read(move(r.seq), move(r.name)), {{'M',r.seq.length()}}, r.sample));
+        aln_loc.recompute_consensus();
+
+        //
+        // Sometimes the consensus in the catalog.tags.tsv file extends further
+        // than any of the validly matching loci. In this case there's no
+        // coverage at the end of the 'forward' alignment matrix, but the reads
+        // are still N-padded. If this happens, hard-clip the Ns.
+        //
+        if (*--aln_loc.ref().end() == Nt4::n)
+            aln_loc.hard_clip_right_Ns();
 
         //
         // Process the paired-end reads, if any.
@@ -655,22 +663,12 @@ LocusProcessor::process(CLocReadSet& loc)
             // Determine if there is overlap -- and how much -- between the SE and PE contigs.
             //   We will query the PE contig suffix tree using the SE consensus sequence.
             //
-            DNASeq4 fw_consensus (aln_loc.ref().length());
-            size_t i = 0;
-            Counts<Nt4> cnts;
-            for (CLocAlnSet::site_iterator site (aln_loc); bool(site); ++site, ++i) {
-                site.counts(cnts);
-                pair<size_t,Nt4> best_nt = cnts.sorted()[0];
-                fw_consensus.set(i, best_nt.first > 0 ? best_nt.second : Nt4::n);
-            }
-            assert(i == fw_consensus.length());
-
             int    overlap;
             string overlap_cigar;
             if (dbg_no_overlaps)
                 overlap = 0;
             else
-                overlap = this->find_locus_overlap(stree, aligner, fw_consensus, overlap_cigar);
+                overlap = this->find_locus_overlap(stree, aligner, aln_loc.ref(), overlap_cigar);
 
             if (overlap > 0) {
                 this->loc_.ctg_status = LocData::overlapped;
@@ -684,7 +682,7 @@ LocusProcessor::process(CLocReadSet& loc)
                 loc_.details_ss
                         << "BEGIN contig\n"
                         << "pe_contig\t"     << ctg << '\n'
-                        << "fw_consensus\t"  << fw_consensus << '\n'
+                        << "fw_consensus\t"  << aln_loc.ref() << '\n'
                         << "overlap\t"       << overlap << '\n'
                         << "overlap CIGAR\t" << overlap_cigar << "\n"
                         << "END contig\n"
@@ -748,6 +746,8 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
             this->loc_.details_ss << "BEGIN locus " << loc_.id << "\n";
     }
 
+    aln_loc.recompute_consensus();
+
     if (detailed_output) {
         loc_.details_ss << "BEGIN aln_matrix\n";
         for (const SAlnRead& read : aln_loc.reads())
@@ -768,11 +768,20 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
     vector<SiteCall> calls;
     depths.reserve(aln_loc.ref().length());
     calls.reserve(aln_loc.ref().length());
+    DNASeq4 new_consensus = aln_loc.ref();
     for (CLocAlnSet::site_iterator site (aln_loc); bool(site); ++site) {
         depths.push_back(site.counts());
         calls.push_back(model->call(depths.back()));
+        if (!calls.back().alleles().empty())
+            new_consensus.set(site.col(), calls.back().most_frequent_allele());
+        else
+            // For the high/low Maruki" models this actually only happens when
+            // there is no coverage; for the Hohenlohe model it may also happen
+            // when there isn't a single significant call.
+            // Keep the already computed majority-rule nucleotide/don't do anything.
+            ;
     }
-    aln_loc.ref(build_consensus(depths, calls));
+    aln_loc.ref(move(new_consensus));
 
     // Call haplotypes.
     vector<map<size_t,PhasedHet>> phase_data;
@@ -1093,30 +1102,6 @@ bool LocusProcessor::add_read_to_aln(
 
     aln_loc.add(SAlnRead(move((Read&)r), move(cigar), r.sample));
     return true;
-}
-
-DNASeq4 LocusProcessor::build_consensus(
-        const vector<SiteCounts>& depths,
-        const vector<SiteCall>& calls
-) const {
-    assert(depths.size() == calls.size());
-    DNASeq4 consensus (depths.size());
-    for (size_t i=0; i<depths.size(); ++i) {
-        if (!calls[i].alleles().empty()) {
-            consensus.set(i, calls[i].most_frequent_allele());
-        } else {
-            // The model returned a null call.
-            // (For the high/low Maruki" models this actually only happens when
-            // there is no coverage; for the Hohenlohe model it may also happen
-            // when there isn't a single significant call.)
-            pair<size_t,Nt2> best_nt = depths[i].tot.sorted()[0];
-            if (best_nt.first > 0)
-                consensus.set(i, Nt4(best_nt.second));
-            else
-                consensus.set(i, Nt4::n);
-        }
-    }
-    return consensus;
 }
 
 vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (

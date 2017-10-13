@@ -229,15 +229,17 @@ public:
     const PhyLoc& pos() const {return aln_pos_;}
     const DNASeq4& ref() const {return ref_;}
     const vector<SAlnRead>& reads() const {return reads_;}
-          vector<SAlnRead>& reads()       {return reads_;}
+          vector<SAlnRead>& reads()       {return reads_;} //TODO remove (but --talns)
     const vector<size_t>& sample_reads(size_t sample) const {return reads_per_sample_.at(sample);}
 
     void clear();
     void reinit(int id, const PhyLoc& aln_pos, const MetaPopInfo* mpopi);
     void ref(DNASeq4&& s) {ref_ = move(s);}
     void add(SAlnRead&& r);
-    void merge_paired_reads();
 
+    void recompute_consensus();
+    void hard_clip_right_Ns();
+    void merge_paired_reads();
     size_t n_samples() const {size_t n=0; for(auto& reads : reads_per_sample_) if (!reads.empty()) ++n; return n;}
 
     friend ostream& operator<< (ostream& os, const CLocAlnSet& loc);
