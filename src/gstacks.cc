@@ -800,8 +800,8 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
     }
 }
 
-int
-LocusProcessor::align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 enc_query, AlignRes &aln_res) const
+bool
+LocusProcessor::align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 &enc_query, AlignRes &aln_res) const
 {
     vector<STAln> alns, final_alns;
     vector<pair<size_t, size_t> > step_alns;
@@ -833,7 +833,7 @@ LocusProcessor::align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 
     // No alignments to the suffix tree were found.
     //
     if (alns.size() == 0)
-        return 0;
+        return false;
 
     //
     // Perfect alignmnet to the suffix tree. Return result.
@@ -842,7 +842,7 @@ LocusProcessor::align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 
         snprintf(c, id_len, "%luM", query.length());
         aln_res.cigar    = c;
         aln_res.subj_pos = alns[0].subj_pos;
-        return 1;
+        return true;
     }
 
     //
@@ -851,11 +851,11 @@ LocusProcessor::align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 
     this->suffix_tree_hits_to_dag(query.length(), alns, final_alns);
 
     g_aln->init(query.length(), st->seq_len(), true);
-    if (g_aln->align_constrained(query, st->seq().str(), final_alns)) {
+    if (g_aln->align_constrained(query, st->seq_str(), final_alns)) {
         aln_res = g_aln->result();
     }
 
-    return 1;
+    return true;
 }
 
 int
@@ -963,8 +963,8 @@ LocusProcessor::suffix_tree_hits_to_dag(size_t query_len, vector<STAln> &alns, v
     return 0;
 }
 
-int
-LocusProcessor::find_locus_overlap(SuffixTree *stree, GappedAln *g_aln, DNASeq4 se_consensus, string &overlap_cigar) const
+size_t
+LocusProcessor::find_locus_overlap(SuffixTree *stree, GappedAln *g_aln, const DNASeq4 &se_consensus, string &overlap_cigar) const
 {
     vector<STAln> alns, final_alns;
     vector<pair<size_t, size_t> > step_alns;
@@ -999,8 +999,8 @@ LocusProcessor::find_locus_overlap(SuffixTree *stree, GappedAln *g_aln, DNASeq4 
         // If no alignments have been found, search the tails of the query and subject for any overlap
         // that is too small to be picked up by the SuffixTree.
         //
-        int    min_olap = (int) stree->min_aln() > min_se_pe_overlap ? stree->min_aln() : min_se_pe_overlap;
-        string pe_ctg   = stree->seq().str().substr(0, min_olap);
+        int min_olap = (int) stree->min_aln() > min_se_pe_overlap ? stree->min_aln() : min_se_pe_overlap;
+        string pe_ctg = stree->seq_str().substr(0, min_olap);
         p = pe_ctg.c_str();
         q = query.c_str() + (query.length() - min_olap);
 
@@ -1034,7 +1034,7 @@ LocusProcessor::find_locus_overlap(SuffixTree *stree, GappedAln *g_aln, DNASeq4 
     // Create a gapped alignment to determine the exact overlap.
     //
     g_aln->init(query.length(), stree->seq_len(), true);
-    if (g_aln->align_constrained(query, stree->seq().str(), final_alns)) {
+    if (g_aln->align_constrained(query, stree->seq_str(), final_alns)) {
         aln_res       = g_aln->result();
         overlap_cigar = aln_res.cigar;
     }

@@ -50,12 +50,6 @@ STNode::add_suffix_link(STNode *node)
 }
 
 size_t
-SuffixTree::align(DNASeq4 query, vector<pair<size_t, size_t> > &alns)
-{
-    return this->align(query.str().c_str(), alns);
-}
-
-size_t
 SuffixTree::align(const char *query, vector<pair<size_t, size_t> > &alns)
 {
     size_t qcnt     = 0;
@@ -278,8 +272,10 @@ SuffixTree::build_tree()
             bool stop_insertion  = false;
             bool add_suffix_link = false;
 
+            string suf;
             while (stop_insertion == false && remainder > 0) {
-                string suf = this->seq_.str().substr(seq_index, remainder);
+                assert(size_t(seq_index) + size_t(remainder) <= this->seq_str_.length());
+                suf.assign(this->seq_str_.c_str()+seq_index, this->seq_str_.c_str()+seq_index+remainder);
                 // cerr << "  Inserting suffix '" << suf << "' into the tree.\n";
 
                 if (active_edge == Nt4::$ && active_node->edge(this->seq_[i]) != NULL)
@@ -442,7 +438,7 @@ SuffixTree::forward_nodes(STNode **active_node, Nt4 &active_edge, int &active_le
 size_t
 SuffixTree::write_dot(ofstream &fh)
 {
-    string s = this->seq_.str();
+    const string& s = this->seq_str_;
 
     fh << "digraph G {\n";
 
@@ -501,8 +497,6 @@ SuffixTree::write_dot(ofstream &fh)
 size_t
 SuffixTree::write_suffixes(ostream &fh)
 {
-    string s = this->seq_.str();
-
     vector<string>  suffixes;
     string          suffix;
 
@@ -517,13 +511,13 @@ SuffixTree::write_suffixes(ostream &fh)
 }
 
 size_t
-SuffixTree::write_suffix(vector<string> &suffixes, string suffix, STNode *node)
+SuffixTree::write_suffix(vector<string> &suffixes, string &suffix, STNode *node)
 {
     for (uint i = 0; i < NT4cnt; i++) {
         if (node->edge(i) != NULL) {
             uint end = node->edge(i)->end() == -1 ? this->seq_.length() - 1 : node->edge(i)->end();
             uint len = end - node->edge(i)->start() + 1;
-            suffix += this->seq_.str().substr(node->edge(i)->start(), len);
+            suffix += this->seq_str_.substr(node->edge(i)->start(), len);
 
             if (node->edge(i)->succ() != NULL) {
                 this->write_suffix(suffixes, suffix, node->edge(i)->succ());
@@ -538,7 +532,7 @@ SuffixTree::write_suffix(vector<string> &suffixes, string suffix, STNode *node)
 }
 
 bool
-compare_staln(STAln a, STAln b)
+compare_staln(const STAln &a, const STAln &b)
 {
     return a.subj_pos < b.subj_pos;
 }
