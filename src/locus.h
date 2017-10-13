@@ -253,6 +253,7 @@ public:
         DNASeq4::iterator ref_it_;
         DNASeq4::iterator ref_past_;
         vector<Alignment::iterator> its_;
+        size_t col_;
 
     public:
         // Iteration methods.
@@ -260,7 +261,7 @@ public:
                 : loc_aln_(loc_aln),
                 ref_it_(loc_aln.ref().begin()),
                 ref_past_(loc_aln.ref().end()),
-                its_()
+                col_(0)
                 {
             its_.reserve(loc_aln.reads().size());
             for (const SAlnRead& r: loc_aln.reads())
@@ -274,6 +275,7 @@ public:
         void counts(Counts<Nt4>& counts) const; // Get the nt counts across all samples.
         void counts(Counts<Nt4>& counts, size_t sample) const; // Get the nt counts for a given sample.
         SiteCounts counts() const;
+        size_t col() const {return col_;}
 
         const MetaPopInfo& mpopi() const {return loc_aln_.mpopi();}
     };
@@ -306,6 +308,7 @@ CLocAlnSet::site_iterator& CLocAlnSet::site_iterator::operator++ () {
     }
     #endif
 
+    ++col_;
     return *this;
 }
 
