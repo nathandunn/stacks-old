@@ -342,6 +342,39 @@ void CLocAlnSet::reinit(int id, const PhyLoc& aln_pos, const MetaPopInfo* mpopi)
     reads_per_sample_.resize(mpopi->samples().size());
 }
 
+void CLocAlnSet::recompute_consensus() {
+    Counts<Nt4> cnts;
+    size_t i = 0;
+    for (CLocAlnSet::site_iterator site (*this); bool(site); ++site, ++i) {
+        site.counts(cnts);
+        pair<size_t,Nt4> best_nt = cnts.sorted()[0];
+        if (best_nt.first > 0)
+            ref_.set(i, best_nt.second);
+        else
+            ref_.set(i, Nt4::n);
+    }
+    assert(i == ref_.length());
+}
+
+void CLocAlnSet::hard_clip_right_Ns() {
+    assert(!ref_.empty() && ref_[0] != Nt4::n); // consensus must have been computed (first nt is in the cutsite)
+
+    size_t to_clip = 0;
+    DNASeq4::iterator nt = ref_.end();
+    while(nt != ref_.begin() && *--nt == Nt4::n)
+        ++to_clip;
+    assert(to_clip < ref_.length());
+
+    ref_.resize(ref_.length() - to_clip);
+
+    for (SAlnRead& r : reads_) {
+        if (r.cigar.empty() || r.cigar.back().first != 'M' || r.cigar.back().second <= to_clip)
+            DOES_NOT_HAPPEN;
+        r.seq.resize(ref_.length());
+        r.cigar.back().second -= to_clip;
+    }
+}
+
 void
 CLocAlnSet::merge_paired_reads()
 {

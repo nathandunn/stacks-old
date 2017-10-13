@@ -187,11 +187,6 @@ private:
     int suffix_tree_hits_to_dag(size_t query_len, vector<STAln> &alns, vector<STAln> &final_alns) const;
     int find_locus_overlap(SuffixTree *st, GappedAln *g_aln, DNASeq4 se_consensus, string &overlap_cigar) const;
 
-    DNASeq4 build_consensus(
-            const vector<SiteCounts>& depths,
-            const vector<SiteCall>& calls
-            ) const;
-
     // For each sample, phase heterozygous SNPs.
     vector<map<size_t,PhasedHet>> phase_hets (
             const vector<SiteCall>& calls,
