@@ -99,34 +99,77 @@ string to_string(const FileT& ft) {
     return "?!";
 }
 
-ProgressMeter& ProgressMeter::operator++() {
+ProgressMeter::ProgressMeter(
+        ostream& os,
+        bool pct,
+        size_t n_operations
+): os_(os),
+   pct_(pct),
+   n_max_(pct_ ? n_operations : SIZE_MAX),
+   n_done_(0),
+   next_(pct_ ? n_max_*0.01 : n_operations)
+{}
+
+ProgressMeter& ProgressMeter::operator++()
+{
     assert(n_done_ != n_max_);
     ++n_done_;
 
     if (n_done_ >= next_) {
-        if (n_done_ >= size_t(n_max_ * 0.5)) {
-            os_ << "50%...\n";
-            next_ = SIZE_MAX;
-        } else if (n_done_ >= size_t(n_max_ * 0.2)) {
-            os_ << "20%...\n";
-            next_ = n_max_ * 0.5;
-        } else if (n_done_ >= size_t(n_max_ * 0.1)) {
-            os_ << "10%...\n";
-            next_ = n_max_ * 0.2;
-        } else if (n_done_ >= size_t(n_max_ * 0.05)) {
-            os_ << "5%...\n";
-            next_ = n_max_ * 0.1;
-        } else if (n_done_ >= size_t(n_max_ * 0.02)) {
-            os_ << "2%...\n";
-            next_ = n_max_ * 0.05;
+        if (pct_) {
+            if (n_done_ >= size_t(n_max_ * 0.5)) {
+                os_ << "50%...\n";
+                next_ = SIZE_MAX;
+            } else if (n_done_ >= size_t(n_max_ * 0.2)) {
+                os_ << "20%...\n";
+                next_ = n_max_ * 0.5;
+            } else if (n_done_ >= size_t(n_max_ * 0.1)) {
+                os_ << "10%...\n";
+                next_ = n_max_ * 0.2;
+            } else if (n_done_ >= size_t(n_max_ * 0.05)) {
+                os_ << "5%...\n";
+                next_ = n_max_ * 0.1;
+            } else if (n_done_ >= size_t(n_max_ * 0.02)) {
+                os_ << "2%...\n";
+                next_ = n_max_ * 0.05;
+            } else {
+                os_ << "1%...\n";
+                next_ = n_max_ * 0.02;
+            }
         } else {
-            os_ << "1%...\n";
-            next_ = n_max_ * 0.02;
+            if (n_done_ >= 1000)
+                os_ << n_done_/1000 << 'K';
+            else
+                os_ << n_done_;
+            os_ << "...\n";
+            size_t scale = 1;
+            while (scale <= next_)
+                scale *= 10;
+            if (next_ < scale / 5)
+                next_ = scale / 5;
+            else if (next_ < scale / 2)
+                next_ = scale / 2;
+            else
+                next_ = scale;
         }
         os_ << flush;
     }
 
     return *this;
+}
+
+void ProgressMeter::done()
+{
+    if (pct_) {
+        assert(n_done_ == n_max_);
+        os_ << "100%\n";
+    } else {
+        if (n_done_ >= 1000)
+            os_ << n_done_/1000 << 'K';
+        else
+            os_ << n_done_;
+        os_ << ", done.\n";
+    }
 }
 
 LogAlterator::LogAlterator(const string& log_path, bool quiet, int argc, char** argv)
