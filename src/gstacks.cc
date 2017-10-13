@@ -338,6 +338,9 @@ try {
 
         //#pragma omp parallel
         {
+            if (num_threads > 1)
+                cerr << "Beta note: Multithreading is not yet implemented for the reference-based mode. Running single-threaded.\n\n";
+
             LocusProcessor loc_proc;
             CLocAlnSet aln_loc;
             Clocks& clocks = clocks_all.front(); //clocks_all[omp_get_thread_num()];
