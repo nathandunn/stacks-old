@@ -183,9 +183,9 @@ private:
             SuffixTree* stree
             ) const;
 
-    int align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 query, AlignRes &aln_res) const;
+    bool align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 &query, AlignRes &aln_res) const;
     int suffix_tree_hits_to_dag(size_t query_len, vector<STAln> &alns, vector<STAln> &final_alns) const;
-    int find_locus_overlap(SuffixTree *st, GappedAln *g_aln, DNASeq4 se_consensus, string &overlap_cigar) const;
+    size_t find_locus_overlap(SuffixTree *st, GappedAln *g_aln, const DNASeq4 &se_consensus, string &overlap_cigar) const;
 
     // For each sample, phase heterozygous SNPs.
     vector<map<size_t,PhasedHet>> phase_hets (
