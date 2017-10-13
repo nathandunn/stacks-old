@@ -58,7 +58,6 @@ bool      write_random_snp  = false;
 bool      merge_sites       = false;
 bool      expand_id         = false;
 bool      write_gtypes      = false;
-bool      vcf_out           = false;
 bool      vcf_haplo_out     = false;
 bool      fasta_loci_out    = false;
 bool      fasta_samples_out = false;
@@ -212,7 +211,7 @@ int main (int argc, char* argv[]) {
     SumStatsSummary sumstats(mpopi.pops().size());
 
     const LocusFilter &filter = bloc.filter();
-    cerr << "\nProcessing data in batches...\n";
+    cerr << "\nProcessing data in batches;\n";
     int loc_cnt = 0;
 
     do {
@@ -227,11 +226,11 @@ int main (int argc, char* argv[]) {
         loc_cnt  = bloc.next_batch(log_fh);
 
         cerr << "analyzed " << filter.batch_total() << " loci";
-        if (loci_ordered)
+        if (loci_ordered && bloc.loci().size() > 0)
             cerr <<  " from " << bloc.loci().front()->cloc->loc.chr();
         cerr << "; filtered " << filter.batch_filtered() << " loci; " << filter.batch_seen() << " loci seen.\n";
 
-        if (loc_cnt == 0) break;
+        if (loc_cnt == 0 && filter.batch_seen() == 0) break;
 
         sumstats.accumulate(bloc.loci());
 
@@ -280,7 +279,7 @@ int main (int argc, char* argv[]) {
             ldiv->clear(bloc.loci());
         }
 
-    } while (loc_cnt > 0);
+    } while (loc_cnt > 0 || filter.batch_seen() > 0);
 
     //
     // Report what we read from the input files.
@@ -321,11 +320,6 @@ int main (int argc, char* argv[]) {
     // if (debug_flags.count("VCFCOMP"))
     //     vcfcomp_simplify_pmap(catalog, pmap);
 
-    // //
-    // // Output the observed haplotypes.
-    // //
-    // write_generic(catalog, pmap, false);
-
     // if (structure_out && ordered_export)
     //     write_structure_ordered(catalog, pmap, psum, log_fh);
     // else if (structure_out)
@@ -360,11 +354,6 @@ int main (int argc, char* argv[]) {
 
     // if (vcf_haplo_out)
     //     write_vcf_haplotypes(catalog, pmap, psum);
-
-    // if (vcf_out && ordered_export)
-    //     write_vcf_ordered(catalog, pmap, psum, merge_map, log_fh);
-    // else if (vcf_out)
-    //     write_vcf(catalog, pmap, psum, merge_map);
 
     // //
     // // Output nucleotide-level genotype calls for each individual.
@@ -412,7 +401,6 @@ BatchLocusProcessor::init(string in_path, string pmap_path)
     if (wl_file.length() > 0) {
         cnt = this->_loc_filter.load_whitelist(wl_file);
         cerr << "Loaded " << cnt << " whitelisted markers.\n";
-        //// check_whitelist_integrity(catalog, whitelist);
         this->_user_supplied_whitelist = true;
     }
     
@@ -515,6 +503,7 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
     if (this->_next_loc != NULL) {
         this->_loci.push_back(this->_next_loc);
         prev_chr        = this->_next_loc->cloc->loc.chr();
+        this->_loc_filter.locus_seen();
         this->_loc_filter.keep_locus(this->_next_loc);
         this->_next_loc = NULL;
         loc_cnt++;
@@ -543,20 +532,6 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
             throw exception();
         }
 
-        this->_loc_filter.locus_seen();
-
-        //
-        // Check if this locus is filtered.
-        //
-        if (this->_user_supplied_whitelist && this->_loc_filter.whitelist_filter(cloc_id)) {
-            records.clear();
-            continue;
-        }
-        if (this->_loc_filter.blacklist_filter(cloc_id)) {
-            records.clear();
-            continue;
-        }
-
         //
         // Create and populate a new catalog locus.
         //
@@ -564,12 +539,41 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
         loc->cloc = new_cslocus(seq, records, cloc_id);
 
         //
+        // Set the current chromosome.
+        //
+        cur_chr = loc->cloc->loc.chr();
+        if (prev_chr.length() == 0)
+            prev_chr = cur_chr;       
+
+        //
+        // If we are in ordered mode, and there were no loci analyzed on the previous chromosome,
+        // keep processing the current chromosome without returning.
+        //
+        if (cur_chr != prev_chr && this->_loc_filter.batch_filtered() == this->_loc_filter.batch_seen())
+            prev_chr = cur_chr;
+
+        this->_loc_filter.locus_seen();
+
+        //
+        // Check if this locus is filtered.
+        //
+        if (this->_user_supplied_whitelist && this->_loc_filter.whitelist_filter(cloc_id)) {
+            records.clear();
+            delete loc;
+            continue;
+        }
+        if (this->_loc_filter.blacklist_filter(cloc_id)) {
+            records.clear();
+            delete loc;
+            continue;
+        }
+
+        //
         // Create and populate a map of the population genotypes.
         //
         loc->d = new Datum *[loc->sample_cnt];
         for (size_t i = 0; i < this->_mpopi->samples().size(); i++) loc->d[i] = NULL;
         PopMap<CSLocus>::populate_locus(loc->d, *loc->cloc, records, (const VcfHeader &) *this->_vcf_header, (const MetaPopInfo &) *this->_mpopi);
-
         records.clear();
 
         this->_dists.accumulate_pre_filtering(loc->cloc);
@@ -627,10 +631,6 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
         loc->s->sum_pops(loc->cloc, (const Datum **) loc->d, (const MetaPopInfo &) *this->_mpopi, verbose, cerr);
         loc->s->tally_metapop(loc->cloc);
 
-        cur_chr = loc->cloc->loc.chr();
-        if (prev_chr.length() == 0)
-            prev_chr = cur_chr;
-        
         //
         // Tabulate haplotypes present and in what combinations.
         //
@@ -644,6 +644,7 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
 
         } else {
             this->_next_loc = loc;
+            this->_loc_filter.locus_unsee();
         }
 
     } while (( loci_ordered && prev_chr == cur_chr) ||
@@ -690,7 +691,7 @@ BatchLocusProcessor::init_external_loci(string in_path, string pmap_path)
         size_t n_samples_before = this->_mpopi->samples().size();
 
         this->_mpopi->intersect_with(this->_vcf_parser.header().samples());
-        
+
         size_t n_rm_samples = n_samples_before - this->_mpopi->samples().size();
         if (n_rm_samples > 0) {
             cerr << "Warning: Of the samples listed in the population map, "
@@ -915,6 +916,13 @@ LocusFilter::locus_seen()
 {
     this->_seen_loci++;
     this->_batch_seen_loci++;
+}
+
+void
+LocusFilter::locus_unsee()
+{
+    this->_seen_loci--;
+    this->_batch_seen_loci--;
 }
 
 void

@@ -343,9 +343,18 @@ MetaPopInfo::status(ostream &fh)
     fh << "Working on " << this->samples().size() << " samples.\n";
     fh << "Working on " << this->pops().size() << " population(s):\n";
     for (vector<Pop>::const_iterator p = this->pops().begin(); p != this->pops().end(); p++) {
+        size_t indent   = p->name.length() + 6;
+        size_t line_lim = 120;
+        size_t line_len = 0;
+        
         fh << "    " << p->name << ": ";
         for (size_t s = p->first_sample; s < p->last_sample; ++s) {
             fh << this->samples()[s].name << ", ";
+            line_len += this->samples()[s].name.length() + 2;
+            if (line_len > line_lim) {
+                fh << "\n" << string(indent, ' ');
+                line_len = 0;
+            }
         }
         fh << this->samples()[p->last_sample].name << "\n";
     }

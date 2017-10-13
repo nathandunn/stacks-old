@@ -215,6 +215,7 @@ public:
     size_t total_sites()    const { return this->_total_sites; }
     size_t variant_sites()  const { return this->_variant_sites; }
     void   locus_seen();
+    void   locus_unsee();
     void   keep_locus(LocBin *);
     void   batch_clear();
     
