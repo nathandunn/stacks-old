@@ -110,30 +110,31 @@ public:
 
 class SuffixTree {
     DNASeq4 seq_;
+    string seq_str_;
     STNode *root;
     const size_t min_align_ = 11;
 
 public:
-    SuffixTree(DNASeq4 s): seq_(s)  { this->root = new STNode(1); }
+    SuffixTree(const DNASeq4& s): seq_(s), seq_str_(seq_.str()) { this->root = new STNode(1); }
     SuffixTree()  { this->root = new STNode(1); }
     ~SuffixTree() { delete this->root; }
 
     size_t  build_tree();
-    size_t  align(DNASeq4, vector<pair<size_t, size_t> > &);
     size_t  align(const char *, vector<pair<size_t, size_t> > &);
     size_t  write_dot(ofstream &);
     size_t  write_suffixes(ostream &);
-    DNASeq4 seq()     { return this->seq_; };
+    const DNASeq4& seq()    { return this->seq_; };
+    const string& seq_str() { return this->seq_str_; };
     size_t  seq_len() { return this->seq_.length(); };
     size_t  min_aln() { return this->min_align_; }
 
 private:
     size_t find_leaf_dist(STNode *);
     size_t find_all_leaf_dists(STNode *, vector<size_t> &, size_t);
-    size_t write_suffix(vector<string> &, string, STNode *);
+    size_t write_suffix(vector<string> &, string&, STNode *);
     int    forward_nodes(STNode **, Nt4 &, int &, int, int &, int);
 };
 
-bool compare_staln(STAln, STAln);
+bool compare_staln(const STAln&, const STAln&);
 
 #endif
