@@ -37,17 +37,20 @@ string to_string(const FileT& ft);
 
 // ProgressMeter
 // ==========
-// Reports 1-2-5-10-20-50% completeness to the given stream.
+// Reports completeness to the given stream.
+// In percentage mode reports 1-2-5-10-20-50-100%; in open-scale mode reports
+// every 1eX, 2eX, 5eX starting at the passed parameter.
 class ProgressMeter {
     ostream& os_;
+    bool pct_;
     size_t n_max_;
     size_t n_done_;
     size_t next_;
 
 public:
-    ProgressMeter(ostream& os, size_t n_operations) : os_(os), n_max_(n_operations), n_done_(0), next_(n_max_*0.01) {}
+    ProgressMeter(ostream& os, bool pct, size_t n_operations);
     ProgressMeter& operator++();
-    void done() {assert(n_done_ == n_max_); os_ << "100%\n";}
+    void done();
 };
 
 // TeeBuf

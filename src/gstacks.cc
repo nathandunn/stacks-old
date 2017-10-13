@@ -187,7 +187,7 @@ try {
         ContigStats ctg_stats {};
 
         const size_t n_loci = bam_cloc_reader.bam_f()->h().n_ref_chroms();
-        ProgressMeter progress (cout, n_loci);
+        ProgressMeter progress (cout, true, n_loci);
 
         #pragma omp parallel
         {
@@ -195,12 +195,10 @@ try {
             CLocReadSet loc (bam_cloc_reader.mpopi());
 
             #ifdef _OPENMP
-            size_t thread_id = omp_get_thread_num();
+            Clocks& clocks = clocks_all[omp_get_thread_num()];
             #else
-            size_t thread_id = 0;
+            Clocks& clocks = clocks_all.front();
             #endif
-            
-            Clocks& clocks = clocks_all[thread_id];
 
             #pragma omp for schedule(dynamic)
             for (size_t i=0; i<n_loci; ++i) {
@@ -335,6 +333,7 @@ try {
         o_vcf_f.reset(new VcfWriter(o_prefix + ".vcf.gz", move(vcf_header)));    
 
         cout << "Processing all loci...\n" << flush;
+        ProgressMeter progress (cout, false, 1000);
 
         //#pragma omp parallel
         {
@@ -389,6 +388,7 @@ try {
                             o_vcf_f->file() << vcf_outputs.front().second;
                             vcf_outputs.pop_front();
                             ++next_vcf_to_write;
+                            ++progress;
                         } while (!vcf_outputs.empty() && vcf_outputs.front().first);
                         actually_writing_vcf += gettm() - start_writing - clocking;
                     }
@@ -421,6 +421,7 @@ try {
 
             gt_stats += loc_proc.gt_stats();
         } //omp parallel
+        progress.done();
         cout << '\n';
 
         // Report statistics on the loci.
@@ -447,7 +448,7 @@ try {
         size_t ph  = gt_stats.n_loci_phasing_issues();
         auto   pct = [tot](size_t n) { return as_percentage((double) n / tot); };
 
-        cout << "Genotyped " << tot << " loci:\n"
+        cout << "Built and genotyped " << tot << " loci:\n"
              << "  (All loci are always conserved)\n"
              << "  one or more samples were excluded in " << ph << " loci (" << pct(ph) << ") because of phasing issues\n\n";
 
@@ -590,7 +591,7 @@ LocusProcessor::process(CLocReadSet& loc)
     // Build the alignment matrix.
     //
     CLocAlnSet aln_loc;
-    aln_loc.reinit(loc.id(), loc.pos(), &loc.mpopi());
+    aln_loc.reinit(loc_.id, loc_.pos, loc_.mpopi);
 
     if (dbg_true_alns) {
         from_true_alignments(aln_loc, move(loc), true);
@@ -603,6 +604,16 @@ LocusProcessor::process(CLocReadSet& loc)
         aln_loc.ref(DNASeq4(loc.reads().at(0).seq.length())); // Just N's.
         for (SRead& r : loc.reads())
             aln_loc.add(SAlnRead(Read(move(r.seq), move(r.name)), {{'M',r.seq.length()}}, r.sample));
+        aln_loc.recompute_consensus();
+
+        //
+        // Sometimes the consensus in the catalog.tags.tsv file extends further
+        // than any of the validly matching loci. In this case there's no
+        // coverage at the end of the 'forward' alignment matrix, but the reads
+        // are still N-padded. If this happens, hard-clip the Ns.
+        //
+        if (*--aln_loc.ref().end() == Nt4::n)
+            aln_loc.hard_clip_right_Ns();
 
         //
         // Process the paired-end reads, if any.
@@ -655,22 +666,12 @@ LocusProcessor::process(CLocReadSet& loc)
             // Determine if there is overlap -- and how much -- between the SE and PE contigs.
             //   We will query the PE contig suffix tree using the SE consensus sequence.
             //
-            DNASeq4 fw_consensus (aln_loc.ref().length());
-            size_t i = 0;
-            Counts<Nt4> cnts;
-            for (CLocAlnSet::site_iterator site (aln_loc); bool(site); ++site, ++i) {
-                site.counts(cnts);
-                pair<size_t,Nt4> best_nt = cnts.sorted()[0];
-                fw_consensus.set(i, best_nt.first > 0 ? best_nt.second : Nt4::n);
-            }
-            assert(i == fw_consensus.length());
-
             int    overlap;
             string overlap_cigar;
             if (dbg_no_overlaps)
                 overlap = 0;
             else
-                overlap = this->find_locus_overlap(stree, aligner, fw_consensus, overlap_cigar);
+                overlap = this->find_locus_overlap(stree, aligner, aln_loc.ref(), overlap_cigar);
 
             if (overlap > 0) {
                 this->loc_.ctg_status = LocData::overlapped;
@@ -684,7 +685,7 @@ LocusProcessor::process(CLocReadSet& loc)
                 loc_.details_ss
                         << "BEGIN contig\n"
                         << "pe_contig\t"     << ctg << '\n'
-                        << "fw_consensus\t"  << fw_consensus << '\n'
+                        << "fw_consensus\t"  << aln_loc.ref() << '\n'
                         << "overlap\t"       << overlap << '\n'
                         << "overlap CIGAR\t" << overlap_cigar << "\n"
                         << "END contig\n"
@@ -748,6 +749,8 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
             this->loc_.details_ss << "BEGIN locus " << loc_.id << "\n";
     }
 
+    aln_loc.recompute_consensus();
+
     if (detailed_output) {
         loc_.details_ss << "BEGIN aln_matrix\n";
         for (const SAlnRead& read : aln_loc.reads())
@@ -768,11 +771,20 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
     vector<SiteCall> calls;
     depths.reserve(aln_loc.ref().length());
     calls.reserve(aln_loc.ref().length());
+    DNASeq4 new_consensus = aln_loc.ref();
     for (CLocAlnSet::site_iterator site (aln_loc); bool(site); ++site) {
         depths.push_back(site.counts());
         calls.push_back(model->call(depths.back()));
+        if (!calls.back().alleles().empty())
+            new_consensus.set(site.col(), calls.back().most_frequent_allele());
+        else
+            // For the high/low Maruki" models this actually only happens when
+            // there is no coverage; for the Hohenlohe model it may also happen
+            // when there isn't a single significant call.
+            // Keep the already computed majority-rule nucleotide/don't do anything.
+            ;
     }
-    aln_loc.ref(build_consensus(depths, calls));
+    aln_loc.ref(move(new_consensus));
 
     // Call haplotypes.
     vector<map<size_t,PhasedHet>> phase_data;
@@ -791,8 +803,8 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
     }
 }
 
-int
-LocusProcessor::align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 enc_query, AlignRes &aln_res) const
+bool
+LocusProcessor::align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 &enc_query, AlignRes &aln_res) const
 {
     vector<STAln> alns, final_alns;
     vector<pair<size_t, size_t> > step_alns;
@@ -824,7 +836,7 @@ LocusProcessor::align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 
     // No alignments to the suffix tree were found.
     //
     if (alns.size() == 0)
-        return 0;
+        return false;
 
     //
     // Perfect alignmnet to the suffix tree. Return result.
@@ -833,7 +845,7 @@ LocusProcessor::align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 
         snprintf(c, id_len, "%luM", query.length());
         aln_res.cigar    = c;
         aln_res.subj_pos = alns[0].subj_pos;
-        return 1;
+        return true;
     }
 
     //
@@ -842,11 +854,11 @@ LocusProcessor::align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 
     this->suffix_tree_hits_to_dag(query.length(), alns, final_alns);
 
     g_aln->init(query.length(), st->seq_len(), true);
-    if (g_aln->align_constrained(query, st->seq().str(), final_alns)) {
+    if (g_aln->align_constrained(query, st->seq_str(), final_alns)) {
         aln_res = g_aln->result();
     }
 
-    return 1;
+    return true;
 }
 
 int
@@ -954,8 +966,8 @@ LocusProcessor::suffix_tree_hits_to_dag(size_t query_len, vector<STAln> &alns, v
     return 0;
 }
 
-int
-LocusProcessor::find_locus_overlap(SuffixTree *stree, GappedAln *g_aln, DNASeq4 se_consensus, string &overlap_cigar) const
+size_t
+LocusProcessor::find_locus_overlap(SuffixTree *stree, GappedAln *g_aln, const DNASeq4 &se_consensus, string &overlap_cigar) const
 {
     vector<STAln> alns, final_alns;
     vector<pair<size_t, size_t> > step_alns;
@@ -990,8 +1002,8 @@ LocusProcessor::find_locus_overlap(SuffixTree *stree, GappedAln *g_aln, DNASeq4 
         // If no alignments have been found, search the tails of the query and subject for any overlap
         // that is too small to be picked up by the SuffixTree.
         //
-        int    min_olap = (int) stree->min_aln() > min_se_pe_overlap ? stree->min_aln() : min_se_pe_overlap;
-        string pe_ctg   = stree->seq().str().substr(0, min_olap);
+        int min_olap = (int) stree->min_aln() > min_se_pe_overlap ? stree->min_aln() : min_se_pe_overlap;
+        string pe_ctg = stree->seq_str().substr(0, min_olap);
         p = pe_ctg.c_str();
         q = query.c_str() + (query.length() - min_olap);
 
@@ -1025,7 +1037,7 @@ LocusProcessor::find_locus_overlap(SuffixTree *stree, GappedAln *g_aln, DNASeq4 
     // Create a gapped alignment to determine the exact overlap.
     //
     g_aln->init(query.length(), stree->seq_len(), true);
-    if (g_aln->align_constrained(query, stree->seq().str(), final_alns)) {
+    if (g_aln->align_constrained(query, stree->seq_str(), final_alns)) {
         aln_res       = g_aln->result();
         overlap_cigar = aln_res.cigar;
     }
@@ -1093,30 +1105,6 @@ bool LocusProcessor::add_read_to_aln(
 
     aln_loc.add(SAlnRead(move((Read&)r), move(cigar), r.sample));
     return true;
-}
-
-DNASeq4 LocusProcessor::build_consensus(
-        const vector<SiteCounts>& depths,
-        const vector<SiteCall>& calls
-) const {
-    assert(depths.size() == calls.size());
-    DNASeq4 consensus (depths.size());
-    for (size_t i=0; i<depths.size(); ++i) {
-        if (!calls[i].alleles().empty()) {
-            consensus.set(i, calls[i].most_frequent_allele());
-        } else {
-            // The model returned a null call.
-            // (For the high/low Maruki" models this actually only happens when
-            // there is no coverage; for the Hohenlohe model it may also happen
-            // when there isn't a single significant call.)
-            pair<size_t,Nt2> best_nt = depths[i].tot.sorted()[0];
-            if (best_nt.first > 0)
-                consensus.set(i, Nt4(best_nt.second));
-            else
-                consensus.set(i, Nt4::n);
-        }
-    }
-    return consensus;
 }
 
 vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
@@ -1936,7 +1924,8 @@ const string help_string = string() +
         "  The input BAM file should (i) be sorted by coordinate and (ii) comprise\n"
         "  all aligned reads for all samples, with reads assigned to samples using\n"
         "  BAM \"reads groups\" (gstacks uses the SM, \"sample name\" field).\n"
-        "  Please refer to the gstacks manual page for information about how to\n"
+        //"  Please refer to the gstacks manual page for information about how to\n"
+        "  Please refer to the Beta webpage for information about how to\n" //TODO
         "  generate such a BAM file with Samtools, and examples.\n"
         "\n"
         "Shared options:\n"
@@ -1945,17 +1934,19 @@ const string help_string = string() +
         "  -t,--threads: number of threads to use (default: 1)\n"
         "  --details: write a more detailed output\n"
         "  --ignore-pe-reads: ignore paired-end reads even if present in the input\n"
+        "                     (in reference-based mode, this implies --paired)\n"
         "\n"
         "Model options:\n"
         "  --model: model to use to call variants and genotypes; one of\n"
         "           marukilow (default), marukihigh, or snp\n"
-        "  --var-alpha: alpha threshold for discovering SNPs (default: 0.05)\n"
+        "  --var-alpha: alpha threshold for discovering SNPs (default: 0.05 for marukilow)\n"
         "  --gt-alpha: alpha threshold for calling genotypes (default: 0.05)\n"
         "\n"
-        "Expert options:\n"
+        "Advanced options:\n"
         "  (De novo mode)\n"
         "  --kmer-length: kmer length for the de Bruijn graph (default: 31, max. 31)\n"
         "  --min-kmer-cov: minimum coverage to consider a kmer (default: 2)\n"
+        "\n"
         "  (Reference-based mode)\n"
         "  --min-mapq: minimum PHRED-scaled mapping quality to consider a read (default: 10)\n"
         "  --max-clipped: maximum soft-clipping level, in fraction of read length (default: 0.20)\n"
