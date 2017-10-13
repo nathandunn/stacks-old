@@ -688,7 +688,7 @@ double MarukiLowModel::calc_fixed_lnl(double n_tot, double n_M_tot) const {
     if (n_M_tot == n_tot)
         return 0.0;
     else
-        return n_M_tot * log(n_M_tot/n_tot) + (n_tot-n_M_tot) * log((n_tot-n_M_tot)/n_tot);
+        return n_M_tot * log(n_M_tot/n_tot) + (n_tot-n_M_tot) * log((n_tot-n_M_tot)/n_tot/3.0);
 }
 
 double MarukiLowModel::calc_dimorph_lnl(double freq_MM, double freq_Mm, double freq_mm, const vector<LikData>& liks) const {
@@ -787,8 +787,10 @@ SiteCall MarukiLowModel::call(const SiteCounts& depths) const {
     // integrate; in particular the error rate is estimated to zero when
     // there aren't any observable errors and this leads to meaningless null
     // likelihoods. Doing the integration isn't practical but we can reduce
-    // the problem by adding 1 to the numerator and denominator.
-    double e = 3.0 / 2.0 * (dp_tot - n_M_tot - n_m_tot + 1) / double(dp_tot + 1);
+    // the problem by adding (see edit) to the numerator and denominator.
+    // Edit. Oct 2017: 1 is way too large; adding 0.1 yields a more reasonable
+    // prior.
+    double e = 3.0 / 2.0 * (dp_tot - n_M_tot - n_m_tot + 0.1) / double(dp_tot + 0.1);
     assert(e > 0.0 && e < 1.0);
 
     // 2. Base likelihoods.
