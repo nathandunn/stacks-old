@@ -187,7 +187,7 @@ try {
         ContigStats ctg_stats {};
 
         const size_t n_loci = bam_cloc_reader.bam_f()->h().n_ref_chroms();
-        ProgressMeter progress (cout, n_loci);
+        ProgressMeter progress (cout, true, n_loci);
 
         #pragma omp parallel
         {
@@ -333,6 +333,7 @@ try {
         o_vcf_f.reset(new VcfWriter(o_prefix + ".vcf.gz", move(vcf_header)));    
 
         cout << "Processing all loci...\n" << flush;
+        ProgressMeter progress (cout, false, 1000);
 
         //#pragma omp parallel
         {
@@ -387,6 +388,7 @@ try {
                             o_vcf_f->file() << vcf_outputs.front().second;
                             vcf_outputs.pop_front();
                             ++next_vcf_to_write;
+                            ++progress;
                         } while (!vcf_outputs.empty() && vcf_outputs.front().first);
                         actually_writing_vcf += gettm() - start_writing - clocking;
                     }
@@ -419,6 +421,7 @@ try {
 
             gt_stats += loc_proc.gt_stats();
         } //omp parallel
+        progress.done();
         cout << '\n';
 
         // Report statistics on the loci.
@@ -445,7 +448,7 @@ try {
         size_t ph  = gt_stats.n_loci_phasing_issues();
         auto   pct = [tot](size_t n) { return as_percentage((double) n / tot); };
 
-        cout << "Genotyped " << tot << " loci:\n"
+        cout << "Built and genotyped " << tot << " loci:\n"
              << "  (All loci are always conserved)\n"
              << "  one or more samples were excluded in " << ph << " loci (" << pct(ph) << ") because of phasing issues\n\n";
 
