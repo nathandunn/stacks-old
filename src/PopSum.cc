@@ -27,12 +27,18 @@ LocPopSum::LocPopSum(size_t cloc_len, const MetaPopInfo& mpopi)
     this->_per_pop  = new LocSum * [this->_pop_cnt];
     this->_hapstats_per_pop = new LocStat * [this->_pop_cnt];
 
-    for (size_t i = 0; i < mpopi.pops().size(); i++)
+    for (size_t i = 0; i < mpopi.pops().size(); i++) {
         this->_per_pop[i] = new LocSum(cloc_len);
+        this->_hapstats_per_pop[i] = NULL;
+    }
 }
 
 LocPopSum::~LocPopSum()
 {
+    for (uint i = 0; i < this->_pop_cnt; i++) {
+        delete this->_per_pop[i];
+        delete this->_hapstats_per_pop[i];
+    }
     delete [] this->_per_pop;
     delete [] this->_hapstats_per_pop;
     delete this->_meta_pop;
