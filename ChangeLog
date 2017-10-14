@@ -1,5 +1,6 @@
 Stacks 2.0 Beta 2 - 
 --------------------------------
+    Bugfix: Fixed three memory leaks in populations; improved reference-aligned batch logic. 
     Bugfix: Improved overlapping code in gstacks to merge more single and paired-end contigs together.
     Bugfix: Now compiles on Apple OS X.
 

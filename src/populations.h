@@ -268,6 +268,7 @@ public:
     };
 
     int            init(string, string);
+    int            cleanup();
     size_t         next_batch(ostream &);
     size_t         next_batch_number() { return this->_batch_num + 1; }
     int            summarize(ostream &);
