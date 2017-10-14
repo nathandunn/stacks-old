@@ -639,28 +639,23 @@ LocusProcessor::process(CLocReadSet& loc)
             for (const Read& r : loc.pe_reads())
                 seqs_to_assemble.push_back(&r.seq);
 
-            string ctg = assemble_contig(seqs_to_assemble);
+            DNASeq4 ctg = DNASeq4(assemble_contig(seqs_to_assemble));
 
             if (ctg.empty())
                 break;
             ctg_stats_.length_ctg_tot += ctg.length();
 
-            // Align each read to the contig.
-            CLocAlnSet pe_aln_loc;
-            pe_aln_loc.reinit(loc_.id, loc_.pos, loc_.mpopi);
-            pe_aln_loc.ref(DNASeq4(ctg));
-
             //
-            // Build a SuffixTree of the reference sequence for this locus.
+            // Build a SuffixTree of the contig.
             //
-            SuffixTree *stree   = new SuffixTree(pe_aln_loc.ref());
+            SuffixTree *stree   = new SuffixTree(ctg);
             stree->build_tree();
 
             //
             // Initialize a gapped alignment obect for use in SE/PE contig overlap and read alignmnets.
             //
-            GappedAln  *aligner = new GappedAln(loc.pe_reads().front().seq.length(), pe_aln_loc.ref().length(), true);
-            AlignRes    aln_res;
+            GappedAln aligner;
+            AlignRes  aln_res;
 
             //
             // Determine if there is overlap -- and how much -- between the SE and PE contigs.
@@ -671,7 +666,7 @@ LocusProcessor::process(CLocReadSet& loc)
             if (dbg_no_overlaps)
                 overlap = 0;
             else
-                overlap = this->find_locus_overlap(stree, aligner, aln_loc.ref(), overlap_cigar);
+                overlap = this->find_locus_overlap(stree, &aligner, aln_loc.ref(), overlap_cigar);
 
             if (overlap > 0) {
                 this->loc_.ctg_status = LocData::overlapped;
@@ -691,28 +686,41 @@ LocusProcessor::process(CLocReadSet& loc)
                         << "END contig\n"
                         ;
 
+            //
+            // Extend the reference sequence & recompute the suffix tree.
+            //
+            CLocAlnSet tmp_loc;
+            tmp_loc.reinit(loc_.id, loc_.pos, loc_.mpopi);
+            tmp_loc.ref(move(ctg));
+
+            aln_loc = CLocAlnSet::juxtapose(move(aln_loc), move(tmp_loc), (overlap > 0 ? -long(overlap) : +10));
+            delete stree;
+            stree   = new SuffixTree(aln_loc.ref());
+            stree->build_tree();
+
+            //
+            // Align the paired-end reads.
+            //
             this->ctg_stats_.n_tot_reads += loc.pe_reads().size();
 
-            if (detailed_output)
+            if (detailed_output) {
                 loc_.details_ss << "BEGIN pe_alns\n";
- 
+                loc_.details_ss << "pe_aln_ref\t" << aln_loc.ref() << '\n'; //TODO
+            }
+
             for (SRead& r : loc.pe_reads()) {
-                if (add_read_to_aln(pe_aln_loc, aln_res, move(r), aligner, stree)) {
+                if (add_read_to_aln(aln_loc, aln_res, move(r), &aligner, stree)) {
                     this->ctg_stats_.n_aln_reads++;
                     if (detailed_output)
                         loc_.details_ss << "pe_aln_local"
-                                        << '\t' << pe_aln_loc.reads().back().name
+                                        << '\t' << aln_loc.reads().back().name
                                         << '\t' << aln_res.subj_pos + 1 << ':' << aln_res.cigar
                                         << '\n';
+                } else {
+                    if (detailed_output)
+                        loc_.details_ss << "pe_aln_fail\t" << aln_loc.reads().back().name << '\n';
                 }
             }
-            delete aligner;
-            delete stree;
-
-            //
-            // Merge the forward & paired-end alignments.
-            //
-            aln_loc = CLocAlnSet::juxtapose(move(aln_loc), move(pe_aln_loc), (overlap > 0 ? -long(overlap) : +10));
             if (detailed_output) {
                 for (auto& r : aln_loc.reads())
                     if (r.is_read2())
@@ -722,6 +730,7 @@ LocusProcessor::process(CLocReadSet& loc)
                                     << '\n';
                 loc_.details_ss << "END pe_alns\n";
             }
+            delete stree;
 
             aln_loc.merge_paired_reads();
 
