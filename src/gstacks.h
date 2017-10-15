@@ -164,8 +164,7 @@ struct Timers {
     Timer assembling;
     Timer olap_aligning;
     Timer geno_haplotyping;
-    Timer building_outputs;
-    Timer building_vcf_output;
+    Timer building_vcf;
 
     Timers& operator+= (const Timers& other);
 };

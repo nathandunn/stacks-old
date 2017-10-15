@@ -483,8 +483,7 @@ try {
         double a   = t_threads_totals.assembling.elapsed();
         double o   = t_threads_totals.olap_aligning.elapsed();
         double g   = t_threads_totals.geno_haplotyping.elapsed();
-        double b   = t_threads_totals.building_outputs.elapsed();
-        double b_v = t_threads_totals.building_vcf_output.elapsed();
+        double b_v = t_threads_totals.building_vcf.elapsed();
 
         double c = t_parallel.consumed()
                  + t_threads_totals.reading.consumed()
@@ -495,8 +494,7 @@ try {
                  + t_threads_totals.assembling.consumed()
                  + t_threads_totals.olap_aligning.consumed()
                  + t_threads_totals.geno_haplotyping.consumed()
-                 + t_threads_totals.building_outputs.consumed()
-                 + t_threads_totals.building_vcf_output.consumed()
+                 + t_threads_totals.building_vcf.consumed()
                  + t_writing_vcf.consumed()
                  ;
 
@@ -513,8 +511,7 @@ try {
             os << std::setw(16) << a << "  assembling (" << as_percentage(a / ll) << ")\n"
                << std::setw(16) << o << "  aligning/overlapping (" << as_percentage(o / ll) << ")\n";
         os << std::setw(16) << g << "  genotyping/haplotyping (" << as_percentage(g / ll) << ")\n"
-           << std::setw(16) << b << "  building outputs (" << as_percentage(b / ll) << ")\n"
-           << std::setw(16) << b_v << "  building VCF output (" << as_percentage(b_v / ll) << ")\n"
+           << std::setw(16) << b_v << "  building_vcf (" << as_percentage(b_v / ll) << ")\n"
            << std::setw(8) << w_f << "  writing_fa (" << as_percentage(w_f / ll) << ")\n"
            << std::setw(8) << w_v << "  writing_vcf (" << as_percentage(w_v / ll) << ")\n";
         if (detailed_output)
@@ -843,9 +840,7 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
     }
     timers_.geno_haplotyping.stop();
 
-    timers_.building_outputs.restart();
     write_one_locus(aln_loc, depths, calls, phase_data);
-    timers_.building_outputs.stop();
 
     if (detailed_output) {
         loc_.details_ss << "END locus " << loc_.id << "\n";
@@ -1487,7 +1482,7 @@ void LocusProcessor::write_one_locus (
     //
     // Vcf output.
     //
-    timers_.building_vcf_output.restart();
+    timers_.building_vcf.restart();
     assert(depths.size() == ref.length());
     assert(calls.size() == ref.length());
     vector<size_t> sample_sites_w_data (mpopi.samples().size(), 0);
@@ -1686,7 +1681,7 @@ void LocusProcessor::write_one_locus (
         vcf_records << rec;
     }
     loc_.o_vcf = vcf_records.str();
-    timers_.building_vcf_output.stop();
+    timers_.building_vcf.stop();
 
     //
     // Fasta output.
@@ -1938,13 +1933,12 @@ Timers& Timers::operator+= (const Timers& other) {
     processing += other.processing;
     writing_fa += other.writing_fa;
     writing_vcf += other.writing_vcf;
-    writing_vcf += other.writing_details;
+    writing_details += other.writing_details;
 
     assembling += other.assembling;
     olap_aligning += other.olap_aligning;
     geno_haplotyping += other.geno_haplotyping;
-    building_outputs += other.building_outputs;
-    building_vcf_output += other.building_vcf_output;
+    building_vcf += other.building_vcf;
 
     return *this;
 }
