@@ -161,6 +161,8 @@ struct Timers {
     Timer writing_vcf;
     Timer writing_details;
 
+    Timer olap_aligning;
+
     Timers& operator+= (const Timers& other);
 };
 
