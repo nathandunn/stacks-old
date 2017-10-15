@@ -580,6 +580,13 @@ BamCLocBuilder::build_one_locus(CLocAlnSet& aln_loc)
             if (pe_name_itr != pe_reads_by_name.end()) {
                 const PhyLoc& pe_5prime = pe_name_itr->second->first;
                 SAlnRead& pe_read = pe_name_itr->second->second;
+                if (pe_read.sample != fw_read.sample) {
+                    cerr << "Warning: Paired reads '" << fw_read.name << "' and '"
+                         << pe_read.name << "' belong to different samples ('"
+                         << mpopi_.samples()[fw_read.sample].name << "' and '"
+                         << mpopi_.samples()[pe_read.sample].name << "').\n";
+                    continue;
+                }
 
                 size_t fw_len = cigar_length_ref(fw_read.cigar);
                 size_t pe_len = cigar_length_ref(pe_read.cigar);
