@@ -298,13 +298,13 @@ bool BamCLocReader::read_one_locus(CLocReadSet& readset) {
                 throw exception();
             }
             if (rec.is_read2())
-                readset.add_pe(SRead(Read(rec.seq(), rec.qname()+"/2"), rg_to_sample_.at(rg)));
+                readset.add_pe(SRead(Read(rec.seq(), string(rec.qname())+"/2"), rg_to_sample_.at(rg)));
             else if (rec.is_read1())
-                readset.add(SRead(Read(rec.seq(), rec.qname()+"/1"), rg_to_sample_.at(rg)));
+                readset.add(SRead(Read(rec.seq(), string(rec.qname())+"/1"), rg_to_sample_.at(rg)));
             else
                 // If tsv2bam wasn't given paired-end reads, no flag was set and the
                 // read names were left unchanged, so we also don't touch them.
-                readset.add(SRead(Read(rec.seq(), rec.qname()), rg_to_sample_.at(rg)));
+                readset.add(SRead(Read(rec.seq(), string(rec.qname())), rg_to_sample_.at(rg)));
 
             if (!bam_f_->next_record()) {
                 eof_ = true;
@@ -392,7 +392,7 @@ BamCLocBuilder::read_and_parse_next_record()
         int32_t chrom = r.chrom();
         int32_t pos = r.pos();
         strand_type strand = strand_plus;
-        string name = r.qname();
+        string name (r.qname());
         Cigar cigar = r.cigar();
         DNASeq4 seq = r.seq();
         const char* rg = r.read_group();
