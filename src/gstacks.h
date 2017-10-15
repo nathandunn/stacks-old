@@ -150,6 +150,21 @@ public:
 };
 
 //
+// Clocks
+// ----------
+// For Benchmarking. Thread specific.
+//
+struct Timers {
+    Timer reading;
+    Timer processing;
+    Timer writing_fa;
+    Timer writing_vcf;
+    Timer writing_details;
+
+    Timers& operator+= (const Timers& other);
+};
+
+//
 // LocusProcessor
 // ----------
 // Functor for processing loci. Thread-specific.
@@ -165,6 +180,8 @@ public:
     // Access the output. Statistics & movable fasta/vcf per-locus text outputs.
     const GenotypeStats& gt_stats() const {return gt_stats_;}
     const ContigStats& ctg_stats() const {return ctg_stats_;}
+    Timers& timers() {return timers_;}
+
     string& vcf_out() {return loc_.o_vcf;}
     string& fasta_out() {return loc_.o_fa;}
     string& details_out() {return loc_.o_details;}
@@ -172,6 +189,7 @@ public:
 private:
     GenotypeStats gt_stats_;
     ContigStats ctg_stats_;
+    Timers timers_;
     mutable LocData loc_;
 
     string assemble_contig(const vector<const DNASeq4*>& seqs);
@@ -272,24 +290,5 @@ Cigar dbg_extract_cigar(const string& read_id);
 // Creates a CLocAlnSet from a CLocReadSet, using true alignments.
 //
 void from_true_alignments(CLocAlnSet& aln_loc, CLocReadSet&& loc, bool merge_reads);
-
-//
-// Clocks
-// ----------
-// For Benchmarking. Thread specific.
-//
-struct Clocks {
-    double clocking;
-    double reading;
-    double processing;
-    double writing_fa;
-    double writing_vcf;
-    double writing_details;
-    double sum() const {return clocking + reading + processing + writing_fa + writing_vcf + writing_details;}
-
-    Clocks& operator+= (const Clocks& other);
-    Clocks& operator/= (double d);
-    friend Clocks operator+ (const Clocks& lhs, const Clocks& rhs) {Clocks sum (lhs); sum+=rhs; return sum;}
-};
 
 #endif

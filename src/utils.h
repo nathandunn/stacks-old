@@ -142,20 +142,35 @@ void check_open (const gzFile fs, const string& path)
 void check_or_mk_dir(const string& path);
 
 //
-// Timing routine "gettime".
+// Chronometer.
 //
-inline
-double gettm() {
-#if defined _POSIX_MONOTONIC_CLOCK && _POSIX_MONOTONIC_CLOCK >= 0
-    struct timespec ts;
-    if(clock_gettime(CLOCK_MONOTONIC, &ts) == 0)
-        return ts.tv_sec + ts.tv_nsec / 1.0e9;
-    else
+class Timer {
+    double elapsed_;
+    double consumed_;
+    double start_;
+
+public:
+    Timer() : elapsed_(0.0), consumed_(0.0), start_(0.0) {}
+    void   restart() {start_=gettm();}
+    void   stop()    {elapsed_+=gettm()-start_; consumed_+=4.0*std::abs(gettm()-gettm());}
+    double elapsed() const {return elapsed_;}
+    double consumed() const {return consumed_;}
+
+    Timer& operator+=(const Timer& other) {elapsed_+=other.elapsed_; consumed_+=other.consumed_; return *this;}
+
+private:
+    double gettm() {
+    #if defined _POSIX_MONOTONIC_CLOCK && _POSIX_MONOTONIC_CLOCK >= 0
+        struct timespec ts;
+        if(clock_gettime(CLOCK_MONOTONIC, &ts) == 0)
+            return ts.tv_sec + ts.tv_nsec / 1.0e9;
+        else
+            return 0.0;
+    #else
         return 0.0;
-#else
-    return 0.0;
-#endif
-}
+    #endif
+    }
+};
 
 //
 // Class to read lines from a plain text or compressed file indifferently.

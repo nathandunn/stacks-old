@@ -156,6 +156,13 @@ try {
     //
     GenotypeStats gt_stats {};
 
+    // For clocking.
+    Timers t_threads_totals;
+    Timer t_parallel;
+    Timer t_writing_vcf;
+    size_t n_writes = 0;
+    size_t max_size_before_write = 0;
+
     // For parallelization.
     int omp_return = 0;
     std::deque<pair<bool,string>> fa_outputs;
@@ -164,13 +171,6 @@ try {
     size_t next_fa_to_write = 0; // locus index, in the input BAM file.
     size_t next_vcf_to_write = 0;
     size_t next_det_to_write = 0;
-
-    // For clocking.
-    double clock_parallel_start = gettm();
-    vector<Clocks> clocks_all (num_threads);
-    size_t n_writes = 0;
-    size_t max_size_before_write = 0;
-    double actually_writing_vcf = 0;
 
     if (input_type == GStacksInputT::denovo) {
         // Initialize the CLoc reader
@@ -189,33 +189,34 @@ try {
         const size_t n_loci = bam_cloc_reader.bam_f()->h().n_ref_chroms();
         ProgressMeter progress (cout, true, n_loci);
 
+        t_parallel.restart();
         #pragma omp parallel
         {
             LocusProcessor loc_proc;
+            Timers& t = loc_proc.timers();
             CLocReadSet loc (bam_cloc_reader.mpopi());
-
-            #ifdef _OPENMP
-            Clocks& clocks = clocks_all[omp_get_thread_num()];
-            #else
-            Clocks& clocks = clocks_all.front();
-            #endif
 
             #pragma omp for schedule(dynamic)
             for (size_t i=0; i<n_loci; ++i) {
                 if (omp_return != 0)
                     continue;
                 try {
-                    double clock_loop_start = gettm();
-                    double clocking = gettm() - clock_loop_start;
-
+                    // Read a locus from the BAM file.
+                    t.reading.restart();
                     #pragma omp critical(read)
-                    bam_cloc_reader.read_one_locus(loc);
-                    double clock_read = gettm();
-
+                    {
+                        bam_cloc_reader.read_one_locus(loc);
+                    }
                     size_t loc_i = loc.bam_i();
-                    loc_proc.process(loc);
-                    double clock_process = gettm();
+                    t.reading.stop();
 
+                    // Process it.
+                    t.processing.restart();
+                    loc_proc.process(loc);
+                    t.processing.stop();
+
+                    // Write the FASTA output.
+                    t.writing_fa.restart();
                     #pragma omp critical(write_fa)
                     {
                         for (size_t i=next_fa_to_write+fa_outputs.size(); i<=loc_i; ++i)
@@ -230,8 +231,10 @@ try {
                             ++next_fa_to_write;
                         }
                     }
-                    double clock_write_fa = gettm();
+                    t.writing_fa.stop();
 
+                    // Write the VCF output.
+                    t.writing_vcf.restart();
                     #pragma omp critical(write_vcf)
                     {
                         for (size_t i=next_vcf_to_write+vcf_outputs.size(); i<=loc_i; ++i)
@@ -242,19 +245,21 @@ try {
                             ++n_writes;
                             if (vcf_outputs.size() > max_size_before_write)
                                 max_size_before_write = vcf_outputs.size();
-                            double start_writing = gettm();
+                            t_writing_vcf.restart();
                             do {
                                 o_vcf_f->file() << vcf_outputs.front().second;
                                 vcf_outputs.pop_front();
                                 ++next_vcf_to_write;
                                 ++progress;
                             } while (!vcf_outputs.empty() && vcf_outputs.front().first);
-                            actually_writing_vcf += gettm() - start_writing - clocking;
+                            t_writing_vcf.stop();
                         }
                     }
-                    double clock_write_vcf = gettm();
+                    t.writing_vcf.stop();
 
+                    // Write the detailed output.
                     if (detailed_output) {
+                        t.writing_details.restart();
                         #pragma omp critical(write_details)
                         {
                             for (size_t i=next_det_to_write+det_outputs.size(); i<=loc_i; ++i)
@@ -267,15 +272,8 @@ try {
                                 ++next_det_to_write;
                             }
                         }
+                        t.writing_details.stop();
                     }
-                    double clock_write_details = gettm();
-
-                    clocks.clocking        += 7 * clocking;
-                    clocks.reading         += clock_read       - clock_loop_start - clocking;
-                    clocks.processing      += clock_process    - clock_read - clocking;
-                    clocks.writing_fa      += clock_write_fa   - clock_process - clocking;
-                    clocks.writing_vcf     += clock_write_vcf  - clock_write_fa - clocking;
-                    clocks.writing_details += clock_write_details  - clock_write_vcf - clocking;
 
                 } catch (exception& e) {
                     #pragma omp critical
@@ -283,14 +281,17 @@ try {
                 }
             }
 
+            // Tally the thread statistics.
             #pragma omp critical(stats)
             {
                 ctg_stats += loc_proc.ctg_stats();
                 gt_stats  += loc_proc.gt_stats();
+                t_threads_totals += loc_proc.timers();
             }
         }
         if (omp_return != 0)
             return omp_return;
+        t_parallel.stop();
         progress.done();
         cout << '\n';
         assert(gt_stats.n_genotyped_loci == ctg_stats.n_nonempty_loci);
@@ -335,28 +336,33 @@ try {
         cout << "Processing all loci...\n" << flush;
         ProgressMeter progress (cout, false, 1000);
 
+        t_parallel.restart();
         //#pragma omp parallel
         {
             if (num_threads > 1)
                 cerr << "Beta note: Multithreading is not yet implemented for the reference-based mode. Running single-threaded.\n\n";
 
             LocusProcessor loc_proc;
+            Timers& t = loc_proc.timers();
             CLocAlnSet aln_loc;
-            Clocks& clocks = clocks_all.front(); //clocks_all[omp_get_thread_num()];
-            for(size_t loc_i=0; true; ++loc_i) {
-                double clock_loop_start = gettm();
-                double clocking = gettm() - clock_loop_start;
 
+            for(size_t loc_i=0; true; ++loc_i) {
+                // Read a locus from the BAM file.
+                t.reading.restart();
                 //#pragma omp critical(read)
                 bool rv = bam_cloc_builder.build_one_locus(aln_loc);
                 if (!rv)
                     break;
-                double clock_read = gettm();
+                t.reading.stop();
 
+                // Process it.
+                t.processing.restart();
                 aln_loc.merge_paired_reads();
                 loc_proc.process(aln_loc);
-                double clock_process = gettm();
+                t.processing.stop();
 
+                // Write the FASTA output.
+                t.writing_fa.restart();
                 //#pragma omp critical(write_fa)
                 {
                     for (size_t i=next_fa_to_write+fa_outputs.size(); i<=loc_i; ++i)
@@ -371,8 +377,10 @@ try {
                         ++next_fa_to_write;
                     }
                 }
-                double clock_write_fa = gettm();
+                t.writing_fa.stop();
 
+                // Write the VCF output.
+                t.writing_vcf.restart();
                 //#pragma omp critical(write_vcf)
                 {
                     for (size_t i=next_vcf_to_write+vcf_outputs.size(); i<=loc_i; ++i)
@@ -383,19 +391,21 @@ try {
                         ++n_writes;
                         if (vcf_outputs.size() > max_size_before_write)
                             max_size_before_write = vcf_outputs.size();
-                        double start_writing = gettm();
+                        t_writing_vcf.restart();
                         do {
                             o_vcf_f->file() << vcf_outputs.front().second;
                             vcf_outputs.pop_front();
                             ++next_vcf_to_write;
                             ++progress;
                         } while (!vcf_outputs.empty() && vcf_outputs.front().first);
-                        actually_writing_vcf += gettm() - start_writing - clocking;
+                        t_writing_vcf.stop();
                     }
                 }
-                double clock_write_vcf = gettm();
+                t.writing_vcf.stop();
 
+                // Write the detailed output.
                 if (detailed_output) {
+                    t.writing_details.restart();
                     //#pragma omp critical(write_details)
                     {
                         for (size_t i=next_det_to_write+det_outputs.size(); i<=loc_i; ++i)
@@ -408,23 +418,18 @@ try {
                             ++next_det_to_write;
                         }
                     }
+                    t.writing_details.stop();
                 }
-                double clock_write_details = gettm();
-
-                clocks.clocking        += 7 * clocking;
-                clocks.reading         += clock_read       - clock_loop_start - clocking;
-                clocks.processing      += clock_process    - clock_read - clocking;
-                clocks.writing_fa      += clock_write_fa   - clock_process - clocking;
-                clocks.writing_vcf     += clock_write_vcf  - clock_write_fa - clocking;
-                clocks.writing_details += clock_write_details  - clock_write_vcf - clocking;
             }
 
             gt_stats += loc_proc.gt_stats();
+            t_threads_totals += loc_proc.timers();
         } //omp parallel
+        t_parallel.stop();
         progress.done();
         cout << '\n';
 
-        // Report statistics on the loci.
+        // Report statistics on the input BAM.
         const BamCLocBuilder::BamStats& bam_stats = bam_cloc_builder.stats();
         cout << "Read " << bam_stats.n_records << " BAM records:\n"
              << "  kept " << bam_stats.n_primary_kept() << " primary alignments\n"
@@ -440,9 +445,7 @@ try {
 
     } else DOES_NOT_HAPPEN; //input_type
 
-    //
-    // Report statistics on the analysis.
-    //
+    // Report statistics on genotyping and haplotyping.
     {
         size_t tot = gt_stats.n_genotyped_loci;
         size_t ph  = gt_stats.n_loci_phasing_issues();
@@ -468,26 +471,38 @@ try {
     // Report clockings.
     //
     {
-        double clock_parallel_end = gettm();
-        Clocks totals = std::accumulate(clocks_all.begin(), clocks_all.end(), Clocks());
-        totals /= num_threads;
-        double total_time = clock_parallel_end - clock_parallel_start;
+        double ll  = t_parallel.elapsed();
+        double r   = t_threads_totals.reading.elapsed();
+        double p   = t_threads_totals.processing.elapsed();
+        double w_f = t_threads_totals.writing_fa.elapsed();
+        double w_v = t_threads_totals.writing_vcf.elapsed();
+        double w_d = t_threads_totals.writing_details.elapsed();
+        double v   = t_writing_vcf.elapsed();
+
+        double c = t_parallel.consumed()
+                 + t_threads_totals.reading.consumed()
+                 + t_threads_totals.processing.consumed()
+                 + t_threads_totals.writing_fa.consumed()
+                 + t_threads_totals.writing_vcf.consumed()
+                 + t_threads_totals.writing_details.consumed()
+                 + t_writing_vcf.consumed()
+                 ;
+
         ostream os (logger->l.rdbuf());
-        os.exceptions(os.exceptions() | ios::badbit);
         os << std::fixed << std::setprecision(2);
         os << "BEGIN clockings\n"
            << "Num. threads: " << num_threads << "\n"
-           << "Parallel time: " << total_time << "\n"
+           << "Parallel time: " << ll << "\n"
            << "Average thread time spent...\n"
-           << std::setw(8) << totals.reading  << "  reading (" << as_percentage(totals.reading / total_time) << ")\n"
-           << std::setw(8) << totals.processing << "  processing (" << as_percentage(totals.processing / total_time) << ")\n"
-           << std::setw(8) << totals.writing_fa << "  writing_fa (" << as_percentage(totals.writing_fa / total_time) << ")\n"
-           << std::setw(8) << totals.writing_vcf << "  writing_vcf (" << as_percentage(totals.writing_vcf / total_time) << ")\n"
-           << std::setw(8) << totals.writing_details << "  writing_details (" << as_percentage(totals.writing_details / total_time) << ")\n"
-           << std::setw(8) << totals.clocking  << "  clocking (" << as_percentage(totals.clocking / total_time) << ")\n"
-           << std::setw(8) << totals.sum() << "  total (" << as_percentage(totals.sum() / total_time) << ")\n"
-           << "Time spent actually_writing_vcf: " << actually_writing_vcf << " (" << as_percentage(actually_writing_vcf / total_time) << ")\n"
-           << "VCFwrite block size: mean=" << (double) gt_stats.n_genotyped_loci / n_writes << "(n=" << n_writes << "); max=" << max_size_before_write << "\n"
+           << std::setw(8) << r  << "  reading (" << as_percentage(r / ll) << ")\n"
+           << std::setw(8) << p << "  processing (" << as_percentage(p / ll) << ")\n"
+           << std::setw(8) << w_f << "  writing_fa (" << as_percentage(w_f / ll) << ")\n"
+           << std::setw(8) << w_v << "  writing_vcf (" << as_percentage(w_v / ll) << ")\n"
+           << std::setw(8) << w_d << "  writing_details (" << as_percentage(w_d / ll) << ")\n"
+           << std::setw(8) << c << "  clocking (" << as_percentage(c / ll) << ")\n"
+           << "Total time spent writing vcf: " << v << " (" << as_percentage(v / ll) << ")\n"
+           << "VCFwrite block size: mean=" << (double) gt_stats.n_genotyped_loci / n_writes
+               << "(n=" << n_writes << "); max=" << max_size_before_write << "\n"
            << "END clockings\n\n"
            ;
     }
@@ -1881,21 +1896,14 @@ void LocusProcessor::using_true_reference(CLocAlnSet& aln_loc, CLocReadSet&& loc
     }
 }
 
-Clocks& Clocks::operator+= (const Clocks& other) {
-    clocking += other.clocking;
+Timers& Timers::operator+= (const Timers& other) {
     reading += other.reading;
-    processing += other.processing;
     writing_fa += other.writing_fa;
     writing_vcf += other.writing_vcf;
-    return *this;
-}
+    writing_vcf += other.writing_details;
 
-Clocks& Clocks::operator/= (double d) {
-    clocking /= d;
-    reading /= d;
-    processing /= d;
-    writing_fa /= d;
-    writing_vcf /= d;
+    processing += other.processing;
+
     return *this;
 }
 
