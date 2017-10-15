@@ -472,13 +472,19 @@ try {
     //
     {
         double ll  = t_parallel.elapsed();
+        double v   = t_writing_vcf.elapsed();
+
         double r   = t_threads_totals.reading.elapsed();
         double p   = t_threads_totals.processing.elapsed();
-        double o   = t_threads_totals.olap_aligning.elapsed();
         double w_f = t_threads_totals.writing_fa.elapsed();
         double w_v = t_threads_totals.writing_vcf.elapsed();
         double w_d = t_threads_totals.writing_details.elapsed();
-        double v   = t_writing_vcf.elapsed();
+
+        double a   = t_threads_totals.assembling.elapsed();
+        double o   = t_threads_totals.olap_aligning.elapsed();
+        double g   = t_threads_totals.geno_haplotyping.elapsed();
+        double b   = t_threads_totals.building_outputs.elapsed();
+        double b_v = t_threads_totals.building_vcf_output.elapsed();
 
         double c = t_parallel.consumed()
                  + t_threads_totals.reading.consumed()
@@ -486,6 +492,11 @@ try {
                  + t_threads_totals.writing_fa.consumed()
                  + t_threads_totals.writing_vcf.consumed()
                  + t_threads_totals.writing_details.consumed()
+                 + t_threads_totals.assembling.consumed()
+                 + t_threads_totals.olap_aligning.consumed()
+                 + t_threads_totals.geno_haplotyping.consumed()
+                 + t_threads_totals.building_outputs.consumed()
+                 + t_threads_totals.building_vcf_output.consumed()
                  + t_writing_vcf.consumed()
                  ;
 
@@ -494,14 +505,21 @@ try {
         os << "BEGIN clockings\n"
            << "Num. threads: " << num_threads << "\n"
            << "Parallel time: " << ll << "\n"
-           << "Average thread time spent...\n"
+           << "Average thread time spent:\n"
            << std::setw(8) << r  << "  reading (" << as_percentage(r / ll) << ")\n"
-           << std::setw(8) << p << "  processing (" << as_percentage(p / ll) << ")\n"
-           << std::setw(16) << o << "  aligning/overlapping (" << as_percentage(o / ll) << ")\n"
+           << std::setw(8) << p << "  processing (" << as_percentage(p / ll) << ")\n";
+        if (a != 0.0)
+            // De novo mode & paired-ends.
+            os << std::setw(16) << a << "  assembling (" << as_percentage(a / ll) << ")\n"
+               << std::setw(16) << o << "  aligning/overlapping (" << as_percentage(o / ll) << ")\n";
+        os << std::setw(16) << g << "  genotyping/haplotyping (" << as_percentage(g / ll) << ")\n"
+           << std::setw(16) << b << "  building outputs (" << as_percentage(b / ll) << ")\n"
+           << std::setw(16) << b_v << "  building VCF output (" << as_percentage(b_v / ll) << ")\n"
            << std::setw(8) << w_f << "  writing_fa (" << as_percentage(w_f / ll) << ")\n"
-           << std::setw(8) << w_v << "  writing_vcf (" << as_percentage(w_v / ll) << ")\n"
-           << std::setw(8) << w_d << "  writing_details (" << as_percentage(w_d / ll) << ")\n"
-           << std::setw(8) << c << "  clocking (" << as_percentage(c / ll) << ")\n"
+           << std::setw(8) << w_v << "  writing_vcf (" << as_percentage(w_v / ll) << ")\n";
+        if (detailed_output)
+            os << std::setw(8) << w_d << "  writing_details (" << as_percentage(w_d / ll) << ")\n";
+        os << std::setw(8) << c << "  clocking (" << as_percentage(c / ll) << ")\n"
            << "Total time spent writing vcf: " << v << " (" << as_percentage(v / ll) << ")\n"
            << "VCFwrite block size: mean=" << (double) gt_stats.n_genotyped_loci / n_writes
                << "(n=" << n_writes << "); max=" << max_size_before_write << "\n"
@@ -652,12 +670,12 @@ LocusProcessor::process(CLocReadSet& loc)
             }
 
             // Assemble a contig.
+            timers_.assembling.restart();
             vector<const DNASeq4*> seqs_to_assemble;
             for (const Read& r : loc.pe_reads())
                 seqs_to_assemble.push_back(&r.seq);
-
             DNASeq4 ctg = DNASeq4(assemble_contig(seqs_to_assemble));
-
+            timers_.assembling.stop();
             if (ctg.empty())
                 break;
             ctg_stats_.length_ctg_tot += ctg.length();
@@ -665,6 +683,7 @@ LocusProcessor::process(CLocReadSet& loc)
             //
             // Build a SuffixTree of the contig.
             //
+            timers_.olap_aligning.restart();
             SuffixTree *stree   = new SuffixTree(ctg);
             stree->build_tree();
 
@@ -748,6 +767,7 @@ LocusProcessor::process(CLocReadSet& loc)
                 loc_.details_ss << "END pe_alns\n";
             }
             delete stree;
+            timers_.olap_aligning.stop();
 
             aln_loc.merge_paired_reads();
 
@@ -793,6 +813,7 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
     //
     // Call SNPs. Determine the consensus sequence.
     //
+    timers_.geno_haplotyping.restart();
     vector<SiteCounts> depths;
     vector<SiteCall> calls;
     depths.reserve(aln_loc.ref().length());
@@ -820,8 +841,11 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
         if (!inconsistent_samples.empty())
             ++gt_stats_.n_badly_phased_samples[ {inconsistent_samples.size(), aln_loc.n_samples()} ];
     }
+    timers_.geno_haplotyping.stop();
 
+    timers_.building_outputs.restart();
     write_one_locus(aln_loc, depths, calls, phase_data);
+    timers_.building_outputs.stop();
 
     if (detailed_output) {
         loc_.details_ss << "END locus " << loc_.id << "\n";
@@ -1463,6 +1487,7 @@ void LocusProcessor::write_one_locus (
     //
     // Vcf output.
     //
+    timers_.building_vcf_output.restart();
     assert(depths.size() == ref.length());
     assert(calls.size() == ref.length());
     vector<size_t> sample_sites_w_data (mpopi.samples().size(), 0);
@@ -1661,6 +1686,7 @@ void LocusProcessor::write_one_locus (
         vcf_records << rec;
     }
     loc_.o_vcf = vcf_records.str();
+    timers_.building_vcf_output.stop();
 
     //
     // Fasta output.
@@ -1914,7 +1940,11 @@ Timers& Timers::operator+= (const Timers& other) {
     writing_vcf += other.writing_vcf;
     writing_vcf += other.writing_details;
 
+    assembling += other.assembling;
     olap_aligning += other.olap_aligning;
+    geno_haplotyping += other.geno_haplotyping;
+    building_outputs += other.building_outputs;
+    building_vcf_output += other.building_vcf_output;
 
     return *this;
 }
