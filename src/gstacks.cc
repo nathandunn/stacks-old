@@ -474,6 +474,7 @@ try {
         double ll  = t_parallel.elapsed();
         double r   = t_threads_totals.reading.elapsed();
         double p   = t_threads_totals.processing.elapsed();
+        double o   = t_threads_totals.olap_aligning.elapsed();
         double w_f = t_threads_totals.writing_fa.elapsed();
         double w_v = t_threads_totals.writing_vcf.elapsed();
         double w_d = t_threads_totals.writing_details.elapsed();
@@ -496,6 +497,7 @@ try {
            << "Average thread time spent...\n"
            << std::setw(8) << r  << "  reading (" << as_percentage(r / ll) << ")\n"
            << std::setw(8) << p << "  processing (" << as_percentage(p / ll) << ")\n"
+           << std::setw(16) << o << "  aligning/overlapping (" << as_percentage(o / ll) << ")\n"
            << std::setw(8) << w_f << "  writing_fa (" << as_percentage(w_f / ll) << ")\n"
            << std::setw(8) << w_v << "  writing_vcf (" << as_percentage(w_v / ll) << ")\n"
            << std::setw(8) << w_d << "  writing_details (" << as_percentage(w_d / ll) << ")\n"
@@ -660,6 +662,8 @@ LocusProcessor::process(CLocReadSet& loc)
                 break;
             ctg_stats_.length_ctg_tot += ctg.length();
 
+            timers_.olap_aligning.restart();
+
             // Align each read to the contig.
             CLocAlnSet pe_aln_loc;
             pe_aln_loc.reinit(loc_.id, loc_.pos, loc_.mpopi);
@@ -723,6 +727,8 @@ LocusProcessor::process(CLocReadSet& loc)
             }
             delete aligner;
             delete stree;
+
+            timers_.olap_aligning.stop();
 
             //
             // Merge the forward & paired-end alignments.
@@ -1898,11 +1904,12 @@ void LocusProcessor::using_true_reference(CLocAlnSet& aln_loc, CLocReadSet&& loc
 
 Timers& Timers::operator+= (const Timers& other) {
     reading += other.reading;
+    processing += other.processing;
     writing_fa += other.writing_fa;
     writing_vcf += other.writing_vcf;
     writing_vcf += other.writing_details;
 
-    processing += other.processing;
+    olap_aligning += other.olap_aligning;
 
     return *this;
 }
