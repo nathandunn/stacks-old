@@ -304,6 +304,7 @@ int main (int argc, char* argv[]) {
     // Write out the distributions of catalog loci.
     //
     bloc.write_distributions(log_fh);
+    bloc.cleanup();
 
     if (kernel_smoothed)
         delete smooth;
@@ -369,7 +370,7 @@ int main (int argc, char* argv[]) {
         exports[i]->close();
         delete exports[i];
     }
-
+    
     // //
     // // Read the bootstrap-whitelist.
     // //
@@ -900,6 +901,19 @@ BatchLocusProcessor::hapstats(ostream &log_fh)
         loc->s->calc_hapstats(loc->cloc, (const Datum **) loc->d, *this->_mpopi);
     }
 
+    return 0;
+}
+
+int
+BatchLocusProcessor::cleanup()
+{
+    if (this->_input_mode == InputMode::vcf) {
+        delete this->_vcf_header;
+        
+    } else {
+        delete this->_vcf_header;
+    }
+    
     return 0;
 }
 
