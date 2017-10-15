@@ -474,27 +474,27 @@ try {
         double ll  = t_parallel.elapsed();
         double v   = t_writing_vcf.elapsed();
 
-        double r   = t_threads_totals.reading.elapsed();
-        double p   = t_threads_totals.processing.elapsed();
-        double w_f = t_threads_totals.writing_fa.elapsed();
-        double w_v = t_threads_totals.writing_vcf.elapsed();
-        double w_d = t_threads_totals.writing_details.elapsed();
+        double r   = t_threads_totals.reading.elapsed() / num_threads;
+        double p   = t_threads_totals.processing.elapsed() / num_threads;
+        double w_f = t_threads_totals.writing_fa.elapsed() / num_threads;
+        double w_v = t_threads_totals.writing_vcf.elapsed() / num_threads;
+        double w_d = t_threads_totals.writing_details.elapsed() / num_threads;
 
-        double a   = t_threads_totals.assembling.elapsed();
-        double o   = t_threads_totals.olap_aligning.elapsed();
-        double g   = t_threads_totals.geno_haplotyping.elapsed();
-        double b_v = t_threads_totals.building_vcf.elapsed();
+        double a   = t_threads_totals.assembling.elapsed() / num_threads;
+        double o   = t_threads_totals.olap_aligning.elapsed() / num_threads;
+        double g   = t_threads_totals.geno_haplotyping.elapsed() / num_threads;
+        double b_v = t_threads_totals.building_vcf.elapsed() / num_threads;
 
         double c = t_parallel.consumed()
-                 + t_threads_totals.reading.consumed()
-                 + t_threads_totals.processing.consumed()
-                 + t_threads_totals.writing_fa.consumed()
-                 + t_threads_totals.writing_vcf.consumed()
-                 + t_threads_totals.writing_details.consumed()
-                 + t_threads_totals.assembling.consumed()
-                 + t_threads_totals.olap_aligning.consumed()
-                 + t_threads_totals.geno_haplotyping.consumed()
-                 + t_threads_totals.building_vcf.consumed()
+                 + t_threads_totals.reading.consumed() / num_threads
+                 + t_threads_totals.processing.consumed() / num_threads
+                 + t_threads_totals.writing_fa.consumed() / num_threads
+                 + t_threads_totals.writing_vcf.consumed() / num_threads
+                 + t_threads_totals.writing_details.consumed() / num_threads
+                 + t_threads_totals.assembling.consumed() / num_threads
+                 + t_threads_totals.olap_aligning.consumed() / num_threads
+                 + t_threads_totals.geno_haplotyping.consumed() / num_threads
+                 + t_threads_totals.building_vcf.consumed() / num_threads
                  + t_writing_vcf.consumed()
                  ;
 
