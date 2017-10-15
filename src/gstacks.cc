@@ -662,8 +662,6 @@ LocusProcessor::process(CLocReadSet& loc)
                 break;
             ctg_stats_.length_ctg_tot += ctg.length();
 
-            timers_.olap_aligning.restart();
-
             // Align each read to the contig.
             CLocAlnSet pe_aln_loc;
             pe_aln_loc.reinit(loc_.id, loc_.pos, loc_.mpopi);
@@ -727,8 +725,6 @@ LocusProcessor::process(CLocReadSet& loc)
             }
             delete aligner;
             delete stree;
-
-            timers_.olap_aligning.stop();
 
             //
             // Merge the forward & paired-end alignments.
