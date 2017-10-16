@@ -325,6 +325,7 @@ try {
     } else if (input_type == GStacksInputT::refbased) {
         // Initialize the CLoc reader
         BamCLocBuilder bam_cloc_builder (&bam_f_ptr, refbased_cfg);
+        bool eof = false;
 
         // Open the VCF file.
         VcfHeader vcf_header;
@@ -337,33 +338,36 @@ try {
         ProgressMeter progress (cout, false, 1000);
 
         t_parallel.restart();
-        //#pragma omp parallel
+        #pragma omp parallel
         {
-            if (num_threads > 1)
-                cerr << "Beta note: Multithreading is not yet implemented for the reference-based mode. Running single-threaded.\n\n";
-
             LocusProcessor loc_proc;
             Timers& t = loc_proc.timers();
             CLocAlnSet aln_loc;
 
-            for(size_t loc_i=0; true; ++loc_i) {
+            bool thread_eof;
+            #pragma omp atomic read
+            thread_eof = eof;
+            while(!thread_eof ) {
                 // Read a locus from the BAM file.
                 t.reading.restart();
-                //#pragma omp critical(read)
-                bool rv = bam_cloc_builder.build_one_locus(aln_loc);
-                if (!rv)
+                #pragma omp critical(read)
+                if (!(thread_eof = eof))
+                    thread_eof = eof = !bam_cloc_builder.build_one_locus(aln_loc);
+                if (thread_eof)
                     break;
                 t.reading.stop();
 
                 // Process it.
                 t.processing.restart();
+                assert(aln_loc.id() >= 1);
+                size_t loc_i = aln_loc.id() - 1;
                 aln_loc.merge_paired_reads();
                 loc_proc.process(aln_loc);
                 t.processing.stop();
 
                 // Write the FASTA output.
                 t.writing_fa.restart();
-                //#pragma omp critical(write_fa)
+                #pragma omp critical(write_fa)
                 {
                     for (size_t i=next_fa_to_write+fa_outputs.size(); i<=loc_i; ++i)
                         fa_outputs.push_back( {false, string()} );
@@ -381,7 +385,7 @@ try {
 
                 // Write the VCF output.
                 t.writing_vcf.restart();
-                //#pragma omp critical(write_vcf)
+                #pragma omp critical(write_vcf)
                 {
                     for (size_t i=next_vcf_to_write+vcf_outputs.size(); i<=loc_i; ++i)
                         vcf_outputs.push_back( {false, string()} );
@@ -406,7 +410,7 @@ try {
                 // Write the detailed output.
                 if (detailed_output) {
                     t.writing_details.restart();
-                    //#pragma omp critical(write_details)
+                    #pragma omp critical(write_details)
                     {
                         for (size_t i=next_det_to_write+det_outputs.size(); i<=loc_i; ++i)
                             det_outputs.push_back( {false, string()} );
@@ -420,6 +424,9 @@ try {
                     }
                     t.writing_details.stop();
                 }
+
+                #pragma omp atomic read
+                thread_eof = eof;
             }
 
             gt_stats += loc_proc.gt_stats();
