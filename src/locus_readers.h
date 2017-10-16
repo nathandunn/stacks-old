@@ -14,8 +14,7 @@ class BamPopInfo {
     set<string> read_groups_;
     map<const char*, size_t, LessCStrs> rg_to_sample_;
 public:
-    BamPopInfo(const Bam* bam_f);
-    void create_sample_ids();
+    BamPopInfo(const Bam* bam_f, bool assign_ids=false);
 
     const MetaPopInfo& mpopi() const {return mpopi_;}
     size_t sample_of(const BamRecord& rec);
@@ -25,8 +24,8 @@ public:
 class BamCLocReader {
     Bam* bam_f_;
     BamPopInfo bpopi_;
-    BamRecord rec_;
     bool eof_;
+    BamRecord rec_;
     vector<const char*> loci_aln_positions_;
 
     int32_t loc_i_; // Index of the next locus (chromosome). Incremented by read_one_locus().
@@ -65,6 +64,8 @@ public:
         size_t n_supplementary;
         size_t n_unmapped;
 
+        size_t n_loci_built;
+
         size_t n_primary_kept() const {return n_primary - n_primary_mapq - n_primary_softclipped;}
     };
 
@@ -99,20 +100,19 @@ private:
     };
 
     Config cfg_;
+    BamStats stats_;
 
     Bam* bam_f_;
     BamPopInfo bpopi_;
 
-    BamStats stats_;
-    size_t n_loci_built_;
-
+    bool next_record();
+    bool eof_;
     BamRecord next_record_;
     bool treat_next_record_as_fw_;
-    bool next_record(BamRecord& r);
 
     // Buffers to store the reads of the sliding window.
     bool fill_window();
-    bool eof_;
+    void add_next_record_to_the_window();
     map<Pos5,vector<BamRecord>> fw_reads_by_5prime_pos_;
     std::multimap<Pos5,BamRecord> pe_reads_by_5prime_pos_;
     map<const char*,std::multimap<Pos5,BamRecord>::iterator, LessCStrs> pe_reads_by_name_;
@@ -140,7 +140,7 @@ class VcfCLocReader {
 //
 
 inline
-BamPopInfo::BamPopInfo(const Bam* bam_f) {
+BamPopInfo::BamPopInfo(const Bam* bam_f, bool assign_ids) {
 
     // Parse the @RG header lines.
     vector<string> rg_ids;
@@ -215,12 +215,10 @@ BamPopInfo::BamPopInfo(const Bam* bam_f) {
         }
         rg_to_sample_[rv.first->c_str()] = mpopi_.get_sample_index(samples[s]);
     }
-}
 
-inline
-void BamPopInfo::create_sample_ids() {
-    for (size_t i=0; i<mpopi_.samples().size(); ++i)
-        mpopi_.set_sample_id(i, i+1);
+    if (assign_ids)
+        for (size_t i=0; i<mpopi_.samples().size(); ++i)
+            mpopi_.set_sample_id(i, i+1);
 }
 
 inline
@@ -260,6 +258,7 @@ BamCLocReader::BamCLocReader(Bam** bam_f)
     }
 
     //
+    // Load genomic alignment information from the header.
     // If the first locus has alignment information: this is a ref-based analysis,
     // record all the alignment positions. Otherwise, assume it's a de novo analysis.
     //
@@ -298,18 +297,8 @@ BamCLocReader::BamCLocReader(Bam** bam_f)
             ++p;
             ++line;
         }
-        assert(loci_aln_positions_.empty() || loci_aln_positions_.size() == bam_f_->h().n_ref_chroms());
-    }
-
-    //
-    // Read the very first record.
-    //
-    if (!bam_f_->next_record(rec_, true)) {
-        cerr << "Error: No records in BAM file '" << bam_f_->path << "'.\n";
-        throw exception();
-    } else if (!rec_.is_primary()) {
-        cerr << "Error: BAM file '" << bam_f_->path << "' unexpectedly contains non-primary records.\n";
-        throw exception();
+        if(!loci_aln_positions_.empty() && loci_aln_positions_.size() != bam_f_->h().n_ref_chroms())
+            DOES_NOT_HAPPEN;
     }
 }
 
@@ -318,7 +307,16 @@ bool BamCLocReader::read_one_locus(CLocReadSet& readset) {
     assert(&readset.mpopi() == &mpopi()); // Otherwise sample indexes may be misleading.
 
     ++loc_i_;
-    if (loc_i_ == int32_t(n_loci())) {
+    if (loc_i_ == 0) {
+        // Read the first record.
+        if (!bam_f_->next_record(rec_, true)) {
+            cerr << "Error: No records in BAM file '" << bam_f_->path << "'.\n";
+            throw exception();
+        } else if (!rec_.is_primary()) {
+            cerr << "Error: BAM file '" << bam_f_->path << "' unexpectedly contains non-primary records.\n";
+            throw exception();
+        }
+    } else if (loc_i_ == int32_t(n_loci())) {
         assert(eof_);
         return false;
     }
@@ -371,34 +369,25 @@ BamCLocBuilder::BamCLocBuilder(
         const Config& cfg
 ) :
     cfg_(cfg),
-    bam_f_(*bam_f),
-    bpopi_(bam_f_),
     stats_(),
-    n_loci_built_(0),
-    treat_next_record_as_fw_(false),
-    eof_(false)
+    bam_f_(*bam_f),
+    bpopi_(bam_f_, true),
+    eof_(false),
+    treat_next_record_as_fw_(false)
     {
     *bam_f = NULL;
 
     if (!cfg_.paired)
         cfg_.max_insert_refsize = 0;
-
-    bpopi_.create_sample_ids();
-
-    // Read the very first record.
-    if (!next_record(next_record_)) {
-        cerr << "Error: No usable records in BAM file '" << bam_f_->path << "'.\n";
-        throw exception();
-    }
 }
 
 inline
-bool
-BamCLocBuilder::next_record(BamRecord& r)
+bool BamCLocBuilder::next_record()
 {
     while (true) {
-        if(!bam_f_->next_record(r, true))
+        if(!bam_f_->next_record(next_record_, true))
             return false;
+        const BamRecord& r = next_record_;
 
         if (cfg_.ign_pe_reads && r.is_read2())
             continue;
@@ -484,13 +473,48 @@ BamCLocBuilder::next_record(BamRecord& r)
 }
 
 inline
-bool
-BamCLocBuilder::fill_window()
+void BamCLocBuilder::add_next_record_to_the_window()
+{
+    //
+    // See `fill_window()`.
+    // This inserts `next_record_` into `fw_reads_by_5prime_pos_` (if it is a
+    // forward read or treated as such) or `pe_reads_by_5prime_pos_` (if it is
+    // a paired-end read).
+    //
+
+    // Determine the 5prime position.
+    Pos5 rec_5prime_pos;
+    rec_5prime_pos.chrom = next_record_.chrom();
+    if (next_record_.is_rev_compl()) {
+        rec_5prime_pos.strand = false;
+        rec_5prime_pos.bp = next_record_.pos() + BamRecord::cig_ref_len(next_record_) - 1;
+    } else {
+        rec_5prime_pos.strand = true;
+        rec_5prime_pos.bp = next_record_.pos();
+    }
+
+    // Save the record.
+    if (treat_next_record_as_fw_) {
+        auto locus_itr = fw_reads_by_5prime_pos_.insert(
+                std::make_pair(move(rec_5prime_pos), vector<BamRecord>())
+                ).first;
+        locus_itr->second.push_back(move(next_record_));
+    } else {
+        auto pe_read_itr = pe_reads_by_5prime_pos_.insert(
+                std::make_pair(move(rec_5prime_pos), move(next_record_))
+                );
+        // Also add an entry in the {pe_read_name : pe_record} map.
+        pe_reads_by_name_.insert( {pe_read_itr->second.qname(), pe_read_itr} );
+    }
+}
+
+inline
+bool BamCLocBuilder::fill_window()
 {
     /*
      * This defines the behavior of the sliding window.
      *
-     * We guarantee that any usable alignment of which the leftmost base
+     * This guarantees that any usable alignment of which the leftmost base
      * is within `max_insert_size` bases of the first base of the leftmost
      * cutsite is loaded.
      *
@@ -500,53 +524,37 @@ BamCLocBuilder::fill_window()
      * ensures that the BAM record's TLEN field is properly set.
      *
      * `pe_reads_by_5prime_pos_` also uses the 5prime position (i.e. that has been
-     * tlen-corrected if the strand is minus) so that we can compute insert lengths
-     * properly later. Paired-end reads need to be sorted by position so that we
-     * can discard those that were not matched and have become too far behind to
-     * find one at the given `max_insert_size`.
+     * tlen-corrected if the strand is minus) to ease insert lengths computations.
+     * Paired-end reads need to be sorted by position so that we can discard those
+     * that were not matched and have become too far behind to find one at the given
+     * `max_insert_size`. Paired-end records can also be accessed by name (for
+     * mate matching) via `pe_reads_by_name_`.
      */
 
     if (!eof_) {
-        while (fw_reads_by_5prime_pos_.empty()
-                || (
-                    next_record_.chrom() == fw_reads_by_5prime_pos_.begin()->first.chrom
-                    && size_t(next_record_.pos()) <= fw_reads_by_5prime_pos_.begin()->first.bp + cfg_.max_insert_refsize
-                )
+        if (next_record_.empty()) {
+            if ((eof_ = !next_record())) {
+                cerr << "Error: No usable records in BAM file '" << bam_f_->path << "'.\n";
+                throw exception();
+            }
+            assert(!next_record_.empty());
+        }
+        while (!eof_ && fw_reads_by_5prime_pos_.empty()) {
+            add_next_record_to_the_window(); // (Note: `next_record_` may be a paired-end read.)
+            eof_ = !next_record();
+        }
+        while (!eof_
+                && next_record_.chrom() == fw_reads_by_5prime_pos_.begin()->first.chrom
+                && size_t(next_record_.pos()) <= fw_reads_by_5prime_pos_.begin()->first.bp + cfg_.max_insert_refsize
         ) {
-            // Determine the 5prime position.
-            Pos5 rec_5prime_pos;
-            rec_5prime_pos.chrom = next_record_.chrom();
-            if (next_record_.is_rev_compl()) {
-                rec_5prime_pos.bp = next_record_.pos() + BamRecord::cig_ref_len(next_record_) - 1;
-                rec_5prime_pos.strand = false;
-            } else {
-                rec_5prime_pos.bp = next_record_.pos();
-                rec_5prime_pos.strand = true;
-            }
-
-            // Save the record.
-            if (treat_next_record_as_fw_) {
-                auto locus_itr = fw_reads_by_5prime_pos_.insert(
-                        // (Cannot use {first, second} here until c++17.)
-                        std::make_pair(move(rec_5prime_pos), vector<BamRecord>())
-                        ).first;
-                locus_itr->second.push_back(move(next_record_));
-            } else {
-                auto pe_read_itr = pe_reads_by_5prime_pos_.insert(
-                        std::make_pair(move(rec_5prime_pos), move(next_record_))
-                        );
-                pe_reads_by_name_.insert( {pe_read_itr->second.qname(), pe_read_itr} );
-            }
-
-            if (!next_record(next_record_)) {
-                eof_ = true;
-                break;
-            }
+            add_next_record_to_the_window();
+            eof_ = !next_record();
         }
     }
-    if (fw_reads_by_5prime_pos_.empty())
-        // No more loci.
+    if (fw_reads_by_5prime_pos_.empty()) {
+        assert(eof_);
         return false;
+    }
 
     if (cfg_.paired) {
         // Clean up paired-end reads that are too far behind.
@@ -560,8 +568,7 @@ BamCLocBuilder::fill_window()
             pe_reads_by_name_.erase(pe_reads_by_5prime_pos_.begin()->second.qname());
             pe_reads_by_5prime_pos_.erase(pe_reads_by_5prime_pos_.begin());
         }
-        // Assuming proper sorting (which we enforce) there shouldn't be reads
-        // from further-ranked chromosomes.
+        // As we enforce sorting there shouldn't be reads from further-ranked chromosomes.
         assert(pe_reads_by_5prime_pos_.empty() || pe_reads_by_5prime_pos_.rbegin()->first.chrom == leftmost_cutsite.chrom);
     } else {
         assert(pe_reads_by_5prime_pos_.empty());
@@ -571,8 +578,7 @@ BamCLocBuilder::fill_window()
 }
 
 inline
-bool
-BamCLocBuilder::build_one_locus(CLocAlnSet& aln_loc)
+bool BamCLocBuilder::build_one_locus(CLocAlnSet& aln_loc)
 {
     aln_loc.clear();
 
@@ -755,7 +761,7 @@ BamCLocBuilder::build_one_locus(CLocAlnSet& aln_loc)
     }
 
     // Build the actual object.
-    aln_loc.reinit(n_loci_built_++, loc_pos, &mpopi());
+    aln_loc.reinit(++stats_.n_loci_built, loc_pos, &mpopi());
     aln_loc.ref(DNASeq4(max_ref_span));
     for (SAlnRead& read : fw_reads) {
         cigar_extend_right(read.cigar, max_ref_span - cigar_length_ref(read.cigar));
