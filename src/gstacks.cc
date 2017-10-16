@@ -206,9 +206,13 @@ try {
                     // Read a locus from the BAM file.
                     t.reading.restart();
                     #pragma omp critical(read)
-                    {
-                        bam_cloc_reader.read_one_locus(loc);
+                    try {
+                        if (omp_return == 0)
+                            bam_cloc_reader.read_one_locus(loc);
+                    } catch (exception& e) {
+                        omp_return = stacks_handle_exceptions(e);
                     }
+                if (omp_return == 0) {
                     size_t loc_i = loc.bam_i();
                     t.reading.stop();
 
@@ -276,9 +280,8 @@ try {
                         }
                         t.writing_details.stop();
                     }
-
-                } catch (exception& e) {
-                    #pragma omp critical
+                }} catch (exception& e) {
+                    #pragma omp critical(exc)
                     omp_return = stacks_handle_exceptions(e);
                 }
             }
@@ -354,7 +357,7 @@ try {
                 t.reading.restart();
                 #pragma omp critical(read)
                 try {
-                    if (!(thread_eof = eof))
+                    if (!(thread_eof = eof) && omp_return == 0)
                         thread_eof = eof = !bam_cloc_builder.build_one_locus(aln_loc);
                 } catch (exception& e) {
                     omp_return = stacks_handle_exceptions(e);
