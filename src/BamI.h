@@ -160,8 +160,11 @@ public:
 
 class Bam: public Input {
     htsFile*  bam_fh;
-    size_t    n_records_read_;
     BamHeader hdr;
+
+    size_t  n_records_read_;
+    int32_t prev_chrom_;
+    int32_t prev_pos_;
 
 public:
     Bam(const char *path);
@@ -170,6 +173,7 @@ public:
     const BamHeader& h() const {return hdr;}
 
     bool next_record(BamRecord& rec);
+    bool next_record(BamRecord& rec, bool check_order);
     size_t n_records_read() const {return n_records_read_;}
 
     Seq *next_seq();
@@ -194,6 +198,26 @@ bool Bam::next_record(BamRecord& rec) {
         throw ios::failure("hts::bam_read1");
     }
     ++n_records_read_;
+    return true;
+}
+
+inline
+bool Bam::next_record(BamRecord& rec, bool check_order) {
+    if (!next_record(rec))
+        return false;
+    if (check_order) {
+        if (rec.chrom() < prev_chrom_
+                || (rec.pos() < prev_pos_ && rec.chrom() == prev_chrom_)
+        ) {
+            cerr << "Error: BAM file is not properly sorted; " << n_records_read_ << "th record '" << rec.qname()
+                 << "' at " << hdr.chrom_str(rec.chrom()) << ':' << rec.pos()
+                 << " should come before previously seen position " << hdr.chrom_str(prev_chrom_)
+                 << ':' << prev_pos_ << ".\n";
+            throw exception();
+        }
+    }
+    prev_chrom_ = rec.chrom();
+    prev_pos_ = rec.pos();
     return true;
 }
 
