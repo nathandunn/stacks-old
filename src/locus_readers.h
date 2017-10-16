@@ -7,14 +7,26 @@
 #include "locus.h"
 #include "Vcf.h"
 
-void build_mpopi(MetaPopInfo& mpopi, map<string, size_t>& rg_to_sample, const Bam& bam_f);
+// BamPopInfo : class to handle BAM read groups and interface
+// them with MetaPopInfo Samples.
+class BamPopInfo {
+    MetaPopInfo mpopi_;
+    set<string> read_groups_;
+    map<const char*, size_t, LessCStrs> rg_to_sample_;
+public:
+    BamPopInfo(const Bam* bam_f);
+    void create_sample_ids();
 
+    const MetaPopInfo& mpopi() const {return mpopi_;}
+    size_t sample_of(const BamRecord& rec);
+};
+
+// BamCLocReader: Class to read catalog loci from files by the de novo pipeline.
 class BamCLocReader {
     Bam* bam_f_;
+    BamPopInfo bpopi_;
     BamRecord rec_;
     bool eof_;
-    MetaPopInfo mpopi_;
-    map<string, size_t> rg_to_sample_;
     vector<const char*> loci_aln_positions_;
 
     int32_t loc_i_; // Index of the next locus (chromosome). Incremented by read_one_locus().
@@ -26,12 +38,13 @@ public:
     const Bam* bam_f() const {return bam_f_;}
     size_t n_loci() const {return bam_f_->h().n_ref_chroms();}
     int target2id(size_t target_i) const {return atoi(bam_f_->h().chrom_str(target_i));}
-    const MetaPopInfo& mpopi() const {return mpopi_;}
+    const MetaPopInfo& mpopi() const {return bpopi_.mpopi();}
 
     // Reads one locus. Returns false on EOF.
     bool read_one_locus(CLocReadSet& readset);
 };
 
+// BamCLocBuilder: Class to build catalog loci from third party alignment files.
 class BamCLocBuilder {
 public:
     struct Config {
@@ -61,7 +74,7 @@ public:
     // Reads one locus. Returns false on EOF.
     bool build_one_locus(CLocAlnSet& readset);    
 
-    const MetaPopInfo& mpopi() const {return mpopi_;}
+    const MetaPopInfo& mpopi() const {return bpopi_.mpopi();}
     const Bam* bam_f() const {return bam_f_;}
     const BamStats& stats() const {return stats_;}
 
@@ -88,8 +101,7 @@ private:
     Config cfg_;
 
     Bam* bam_f_;
-    MetaPopInfo mpopi_;
-    map<string, size_t> rg_to_sample_;
+    BamPopInfo bpopi_;
 
     BamStats stats_;
     size_t n_loci_built_;
@@ -128,21 +140,13 @@ class VcfCLocReader {
 //
 
 inline
-void
-build_mpopi(
-        MetaPopInfo& mpopi,
-        map<string, size_t>& rg_to_sample,
-        const Bam& bam_f
-) {
-    assert(mpopi.samples().empty());
-    assert(rg_to_sample.empty());
+BamPopInfo::BamPopInfo(const Bam* bam_f) {
 
+    // Parse the @RG header lines.
     vector<string> rg_ids;
     vector<string> samples;
     vector<int> sample_ids;
-
-    // Parse the @RG header lines.
-    const char* p = bam_f.h().text();
+    const char* p = bam_f->h().text();
     size_t line = 1;
     try {
         while (true) {
@@ -189,40 +193,66 @@ build_mpopi(
 
     if (samples.empty()) {
         cerr << "Error: Found no @RG lines (read groups/sample identifiers) in the header of BAM file '"
-             << bam_f.path << "'.\n";
+             << bam_f->path << "'.\n";
         throw exception();
     }
 
     // Initialize the MetaPopInfo.
-    mpopi.init_names(samples);
+    mpopi_.init_names(samples);
 
     // Set the sample IDs.
     assert(sample_ids.size() == samples.size());
     for (size_t s=0; s<samples.size(); ++s)
-        mpopi.set_sample_id(mpopi.get_sample_index(samples[s]),sample_ids[s]);
+        mpopi_.set_sample_id(mpopi_.get_sample_index(samples[s]),sample_ids[s]);
 
-    // Initialize `rg_to_sample_`.
+    // Initialize `read_groups_`, `rg_to_sample_`.
     assert(rg_ids.size() == samples.size());
-    for (size_t s=0; s<mpopi.samples().size(); ++s)
-        rg_to_sample[rg_ids[s]] = mpopi.get_sample_index(samples[s]);
+    for (size_t s=0; s<mpopi_.samples().size(); ++s) {
+        auto rv = read_groups_.insert(move(rg_ids[s]));
+        if (!rv.second) {
+            cerr << "Error: BAM read group '" << *rv.first << "' is duplicated.\n";
+            throw exception();
+        }
+        rg_to_sample_[rv.first->c_str()] = mpopi_.get_sample_index(samples[s]);
+    }
+}
+
+inline
+void BamPopInfo::create_sample_ids() {
+    for (size_t i=0; i<mpopi_.samples().size(); ++i)
+        mpopi_.set_sample_id(i, i+1);
+}
+
+inline
+size_t BamPopInfo::sample_of(const BamRecord& rec) {
+    const char* rg = rec.read_group();
+    if (rg == NULL) {
+        cerr << "Error: Corrupt BAM file: missing read group for record '" << rec.qname() << "'.\n";
+        throw exception();
+    }
+    size_t sample;
+    try {
+        sample = rg_to_sample_.at(rg);
+    } catch(std::out_of_range&) {
+        cerr << "Error: Corrupt BAM file: encountered read group '" << rg
+             << "', which was not declared in the header (at record  '"
+             << rec.qname() << "').\n";
+        throw exception();
+    }
+    return sample;
 }
 
 inline
 BamCLocReader::BamCLocReader(Bam** bam_f)
-        : bam_f_(*bam_f),
-          eof_(false),
-          mpopi_(),
-          rg_to_sample_(),
-          loc_i_(-1)
-        {
-
+:
+    bam_f_(*bam_f),
+    bpopi_(bam_f_),
+    eof_(false),
+    loc_i_(-1)
+{
     *bam_f = NULL;
 
-    //
-    // Create the MetaPopInfo object from the header.
-    //
-    build_mpopi(mpopi_, rg_to_sample_, *bam_f_);
-    for (const Sample& s : mpopi_.samples()) {
+    for (const Sample& s : mpopi().samples()) {
         if (s.id == -1) {
             cerr << "Error: Sample '" << s.name << "' is missing its (integer) ID; was tsv2bam run correctly?\n";
             throw exception();
@@ -285,7 +315,7 @@ BamCLocReader::BamCLocReader(Bam** bam_f)
 
 inline
 bool BamCLocReader::read_one_locus(CLocReadSet& readset) {
-    assert(&readset.mpopi() == &mpopi_); // Otherwise sample indexes may be misleading.
+    assert(&readset.mpopi() == &mpopi()); // Otherwise sample indexes may be misleading.
 
     ++loc_i_;
     if (loc_i_ == int32_t(n_loci())) {
@@ -307,19 +337,14 @@ bool BamCLocReader::read_one_locus(CLocReadSet& readset) {
     if (!eof_) {
         // Read all the reads of the locus, and one more.
         while (rec_.chrom() == loc_i_) {
-            const char* rg = rec_.read_group();
-            if (rg == NULL) {
-                cerr << "Error: Corrupted BAM file: missing read group for record '" << rec_.qname() << "'.\n";
-                throw exception();
-            }
             if (rec_.is_read2())
-                readset.add_pe(SRead(Read(rec_.seq(), string(rec_.qname())+"/2"), rg_to_sample_.at(rg)));
+                readset.add_pe(SRead(Read(rec_.seq(), string(rec_.qname())+"/2"), bpopi_.sample_of(rec_)));
             else if (rec_.is_read1())
-                readset.add(SRead(Read(rec_.seq(), string(rec_.qname())+"/1"), rg_to_sample_.at(rg)));
+                readset.add(SRead(Read(rec_.seq(), string(rec_.qname())+"/1"), bpopi_.sample_of(rec_)));
             else
                 // If tsv2bam wasn't given paired-end reads, no flag was set and the
                 // read names were left unchanged, so we also don't touch them.
-                readset.add(SRead(Read(rec_.seq(), string(rec_.qname())), rg_to_sample_.at(rg)));
+                readset.add(SRead(Read(rec_.seq(), string(rec_.qname())), bpopi_.sample_of(rec_)));
 
             if (!bam_f_->next_record(rec_, true)) {
                 eof_ = true;
@@ -347,6 +372,7 @@ BamCLocBuilder::BamCLocBuilder(
 ) :
     cfg_(cfg),
     bam_f_(*bam_f),
+    bpopi_(bam_f_),
     stats_(),
     n_loci_built_(0),
     treat_next_record_as_fw_(false),
@@ -357,10 +383,7 @@ BamCLocBuilder::BamCLocBuilder(
     if (!cfg_.paired)
         cfg_.max_insert_refsize = 0;
 
-    // Create the MetaPopInfo object from the header. Assign sample IDs.
-    build_mpopi(mpopi_, rg_to_sample_, *bam_f_);
-    for (size_t i=0; i<mpopi_.samples().size(); ++i)
-        mpopi_.set_sample_id(i, i+1);
+    bpopi_.create_sample_ids();
 
     // Read the very first record.
     if (!next_record(next_record_)) {
@@ -574,14 +597,9 @@ BamCLocBuilder::build_one_locus(CLocAlnSet& aln_loc)
 
         // Get the samples of the records, and tally sample occurrences.
         fw_samples.clear();
-        vector<size_t> n_reads_per_sample (mpopi_.samples().size(), 0);
+        vector<size_t> n_reads_per_sample (mpopi().samples().size(), 0);
         for (const BamRecord& r : loc_records) {
-            const char* rg = r.read_group();
-            if (rg == NULL) {
-                cerr << "Error: Corrupted BAM file: missing read group for record '" << r.qname() << "'.\n";
-                throw exception();
-            }
-            size_t sample = rg_to_sample_.at(string(rg));
+            size_t sample = bpopi_.sample_of(r);
             fw_samples.push_back(sample);
             ++n_reads_per_sample[sample];
         }
@@ -699,17 +717,12 @@ BamCLocBuilder::build_one_locus(CLocAlnSet& aln_loc)
                 max_ref_span = insert_length;
 
             // Check that the read groups are consistent.
-            const char* rg = pe_rec.read_group();
-            if (rg == NULL) {
-                cerr << "Error: Corrupted BAM file: missing read group for record '" << pe_rec.qname() << "'.\n";
-                throw exception();
-            }
-            size_t pe_sample = rg_to_sample_.at(string(rg));
+            size_t pe_sample = bpopi_.sample_of(pe_rec);
             if (pe_sample != fw_samples[i]) {
                 cerr << "Warning: Paired reads '" << fw_rec.qname() << "' and '"
                      << pe_rec.qname() << "' belong to different samples ('"
-                     << mpopi_.samples()[fw_samples[i]].name << "' and '"
-                     << mpopi_.samples()[pe_sample].name << "').\n";
+                     << mpopi().samples()[fw_samples[i]].name << "' and '"
+                     << mpopi().samples()[pe_sample].name << "').\n";
                 continue;
             }
 
@@ -742,7 +755,7 @@ BamCLocBuilder::build_one_locus(CLocAlnSet& aln_loc)
     }
 
     // Build the actual object.
-    aln_loc.reinit(n_loci_built_++, loc_pos, &mpopi_);
+    aln_loc.reinit(n_loci_built_++, loc_pos, &mpopi());
     aln_loc.ref(DNASeq4(max_ref_span));
     for (SAlnRead& read : fw_reads) {
         cigar_extend_right(read.cigar, max_ref_span - cigar_length_ref(read.cigar));
