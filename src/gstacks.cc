@@ -176,7 +176,7 @@ try {
 
     if (input_type == GStacksInputT::denovo) {
         // Initialize the CLoc reader
-        BamCLocReader bam_cloc_reader (&bam_f_ptrs[0]);
+        BamCLocReader bam_cloc_reader (move(bam_f_ptrs));
 
         // Open the VCF file.
         VcfHeader vcf_header;
@@ -188,7 +188,7 @@ try {
         cout << "Processing all loci...\n" << flush;
         ContigStats ctg_stats {};
 
-        const size_t n_loci = bam_cloc_reader.bam_f()->h().n_ref_chroms();
+        const size_t n_loci = bam_cloc_reader.n_loci();
         ProgressMeter progress (cout, true, n_loci);
 
         t_parallel.restart();
@@ -1961,16 +1961,16 @@ Timers& Timers::operator+= (const Timers& other) {
 
 const string help_string = string() +
         prog_name + " " + VERSION  + "\n" +
-        prog_name + " -P stacks_dir\n" +
+        prog_name + " -P stacks_dir [-M popmap]\n" +
         prog_name + " -B bam_file [-B ...] -O out_dir [--paired]\n" +
         "\n"
         "De novo mode:\n"
         "  -P: input directory\n"
+        "  -M: list of samples in a population map\n"
         "\n"
-        "  The input directory must contain a 'catalog.bam' file, that\n"
-        "  the user should generate after running ustacks, cstacks, sstacks and\n"
-        "  tsv2bam with e.g.:\n"
-        "  \"samtools merge ./catalog.bam ./*.matches.bam\"\n"
+        "  If a population map is not given, the input directory must contain a\n"
+        "  'catalog.bam' file, that should be the merger (e.g. using samtools merge)\n"
+        "  of the '*.matches.bam' files of all the samples.\n"
         "\n"
         "Reference-based mode:\n"
         "  -B: input BAM file(s)\n"
@@ -2039,6 +2039,7 @@ try {
         {"quiet",        no_argument,       NULL,  'q'},
         {"in-dir",       required_argument, NULL,  'P'},
         {"in-bam",       required_argument, NULL,  'B'},
+        {"mpopi",        required_argument, NULL,  'M'},
         {"out-dir",      required_argument, NULL,  'O'},
         {"paired",       no_argument,       NULL,  1007},
         {"threads",      required_argument, NULL,  't'},
@@ -2069,12 +2070,13 @@ try {
     string out_dir;
     double gt_alpha = 0.05;
     double var_alpha = 0.05;
+    MetaPopInfo mpopi;
 
     int c;
     int long_options_i;
     while (true) {
 
-        c = getopt_long(argc, argv, "hqP:B:O:W:t:m:", long_options, &long_options_i);
+        c = getopt_long(argc, argv, "hqP:B:M:O:W:t:m:", long_options, &long_options_i);
 
         if (c == -1)
             break;
@@ -2096,6 +2098,9 @@ try {
             break;
         case 'B':
             in_bams.push_back(optarg);
+            break;
+        case 'M':
+            mpopi.init_popmap(optarg);
             break;
         case 'O':
             out_dir = optarg;
@@ -2229,7 +2234,11 @@ try {
     if (input_type == GStacksInputT::denovo) {
         if (in_dir.back() != '/')
             in_dir += '/';
-        in_bams.push_back(in_dir + "catalog.bam");
+        if (mpopi.samples().empty())
+            in_bams.push_back(in_dir + "catalog.bam");
+        else
+            for (const Sample& s : mpopi.samples())
+                in_bams.push_back(in_dir + s.name + ".matches.bam");
         if (out_dir.empty())
             out_dir = in_dir;
     }
@@ -2251,7 +2260,7 @@ void report_options(ostream& os) {
             "de novo"
             : (refbased_cfg.paired ? "reference-based, paired-end" : "reference-based, single-end")
             ) << "\n"
-       << "  Input file: '" << in_bams.front() << "'\n" //TODO
+       << "  Input file: '" << in_bams.front() << "'\n" //TODO Also, popmap_path.
        << "  Output to: '" << o_prefix << ".*'\n"
        << "  Model: " << *model << "\n";
 
