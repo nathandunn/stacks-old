@@ -221,6 +221,37 @@ BamPopInfo::BamPopInfo(const vector<Bam*>& bam_fs)
         throw;
     }}
 
+    //
+    // Initialize all the members.
+    //
+
+    // Initialize the MetaPopInfo.
+    vector<string> names_all;
+    for (size_t bam_f_i=0; bam_f_i<bam_fs.size(); ++bam_f_i)
+        for (const SampleData& d : readgroups_per_f[bam_f_i])
+            names_all.push_back(d.name);
+    names_all.erase(std::unique(names_all.begin(), names_all.end()), names_all.end());
+    mpopi_.init_names(names_all);
+
+    // Set the sample IDs. We allow overwriting.
+    for (size_t bam_f_i=0; bam_f_i<bam_fs.size(); ++bam_f_i)
+        for (const SampleData& d : readgroups_per_f[bam_f_i])
+            if (d.stacks_id != -1)
+                mpopi_.set_sample_id(mpopi_.get_sample_index(d.name), d.stacks_id);
+
+    // Initialize `read_groups_`, `rg_to_sample_`.
+    for (size_t bam_f_i=0; bam_f_i<bam_fs.size(); ++bam_f_i) {
+        for (SampleData& d : readgroups_per_f[bam_f_i]) {
+            auto rv = read_groups_[bam_f_i].emplace(move(d.rg), mpopi_.get_sample_index(d.name));
+            if (rv.second)
+                rg_to_sample_[bam_f_i].emplace(rv.first->first.c_str(), rv.first);
+        }
+    }
+
+    //
+    // Run checks.
+    //
+
     // Check that all the files have read groups.
     bool no_rg = false;
     for (size_t bam_f_i=0; bam_f_i<bam_fs.size(); ++bam_f_i) {
@@ -237,7 +268,6 @@ BamPopInfo::BamPopInfo(const vector<Bam*>& bam_fs)
     // (ID,NAME) combination.
     map<string,pair<string,size_t>> name_to_rg;
     map<string,pair<string,size_t>> rg_to_name;
-    map<string,int> name_to_stacks_id;
     for (size_t bam_f_i=0; bam_f_i<bam_fs.size(); ++bam_f_i) {
         for (const SampleData& d : readgroups_per_f[bam_f_i]) {
             auto rv1 = name_to_rg.insert({d.name, {d.rg, bam_f_i}});
@@ -260,26 +290,6 @@ BamPopInfo::BamPopInfo(const vector<Bam*>& bam_fs)
                      << "' and '" << bam_fs[r2n.second.second]->path << ".\n";
                 throw exception();
             }
-            name_to_stacks_id[d.name] = d.stacks_id; // (Overwriting may happen.)
-        }
-    }
-
-    // Initialize the MetaPopInfo.
-    vector<string> names_all;
-    for (auto& elem : name_to_rg)
-        names_all.push_back(elem.first);
-    mpopi_.init_names(names_all);
-
-    // Set the sample IDs.
-    for (auto& elem : name_to_stacks_id)
-        mpopi_.set_sample_id(mpopi_.get_sample_index(elem.first), elem.second);
-
-    // Initialize `read_groups_`, `rg_to_sample_`.
-    for (size_t bam_f_i=0; bam_f_i<bam_fs.size(); ++bam_f_i) {
-        for (SampleData& d : readgroups_per_f[bam_f_i]) {
-            auto rv = read_groups_[bam_f_i].emplace(move(d.rg), mpopi_.get_sample_index(d.name));
-            if (rv.second)
-                rg_to_sample_[bam_f_i].emplace(rv.first->first.c_str(), rv.first);
         }
     }
 }
