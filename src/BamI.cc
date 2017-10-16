@@ -170,6 +170,28 @@ void BamRecord::assign(
     r_->core.bin = hts_reg2bin(r_->core.pos, r_->core.pos + bam_cigar2rlen(r_->core.n_cigar, cigar), 14, 5);
 }
 
+void BamHeader::check_same_ref_chroms(
+        const BamHeader& h1,
+        const BamHeader& h2
+) {
+    if (h1.n_ref_chroms() != h2.n_ref_chroms()) {
+        cerr << "Error: Headers have different number of chromosomes.\n";
+        throw exception();
+    }
+    for (size_t i=0; i<h1.n_ref_chroms(); ++i) {
+        if (strcmp(h1.chrom_str(i), h2.chrom_str(i)) != 0) {
+            cerr << "Error: Conflicting names for the " << i+1 << "th chromosome, '"
+                 << h1.chrom_str(i) << "' and '" << h2.chrom_str(i) << "'.\n";
+            throw exception();
+        }
+        if (h1.chrom_len(i) != h2.chrom_len(i)) {
+            cerr << "Error: " << i+1 << "th chromosome has lengths "
+                 << h1.chrom_len(i) << " and " << h2.chrom_len(i) << ".\n";
+            throw exception();
+        }
+    }
+}
+
 Bam::Bam(const char *path)
 :
     Input(),

@@ -72,7 +72,6 @@ public:
         size_t n_primary_kept() const {return n_primary - n_primary_mapq - n_primary_softclipped;}
     };
 
-    BamCLocBuilder(Bam** bam_f, const Config& cfg) : BamCLocBuilder({*bam_f}, cfg) {*bam_f=NULL;}
     BamCLocBuilder(vector<Bam*>&& bam_fs, const Config& cfg);
     ~BamCLocBuilder() {for(Bam* bam_f : bam_fs_) delete bam_f;}
 
@@ -154,6 +153,9 @@ BamPopInfo::BamPopInfo(const vector<Bam*>& bam_fs)
     read_groups_(bam_fs.size()),
     rg_to_sample_(bam_fs.size())
 {
+    if (bam_fs.empty())
+        DOES_NOT_HAPPEN;
+
     struct SampleData {
         string rg;
         string name;
@@ -442,6 +444,18 @@ BamCLocBuilder::BamCLocBuilder(
     if (!cfg_.paired)
         cfg_.max_insert_refsize = 0;
     bpopi_.reassign_ids();
+
+    size_t bam_f_i=1;
+    if (bam_fs_.empty())
+        DOES_NOT_HAPPEN;
+    try {
+        for (; bam_f_i<bam_fs_.size(); ++bam_f_i)
+            BamHeader::check_same_ref_chroms(bam_fs_[0]->h(), bam_fs_[bam_f_i]->h());
+    } catch (exception& e) {
+        cerr << "Error: Inconsistent BAM headers; in files '" << bam_fs_[0]->path
+             << "' and '" << bam_fs_[bam_f_i]->path << "'.\n";
+        throw;
+    }
 }
 
 inline
