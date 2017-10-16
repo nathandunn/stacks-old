@@ -162,17 +162,14 @@ class Bam: public Input {
     htsFile*  bam_fh;
     size_t    n_records_read_;
     BamHeader hdr;
-    BamRecord rec;
 
 public:
     Bam(const char *path);
     ~Bam() {hts_close(bam_fh);};
 
-          BamRecord& r()       {return rec;}
-    const BamRecord& r() const {return rec;}
     const BamHeader& h() const {return hdr;}
 
-    bool next_record();
+    bool next_record(BamRecord& rec);
     size_t n_records_read() const {return n_records_read_;}
 
     Seq *next_seq();
@@ -185,7 +182,7 @@ public:
 //
 
 inline
-bool Bam::next_record() {
+bool Bam::next_record(BamRecord& rec) {
     if (rec.empty())
         rec.reinit();
     int rv = bam_read1(bam_fh->fp.bgzf, rec.hts());
@@ -219,7 +216,8 @@ Bam::next_seq(Seq& s)
     //
     // Read a record
     //
-    if (!next_record())
+    BamRecord rec;
+    if (!next_record(rec))
         return false;
 
     //
