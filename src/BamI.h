@@ -156,6 +156,8 @@ public:
 
     typedef map<string, map<string, string>> ReadGroups; // map of ( ID: (TAG: VALUE) )
     ReadGroups read_groups() const;
+
+    static void check_same_ref_chroms(const BamHeader& h1, const BamHeader& h2);
 };
 
 class Bam: public Input {
