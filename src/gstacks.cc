@@ -721,9 +721,7 @@ LocusProcessor::process(CLocReadSet& loc)
                         << "BEGIN contig\n"
                         << "pe_contig\t"     << ctg << '\n'
                         << "fw_consensus\t"  << aln_loc.ref() << '\n'
-                        << "overlap\t"       << overlap << '\n'
-                        << "overlap CIGAR\t" << overlap_cigar << "\n"
-                        << "END contig\n"
+                        << "overlap\t"       << overlap << '\t' << overlap_cigar << "\n"
                         ;
 
             //
@@ -734,6 +732,9 @@ LocusProcessor::process(CLocReadSet& loc)
             tmp_loc.ref(move(ctg));
 
             aln_loc = CLocAlnSet::juxtapose(move(aln_loc), move(tmp_loc), (overlap > 0 ? -long(overlap) : +10));
+            if (detailed_output)
+                loc_.details_ss << "merger\t" << aln_loc.ref() << "\nEND contig\n";
+
             delete stree;
             stree   = new SuffixTree(aln_loc.ref());
             stree->build_tree();
@@ -742,12 +743,8 @@ LocusProcessor::process(CLocReadSet& loc)
             // Align the paired-end reads.
             //
             this->ctg_stats_.n_tot_reads += loc.pe_reads().size();
-
-            if (detailed_output) {
+            if (detailed_output)
                 loc_.details_ss << "BEGIN pe_alns\n";
-                loc_.details_ss << "pe_aln_ref\t" << aln_loc.ref() << '\n'; //TODO
-            }
-
             for (SRead& r : loc.pe_reads()) {
                 if (add_read_to_aln(aln_loc, aln_res, move(r), &aligner, stree)) {
                     this->ctg_stats_.n_aln_reads++;
@@ -761,15 +758,8 @@ LocusProcessor::process(CLocReadSet& loc)
                         loc_.details_ss << "pe_aln_fail\t" << aln_loc.reads().back().name << '\n';
                 }
             }
-            if (detailed_output) {
-                for (auto& r : aln_loc.reads())
-                    if (r.is_read2())
-                        loc_.details_ss << "pe_aln_global"
-                                    << '\t' << r.name
-                                    << '\t' << r.cigar
-                                    << '\n';
+            if (detailed_output)
                 loc_.details_ss << "END pe_alns\n";
-            }
             delete stree;
             timers_.olap_aligning.stop();
 
@@ -785,7 +775,7 @@ LocusProcessor::process(CLocReadSet& loc)
 void
 LocusProcessor::process(CLocAlnSet& aln_loc)
 {
-    //assert(!aln_loc.reads().empty()); //TODO Add this in the private versions.
+    assert(!aln_loc.reads().empty());
     ++gt_stats_.n_genotyped_loci;
     if (input_type == GStacksInputT::denovo) {
         // Called from process(CLocReadSet&).
