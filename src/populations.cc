@@ -3194,8 +3194,8 @@ LocusSmoothing::snp_divergence(const vector<LocBin *> &loci, const vector<vector
         map<uint, uint> sites_key;
         vector<const PopPair *> sites;
         
-        this->_ord_pp->order(sites, sites_key, loci, div[i]);
-        this->_ks_pp->smooth(sites);
+        if (this->_ord_pp->order(sites, sites_key, loci, div[i]))
+            this->_ks_pp->smooth(sites);
     }
 
     return 0;
