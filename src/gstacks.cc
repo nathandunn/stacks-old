@@ -339,7 +339,7 @@ try {
 
         t_parallel.restart();
         #pragma omp parallel
-        {
+        try {
             LocusProcessor loc_proc;
             Timers& t = loc_proc.timers();
             CLocAlnSet aln_loc;
@@ -347,15 +347,19 @@ try {
             bool thread_eof;
             #pragma omp atomic read
             thread_eof = eof;
-            while(!thread_eof ) {
+            while(!thread_eof && omp_return == 0) {
                 // Read a locus from the BAM file.
                 t.reading.restart();
                 #pragma omp critical(read)
-                if (!(thread_eof = eof))
-                    thread_eof = eof = !bam_cloc_builder.build_one_locus(aln_loc);
-                if (thread_eof)
-                    break;
+                try {
+                    if (!(thread_eof = eof))
+                        thread_eof = eof = !bam_cloc_builder.build_one_locus(aln_loc);
+                } catch (exception& e) {
+                    omp_return = stacks_handle_exceptions(e);
+                }
                 t.reading.stop();
+                if (thread_eof || omp_return != 0)
+                    break;
 
                 // Process it.
                 t.processing.restart();
@@ -431,7 +435,12 @@ try {
 
             gt_stats += loc_proc.gt_stats();
             t_threads_totals += loc_proc.timers();
-        } //omp parallel
+        } catch (exception& e) {
+            #pragma omp critical (exc)
+            omp_return = stacks_handle_exceptions(e);
+        }
+        if (omp_return != 0)
+            return omp_return;
         t_parallel.stop();
         progress.done();
         cout << '\n';
