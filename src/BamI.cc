@@ -116,17 +116,17 @@ void BamRecord::assign(
         ) {
 
     // bam1_t::core
-    c_.tid = chr_index;
-    c_.pos = aln_pos;
-    c_.bin = 0; // No idea
-    c_.qual = 255;
-    c_.l_qname = name.length() + 1; // `l_qname` includes the trailing \0.
-    c_.flag = flg;
-    c_.n_cigar = cig.size();
-    c_.l_qseq = seq.length();
-    c_.mtid = -1;
-    c_.mpos = -1;
-    c_.isize = -1; // No idea
+    r_->core.tid = chr_index;
+    r_->core.pos = aln_pos;
+    r_->core.bin = 0; // No idea
+    r_->core.qual = 255;
+    r_->core.l_qname = name.length() + 1; // `l_qname` includes the trailing \0.
+    r_->core.flag = flg;
+    r_->core.n_cigar = cig.size();
+    r_->core.l_qseq = seq.length();
+    r_->core.mtid = -1;
+    r_->core.mpos = -1;
+    r_->core.isize = -1; // No idea
 
     // bam1_t::data
     // Htslib says: "bam1_t::data -- all variable-length data, concatenated;
@@ -137,7 +137,7 @@ void BamRecord::assign(
 
     // Determine the length of `data`.
     size_t l_aux = rg.length() + 1;
-    r_->l_data = c_.l_qname + c_.n_cigar*sizeof(uint32_t) + seq.nbytes() + seq.length() + l_aux;
+    r_->l_data = r_->core.l_qname + r_->core.n_cigar*sizeof(uint32_t) + seq.nbytes() + seq.length() + l_aux;
     if (r_->l_data > r_->m_data) {
         if (r_->data != NULL)
             free(r_->data);
@@ -149,7 +149,7 @@ void BamRecord::assign(
     uchar* p = r_->data;
     //qname
     strcpy((char*)p, name.c_str());
-    p += c_.l_qname;
+    p += r_->core.l_qname;
     //cigar
     for (const pair<char, uint>& op : cig) {
         // Cigars are uint32_t's with the length on the 28 high bits & op on the low 4 bits.
@@ -166,11 +166,19 @@ void BamRecord::assign(
 
     // bam1_t::core.bin
     // c.f. `sam_parse1()`; I have no idea what this is.
-    uint32_t* cigar = (uint32_t*)(r_->data + c_.l_qname);
-    c_.bin = hts_reg2bin(c_.pos, c_.pos + bam_cigar2rlen(c_.n_cigar, cigar), 14, 5);
+    uint32_t* cigar = (uint32_t*)(r_->data + r_->core.l_qname);
+    r_->core.bin = hts_reg2bin(r_->core.pos, r_->core.pos + bam_cigar2rlen(r_->core.n_cigar, cigar), 14, 5);
 }
 
-Bam::Bam(const char *path) : Input(), bam_fh(NULL), hdr(), rec() {
+Bam::Bam(const char *path)
+:
+    Input(),
+    bam_fh(NULL),
+    hdr(),
+    n_records_read_(0),
+    prev_chrom_(-1),
+    prev_pos_(-1)
+{
     this->path   = string(path);
     bam_fh = hts_open(path, "r");
     if (bam_fh == NULL) {
@@ -184,5 +192,5 @@ Bam::Bam(const char *path) : Input(), bam_fh(NULL), hdr(), rec() {
             cerr << " not a BAM file.\n";
         throw exception();
     }
-    hdr.init(bam_fh);
+    hdr.reinit(bam_fh);
 };
