@@ -274,7 +274,7 @@ BamCLocReader::BamCLocReader(Bam** bam_f)
     //
     // Read the very first record.
     //
-    if (!bam_f_->next_record(rec_)) {
+    if (!bam_f_->next_record(rec_, true)) {
         cerr << "Error: No records in BAM file '" << bam_f_->path << "'.\n";
         throw exception();
     } else if (!rec_.is_primary()) {
@@ -306,10 +306,6 @@ bool BamCLocReader::read_one_locus(CLocReadSet& readset) {
 
     if (!eof_) {
         // Read all the reads of the locus, and one more.
-        if (rec_.chrom() < loc_i_) {
-            cerr << "Error: BAM file isn't properly sorted.\n";
-            throw exception();
-        }
         while (rec_.chrom() == loc_i_) {
             const char* rg = rec_.read_group();
             if (rg == NULL) {
@@ -325,7 +321,7 @@ bool BamCLocReader::read_one_locus(CLocReadSet& readset) {
                 // read names were left unchanged, so we also don't touch them.
                 readset.add(SRead(Read(rec_.seq(), string(rec_.qname())), rg_to_sample_.at(rg)));
 
-            if (!bam_f_->next_record(rec_)) {
+            if (!bam_f_->next_record(rec_, true)) {
                 eof_ = true;
                 break;
             }
@@ -378,7 +374,7 @@ bool
 BamCLocBuilder::next_record(BamRecord& r)
 {
     while (true) {
-        if(!bam_f_->next_record(r))
+        if(!bam_f_->next_record(r, true))
             return false;
 
         if (cfg_.ign_pe_reads && r.is_read2())
@@ -488,7 +484,6 @@ BamCLocBuilder::fill_window()
      */
 
     if (!eof_) {
-        const BamRecord* previous = NULL;
         while (fw_reads_by_5prime_pos_.empty()
                 || (
                     next_record_.chrom() == fw_reads_by_5prime_pos_.begin()->first.chrom
@@ -513,27 +508,16 @@ BamCLocBuilder::fill_window()
                         std::make_pair(move(rec_5prime_pos), vector<BamRecord>())
                         ).first;
                 locus_itr->second.push_back(move(next_record_));
-                previous = &locus_itr->second.back(); // At least stable until we push_back again.
             } else {
                 auto pe_read_itr = pe_reads_by_5prime_pos_.insert(
                         std::make_pair(move(rec_5prime_pos), move(next_record_))
                         );
                 pe_reads_by_name_.insert( {pe_read_itr->second.qname(), pe_read_itr} );
-                previous = &pe_read_itr->second;
             }
 
             if (!next_record(next_record_)) {
                 eof_ = true;
                 break;
-            }
-            if (next_record_.chrom() < previous->chrom()
-                    || (next_record_.pos() < previous->pos() && next_record_.chrom() == previous->chrom())
-            ) {
-                cerr << "Error: BAM file is not properly sorted (record '" << next_record_.qname()
-                     << "' at " << bam_f_->h().chrom_str(next_record_.chrom()) << ':' << next_record_.pos()
-                     << " should come before record '" << previous->qname() << "' at "
-                     << bam_f_->h().chrom_str(previous->chrom()) << ':' << previous->pos() << ").\n";
-                throw exception();
             }
         }
     }
