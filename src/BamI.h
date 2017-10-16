@@ -192,6 +192,7 @@ bool Bam::next_record(BamRecord& rec) {
     int rv = bam_read1(bam_fh->fp.bgzf, rec.hts());
     if (rv == -1) {
         // EOF.
+        rec.destroy();
         return false;
     } else if (rv < -1) {
         cerr << "Error: while reading BAM file.\n";
