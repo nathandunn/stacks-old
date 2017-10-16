@@ -53,41 +53,45 @@ void write_bam_header(htsFile* bam_f, const string& header_text);
 
 class BamRecord {
     bam1_t* r_;
-    bam1_core_t& c_; // r_->core
 
-    BamRecord(BamRecord&) = delete;
-    BamRecord& operator= (BamRecord&) = delete;
+    BamRecord(const BamRecord&) = delete;
+    BamRecord& operator= (const BamRecord&) = delete;
 
 public:
-    BamRecord() : r_(bam_init1()), c_(r_->core) {r_->data = NULL; r_->m_data = 0;}
-    ~BamRecord() {bam_destroy1(r_);}
+    BamRecord() : r_(NULL) {}
+    ~BamRecord() {destroy();}
+    BamRecord(BamRecord&& other) : BamRecord() {std::swap(r_, other.r_);}
+    BamRecord& operator= (BamRecord&& other) {std::swap(r_, other.r_); return *this;}
+    void reinit() {destroy(); r_=bam_init1(); r_->data=NULL; r_->m_data=0;}
+    void destroy() {if (r_!=NULL) {bam_destroy1(r_); r_=NULL;}}
+    bool empty() const {return r_==NULL;}
 
-    bam1_t*& r() {return r_;}
-
-    string qname() const {return string(bam_get_qname(r_), c_.l_qname-1);}
-    uint16_t flag() const {return c_.flag;}
-    int32_t chrom() const {return c_.tid;}
-    int32_t pos() const {return c_.pos;}
-    uint8_t mapq() const {return c_.qual;}
+    // Access the fields.
+    const char* qname()     const {return bam_get_qname(r_);}
+    uint8_t     qname_len() const {return r_->core.l_qname-1;}
+    uint16_t    flag()      const {return r_->core.flag;}
+    int32_t     chrom()     const {return r_->core.tid;}
+    int32_t     pos()       const {return r_->core.pos;}
+    uint8_t     mapq()      const {return r_->core.qual;}
     vector<pair<char, uint>> cigar() const;
     // (rnext)
     // (pnext)
     // (tlen)
-    DNASeq4 seq() const {return DNASeq4((uchar*) bam_get_seq(r_), c_.l_qseq);}
+    DNASeq4     seq()       const {return DNASeq4((uchar*) bam_get_seq(r_), r_->core.l_qseq);}
     // (qual)
     // (aux)
 
-    bool is_unmapped()      const {return c_.flag & BAM_FUNMAP;}
-    bool is_secondary()     const {return c_.flag & BAM_FSECONDARY;}
-    bool is_supplementary() const {return c_.flag & BAM_FSUPPLEMENTARY;}
-    bool is_primary()       const {return ! (c_.flag & (BAM_FUNMAP | BAM_FSECONDARY | BAM_FSUPPLEMENTARY));}
-    bool is_rev_compl()     const {return c_.flag & BAM_FREVERSE;}
-    bool is_read1()         const {return c_.flag & BAM_FREAD1;}
-    bool is_read2()         const {return c_.flag & BAM_FREAD2;}
+    // Flags.
+    bool is_unmapped()      const {return r_->core.flag & BAM_FUNMAP;}
+    bool is_secondary()     const {return r_->core.flag & BAM_FSECONDARY;}
+    bool is_supplementary() const {return r_->core.flag & BAM_FSUPPLEMENTARY;}
+    bool is_primary()       const {return ! (r_->core.flag & (BAM_FUNMAP | BAM_FSECONDARY | BAM_FSUPPLEMENTARY));}
+    bool is_rev_compl()     const {return r_->core.flag & BAM_FREVERSE;}
+    bool is_read1()         const {return r_->core.flag & BAM_FREAD1;}
+    bool is_read2()         const {return r_->core.flag & BAM_FREAD2;}
+    // (etc.)
 
-    AlnT aln_type() const;
-    const char* read_group() const;
-
+    // Creation.
     void assign(
             const string& name,
             uint16_t flg,
@@ -99,10 +103,23 @@ public:
             );
     void write_to(htsFile* bam_f) const {if (bam_write1(bam_f->fp.bgzf, r_) < 0) throw ios::failure("bam_write1");}
 
+    // Access to the underlying hts record.
+    const bam1_t*   hts()         const {return r_;}
+    bam1_t*         hts()               {return r_;}
+    int32_t         hts_l_seq()   const {return r_->core.l_qseq;}
+    const uchar*    hts_seq()     const {return bam_get_seq(r_);}
+    uint32_t        hts_n_cigar() const {return r_->core.n_cigar;}
+    const uint32_t* hts_cigar()   const {return bam_get_cigar(r_);}
+
+    // Other convenience functions.
+    static uint32_t cig_op_t(uint32_t op) {return op & BAM_CIGAR_MASK;}
+    static uint32_t cig_op_len(uint32_t op) {return op >> BAM_CIGAR_SHIFT;}
+    static uint32_t cig_ref_len(const uint32_t* cigar, uint32_t n_cigar);
+    static uint32_t cig_ref_len(const BamRecord& r) {return cig_ref_len(r.hts_cigar(), r.hts_n_cigar());}
+    const char* read_group() const;
+
 private:
-    // Moves the pointer to the start of the next AUX field. Doesn't actually read
-    // anything, the point is just to be able to scan until field(s) of interest.
-    // Returns `ptr`.
+    // Moves the given pointer to the start of the next AUX field.
     static void skip_one_aux(const uint8_t** ptr);
 };
 
@@ -114,12 +131,11 @@ class BamHeader {
 
 public:
     BamHeader() : h_(NULL) {}
-    ~BamHeader() {if (h_!=NULL) bam_hdr_destroy(h_);}
-    void init() {h_ = bam_hdr_init();}
-    void init(htsFile* bam_f) {h_ = bam_hdr_read(bam_f->fp.bgzf);}
-
-    const bam_hdr_t* h() const {return h_;}
-          bam_hdr_t* h()       {return h_;}
+    ~BamHeader() {destroy();}
+    void reinit() {destroy(); h_ = bam_hdr_init();}
+    void reinit(htsFile* bam_f) {destroy(); h_ = bam_hdr_read(bam_f->fp.bgzf);}
+    void destroy() {if (h_!=NULL) {bam_hdr_destroy(h_); h_=NULL;}}
+    bool empty() const {return h_==NULL;}
 
     const char* text() const {return h_->text;}
 
@@ -135,23 +151,30 @@ public:
         return h_->target_len[index];
     }
 
+    const bam_hdr_t* hts() const {return h_;}
+          bam_hdr_t* hts()       {return h_;}
+
     typedef map<string, map<string, string>> ReadGroups; // map of ( ID: (TAG: VALUE) )
     ReadGroups read_groups() const;
 };
 
 class Bam: public Input {
-    htsFile   *bam_fh;
+    htsFile*  bam_fh;
     BamHeader hdr;
-    BamRecord rec;
+
+    size_t  n_records_read_;
+    int32_t prev_chrom_;
+    int32_t prev_pos_;
 
 public:
     Bam(const char *path);
     ~Bam() {hts_close(bam_fh);};
 
-    const BamRecord& r() const {return rec;}
     const BamHeader& h() const {return hdr;}
 
-    bool next_record();
+    bool next_record(BamRecord& rec);
+    bool next_record(BamRecord& rec, bool check_order);
+    size_t n_records_read() const {return n_records_read_;}
 
     Seq *next_seq();
     int  next_seq(Seq&);
@@ -163,15 +186,39 @@ public:
 //
 
 inline
-bool Bam::next_record() {
-    int rv = bam_read1(bam_fh->fp.bgzf, rec.r());
+bool Bam::next_record(BamRecord& rec) {
+    if (rec.empty())
+        rec.reinit();
+    int rv = bam_read1(bam_fh->fp.bgzf, rec.hts());
     if (rv == -1) {
         // EOF.
+        rec.destroy();
         return false;
     } else if (rv < -1) {
         cerr << "Error: while reading BAM file.\n";
-        throw ios::failure("bam_read1");
+        throw ios::failure("hts::bam_read1");
     }
+    ++n_records_read_;
+    return true;
+}
+
+inline
+bool Bam::next_record(BamRecord& rec, bool check_order) {
+    if (!next_record(rec))
+        return false;
+    if (check_order) {
+        if (rec.chrom() < prev_chrom_
+                || (rec.pos() < prev_pos_ && rec.chrom() == prev_chrom_)
+        ) {
+            cerr << "Error: BAM file is not properly sorted; " << n_records_read_ << "th record '" << rec.qname()
+                 << "' at " << hdr.chrom_str(rec.chrom()) << ':' << rec.pos()
+                 << " should come before previously seen position " << hdr.chrom_str(prev_chrom_)
+                 << ':' << prev_pos_ << ".\n";
+            throw exception();
+        }
+    }
+    prev_chrom_ = rec.chrom();
+    prev_pos_ = rec.pos();
     return true;
 }
 
@@ -194,16 +241,17 @@ Bam::next_seq(Seq& s)
     //
     // Read a record
     //
-    if (!next_record())
+    BamRecord rec;
+    if (!next_record(rec))
         return false;
 
     //
     // Fetch the sequence.
     //
     string  seq;
-    seq.reserve(rec.r()->core.l_qseq);
-    for (int i = 0; i < rec.r()->core.l_qseq; i++) {
-        uint8_t j = bam_seqi(bam_get_seq(rec.r()), i);
+    seq.reserve(rec.hts()->core.l_qseq);
+    for (int i = 0; i < rec.hts()->core.l_qseq; i++) {
+        uint8_t j = bam_seqi(bam_get_seq(rec.hts()), i);
         switch(j) {
         case 1:
             seq += 'A';
@@ -230,13 +278,23 @@ Bam::next_seq(Seq& s)
     // Fetch the quality score.
     //
     string   qual;
-    uint8_t *q = bam_get_qual(rec.r());
-    for (int i = 0; i < rec.r()->core.l_qseq; i++) {
+    uint8_t *q = bam_get_qual(rec.hts());
+    for (int i = 0; i < rec.hts()->core.l_qseq; i++) {
         qual += char(int(q[i]) + 33);
     }
 
-    if (rec.is_unmapped()) {
-        s = Seq(rec.qname().c_str(), seq.c_str(), qual.c_str());
+    AlnT aln_type;
+    if (rec.is_unmapped())
+        aln_type = AlnT::null;
+    else if (rec.is_secondary())
+        aln_type = AlnT::secondary;
+    else if (rec.is_supplementary())
+        aln_type = AlnT::supplementary;
+    else
+        aln_type = AlnT::primary;
+
+    if (aln_type == AlnT::null) {
+        s = Seq(rec.qname(), seq.c_str(), qual.c_str());
     } else {
         //
         // Check which strand this is aligned to:
@@ -276,7 +334,7 @@ Bam::next_seq(Seq& s)
             name += "/2";
         s = Seq(name.c_str(), seq.c_str(), qual.c_str(),
                 hdr.chrom_str(rec.chrom()), bp, strand,
-                rec.aln_type(), pct_clipped, rec.mapq());
+                aln_type, pct_clipped, rec.mapq());
 
         if (cigar.size() > 0)
             bam_edit_gaps(cigar, s.seq);
@@ -423,72 +481,73 @@ bam_edit_gaps(vector<pair<char, uint> > &cigar, char *seq)
 inline
 vector<pair<char, uint>> BamRecord::cigar() const {
     vector<pair<char, uint>> cig;
-
-    uint32_t* hts_cigar = bam_get_cigar(r_);
-    for (size_t i = 0; i < c_.n_cigar; i++) {
-        char op;
-        switch(hts_cigar[i] &  BAM_CIGAR_MASK) {
+    for (size_t i = 0; i < hts_n_cigar(); ++i) {
+        uint32_t op = hts_cigar()[i];
+        char op_t;
+        switch(cig_op_t(op)) {
         case BAM_CMATCH:
-            op = 'M';
+            op_t = 'M';
             break;
         case BAM_CEQUAL:
-            op = '=';
+            op_t = '=';
             break;
         case BAM_CDIFF:
-            op = 'X';
+            op_t = 'X';
             break;
         case BAM_CINS:
-            op = 'I';
+            op_t = 'I';
             break;
         case BAM_CDEL:
-            op = 'D';
+            op_t = 'D';
             break;
         case BAM_CSOFT_CLIP:
-            op = 'S';
+            op_t = 'S';
             break;
         case BAM_CREF_SKIP:
-            op = 'N';
+            op_t = 'N';
             break;
         case BAM_CHARD_CLIP:
-            op = 'H';
+            op_t = 'H';
             break;
         case BAM_CPAD:
-            op = 'P';
+            op_t = 'P';
             break;
         default:
-            cerr << "Warning: Unknown CIGAR operation (current record name is '" << bam_get_qname(r_) << "').\n";
-            op = '?';
+            cerr << "Warning: Unknown CIGAR operation at record '" << bam_get_qname(r_)
+                 << "(binary value " << cig_op_t(op) << ").\n";
+            op_t = '?';
             break;
         }
-
-        cig.push_back({op, hts_cigar[i] >> BAM_CIGAR_SHIFT});
+        cig.push_back({op_t, cig_op_len(op)});
     }
-
     return cig;
 }
 
 inline
-AlnT BamRecord::aln_type() const {
-    if (c_.flag & BAM_FUNMAP)
-        return AlnT::null;
-    else if (c_.flag & BAM_FSECONDARY)
-        return AlnT::secondary;
-    else if (c_.flag & BAM_FSUPPLEMENTARY)
-        return AlnT::supplementary;
-    else
-        return AlnT::primary;
+uint32_t BamRecord::cig_ref_len(const uint32_t* cigar, uint32_t n_cigar) {
+    int32_t ref_len = 0;
+    for (size_t i = 0; i < n_cigar; ++i) {
+        uint32_t op = cigar[i];
+        switch(cig_op_t(op)) {
+        case BAM_CINS:
+        case BAM_CSOFT_CLIP:
+            break;
+        default:
+            ref_len += cig_op_len(op);
+            break;
+        }
+    }
+    return ref_len;
 }
 
 inline
 const char* BamRecord::read_group() const {
-    uint8_t* ptr = bam_get_aux(r_);
-    while (ptr < bam_get_aux(r_) + bam_get_l_aux(r_) - 3) { // minimum field size is 4
-        if (*ptr == 'R' && *(ptr+1) == 'G') {
+    const uint8_t* ptr = bam_get_aux(r_);
+    while (ptr < bam_get_aux(r_) + bam_get_l_aux(r_) - 3)
+        if (strncmp((const char*)ptr, "RGZ", 3) == 0)
             return (const char*)ptr+3;
-        } else {
-            skip_one_aux((const uint8_t**)&ptr);
-        }
-    }
+        else
+            skip_one_aux(&ptr);
 
     return NULL;
 }
