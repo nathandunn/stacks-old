@@ -36,7 +36,7 @@
 //
 // Argument globals.
 //
-string in_bam;
+vector<string> in_bams;
 string o_prefix;
 GStacksInputT input_type = GStacksInputT::unknown;
 
@@ -109,7 +109,9 @@ try {
     //
     // Open (and check the existence of) the input BAM file.
     //
-    Bam* bam_f_ptr = new Bam(in_bam.c_str());
+    vector<Bam*> bam_f_ptrs;
+    for (const string& in_bam : in_bams)
+        bam_f_ptrs.push_back(new Bam(in_bam.c_str()));
 
     //
     // Open the log.
@@ -174,7 +176,7 @@ try {
 
     if (input_type == GStacksInputT::denovo) {
         // Initialize the CLoc reader
-        BamCLocReader bam_cloc_reader (&bam_f_ptr);
+        BamCLocReader bam_cloc_reader (&bam_f_ptrs[0]);
 
         // Open the VCF file.
         VcfHeader vcf_header;
@@ -324,7 +326,7 @@ try {
 
     } else if (input_type == GStacksInputT::refbased) {
         // Initialize the CLoc reader
-        BamCLocBuilder bam_cloc_builder (&bam_f_ptr, refbased_cfg);
+        BamCLocBuilder bam_cloc_builder (move(bam_f_ptrs), refbased_cfg);
         bool eof = false;
 
         // Open the VCF file.
@@ -1957,7 +1959,7 @@ Timers& Timers::operator+= (const Timers& other) {
 const string help_string = string() +
         prog_name + " " + VERSION  + "\n" +
         prog_name + " -P stacks_dir\n" +
-        prog_name + " -B bam_file -O out_dir [--paired]\n" +
+        prog_name + " -B bam_file [-B ...] -O out_dir [--paired]\n" +
         "\n"
         "De novo mode:\n"
         "  -P: input directory\n"
@@ -1968,12 +1970,13 @@ const string help_string = string() +
         "  \"samtools merge ./catalog.bam ./*.matches.bam\"\n"
         "\n"
         "Reference-based mode:\n"
-        "  -B: input BAM file\n"
+        "  -B: input BAM file(s)\n"
         "  --paired: reads are paired (RAD loci will be defined by READ1 alignments)\n"
         "\n"
-        "  The input BAM file should (i) be sorted by coordinate and (ii) comprise\n"
-        "  all aligned reads for all samples, with reads assigned to samples using\n"
-        "  BAM \"reads groups\" (gstacks uses the SM, \"sample name\" field).\n"
+        "  The input BAM file(s) should (i) be sorted by coordinate and (ii) have"
+        "  reads assigned to samples using BAM \"reads groups\" (gstacks uses"
+        "  the ID \"identifier\" and SM \"sample name\" fields). Read groups,\n"
+        "  if repeated in multiple files, must be consistent.\n"
         //"  Please refer to the gstacks manual page for information about how to\n"
         "  Please refer to the Beta webpage for information about how to\n" //TODO
         "  generate such a BAM file with Samtools, and examples.\n"
@@ -2089,7 +2092,7 @@ try {
             in_dir = optarg;
             break;
         case 'B':
-            in_bam = optarg;
+            in_bams.push_back(optarg);
             break;
         case 'O':
             out_dir = optarg;
@@ -2189,15 +2192,15 @@ try {
         bad_args();
     }
 
-    if (in_dir.empty() && in_bam.empty()) {
+    if (in_dir.empty() && in_bams.empty()) {
         cerr << "Error: Please specify -P or -B.\n";
         bad_args();
-    } else if (!in_dir.empty() && !in_bam.empty()) {
+    } else if (!in_dir.empty() && !in_bams.empty()) {
         cerr << "Error: Please specify one of -P or -B, not both.\n";
         bad_args();
     }
 
-    if (!in_bam.empty() && out_dir.empty()) {
+    if (!in_bams.empty() && out_dir.empty()) {
         cerr << "Error: Please specify an output directory (-O).\n";
         bad_args();
     }
@@ -2223,7 +2226,7 @@ try {
     if (input_type == GStacksInputT::denovo) {
         if (in_dir.back() != '/')
             in_dir += '/';
-        in_bam = in_dir + "catalog.bam";
+        in_bams.push_back(in_dir + "catalog.bam");
         if (out_dir.empty())
             out_dir = in_dir;
     }
@@ -2245,7 +2248,7 @@ void report_options(ostream& os) {
             "de novo"
             : (refbased_cfg.paired ? "reference-based, paired-end" : "reference-based, single-end")
             ) << "\n"
-       << "  Input file: '" << in_bam << "'\n"
+       << "  Input file: '" << in_bams.front() << "'\n" //TODO
        << "  Output to: '" << o_prefix << ".*'\n"
        << "  Model: " << *model << "\n";
 
