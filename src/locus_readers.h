@@ -11,13 +11,16 @@
 // them with MetaPopInfo Samples.
 class BamPopInfo {
     MetaPopInfo mpopi_;
-    set<string> read_groups_;
-    map<const char*, size_t, LessCStrs> rg_to_sample_;
+    typedef map<string,size_t> RGMap;
+    vector<RGMap> read_groups_;
+    vector<map<const char*, RGMap::iterator, LessCStrs>> rg_to_sample_;
+
 public:
-    BamPopInfo(const Bam* bam_f, bool assign_ids=false);
+    BamPopInfo(const vector<Bam*>& bam_fs); //, const vector<size_t>& samples={});
+    void reassign_ids();
 
     const MetaPopInfo& mpopi() const {return mpopi_;}
-    size_t sample_of(const BamRecord& rec);
+    size_t sample_of(const BamRecord& rec, size_t bam_f_i=0);
 };
 
 // BamCLocReader: Class to read catalog loci from files by the de novo pipeline.
@@ -69,14 +72,15 @@ public:
         size_t n_primary_kept() const {return n_primary - n_primary_mapq - n_primary_softclipped;}
     };
 
-    BamCLocBuilder(Bam** bam_f, const Config& cfg);
-    ~BamCLocBuilder() {if (bam_f_) delete bam_f_;}
+    BamCLocBuilder(Bam** bam_f, const Config& cfg) : BamCLocBuilder({*bam_f}, cfg) {*bam_f=NULL;}
+    BamCLocBuilder(vector<Bam*>&& bam_fs, const Config& cfg);
+    ~BamCLocBuilder() {for(Bam* bam_f : bam_fs_) delete bam_f;}
 
     // Reads one locus. Returns false on EOF.
     bool build_one_locus(CLocAlnSet& readset);    
 
     const MetaPopInfo& mpopi() const {return bpopi_.mpopi();}
-    const Bam* bam_f() const {return bam_f_;}
+    const vector<Bam*>& bam_fs() const {return bam_fs_;}
     const BamStats& stats() const {return stats_;}
 
 private:
@@ -103,19 +107,24 @@ private:
     BamStats stats_;
 
     Bam* bam_f_;
+    vector<Bam*> bam_fs_;
     BamPopInfo bpopi_;
 
-    bool next_record();
-    bool eof_;
-    BamRecord next_record_;
-    bool treat_next_record_as_fw_;
+    bool next_record(size_t bam_f_i);
+    bool next_record() {return next_record(0);}
+    vector<uchar> eofs_; // For each BAM file. (Vector of bools; `uchar`s because std specializes `vector<bool>`.)
+    vector<BamRecord> next_records_; // The next record, for each file.
+    vector<uchar> treat_next_records_as_fw_; // Whether to treat the above as forward reads. c.f. `cfg_.paired`/--paired.
 
     // Buffers to store the reads of the sliding window.
     bool fill_window();
-    void add_next_record_to_the_window();
-    map<Pos5,vector<BamRecord>> fw_reads_by_5prime_pos_;
-    std::multimap<Pos5,BamRecord> pe_reads_by_5prime_pos_;
-    map<const char*,std::multimap<Pos5,BamRecord>::iterator, LessCStrs> pe_reads_by_name_;
+    void add_next_record_to_the_window(size_t bam_f_i);
+    typedef size_t SampleIdx;
+    map<Pos5,vector<pair<BamRecord,SampleIdx>>> fw_reads_by_5prime_pos_;
+    std::multimap<Pos5,pair<BamRecord,SampleIdx>> pe_reads_by_5prime_pos_;
+    map<const char*,
+        std::multimap<Pos5,pair<BamRecord,SampleIdx>>::iterator,
+        LessCStrs> pe_reads_by_name_;
 };
 
 class VcfCLocReader {
@@ -140,22 +149,33 @@ class VcfCLocReader {
 //
 
 inline
-BamPopInfo::BamPopInfo(const Bam* bam_f, bool assign_ids) {
+BamPopInfo::BamPopInfo(const vector<Bam*>& bam_fs)
+:
+    read_groups_(bam_fs.size()),
+    rg_to_sample_(bam_fs.size())
+{
+    struct SampleData {
+        string rg;
+        string name;
+        int stacks_id;
+    };
+    vector<vector<SampleData>> readgroups_per_f  (bam_fs.size());
 
-    // Parse the @RG header lines.
-    vector<string> rg_ids;
-    vector<string> samples;
-    vector<int> sample_ids;
-    const char* p = bam_f->h().text();
-    size_t line = 1;
+    for (size_t bam_f_i=0; bam_f_i<bam_fs.size(); ++bam_f_i) {
+        Bam* bam_f = bam_fs[bam_f_i];
+        size_t line = 1;
     try {
+        // Parse the @RG header lines.
+        const char* p = bam_f->h().text();
+        string rg;
+        string name;
+        int stacks_id = -1;
         while (true) {
             if (strncmp(p, "@RG\t", 4) == 0) {
-                // Sample line.
-                rg_ids.push_back(string());
-                samples.push_back(string());
-                sample_ids.push_back(-1);
-
+                rg.clear();
+                name.clear();
+                stacks_id = -1;
+                // Parse the line.
                 p += 4;
                 while (*p && *p != '\n') {
                     const char* q = p;
@@ -163,23 +183,28 @@ BamPopInfo::BamPopInfo(const Bam* bam_f, bool assign_ids) {
                         ++p;
 
                     if (strncmp(q, "ID:", 3) == 0) {
-                        rg_ids.back() = string(q+3, p);
+                        rg.assign(q+3, p);
                     } else if (strncmp(q, "SM:", 3) == 0) {
-                        samples.back() = string(q+3, p);
+                        name.assign(q+3, p);
                     } else if (strncmp(q, "id:", 3) == 0) {
                         char* end;
-                        sample_ids.back() = strtol(q+3, &end, 10);
+                        stacks_id = strtol(q+3, &end, 10);
                         if (end != p)
                             throw exception();
                     }
                     if (*p == '\t')
                         ++p;
                 }
-
-                if (rg_ids.back().empty() || samples.back().empty())
+                if (rg.empty()) {
+                    cerr << "Error: @RG line has no ID (identifier) field.\n";
                     throw exception();
+                } else if (name.empty()) {
+                    cerr << "Error: @RG line has no SM (sample name) field.\n";
+                    throw exception();
+                }
+                // Record the read group.
+                readgroups_per_f[bam_f_i].push_back({move(rg), move(name), stacks_id});
             }
-
             p = strchr(p, '\n');
             if (p == NULL)
                 break;
@@ -187,54 +212,93 @@ BamPopInfo::BamPopInfo(const Bam* bam_f, bool assign_ids) {
             ++line;
         }
     } catch (exception&) {
-        cerr << "Error: Malformed BAM header, at line " << line << ".\n";
+        cerr << "Error: Malformed BAM header.\n"
+             << "Error: At header line " << line << " in file '" << bam_f->path << "'.\n";
         throw;
-    }
+    }}
 
-    if (samples.empty()) {
-        cerr << "Error: Found no @RG lines (read groups/sample identifiers) in the header of BAM file '"
-             << bam_f->path << "'.\n";
+    // Check that all the files have read groups.
+    bool no_rg = false;
+    for (size_t bam_f_i=0; bam_f_i<bam_fs.size(); ++bam_f_i) {
+        if (readgroups_per_f[bam_f_i].empty()) {
+            no_rg = true;
+            cerr << "Error: No read group(s) in BAM file '"
+                 << bam_fs[bam_f_i]->path << "'.\n";
+        }
+    }
+    if (no_rg)
         throw exception();
+
+    // Check that duplicated readgroup IDs and sample names appear in a single
+    // (ID,NAME) combination.
+    map<string,pair<string,size_t>> name_to_rg;
+    map<string,pair<string,size_t>> rg_to_name;
+    map<string,int> name_to_stacks_id;
+    for (size_t bam_f_i=0; bam_f_i<bam_fs.size(); ++bam_f_i) {
+        for (const SampleData& d : readgroups_per_f[bam_f_i]) {
+            auto rv1 = name_to_rg.insert({d.name, {d.rg, bam_f_i}});
+            auto rv2 = rg_to_name.insert({d.rg, {d.name, bam_f_i}});
+            if (!rv1.second && rv1.first->second.first != d.rg) {
+                const pair<string,pair<string,size_t>>& n2r = *rv1.first;
+                cerr << "Error: Incompatible read groups (ID:" << d.rg << ", SM:"
+                     << d.name << ") and (ID:" << n2r.second.first << ", SM:"
+                     << n2r.first << ").\n"
+                     << "Error: In BAM files '" << bam_fs[bam_f_i]->path
+                     << "' and '" << bam_fs[n2r.second.second]->path << ".\n";
+                throw exception();
+            }
+            if (!rv2.second && rv2.first->second.first != d.name) {
+                const pair<string,pair<string,size_t>>& r2n = *rv2.first;
+                cerr << "Error: Incompatible read groups (ID:" << d.rg << ", SM:"
+                     << d.name << ") and (ID:" << r2n.first << ", SM:"
+                     << r2n.second.first << ").\n"
+                     << "Error: In BAM files '" << bam_fs[bam_f_i]->path
+                     << "' and '" << bam_fs[r2n.second.second]->path << ".\n";
+                throw exception();
+            }
+            name_to_stacks_id[d.name] = d.stacks_id; // (Overwriting may happen.)
+        }
     }
 
     // Initialize the MetaPopInfo.
-    mpopi_.init_names(samples);
+    vector<string> names_all;
+    for (auto& elem : name_to_rg)
+        names_all.push_back(elem.first);
+    mpopi_.init_names(names_all);
 
     // Set the sample IDs.
-    assert(sample_ids.size() == samples.size());
-    for (size_t s=0; s<samples.size(); ++s)
-        mpopi_.set_sample_id(mpopi_.get_sample_index(samples[s]),sample_ids[s]);
+    for (auto& elem : name_to_stacks_id)
+        mpopi_.set_sample_id(mpopi_.get_sample_index(elem.first), elem.second);
 
     // Initialize `read_groups_`, `rg_to_sample_`.
-    assert(rg_ids.size() == samples.size());
-    for (size_t s=0; s<mpopi_.samples().size(); ++s) {
-        auto rv = read_groups_.insert(move(rg_ids[s]));
-        if (!rv.second) {
-            cerr << "Error: BAM read group '" << *rv.first << "' is duplicated.\n";
-            throw exception();
+    for (size_t bam_f_i=0; bam_f_i<bam_fs.size(); ++bam_f_i) {
+        for (SampleData& d : readgroups_per_f[bam_f_i]) {
+            auto rv = read_groups_[bam_f_i].emplace(move(d.rg), mpopi_.get_sample_index(d.name));
+            if (rv.second)
+                rg_to_sample_[bam_f_i].emplace(rv.first->first.c_str(), rv.first);
         }
-        rg_to_sample_[rv.first->c_str()] = mpopi_.get_sample_index(samples[s]);
     }
-
-    if (assign_ids)
-        for (size_t i=0; i<mpopi_.samples().size(); ++i)
-            mpopi_.set_sample_id(i, i+1);
 }
 
 inline
-size_t BamPopInfo::sample_of(const BamRecord& rec) {
+void BamPopInfo::reassign_ids() {
+    for (size_t i=0; i<mpopi_.samples().size(); ++i)
+        mpopi_.set_sample_id(i, i+1);
+}
+
+inline
+size_t BamPopInfo::sample_of(const BamRecord& rec, size_t bam_f_i) {
     const char* rg = rec.read_group();
     if (rg == NULL) {
-        cerr << "Error: Corrupt BAM file: missing read group for record '" << rec.qname() << "'.\n";
+        cerr << "Error: Missing read group for BAM record '" << rec.qname() << "'.\n";
         throw exception();
     }
     size_t sample;
     try {
-        sample = rg_to_sample_.at(rg);
+        sample = rg_to_sample_.at(bam_f_i).at(rg)->second;
     } catch(std::out_of_range&) {
-        cerr << "Error: Corrupt BAM file: encountered read group '" << rg
-             << "', which was not declared in the header (at record  '"
-             << rec.qname() << "').\n";
+        cerr << "Error: BAM record '" << rec.qname() << "' has read group '" << rg
+             << "', which was not declared in the header.\n";
         throw exception();
     }
     return sample;
@@ -244,7 +308,7 @@ inline
 BamCLocReader::BamCLocReader(Bam** bam_f)
 :
     bam_f_(*bam_f),
-    bpopi_(bam_f_),
+    bpopi_({bam_f_}),
     eof_(false),
     loc_i_(-1)
 {
@@ -252,8 +316,7 @@ BamCLocReader::BamCLocReader(Bam** bam_f)
 
     for (const Sample& s : mpopi().samples()) {
         if (s.id == -1) {
-            cerr << "Error: Sample '" << s.name << "' is missing its (integer) ID; was tsv2bam run correctly?\n";
-            throw exception();
+            cerr << "WARNING: Sample '" << s.name << "' is missing its (integer) ID; was tsv2bam run correctly?!\n";
         }
     }
 
@@ -365,29 +428,32 @@ bool BamCLocReader::read_one_locus(CLocReadSet& readset) {
 
 inline
 BamCLocBuilder::BamCLocBuilder(
-        Bam** bam_f,
+        vector<Bam*>&& bam_fs,
         const Config& cfg
 ) :
     cfg_(cfg),
     stats_(),
-    bam_f_(*bam_f),
-    bpopi_(bam_f_, true),
-    eof_(false),
-    treat_next_record_as_fw_(false)
-    {
-    *bam_f = NULL;
-
+    bam_fs_(move(bam_fs)),
+    bpopi_(bam_fs_),
+    eofs_(bam_fs_.size(), false),
+    next_records_(bam_fs_.size()),
+    treat_next_records_as_fw_(bam_fs_.size())
+{
     if (!cfg_.paired)
         cfg_.max_insert_refsize = 0;
+    bpopi_.reassign_ids();
 }
 
 inline
-bool BamCLocBuilder::next_record()
+bool BamCLocBuilder::next_record(size_t bam_f_i)
 {
+    Bam* bam_f = bam_fs_[bam_f_i];
+    BamRecord& r = next_records_[bam_f_i];
+    uchar& treat_as_fw = treat_next_records_as_fw_[bam_f_i];
+
     while (true) {
-        if(!bam_f_->next_record(next_record_, true))
+        if(!bam_f->next_record(r, true))
             return false;
-        const BamRecord& r = next_record_;
 
         if (cfg_.ign_pe_reads && r.is_read2())
             continue;
@@ -419,30 +485,29 @@ bool BamCLocBuilder::next_record()
         // set and the case when these flags are not set but the read names end
         // with /1, /2.
         if (!cfg_.paired) {
-            treat_next_record_as_fw_ = true;
+            treat_as_fw = true;
         } else if (r.is_read1()) {
-            treat_next_record_as_fw_ = true;
+            treat_as_fw = true;
         } else if (r.is_read2()) {
-            treat_next_record_as_fw_ = false;
+            treat_as_fw = false;
         } else {
-            cerr << "Error: BAM record '" << r.qname()
-                 << "' is not flagged as READ1 nor READ2 (while reading BAM file '"
-                 << bam_f_->path << "'in paired mode).\n";
+            cerr << "Error: --paired is on but BAM record '" << r.qname()
+                 << "' is not flagged as READ1 nor READ2.\n";
             throw exception();
         }
 
         // Check that there's a sequence.
         if (r.hts_l_seq() <= 0) {
-            cerr << "Error: No sequence at BAM primary record '" << r.qname() << "'.\n";
+            cerr << "Error: No sequence at BAM record '" << r.qname() << "'.\n";
             throw exception();
         }
 
         // Check the CIGAR.
         if (r.hts_n_cigar() == 0) {
-            cerr << "Error: Empty CIGAR at BAM primary record '" << r.qname() << "'.\n";
+            cerr << "Error: Empty CIGAR at BAM record '" << r.qname() << "'.\n";
             throw exception();
         }
-        if (treat_next_record_as_fw_) {
+        if (treat_as_fw) {
             if (r.is_rev_compl()) {
                 if(BamRecord::cig_op_t(r.hts_cigar()[r.hts_n_cigar()-1]) != BAM_CMATCH) {
                     // A cutsite is expected, and it is not aligned.
@@ -466,14 +531,13 @@ bool BamCLocBuilder::next_record()
             ++stats_.n_primary_softclipped;
             continue;
         }
-
         break;
     }
     return true;
 }
 
 inline
-void BamCLocBuilder::add_next_record_to_the_window()
+void BamCLocBuilder::add_next_record_to_the_window(size_t bam_f_i)
 {
     //
     // See `fill_window()`.
@@ -482,29 +546,34 @@ void BamCLocBuilder::add_next_record_to_the_window()
     // a paired-end read).
     //
 
+    BamRecord& rec = next_records_[bam_f_i];
+
     // Determine the 5prime position.
     Pos5 rec_5prime_pos;
-    rec_5prime_pos.chrom = next_record_.chrom();
-    if (next_record_.is_rev_compl()) {
+    rec_5prime_pos.chrom = rec.chrom();
+    if (rec.is_rev_compl()) {
         rec_5prime_pos.strand = false;
-        rec_5prime_pos.bp = next_record_.pos() + BamRecord::cig_ref_len(next_record_) - 1;
+        rec_5prime_pos.bp = rec.pos() + BamRecord::cig_ref_len(rec) - 1;
     } else {
         rec_5prime_pos.strand = true;
-        rec_5prime_pos.bp = next_record_.pos();
+        rec_5prime_pos.bp = rec.pos();
     }
 
+    // Determine the sample.
+    size_t sample = bpopi_.sample_of(rec, bam_f_i);
+
     // Save the record.
-    if (treat_next_record_as_fw_) {
+    if (treat_next_records_as_fw_[bam_f_i]) {
         auto locus_itr = fw_reads_by_5prime_pos_.insert(
-                std::make_pair(move(rec_5prime_pos), vector<BamRecord>())
+                std::make_pair(move(rec_5prime_pos), vector<pair<BamRecord,SampleIdx>>())
                 ).first;
-        locus_itr->second.push_back(move(next_record_));
+        locus_itr->second.push_back({move(rec), sample});
     } else {
         auto pe_read_itr = pe_reads_by_5prime_pos_.insert(
-                std::make_pair(move(rec_5prime_pos), move(next_record_))
+                std::make_pair(move(rec_5prime_pos), std::make_pair(move(rec), move(sample)))
                 );
         // Also add an entry in the {pe_read_name : pe_record} map.
-        pe_reads_by_name_.insert( {pe_read_itr->second.qname(), pe_read_itr} );
+        pe_reads_by_name_.insert( {pe_read_itr->second.first.qname(), pe_read_itr} );
     }
 }
 
@@ -531,28 +600,41 @@ bool BamCLocBuilder::fill_window()
      * mate matching) via `pe_reads_by_name_`.
      */
 
-    if (!eof_) {
-        if (next_record_.empty()) {
-            if ((eof_ = !next_record())) {
-                cerr << "Error: No usable records in BAM file '" << bam_f_->path << "'.\n";
-                throw exception();
+    for (size_t bam_f_i=0; bam_f_i<bam_fs_.size(); ++bam_f_i) {
+    try {
+        uchar& eof = eofs_[bam_f_i];
+        BamRecord& rec = next_records_[bam_f_i];
+        if (!eof) {
+            if (rec.empty()) {
+                if ((eof = !next_record(bam_f_i))) {
+                    if (bam_fs_[bam_f_i]->n_records_read() == 0)
+                        cerr << "Error: No BAM records.\n";
+                    else
+                        cerr << "Error: All records were discarded.\n";
+                    throw exception();
+                }
+                assert(!rec.empty());
             }
-            assert(!next_record_.empty());
+            while (!eof && fw_reads_by_5prime_pos_.empty()) {
+                add_next_record_to_the_window(bam_f_i); // (Note: `next_record_` may be a paired-end read.)
+                eof = !next_record(bam_f_i);
+            }
+            while (!eof
+                    && rec.chrom() == fw_reads_by_5prime_pos_.begin()->first.chrom
+                    && size_t(rec.pos()) <= fw_reads_by_5prime_pos_.begin()->first.bp + cfg_.max_insert_refsize
+            ) {
+                add_next_record_to_the_window(bam_f_i);
+                eof = !next_record(bam_f_i);
+            }
         }
-        while (!eof_ && fw_reads_by_5prime_pos_.empty()) {
-            add_next_record_to_the_window(); // (Note: `next_record_` may be a paired-end read.)
-            eof_ = !next_record();
-        }
-        while (!eof_
-                && next_record_.chrom() == fw_reads_by_5prime_pos_.begin()->first.chrom
-                && size_t(next_record_.pos()) <= fw_reads_by_5prime_pos_.begin()->first.bp + cfg_.max_insert_refsize
-        ) {
-            add_next_record_to_the_window();
-            eof_ = !next_record();
-        }
-    }
+    } catch (exception& e) {
+        cerr << "Error: (At the " << bam_fs_[bam_f_i]->n_records_read()
+             << "th record in file '" << bam_fs_[bam_f_i]->path << "'.)\n";
+        throw;
+    }}
+
     if (fw_reads_by_5prime_pos_.empty()) {
-        assert(eof_);
+        assert(std::accumulate(eofs_.begin(), eofs_.end(), size_t(0)) == eofs_.size());
         return false;
     }
 
@@ -565,7 +647,7 @@ bool BamCLocBuilder::fill_window()
                     || pe_reads_by_5prime_pos_.begin()->first.bp + cfg_.max_insert_refsize < size_t(leftmost_cutsite.bp) + 1
                 )
         ) {
-            pe_reads_by_name_.erase(pe_reads_by_5prime_pos_.begin()->second.qname());
+            pe_reads_by_name_.erase(pe_reads_by_5prime_pos_.begin()->second.first.qname());
             pe_reads_by_5prime_pos_.erase(pe_reads_by_5prime_pos_.begin());
         }
         // As we enforce sorting there shouldn't be reads from further-ranked chromosomes.
@@ -599,36 +681,22 @@ bool BamCLocBuilder::build_one_locus(CLocAlnSet& aln_loc)
         // Apply filters to the putative locus.
         //
 
-        vector<BamRecord>& loc_records = fw_reads_by_5prime_pos_.begin()->second;
+        vector<pair<BamRecord,SampleIdx>>& loc_records = fw_reads_by_5prime_pos_.begin()->second;
 
         // Get the samples of the records, and tally sample occurrences.
-        fw_samples.clear();
         vector<size_t> n_reads_per_sample (mpopi().samples().size(), 0);
-        for (const BamRecord& r : loc_records) {
-            size_t sample = bpopi_.sample_of(r);
-            fw_samples.push_back(sample);
-            ++n_reads_per_sample[sample];
-        }
+        for (const pair<BamRecord,SampleIdx>& r : loc_records)
+            ++n_reads_per_sample[r.second];
 
         // Remove reads from samples that have less than `cfg_.min_reads_per_sample` reads.
-        assert(fw_samples.size() == loc_records.size());
-        for (size_t i=0; i<loc_records.size(); ++i) {
-            if (n_reads_per_sample[fw_samples[i]] < cfg_.min_reads_per_sample) {
-                // Mark it for deletion.
-                loc_records[i].destroy();
-                assert(loc_records[i].empty());
-                fw_samples[i] = SIZE_MAX;
-            }
-        }
-        // Splice deleted records out of the vectors.
+        for (pair<BamRecord,SampleIdx>& r : loc_records)
+            if (n_reads_per_sample[r.second] < cfg_.min_reads_per_sample)
+                // Bad sample, mark the record for deletion.
+                r.first.destroy();
         loc_records.erase(std::remove_if(
                 loc_records.begin(), loc_records.end(),
-                [] (const BamRecord& r) {return r.empty();}
+                [] (const pair<BamRecord,SampleIdx>& r) { return r.first.empty(); }
                 ), loc_records.end());
-        fw_samples.erase(std::remove_if(
-                fw_samples.begin(), fw_samples.end(),
-                [] (size_t s) {return s == SIZE_MAX;}
-                ), fw_samples.end());
 
         if (loc_records.empty()) {
             // Discard the locus; regenerate the window and retry.
@@ -644,16 +712,17 @@ bool BamCLocBuilder::build_one_locus(CLocAlnSet& aln_loc)
 
     // Position.
     Pos5 cutsite = fw_reads_by_5prime_pos_.begin()->first;
-    PhyLoc loc_pos (bam_f_->h().chrom_str(cutsite.chrom), cutsite.bp, cutsite.strand ? strand_plus : strand_minus);
+    PhyLoc loc_pos (bam_fs_.at(0)->h().chrom_str(cutsite.chrom),
+                    cutsite.bp,
+                    cutsite.strand ? strand_plus : strand_minus);
     size_t max_ref_span = 0;
 
     // Forward reads.
-    const vector<BamRecord>& fw_records = fw_reads_by_5prime_pos_.begin()->second;
+    const vector<pair<BamRecord,SampleIdx>>& fw_records = fw_reads_by_5prime_pos_.begin()->second;
     vector<SAlnRead> fw_reads;
-    assert(fw_samples.size() == fw_records.size());
-    for (size_t i=0; i<fw_records.size(); ++i) {
-        const BamRecord& r = fw_records[i];
-        size_t sample = fw_samples[i];
+    for (const pair<BamRecord,SampleIdx>& pair : fw_records) {
+        const BamRecord& r = pair.first;
+        size_t sample = pair.second;
 
         string name (r.qname());
         if (r.is_read1())
@@ -685,17 +754,18 @@ bool BamCLocBuilder::build_one_locus(CLocAlnSet& aln_loc)
     // Paired-end reads.
     vector<SAlnRead> pe_reads;
     if (!pe_reads_by_5prime_pos_.empty()) {
-        for (size_t i=0; i<fw_records.size(); ++i) {
-            const BamRecord& fw_rec = fw_records[i];
+        for (auto& fw_pair : fw_records) {
+            const BamRecord& fw_rec = fw_pair.first;
 
             // Find a mate.
             auto pe_name_itr = pe_reads_by_name_.find(fw_rec.qname());
             if (pe_name_itr == pe_reads_by_name_.end())
                 continue;
+            std::multimap<Pos5,pair<BamRecord,SampleIdx>>::iterator pe_rec_itr = pe_name_itr->second;
 
-            std::multimap<Pos5,BamRecord>::iterator pe_rec_itr = pe_name_itr->second;
             Pos5 pe_pos5 = pe_rec_itr->first;
-            const BamRecord& pe_rec = pe_rec_itr->second;
+            const BamRecord& pe_rec = pe_rec_itr->second.first;
+            size_t pe_sample = pe_rec_itr->second.second;
 
             // Check that the mate is in the window and that the reads don't
             // extend past one another. //xxx Oct 2017 @Nick: This may actually
@@ -723,11 +793,10 @@ bool BamCLocBuilder::build_one_locus(CLocAlnSet& aln_loc)
                 max_ref_span = insert_length;
 
             // Check that the read groups are consistent.
-            size_t pe_sample = bpopi_.sample_of(pe_rec);
-            if (pe_sample != fw_samples[i]) {
+            if (pe_sample != fw_pair.second) {
                 cerr << "Warning: Paired reads '" << fw_rec.qname() << "' and '"
                      << pe_rec.qname() << "' belong to different samples ('"
-                     << mpopi().samples()[fw_samples[i]].name << "' and '"
+                     << mpopi().samples()[fw_pair.second].name << "' and '"
                      << mpopi().samples()[pe_sample].name << "').\n";
                 continue;
             }
