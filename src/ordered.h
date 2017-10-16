@@ -246,11 +246,11 @@ public:
         this->log_fh = &log_fh;
     }
 
-    int order(vector<const StatT *> &, map<uint, uint> &, const vector<LocBin *> &, const vector<StatT **> &);
+    bool order(vector<const StatT *> &, map<uint, uint> &, const vector<LocBin *> &, const vector<StatT **> &);
 };
 
 template<class StatT>
-int
+bool
 OPopPair<StatT>::order(vector<const StatT *> &sites, map<uint, uint> &sites_key, const vector<LocBin *> &sorted_loci, const vector<StatT **> &div)
 {
     CSLocus *loc;
@@ -263,7 +263,7 @@ OPopPair<StatT>::order(vector<const StatT *> &sites, map<uint, uint> &sites_key,
 
     uint pop_1=UINT_MAX, pop_2=UINT_MAX;
     for (uint i = 0; i < div.size(); i++) {
-        cloc_len = strlen(sorted_loci[i]->cloc->con);
+        cloc_len = sorted_loci[i]->cloc->len;
         pair     = div[i];
         
         for (uint j = 0; j < cloc_len; j++) {
@@ -276,13 +276,14 @@ OPopPair<StatT>::order(vector<const StatT *> &sites, map<uint, uint> &sites_key,
         }
         if (found == true) break;
     }
-    assert(found);
+    if (found == false)
+        return found;
 
     this->init_sites(sites, sites_key, sorted_loci, pop_1, pop_2);
 
     for (uint i = 0; i < div.size(); i++) {
         loc      = sorted_loci[i]->cloc;
-        cloc_len = strlen(loc->con);
+        cloc_len = loc->len;
         pair     = div[i];
 
         for (uint pos = 0; pos < cloc_len; pos++) {
@@ -309,7 +310,7 @@ OPopPair<StatT>::order(vector<const StatT *> &sites, map<uint, uint> &sites_key,
         }
     }
 
-    return 0;
+    return true;
 };
 
 template<class StatT>
