@@ -170,7 +170,7 @@ void BamRecord::assign(
     r_->core.bin = hts_reg2bin(r_->core.pos, r_->core.pos + bam_cigar2rlen(r_->core.n_cigar, cigar), 14, 5);
 }
 
-Bam::Bam(const char *path) : Input(), bam_fh(NULL), n_records_read_(0), hdr(), rec() {
+Bam::Bam(const char *path) : Input(), bam_fh(NULL), n_records_read_(0), hdr() {
     this->path   = string(path);
     bam_fh = hts_open(path, "r");
     if (bam_fh == NULL) {

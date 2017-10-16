@@ -11,6 +11,7 @@ void build_mpopi(MetaPopInfo& mpopi, map<string, size_t>& rg_to_sample, const Ba
 
 class BamCLocReader {
     Bam* bam_f_;
+    BamRecord rec_;
     bool eof_;
     MetaPopInfo mpopi_;
     map<string, size_t> rg_to_sample_;
@@ -95,7 +96,7 @@ private:
 
     BamRecord next_record_;
     bool treat_next_record_as_fw_;
-    bool next_record();
+    bool next_record(BamRecord& r);
 
     // Buffers to store the reads of the sliding window.
     bool fill_window();
@@ -273,11 +274,11 @@ BamCLocReader::BamCLocReader(Bam** bam_f)
     //
     // Read the very first record.
     //
-    if (!bam_f_->next_record()) {
+    if (!bam_f_->next_record(rec_)) {
         cerr << "Error: No records in BAM file '" << bam_f_->path << "'.\n";
         throw exception();
-    } else if (bam_f_->r().is_unmapped()) {
-        cerr << "Error: BAM file '" << bam_f_->path << "' unexpectedly contains unmapped records.\n";
+    } else if (!rec_.is_primary()) {
+        cerr << "Error: BAM file '" << bam_f_->path << "' unexpectedly contains non-primary records.\n";
         throw exception();
     }
 }
@@ -305,27 +306,26 @@ bool BamCLocReader::read_one_locus(CLocReadSet& readset) {
 
     if (!eof_) {
         // Read all the reads of the locus, and one more.
-        if (bam_f_->r().chrom() < loc_i_) {
+        if (rec_.chrom() < loc_i_) {
             cerr << "Error: BAM file isn't properly sorted.\n";
             throw exception();
         }
-        while (bam_f_->r().chrom() == loc_i_) {
-            const BamRecord& rec = bam_f_->r();
-            const char* rg = rec.read_group();
+        while (rec_.chrom() == loc_i_) {
+            const char* rg = rec_.read_group();
             if (rg == NULL) {
-                cerr << "Error: Corrupted BAM file: missing read group for record '" << rec.qname() << "'.\n";
+                cerr << "Error: Corrupted BAM file: missing read group for record '" << rec_.qname() << "'.\n";
                 throw exception();
             }
-            if (rec.is_read2())
-                readset.add_pe(SRead(Read(rec.seq(), string(rec.qname())+"/2"), rg_to_sample_.at(rg)));
-            else if (rec.is_read1())
-                readset.add(SRead(Read(rec.seq(), string(rec.qname())+"/1"), rg_to_sample_.at(rg)));
+            if (rec_.is_read2())
+                readset.add_pe(SRead(Read(rec_.seq(), string(rec_.qname())+"/2"), rg_to_sample_.at(rg)));
+            else if (rec_.is_read1())
+                readset.add(SRead(Read(rec_.seq(), string(rec_.qname())+"/1"), rg_to_sample_.at(rg)));
             else
                 // If tsv2bam wasn't given paired-end reads, no flag was set and the
                 // read names were left unchanged, so we also don't touch them.
-                readset.add(SRead(Read(rec.seq(), string(rec.qname())), rg_to_sample_.at(rg)));
+                readset.add(SRead(Read(rec_.seq(), string(rec_.qname())), rg_to_sample_.at(rg)));
 
-            if (!bam_f_->next_record()) {
+            if (!bam_f_->next_record(rec_)) {
                 eof_ = true;
                 break;
             }
@@ -367,7 +367,7 @@ BamCLocBuilder::BamCLocBuilder(
         mpopi_.set_sample_id(i, i+1);
 
     // Read the very first record.
-    if (!next_record()) {
+    if (!next_record(next_record_)) {
         cerr << "Error: No usable records in BAM file '" << bam_f_->path << "'.\n";
         throw exception();
     }
@@ -375,13 +375,11 @@ BamCLocBuilder::BamCLocBuilder(
 
 inline
 bool
-BamCLocBuilder::next_record()
+BamCLocBuilder::next_record(BamRecord& r)
 {
     while (true) {
-        if(!bam_f_->next_record())
+        if(!bam_f_->next_record(r))
             return false;
-
-        const BamRecord& r = bam_f_->r();
 
         if (cfg_.ign_pe_reads && r.is_read2())
             continue;
@@ -461,9 +459,6 @@ BamCLocBuilder::next_record()
             continue;
         }
 
-        // Assign to `next_record_`.
-        next_record_ = move(bam_f_->r());
-
         break;
     }
     return true;
@@ -527,7 +522,7 @@ BamCLocBuilder::fill_window()
                 previous = &pe_read_itr->second;
             }
 
-            if (!next_record()) {
+            if (!next_record(next_record_)) {
                 eof_ = true;
                 break;
             }
