@@ -25,21 +25,23 @@ public:
 
 // BamCLocReader: Class to read catalog loci from files by the de novo pipeline.
 class BamCLocReader {
-    Bam* bam_f_;
+    vector<Bam*> bam_fs_;
+
     BamPopInfo bpopi_;
-    bool eof_;
-    BamRecord rec_;
     vector<const char*> loci_aln_positions_;
 
     int32_t loc_i_; // Index of the next locus (chromosome). Incremented by read_one_locus().
 
-public:
-    BamCLocReader(Bam** bam_f);
-    ~BamCLocReader() {if (bam_f_) delete bam_f_;}
+    vector<uchar> eofs_; // For each BAM file. (Vector of bools; `uchar`s because std specializes `vector<bool>`.)
+    vector<BamRecord> next_records_; // The next record, for each file.
 
-    const Bam* bam_f() const {return bam_f_;}
-    size_t n_loci() const {return bam_f_->h().n_ref_chroms();}
-    int target2id(size_t target_i) const {return atoi(bam_f_->h().chrom_str(target_i));}
+public:
+    BamCLocReader(vector<Bam*>&& bam_fs);
+    ~BamCLocReader() {for (Bam* bam_f : bam_fs_) delete bam_f;}
+
+    const vector<Bam*>& bam_fs() const {return bam_fs_;}
+    size_t n_loci() const {return bam_fs_[0]->h().n_ref_chroms();}
+    int target2id(size_t target_i) const {return atoi(bam_fs_[0]->h().chrom_str(target_i));}
     const MetaPopInfo& mpopi() const {return bpopi_.mpopi();}
 
     // Reads one locus. Returns false on EOF.
@@ -307,64 +309,73 @@ size_t BamPopInfo::sample_of(const BamRecord& rec, size_t bam_f_i) {
 }
 
 inline
-BamCLocReader::BamCLocReader(Bam** bam_f)
+BamCLocReader::BamCLocReader(vector<Bam*>&& bam_fs)
 :
-    bam_f_(*bam_f),
-    bpopi_({bam_f_}),
-    eof_(false),
-    loc_i_(-1)
+    bam_fs_(move(bam_fs)),
+    bpopi_(bam_fs_),
+    loc_i_(-1),
+    eofs_(bam_fs_.size(), false),
+    next_records_(bam_fs_.size())
 {
-    *bam_f = NULL;
-
-    for (const Sample& s : mpopi().samples()) {
-        if (s.id == -1) {
-            cerr << "WARNING: Sample '" << s.name << "' is missing its (integer) ID; was tsv2bam run correctly?!\n";
-        }
+    // Check that headers are consistent.
+    size_t bam_f_i=1;
+    if (bam_fs_.empty())
+        DOES_NOT_HAPPEN;
+    try {
+        for (; bam_f_i<bam_fs_.size(); ++bam_f_i)
+            BamHeader::check_same_ref_chroms(bam_fs_[0]->h(), bam_fs_[bam_f_i]->h());
+    } catch (exception& e) {
+        cerr << "Error: Inconsistent BAM headers; in files '" << bam_fs_[0]->path
+             << "' and '" << bam_fs_[bam_f_i]->path << "'.\n";
+        throw;
     }
+
+    // Check that Stacks sample IDs are present.
+    for (const Sample& s : mpopi().samples())
+        if (s.id == -1)
+            cerr << "WARNING: Sample '" << s.name << "' is missing its (integer) ID; was tsv2bam run correctly?!\n";
 
     //
     // Load genomic alignment information from the header.
     // If the first locus has alignment information: this is a ref-based analysis,
     // record all the alignment positions. Otherwise, assume it's a de novo analysis.
     //
-    {
-        const char* p = bam_f_->h().text();
-        size_t line = 1;
-        while (true) {
-            if (strncmp(p, "@SQ\t", 4) == 0) {
-                loci_aln_positions_.push_back(NULL);
-                while (*p && *p != '\n') {
-                    if (strncmp(p, "pos:", 4) == 0) {
-                        loci_aln_positions_.back() = p+4;
-                        break; // Skip the rest of the line.
-                    }
-                    while (*p && *p != '\n' && *p != '\t')
-                        ++p;
-                    if (*p == '\t')
-                        ++p;
+    const char* p = bam_fs_[0]->h().text();
+    size_t line = 1;
+    while (true) {
+        if (strncmp(p, "@SQ\t", 4) == 0) {
+            loci_aln_positions_.push_back(NULL);
+            while (*p && *p != '\n') {
+                if (strncmp(p, "pos:", 4) == 0) {
+                    loci_aln_positions_.back() = p+4;
+                    break; // Skip the rest of the line.
                 }
-                if (loci_aln_positions_.back() == NULL) {
-                    if (loci_aln_positions_.size() == 1) {
-                        // de novo.
-                        loci_aln_positions_ = vector<const char*>();
-                        break;
-                    } else {
-                        cerr << "Error: In BAM header, at line " << line
-                             << ": alignment information is missing.\n";
-                        throw exception();
-                    }
+                while (*p && *p != '\n' && *p != '\t')
+                    ++p;
+                if (*p == '\t')
+                    ++p;
+            }
+            if (loci_aln_positions_.back() == NULL) {
+                if (loci_aln_positions_.size() == 1) {
+                    // de novo.
+                    loci_aln_positions_ = vector<const char*>();
+                    break;
+                } else {
+                    cerr << "Error: In BAM header, at line " << line
+                         << ": alignment information is missing.\n";
+                    throw exception();
                 }
             }
-
-            p = strchr(p, '\n');
-            if (p == NULL)
-                break;
-            ++p;
-            ++line;
         }
-        if(!loci_aln_positions_.empty() && loci_aln_positions_.size() != bam_f_->h().n_ref_chroms())
-            DOES_NOT_HAPPEN;
+
+        p = strchr(p, '\n');
+        if (p == NULL)
+            break;
+        ++p;
+        ++line;
     }
+    if(!loci_aln_positions_.empty() && loci_aln_positions_.size() != bam_fs_[0]->h().n_ref_chroms())
+        DOES_NOT_HAPPEN;
 }
 
 inline
@@ -373,22 +384,28 @@ bool BamCLocReader::read_one_locus(CLocReadSet& readset) {
 
     ++loc_i_;
     if (loc_i_ == 0) {
-        // Read the first record.
-        if (!bam_f_->next_record(rec_, true)) {
-            cerr << "Error: No records in BAM file '" << bam_f_->path << "'.\n";
-            throw exception();
-        } else if (!rec_.is_primary()) {
-            cerr << "Error: BAM file '" << bam_f_->path << "' unexpectedly contains non-primary records.\n";
-            throw exception();
+        // Read the first records.
+        for (size_t bam_f_i=0; bam_f_i<bam_fs_.size(); ++bam_f_i) {
+            Bam* bam_f = bam_fs_[bam_f_i];
+            BamRecord& rec = next_records_[bam_f_i];
+            uchar& eof = eofs_[bam_f_i];
+            if ((eof = !bam_f->next_record(rec, true))) {
+                cerr << "Error: No records in BAM file '" << bam_f->path << "'.\n";
+                throw exception();
+            } else if (!rec.is_primary()) {
+                cerr << "Error: BAM file '" << bam_f->path
+                     << "' unexpectedly contains non-primary records.\n";
+                throw exception();
+            }
         }
     } else if (loc_i_ == int32_t(n_loci())) {
-        assert(eof_);
+        assert(std::accumulate(eofs_.begin(), eofs_.end(), size_t(0)) == eofs_.size());
         return false;
     }
 
     readset.clear();
     readset.bam_i(loc_i_);
-    readset.id(atoi(bam_f_->h().chrom_str(loc_i_)));
+    readset.id(atoi(bam_fs_[0]->h().chrom_str(loc_i_)));
     if (!loci_aln_positions_.empty()) {
         const char* p = loci_aln_positions_.at(loc_i_);
         const char* q = p;
@@ -397,22 +414,23 @@ bool BamCLocReader::read_one_locus(CLocReadSet& readset) {
         readset.pos(PhyLoc(string(p, q)));
     }
 
-    if (!eof_) {
+    for (size_t bam_f_i=0; bam_f_i<bam_fs_.size(); ++bam_f_i) {
+        Bam* bam_f = bam_fs_[bam_f_i];
+        BamRecord& rec = next_records_[bam_f_i];
+        uchar& eof = eofs_[bam_f_i];
+
         // Read all the reads of the locus, and one more.
-        while (rec_.chrom() == loc_i_) {
-            if (rec_.is_read2())
-                readset.add_pe(SRead(Read(rec_.seq(), string(rec_.qname())+"/2"), bpopi_.sample_of(rec_)));
-            else if (rec_.is_read1())
-                readset.add(SRead(Read(rec_.seq(), string(rec_.qname())+"/1"), bpopi_.sample_of(rec_)));
+        while (!eof && rec.chrom() == loc_i_) {
+            if (rec.is_read2())
+                readset.add_pe(SRead(Read(rec.seq(), string(rec.qname())+"/2"), bpopi_.sample_of(rec, bam_f_i)));
+            else if (rec.is_read1())
+                readset.add(SRead(Read(rec.seq(), string(rec.qname())+"/1"), bpopi_.sample_of(rec, bam_f_i)));
             else
                 // If tsv2bam wasn't given paired-end reads, no flag was set and the
                 // read names were left unchanged, so we also don't touch them.
-                readset.add(SRead(Read(rec_.seq(), string(rec_.qname())), bpopi_.sample_of(rec_)));
+                readset.add(SRead(Read(rec.seq(), string(rec.qname())), bpopi_.sample_of(rec, bam_f_i)));
 
-            if (!bam_f_->next_record(rec_, true)) {
-                eof_ = true;
-                break;
-            }
+            eof = !bam_f->next_record(rec, true);
         }
     }
 
