@@ -45,21 +45,21 @@ const uint PopStatSize = 5;
 
 class PopStat {
 public:
-    int    loc_id;
-    int    bp;
-    bool   fixed;
-    double alleles;    // Number of alleles sampled at this location.
-    uint   snp_cnt;    // Number of SNPs in kernel-smoothed window centered on this SNP.
-    double stat[PopStatSize];
+    int      loc_id;
+    int      bp;
+    bool     fixed;
+    double   alleles;    // Number of alleles sampled at this location.
+    uint16_t snp_cnt;    // Number of SNPs in kernel-smoothed window centered on this SNP.
+    double   stat[PopStatSize];
     mutable double smoothed[PopStatSize];
-    double bs[PopStatSize];
+    double   bs[PopStatSize];
 
     PopStat() {
-        this->loc_id  = 0;
-        this->bp      = 0;
-        this->fixed   = false;
-        this->alleles = 0.0;
-        this->snp_cnt = 0;
+        this->loc_id   = 0;
+        this->bp       = 0;
+        this->fixed    = false;
+        this->alleles  = 0.0;
+        this->snp_cnt  = 0;
 
         for (uint i = 0; i < PopStatSize; i++) {
             this->stat[i]     = 0.0;
@@ -68,11 +68,11 @@ public:
         }
     }
     int reset() {
-        this->loc_id  = 0;
-        this->bp      = 0;
-        this->fixed   = false;
-        this->alleles = 0.0;
-        this->snp_cnt = 0;
+        this->loc_id   = 0;
+        this->bp       = 0;
+        this->fixed    = false;
+        this->alleles  = 0.0;
+        this->snp_cnt  = 0;
 
         for (uint i = 0; i < PopStatSize; i++) {
             this->stat[i]     = 0.0;

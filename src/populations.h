@@ -147,10 +147,10 @@ public:
         delete this->_ord_pp;
     }
 
-    int snpstats(const vector<LocBin *> &, ofstream &);
-    int hapstats(const vector<LocBin *> &, ofstream &);
-    int snp_divergence(const vector<LocBin *> &, const vector<vector<PopPair **>> &, ofstream &);
-    int hap_divergence(const vector<LocBin *> &, const vector<vector<HapStat *>>  &, const vector<HapStat *> &, ofstream &);
+    int    snpstats(const vector<LocBin *> &, ofstream &);
+    int    hapstats(const vector<LocBin *> &, ofstream &);
+    int    snp_divergence(const vector<LocBin *> &, const vector<vector<PopPair **>> &, ofstream &);
+    int    hap_divergence(const vector<LocBin *> &, const vector<vector<HapStat *>>  &, const vector<HapStat *> &, ofstream &);
 };
 
 //
@@ -219,8 +219,8 @@ public:
     void   keep_locus(LocBin *);
     void   batch_clear();
     
-    const set<int>&            blacklist()       { return this->_blacklist; }
-    const map<int, set<int>>&  whitelist()       { return this->_whitelist; }
+    const set<int>&            blacklist() { return this->_blacklist; }
+    const map<int, set<int>>&  whitelist() { return this->_whitelist; }
 
 private:
     size_t  _pop_cnt;
@@ -283,6 +283,7 @@ public:
     VcfHeader*     vcf_header()    { return this->_vcf_header; }
     size_t         batch_size()    { return this->_batch_size; }
     size_t         batch_size(size_t bsize) { this->_batch_size = bsize; return bsize; }
+    string         report_locus_overlap(ofstream *);
     
     const LocusFilter&      filter() { return this->_loc_filter; }
     const vector<LocBin *>& loci()   { return this->_loci; }
