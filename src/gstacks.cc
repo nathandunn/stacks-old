@@ -2234,6 +2234,11 @@ try {
     ) {
         cerr << "Error: Please specify a population map (-M).\n";
         bad_args();
+    } else if (input_type == In::refbased_list
+        && !popmap_path.empty()
+    ) {
+        cerr << "Error: Please specify -I/-M or -B, not both.\n";
+        bad_args();
     }
 
     if ((input_type == In::refbased_popmap || input_type == In::refbased_list)
