@@ -29,7 +29,7 @@
 void parse_command_line(int argc, char* argv[]);
 void report_options(ostream& os);
 
-enum class GStacksInputT {unknown, denovo, refbased};
+enum class GStacksInputT {unknown, denovo_popmap, denovo_merger, refbased_popmap, refbased_list};
 
  //
 // PhasedHet & PhaseSet
