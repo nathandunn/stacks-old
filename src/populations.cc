@@ -121,14 +121,13 @@ int main (int argc, char* argv[]) {
     // Parse the command line.
     //
     parse_command_line(argc, argv);
-    output_parameters(cerr);
 
     //
     // Open and initialize the log file.
     //
-    ofstream log_fh;
-    open_log(log_fh);
-    init_log(log_fh, argc, argv);
+    LogAlterator *logger = new LogAlterator(out_path + out_prefix + ".log", false, argc, argv);
+
+    output_parameters(cerr);
 
     //
     // Set the number of OpenMP parallel threads to execute.
@@ -188,7 +187,7 @@ int main (int argc, char* argv[]) {
     //
     LocusSmoothing *smooth = NULL;
     if (smooth_fstats || smooth_popstats)
-        smooth = new LocusSmoothing(&mpopi, log_fh);
+        smooth = new LocusSmoothing(&mpopi, logger->l);
 
     //
     // Setup the divergence statistics calculator, if requested.
@@ -224,7 +223,7 @@ int main (int argc, char* argv[]) {
         // - Sort the loci by basepair if they are ordered.
         //
         cerr << "  Begin batch " << bloc.next_batch_number() << "...";
-        loc_cnt  = bloc.next_batch(log_fh);
+        loc_cnt  = bloc.next_batch(logger->l);
 
         cerr << "analyzed " << filter.batch_total() << " loci";
         if (loci_ordered && bloc.loci().size() > 0)
@@ -238,7 +237,7 @@ int main (int argc, char* argv[]) {
         //
         // Calculate haplotype and gene diversity per locus per population.
         //
-        bloc.hapstats(log_fh);
+        bloc.hapstats(logger->l);
 
         //
         // Export this subset of the loci.
@@ -265,12 +264,12 @@ int main (int argc, char* argv[]) {
         } else {
             cerr << "    Generating kernel-smoothed population statistics...";
             if (smooth_popstats) {
-                smooth->snpstats(bloc.loci(), log_fh);
-                smooth->hapstats(bloc.loci(), log_fh);
+                smooth->snpstats(bloc.loci(), logger->l);
+                smooth->hapstats(bloc.loci(), logger->l);
             }
             if (smooth_fstats) {
-                smooth->snp_divergence(bloc.loci(), ldiv->snp_values(), log_fh);
-                smooth->hap_divergence(bloc.loci(), ldiv->haplotype_values(), ldiv->metapop_haplotype_values(), log_fh);
+                smooth->snp_divergence(bloc.loci(), ldiv->snp_values(), logger->l);
+                smooth->hap_divergence(bloc.loci(), ldiv->haplotype_values(), ldiv->metapop_haplotype_values(), logger->l);
             }
             cerr << "done.\n";
         }
@@ -305,7 +304,7 @@ int main (int argc, char* argv[]) {
     //
     // Write out the distributions of catalog loci.
     //
-    bloc.write_distributions(log_fh);
+    bloc.write_distributions(logger->l);
     bloc.cleanup();
 
     if (smooth_fstats || smooth_popstats)
@@ -318,13 +317,13 @@ int main (int argc, char* argv[]) {
     // //
     // map<int, pair<merget, int> > merge_map;
     // if (merge_sites && loci_ordered)
-    //     merge_shared_cutsite_loci(catalog, pmap, psum, merge_map, log_fh);
+    //     merge_shared_cutsite_loci(catalog, pmap, psum, merge_map, logger->l);
 
     // if (debug_flags.count("VCFCOMP"))
     //     vcfcomp_simplify_pmap(catalog, pmap);
 
     // if (structure_out && ordered_export)
-    //     write_structure_ordered(catalog, pmap, psum, log_fh);
+    //     write_structure_ordered(catalog, pmap, psum, logger->l);
     // else if (structure_out)
     //     write_structure(catalog, pmap, psum);
 
@@ -381,7 +380,7 @@ int main (int argc, char* argv[]) {
     //     cerr << "Loaded " << bootstraplist.size() << " markers to include when bootstrapping.\n";
     // }
 
-    log_fh.close();
+    delete logger;
 
     cerr << "Populations is done.\n";
 
@@ -3813,19 +3812,6 @@ bool
 hap_compare(const pair<string, int>& a, const pair<string, int>& b)
 {
     return (a.second > b.second);
-}
-
-void
-open_log(ofstream &log_fh)
-{
-    check_or_mk_dir(out_path);
-
-    string log_path = out_path + out_prefix + ".log";
-    log_fh.open(log_path.c_str(), ofstream::out);
-    if (log_fh.fail()) {
-        cerr << "Error opening log file '" << log_path << "'\n";
-        throw exception();
-    }
 }
 
 void
