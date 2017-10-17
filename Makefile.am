@@ -79,48 +79,48 @@ gstacks_SOURCES = libcore.a src/gstacks.h src/gstacks.cc src/debruijn.h src/debr
 
 phasedstacks_CXXFLAGS = $(OPENMP_CFLAGS)
 phasedstacks_LDFLAGS  = $(OPENMP_CFLAGS)
-phasedstacks_LDADD    = libcore.a
+phasedstacks_LDADD    = libcore.a $(BAM_LIBS)
 
 ustacks_CXXFLAGS = $(OPENMP_CFLAGS)
 ustacks_LDFLAGS  = $(OPENMP_CFLAGS)
-ustacks_LDADD    = libcore.a
+ustacks_LDADD    = libcore.a $(BAM_LIBS)
 pstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
 pstacks_LDFLAGS  = $(OPENMP_CFLAGS)
-pstacks_LDADD    = $(BAM_LIBS) libcore.a
+pstacks_LDADD    = libcore.a $(BAM_LIBS)
 cstacks_CXXFLAGS = $(OPENMP_CFLAGS)
 cstacks_LDFLAGS  = $(OPENMP_CFLAGS)
-cstacks_LDADD    = libcore.a
+cstacks_LDADD    = libcore.a $(BAM_LIBS)
 sstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
 sstacks_LDFLAGS  = $(OPENMP_CFLAGS)
-sstacks_LDADD    = $(BAM_LIBS) libcore.a
+sstacks_LDADD    = libcore.a $(BAM_LIBS)
 
 process_radtags_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
 process_radtags_LDFLAGS  = $(OPENMP_CFLAGS)
-process_radtags_LDADD    = $(BAM_LIBS) libcore.a libclean.a
+process_radtags_LDADD    =  libcore.a libclean.a $(BAM_LIBS)
 process_shortreads_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
 process_shortreads_LDFLAGS  = $(OPENMP_CFLAGS)
-process_shortreads_LDADD    = $(BAM_LIBS) libcore.a libclean.a
+process_shortreads_LDADD    =  libcore.a libclean.a $(BAM_LIBS)
 clone_filter_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
 clone_filter_LDFLAGS  = $(OPENMP_CFLAGS)
-clone_filter_LDADD    = $(BAM_LIBS) libcore.a libclean.a
-kmer_filter_CXXFLAGS = $(OPENMP_CFLAGS) 
+clone_filter_LDADD    = libcore.a libclean.a $(BAM_LIBS)
+kmer_filter_CXXFLAGS = $(OPENMP_CFLAGS)
 kmer_filter_LDFLAGS  = $(OPENMP_CFLAGS)
-kmer_filter_LDADD    = libcore.a libclean.a
+kmer_filter_LDADD    = libcore.a libclean.a $(BAM_LIBS)
 
 genotypes_CXXFLAGS = $(OPENMP_CFLAGS)
 genotypes_LDFLAGS  = $(OPENMP_CFLAGS)
-genotypes_LDADD    = libcore.a libpop.a
+genotypes_LDADD    = libcore.a libpop.a $(BAM_LIBS)
 populations_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
 populations_LDFLAGS  = $(OPENMP_CFLAGS)
-populations_LDADD    = $(OPENMP_CFLAGS) $(BAM_LIBS) libcore.a libpop.a
+populations_LDADD    = libcore.a libpop.a $(BAM_LIBS)
 
 # tsv2bam & gstacks
 tsv2bam_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
 tsv2bam_LDFLAGS  = $(OPENMP_CFLAGS)
-tsv2bam_LDADD    = $(BAM_LIBS) libcore.a
+tsv2bam_LDADD    = libcore.a $(BAM_LIBS)
 gstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
 gstacks_LDFLAGS  = $(OPENMP_CFLAGS)
-gstacks_LDADD    = $(BAM_LIBS) libcore.a
+gstacks_LDADD    = libcore.a $(BAM_LIBS)
 
 dist_bin_SCRIPTS = scripts/denovo_map.pl scripts/ref_map.pl	scripts/export_sql.pl \
 	scripts/sort_read_pairs.pl scripts/exec_velvet.pl scripts/load_sequences.pl \
