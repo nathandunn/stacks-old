@@ -54,7 +54,10 @@ class MetaPopInfo {
     map<size_t,size_t> sample_indexes_by_id_; // Links a sample ID with an index in [samples_].
     void reset_sample_id_map();
 
+    MetaPopInfo(MetaPopInfo&& other) = delete; // Immovable (for pointer stability).
 public:
+    MetaPopInfo() = default;
+
     // Create the representation :
     // -- from a population map file.
     // -- from just a vector of sample names.

@@ -10,16 +10,22 @@
 // BamPopInfo : class to handle BAM read groups and interface
 // them with MetaPopInfo Samples.
 class BamPopInfo {
-    MetaPopInfo mpopi_;
+    unique_ptr<MetaPopInfo> mpopi_; // (Pointer because MetaPopInfo is immovable.)
+
+    // For read group-based identification.
     typedef map<string,size_t> RGMap;
     vector<RGMap> read_groups_;
     vector<map<const char*, RGMap::iterator, LessCStrs>> rg_to_sample_;
 
+    // For file name-based identification.
+    vector<size_t> file_samples_;
+
 public:
-    BamPopInfo(const vector<Bam*>& bam_fs); //, const vector<size_t>& samples={});
+    BamPopInfo(const vector<Bam*>& bam_fs);
+    BamPopInfo(const vector<Bam*>& bam_fs, const vector<string>& file_samples);
     void reassign_ids();
 
-    const MetaPopInfo& mpopi() const {return mpopi_;}
+    const MetaPopInfo& mpopi() const {return *mpopi_;}
     size_t sample_of(const BamRecord& rec, size_t bam_f_i=0);
 };
 
@@ -36,7 +42,7 @@ class BamCLocReader {
     vector<BamRecord> next_records_; // The next record, for each file.
 
 public:
-    BamCLocReader(vector<Bam*>&& bam_fs);
+    BamCLocReader(vector<Bam*>&& bam_fs, const vector<string>& samples={});
     ~BamCLocReader() {for (Bam* bam_f : bam_fs_) delete bam_f;}
 
     const vector<Bam*>& bam_fs() const {return bam_fs_;}
@@ -74,7 +80,9 @@ public:
         size_t n_primary_kept() const {return n_primary - n_primary_mapq - n_primary_softclipped;}
     };
 
-    BamCLocBuilder(vector<Bam*>&& bam_fs, const Config& cfg);
+    // Constructs the object from a list of BAM file objects. If `samples` is
+    // given, its size must be the same as that of `bam_fs`, and
+    BamCLocBuilder(vector<Bam*>&& bam_fs, const Config& cfg, const vector<string>& samples={});
     ~BamCLocBuilder() {for(Bam* bam_f : bam_fs_) delete bam_f;}
 
     // Reads one locus. Returns false on EOF.
@@ -152,6 +160,7 @@ class VcfCLocReader {
 inline
 BamPopInfo::BamPopInfo(const vector<Bam*>& bam_fs)
 :
+    mpopi_(new MetaPopInfo()),
     read_groups_(bam_fs.size()),
     rg_to_sample_(bam_fs.size())
 {
@@ -231,18 +240,18 @@ BamPopInfo::BamPopInfo(const vector<Bam*>& bam_fs)
         for (const SampleData& d : readgroups_per_f[bam_f_i])
             names_all.push_back(d.name);
     names_all.erase(std::unique(names_all.begin(), names_all.end()), names_all.end());
-    mpopi_.init_names(names_all);
+    mpopi_->init_names(names_all);
 
     // Set the sample IDs. We allow overwriting.
     for (size_t bam_f_i=0; bam_f_i<bam_fs.size(); ++bam_f_i)
         for (const SampleData& d : readgroups_per_f[bam_f_i])
             if (d.stacks_id != -1)
-                mpopi_.set_sample_id(mpopi_.get_sample_index(d.name), d.stacks_id);
+                mpopi_->set_sample_id(mpopi_->get_sample_index(d.name), d.stacks_id);
 
     // Initialize `read_groups_`, `rg_to_sample_`.
     for (size_t bam_f_i=0; bam_f_i<bam_fs.size(); ++bam_f_i) {
         for (SampleData& d : readgroups_per_f[bam_f_i]) {
-            auto rv = read_groups_[bam_f_i].emplace(move(d.rg), mpopi_.get_sample_index(d.name));
+            auto rv = read_groups_[bam_f_i].emplace(d.rg, mpopi_->get_sample_index(d.name));
             if (rv.second)
                 rg_to_sample_[bam_f_i].emplace(rv.first->first.c_str(), rv.first);
         }
@@ -295,34 +304,53 @@ BamPopInfo::BamPopInfo(const vector<Bam*>& bam_fs)
 }
 
 inline
-void BamPopInfo::reassign_ids() {
-    for (size_t i=0; i<mpopi_.samples().size(); ++i)
-        mpopi_.set_sample_id(i, i+1);
+BamPopInfo::BamPopInfo(const vector<Bam*>& bam_fs, const vector<string>& file_samples)
+:
+    mpopi_(new MetaPopInfo()),
+    file_samples_(bam_fs.size())
+{
+    if (bam_fs.size() != file_samples.size())
+        DOES_NOT_HAPPEN;
+
+    mpopi_->init_names(file_samples);
+    for (size_t bam_f_i=0; bam_f_i<bam_fs.size(); ++bam_f_i)
+        file_samples_[bam_f_i] = mpopi_->get_sample_index(file_samples[bam_f_i]);
 }
 
 inline
-size_t BamPopInfo::sample_of(const BamRecord& rec, size_t bam_f_i) {
-    const char* rg = rec.read_group();
-    if (rg == NULL) {
-        cerr << "Error: Missing read group for BAM record '" << rec.qname() << "'.\n";
-        throw exception();
-    }
+void BamPopInfo::reassign_ids() {
+    for (size_t i=0; i<mpopi_->samples().size(); ++i)
+        mpopi_->set_sample_id(i, i+1);
+}
+
+inline
+size_t BamPopInfo::sample_of(const BamRecord& rec, size_t bam_f_i)
+{
     size_t sample;
-    try {
-        sample = rg_to_sample_.at(bam_f_i).at(rg)->second;
-    } catch(std::out_of_range&) {
-        cerr << "Error: BAM record '" << rec.qname() << "' has read group '" << rg
-             << "', which was not declared in the header.\n";
-        throw exception();
+    if (file_samples_.empty()) {
+        const char* rg = rec.read_group();
+        if (rg == NULL) {
+            cerr << "Error: Missing read group for BAM record '" << rec.qname() << "'.\n";
+            throw exception();
+        }
+        try {
+            sample = rg_to_sample_.at(bam_f_i).at(rg)->second;
+        } catch(std::out_of_range&) {
+            cerr << "Error: BAM record '" << rec.qname() << "' has read group '" << rg
+                 << "', which was not declared in the header.\n";
+            throw exception();
+        }
+    } else {
+        sample = file_samples_.at(bam_f_i);
     }
     return sample;
 }
 
 inline
-BamCLocReader::BamCLocReader(vector<Bam*>&& bam_fs)
+BamCLocReader::BamCLocReader(vector<Bam*>&& bam_fs, const vector<string>& samples)
 :
     bam_fs_(move(bam_fs)),
-    bpopi_(bam_fs_),
+    bpopi_(samples.empty() ? BamPopInfo(bam_fs_) : BamPopInfo(bam_fs_, samples)),
     loc_i_(-1),
     eofs_(bam_fs_.size(), false),
     next_records_(bam_fs_.size())
@@ -459,12 +487,13 @@ bool BamCLocReader::read_one_locus(CLocReadSet& readset) {
 inline
 BamCLocBuilder::BamCLocBuilder(
         vector<Bam*>&& bam_fs,
-        const Config& cfg
+        const Config& cfg,
+        const vector<string>& samples
 ) :
     cfg_(cfg),
     stats_(),
     bam_fs_(move(bam_fs)),
-    bpopi_(bam_fs_),
+    bpopi_(samples.empty() ? BamPopInfo(bam_fs_) : BamPopInfo(bam_fs_, samples)),
     eofs_(bam_fs_.size(), false),
     next_records_(bam_fs_.size()),
     treat_next_records_as_fw_(bam_fs_.size())
