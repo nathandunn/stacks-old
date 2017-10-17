@@ -48,9 +48,6 @@ extern const uint32_t cigar_c2i[128];
 int bam_find_start_bp(int, strand_type, const Cigar&);
 int bam_edit_gaps(const Cigar&, char*);
 
-// Write a SAM-style text header to a BAM file.
-void write_bam_header(htsFile* bam_f, const string& header_text);
-
 class BamRecord {
     bam1_t* r_;
 
@@ -88,7 +85,6 @@ public:
     bool is_read2()         const {return r_->core.flag & BAM_FREAD2;}
     // (etc.)
 
-    // Creation.
     void assign(
             const string& name,
             uint16_t flg,
@@ -98,7 +94,6 @@ public:
             const DNASeq4& seq,
             size_t read_group
             );
-    void write_to(htsFile* bam_f) const {if (bam_write1(bam_f->fp.bgzf, r_) < 0) throw ios::failure("bam_write1");}
 
     // Access to the underlying hts record.
     const bam1_t*   hts()         const {return r_;}
@@ -128,6 +123,7 @@ class BamHeader {
 
 public:
     BamHeader()                             : h_(NULL) {}
+    BamHeader(const string& text);
     BamHeader(BamHeader&& other)            : BamHeader() {std::swap(h_, other.h_);}
     ~BamHeader()                            {destroy();}
     BamHeader& operator=(BamHeader&& other) {std::swap(h_, other.h_); return *this;}
@@ -158,7 +154,9 @@ class Bam: public Input {
     Bam(Bam&&) = delete; // (This is just not implemented at the moment.)
 
 public:
-    Bam(const char *path);
+    Bam(const char* path);
+    Bam(const string& path) : Bam(path.c_str()) {}
+    Bam(const string& path, BamHeader&& header);
     ~Bam() {hts_close(bam_fh);};
 
     const BamHeader& h() const {return hdr;}
@@ -170,8 +168,10 @@ public:
     Seq *next_seq();
     int  next_seq(Seq&);
 
+    void write(const BamRecord& rec) {if(bam_write1(bam_fh->fp.bgzf, rec.hts()) < 0) throw ios::failure("bam_write1");}
+
 private:
-    void check_open(const htsFile* bam_f, const string& path);
+    static void check_open(const htsFile* bam_f, const string& path);
 };
 
 //

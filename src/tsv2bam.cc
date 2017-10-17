@@ -344,20 +344,18 @@ void run(const vector<int>& cloc_ids,
     }
 
     //
-    // Open the BAM file.
-    //
-    string matches_bam_path = prefix_path + ".matches.bam";
-    htsFile* bam_f = hts_open(matches_bam_path.c_str(), "wb");
-    check_open(bam_f, matches_bam_path);
-
-    //
     // Write the BAM header.
     //
     string header;
     header += "@HD\tVN:1.5\tSO:coordinate\n";
     header += "@RG\tID:" + to_string(sample_id) + "\tSM:" + samples.at(sample_i) + "\tid:" + to_string(sample_id) + '\n';
     header += header_sq_lines;
-    write_bam_header(bam_f, header);
+
+    //
+    // Open the BAM file.
+    //
+    string matches_bam_path = prefix_path + ".matches.bam";
+    Bam bam_f (matches_bam_path, header);
 
     //
     // Write the BAM records.
@@ -389,7 +387,7 @@ void run(const vector<int>& cloc_ids,
                             DNASeq4(seq, seq_len),
                             sample_id
                             );
-                    rec.write_to(bam_f);
+                    bam_f.write(rec);
                 }
 
                 // Write the paired-end reads.
@@ -405,7 +403,7 @@ void run(const vector<int>& cloc_ids,
                                 dbg_reversed_pe_reads ? stack.first : stack.first.rev_compl(),
                                 sample_id
                                 );
-                        rec.write_to(bam_f);
+                        bam_f.write(rec);
                     }
                 }
 
@@ -427,7 +425,7 @@ void run(const vector<int>& cloc_ids,
                             DNASeq4(seq, seq_len),
                             sample_id
                             );
-                    rec.write_to(bam_f);
+                    bam_f.write(rec);
                 }
             }
         }
@@ -443,7 +441,6 @@ void run(const vector<int>& cloc_ids,
     if(!pe_reads_paths.empty())
         for (Loc& loc : sorted_loci)
             delete loc.pe_reads;
-    hts_close(bam_f);
 }
 
 void cigar_apply_to_locus(Locus* l, const Cigar& c) {
