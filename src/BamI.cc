@@ -20,27 +20,6 @@ const uint32_t cigar_c2i[128] = {
     o,o,o,o, o,o,o,o, o,o,o,o, o,o,o,o,
 };
 
-void write_bam_header(
-        htsFile* bam_f,
-        const string& header
-        ) {
-
-    bam_hdr_t* hdr = sam_hdr_parse(header.length()+1, header.c_str());
-    hdr->l_text = header.length()+1; // null-terminated
-    hdr->text = (char*) malloc(hdr->l_text);
-    strcpy(hdr->text, header.c_str());
-
-    // Write the header.
-    int r = bam_hdr_write(bam_f->fp.bgzf, hdr);
-    if (r != 0) {
-        cerr << "Error: Writing of BAM header failed (`bam_hdr_write()`returned " << r << ").\n";
-        throw exception();
-    }
-
-    // Clean up.
-    bam_hdr_destroy(hdr);
-}
-
 void BamRecord::assign(
         const string& name,
         uint16_t flg,
@@ -106,6 +85,15 @@ void BamRecord::assign(
     r_->core.bin = hts_reg2bin(r_->core.pos, r_->core.pos + bam_cigar2rlen(r_->core.n_cigar, cigar), 14, 5);
 }
 
+BamHeader::BamHeader(const string& text) {
+    bam_hdr_t* hdr = sam_hdr_parse(text.length()+1, text.c_str());
+    if (hdr == NULL)
+        throw ios::failure("sam_hdr_parse");
+    hdr->l_text = text.length()+1; // null-terminated
+    hdr->text = (char*) malloc(hdr->l_text);
+    strcpy(hdr->text, text.c_str());
+}
+
 void BamHeader::check_same_ref_chroms(
         const BamHeader& h1,
         const BamHeader& h2
@@ -131,18 +119,15 @@ void BamHeader::check_same_ref_chroms(
 Bam::Bam(const char *path)
 :
     Input(),
-    bam_fh(NULL),
+    bam_fh(hts_open(path, "r")),
     hdr(),
     n_records_read_(0),
     prev_chrom_(-1),
     prev_pos_(-1)
 {
     this->path   = string(path);
-    bam_fh = hts_open(path, "r");
-    if (bam_fh == NULL) {
-        cerr << "Error: Failed to open BAM file '" << path << "'.\n";
-        throw exception();
-    } else if (bam_fh->format.format != bam) {
+    check_open(bam_fh, path);
+    if (bam_fh->format.format != bam) {
         cerr << "Error: '" << path << "':";
         if (bam_fh->format.format == sam)
             cerr << " this is a SAM file (and BAM was specified).\n";
@@ -152,6 +137,26 @@ Bam::Bam(const char *path)
     }
     hdr.reinit(bam_fh);
 };
+
+Bam::Bam(const string& path, BamHeader&& header)
+:
+    Input(),
+    bam_fh(hts_open(path.c_str(), "wb")),
+    hdr(move(header)),
+    n_records_read_(0),
+    prev_chrom_(-1),
+    prev_pos_(-1)
+{
+    this->path   = path;
+    check_open(bam_fh, path);
+
+    // Write the header.
+    int rv = bam_hdr_write(bam_fh->fp.bgzf, hdr.hts());
+    if (rv != 0) {
+        cerr << "Error: Writing of BAM header failed (`bam_hdr_write()`returned " << rv << ").\n";
+        throw ios::failure("bam_hdr_write");
+    }
+}
 
 void Bam::check_open(const htsFile* bam_f, const string& path) {
     if (bam_f == NULL) {
