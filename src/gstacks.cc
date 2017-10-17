@@ -36,9 +36,12 @@
 //
 // Argument globals.
 //
-vector<string> in_bams;
+GStacksInputT  input_type = GStacksInputT::unknown;
+string         popmap_path;  // Set if --popmap is given. For logging purposes.
+vector<string> sample_names; // Set if --popmap is given.
+vector<string> in_bams;      // Set if -B is given, or if -P is given without -M.
+
 string o_prefix;
-GStacksInputT input_type = GStacksInputT::unknown;
 
 BamCLocBuilder::Config refbased_cfg {false, 1000, 10, 0.20, 1, false};
 
@@ -107,11 +110,25 @@ try {
     parse_command_line(argc, argv);
 
     //
-    // Open (and check the existence of) the input BAM file.
+    // Open the input BAM file(s).
     //
     vector<Bam*> bam_f_ptrs;
     for (const string& in_bam : in_bams)
         bam_f_ptrs.push_back(new Bam(in_bam.c_str()));
+
+    unique_ptr<BamCLocReader> bam_cloc_reader;
+    unique_ptr<BamCLocBuilder> bam_cloc_builder;
+    const MetaPopInfo* bam_mpopi;
+    if (input_type == GStacksInputT::denovo_popmap || input_type == GStacksInputT::denovo_merger) {
+        bam_cloc_reader.reset(new BamCLocReader(move(bam_f_ptrs)));
+        // (Note: For de novo (Stacks) input we use read groups, even when a
+        // popmap was specified, since the input files ought to have them and
+        // this allows to detect corruption.)
+        bam_mpopi = &bam_cloc_reader->mpopi();
+    } else if (input_type == GStacksInputT::refbased_popmap || input_type == GStacksInputT::refbased_list) {
+        bam_cloc_builder.reset(new BamCLocBuilder(move(bam_f_ptrs), refbased_cfg, sample_names));
+        bam_mpopi = &bam_cloc_builder->mpopi();
+    }
 
     //
     // Open the log.
@@ -128,11 +145,17 @@ try {
     #endif
 
     //
-    // Open the output files (except the VCF file because we need the mpopi).
+    // Open the output files.
     //
     string o_gzfasta_path = o_prefix + ".fa.gz";
     o_gzfasta_f = gzopen(o_gzfasta_path.c_str(), "wb");
     check_open(o_gzfasta_f, o_gzfasta_path);
+
+    VcfHeader vcf_header;
+    vcf_header.add_std_meta();
+    for(auto& s : bam_mpopi->samples())
+        vcf_header.add_sample(s.name);
+    o_vcf_f.reset(new VcfWriter(o_prefix + ".vcf.gz", move(vcf_header)));
 
     if (detailed_output) {
         o_details_f.reset(new VersatileWriter(o_prefix + ".details.gz"));
@@ -174,21 +197,12 @@ try {
     size_t next_vcf_to_write = 0;
     size_t next_det_to_write = 0;
 
-    if (input_type == GStacksInputT::denovo) {
-        // Initialize the CLoc reader
-        BamCLocReader bam_cloc_reader (move(bam_f_ptrs));
+    if (input_type == GStacksInputT::denovo_popmap || input_type == GStacksInputT::denovo_merger) {
 
-        // Open the VCF file.
-        VcfHeader vcf_header;
-        vcf_header.add_std_meta();
-        for(auto& s : bam_cloc_reader.mpopi().samples())
-            vcf_header.add_sample(s.name);
-        o_vcf_f.reset(new VcfWriter(o_prefix + ".vcf.gz", move(vcf_header)));    
-
-        cout << "Processing all loci...\n" << flush;
+        const size_t n_loci = bam_cloc_reader->n_loci();
         ContigStats ctg_stats {};
 
-        const size_t n_loci = bam_cloc_reader.n_loci();
+        cout << "Processing all loci...\n" << flush;
         ProgressMeter progress (cout, true, n_loci);
 
         t_parallel.restart();
@@ -196,7 +210,7 @@ try {
         {
             LocusProcessor loc_proc;
             Timers& t = loc_proc.timers();
-            CLocReadSet loc (bam_cloc_reader.mpopi());
+            CLocReadSet loc (*bam_mpopi);
 
             #pragma omp for schedule(dynamic)
             for (size_t i=0; i<n_loci; ++i) {
@@ -208,7 +222,7 @@ try {
                     #pragma omp critical(read)
                     try {
                         if (omp_return == 0)
-                            bam_cloc_reader.read_one_locus(loc);
+                            bam_cloc_reader->read_one_locus(loc);
                     } catch (exception& e) {
                         omp_return = stacks_handle_exceptions(e);
                     }
@@ -327,20 +341,11 @@ try {
                << "\n";
         }
 
-    } else if (input_type == GStacksInputT::refbased) {
-        // Initialize the CLoc reader
-        BamCLocBuilder bam_cloc_builder (move(bam_f_ptrs), refbased_cfg);
-        bool eof = false;
-
-        // Open the VCF file.
-        VcfHeader vcf_header;
-        vcf_header.add_std_meta();
-        for(auto& s : bam_cloc_builder.mpopi().samples())
-            vcf_header.add_sample(s.name);
-        o_vcf_f.reset(new VcfWriter(o_prefix + ".vcf.gz", move(vcf_header)));    
+    } else if (input_type == GStacksInputT::refbased_popmap || input_type == GStacksInputT::refbased_list) {
 
         cout << "Processing all loci...\n" << flush;
         ProgressMeter progress (cout, false, 1000);
+        bool eof = false;
 
         t_parallel.restart();
         #pragma omp parallel
@@ -358,7 +363,7 @@ try {
                 #pragma omp critical(read)
                 try {
                     if (!(thread_eof = eof) && omp_return == 0)
-                        thread_eof = eof = !bam_cloc_builder.build_one_locus(aln_loc);
+                        thread_eof = eof = !bam_cloc_builder->build_one_locus(aln_loc);
                 } catch (exception& e) {
                     omp_return = stacks_handle_exceptions(e);
                 }
@@ -451,7 +456,7 @@ try {
         cout << '\n';
 
         // Report statistics on the input BAM.
-        const BamCLocBuilder::BamStats& bam_stats = bam_cloc_builder.stats();
+        const BamCLocBuilder::BamStats& bam_stats = bam_cloc_builder->stats();
         cout << "Read " << bam_stats.n_records << " BAM records:\n"
              << "  kept " << bam_stats.n_primary_kept() << " primary alignments\n"
              << "  skipped " << bam_stats.n_primary_mapq << " primary alignments with insufficient mapping qualities ("
@@ -552,7 +557,7 @@ try {
     model.reset();
     if (dbg_write_hapgraphs)
         o_hapgraphs_f << "}\n";
-    cout << prog_name << " is done.\n";
+    cout << "gstacks is done.\n";
     return 0;
 
 } catch (exception& e) {
@@ -791,7 +796,7 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
 {
     assert(!aln_loc.reads().empty());
     ++gt_stats_.n_genotyped_loci;
-    if (input_type == GStacksInputT::denovo) {
+    if (input_type == GStacksInputT::denovo_popmap || input_type == GStacksInputT::denovo_merger) {
         // Called from process(CLocReadSet&).
         assert(this->loc_.id == aln_loc.id());
     } else {
@@ -1960,31 +1965,30 @@ Timers& Timers::operator+= (const Timers& other) {
 //
 
 const string help_string = string() +
-        prog_name + " " + VERSION  + "\n" +
-        prog_name + " -P stacks_dir [-M popmap]\n" +
-        prog_name + " -B bam_file [-B ...] -O out_dir [--paired]\n" +
+        "gstacks " + VERSION  + "\n" +
         "\n"
         "De novo mode:\n"
-        "  -P: input directory\n"
-        "  -M: list of samples in a population map\n"
+        "  gstacks -P stacks_dir -M popmap\n"
         "\n"
-        "  If a population map is not given, the input directory must contain a\n"
-        "  'catalog.bam' file, that should be the merger (e.g. using samtools merge)\n"
-        "  of the '*.matches.bam' files of all the samples.\n"
+        "  -P: input directory\n"
         "\n"
         "Reference-based mode:\n"
+        "  gstacks -I in_dir -M popmap -O out_dir [--paired]\n"
+        "  gstacks -B bam_file [-B ...] -O out_dir [--paired]\n"
+        "\n"
+        "  -I: input directory containing '[SAMPLE_NAME].bam' files (or such-named\n"
+        "      symbolic links).\n"
         "  -B: input BAM file(s)\n"
         "  --paired: reads are paired (RAD loci will be defined by READ1 alignments)\n"
         "\n"
-        "  The input BAM file(s) should (i) be sorted by coordinate and (ii) have"
-        "  reads assigned to samples using BAM \"reads groups\" (gstacks uses"
+        "  The input BAM file(s) must be sorted by coordinate. With -B, records\n"
+        "  must be assigned to samples using BAM \"reads groups\" (gstacks uses"
         "  the ID \"identifier\" and SM \"sample name\" fields). Read groups,\n"
-        "  if repeated in multiple files, must be consistent.\n"
-        //"  Please refer to the gstacks manual page for information about how to\n"
-        "  Please refer to the Beta webpage for information about how to\n" //TODO
-        "  generate such a BAM file with Samtools, and examples.\n"
+        "  if repeated in several files, must be consistent. With -I, read groups\n"
+        "  are ignored.\n"
         "\n"
         "Shared options:\n"
+        "  -M: path to a population map giving the list of samples\n"
         "  -O: output directory (default: none with -B; with -P same as the input\n"
         "      directory)\n"
         "  -t,--threads: number of threads to use (default: 1)\n"
@@ -2037,9 +2041,10 @@ try {
         {"version",      no_argument,       NULL,  1000},
         {"help",         no_argument,       NULL,  'h'},
         {"quiet",        no_argument,       NULL,  'q'},
-        {"in-dir",       required_argument, NULL,  'P'},
+        {"stacks-dir",   required_argument, NULL,  'P'},
+        {"in-dir",       required_argument, NULL,  'I'},
         {"in-bam",       required_argument, NULL,  'B'},
-        {"mpopi",        required_argument, NULL,  'M'},
+        {"popmap",       required_argument, NULL,  'M'},
         {"out-dir",      required_argument, NULL,  'O'},
         {"paired",       no_argument,       NULL,  1007},
         {"threads",      required_argument, NULL,  't'},
@@ -2066,17 +2071,17 @@ try {
         {0, 0, 0, 0}
     };
 
+    string stacks_dir;
     string in_dir;
     string out_dir;
     double gt_alpha = 0.05;
     double var_alpha = 0.05;
-    MetaPopInfo mpopi;
 
     int c;
     int long_options_i;
     while (true) {
 
-        c = getopt_long(argc, argv, "hqP:B:M:O:W:t:m:", long_options, &long_options_i);
+        c = getopt_long(argc, argv, "hqP:I:B:M:O:W:t:m:", long_options, &long_options_i);
 
         if (c == -1)
             break;
@@ -2094,13 +2099,16 @@ try {
             quiet = true;
             break;
         case 'P':
+            stacks_dir = optarg;
+            break;
+        case 'I':
             in_dir = optarg;
             break;
         case 'B':
             in_bams.push_back(optarg);
             break;
         case 'M':
-            mpopi.init_popmap(optarg);
+            popmap_path = optarg;
             break;
         case 'O':
             out_dir = optarg;
@@ -2193,30 +2201,62 @@ try {
         }
     }
 
+    //
     // Check command consistency.
+    //
+
     if (optind < argc) {
         cerr << "Error: Failed to parse command line: '" << argv[optind]
              << "' is seen as a positional argument. Expected no positional arguments.\n";
         bad_args();
     }
 
-    if (in_dir.empty() && in_bams.empty()) {
-        cerr << "Error: Please specify -P or -B.\n";
-        bad_args();
-    } else if (!in_dir.empty() && !in_bams.empty()) {
-        cerr << "Error: Please specify one of -P or -B, not both.\n";
+    size_t n_modes_given = !stacks_dir.empty() + !in_dir.empty() + !in_bams.empty();
+    if (n_modes_given != 1) {
+        cerr << "Error: Please specify exactly one of -P, -I or -B.\n";
         bad_args();
     }
 
-    if (!in_bams.empty() && out_dir.empty()) {
+    typedef GStacksInputT In;
+    if (!stacks_dir.empty())
+        input_type = popmap_path.empty()
+            ? In::denovo_merger
+            : In::denovo_popmap;
+    else if (!in_dir.empty())
+        input_type = In::refbased_popmap;
+    else if (!in_bams.empty())
+        input_type = In::refbased_list;
+    else
+        DOES_NOT_HAPPEN;
+
+    if (input_type == In::refbased_popmap
+        && popmap_path.empty()
+    ) {
+        cerr << "Error: Please specify a population map (-M).\n";
+        bad_args();
+    }
+
+    if ((input_type == In::refbased_popmap || input_type == In::refbased_list)
+        && out_dir.empty()
+    ) {
         cerr << "Error: Please specify an output directory (-O).\n";
         bad_args();
     }
 
-    if (refbased_cfg.paired && !in_dir.empty()) {
-        cerr << "Error: --paired is for the reference-based mode (-B).\n";
+    if (refbased_cfg.paired
+        && (input_type == In::denovo_popmap || input_type == In::denovo_merger)
+    ) {
+        cerr << "Error: --paired is for the reference-based mode.\n";
         bad_args();
     }
+
+    //
+    // Process arguments.
+    //
+
+    for (string* dir : {&stacks_dir, &in_dir, &out_dir})
+        if (!dir->empty() && dir->back() != '/')
+            *dir += '/';
 
     switch (model_type) {
     case snp:        model.reset(new MultinomialModel(gt_alpha)); break;
@@ -2228,25 +2268,34 @@ try {
         break;
     }
 
-    // Process arguments.
-    input_type = in_dir.empty() ? GStacksInputT::refbased : GStacksInputT::denovo;
-
-    if (input_type == GStacksInputT::denovo) {
-        if (in_dir.back() != '/')
-            in_dir += '/';
-        if (mpopi.samples().empty())
-            in_bams.push_back(in_dir + "catalog.bam");
-        else
-            for (const Sample& s : mpopi.samples())
-                in_bams.push_back(in_dir + s.name + ".matches.bam");
-        if (out_dir.empty())
-            out_dir = in_dir;
+    if (!popmap_path.empty()) {
+        MetaPopInfo m;
+        m.init_popmap(popmap_path);
+        for (auto& s : m.samples())
+            sample_names.push_back(s.name);
     }
 
-    if (out_dir.back() != '/')
-        out_dir += '/';
+    if (input_type == In::denovo_popmap) {
+        for (const string& s : sample_names)
+            in_bams.push_back(stacks_dir + s + ".matches.bam");
+        if (out_dir.empty())
+            out_dir = stacks_dir;
+    } else if (input_type == In::denovo_merger) {
+        in_bams.push_back(stacks_dir + "catalog.bam");
+        if (out_dir.empty())
+            out_dir = stacks_dir;
+    } else if (input_type == In::refbased_popmap) {
+        for (const string& s : sample_names)
+            in_bams.push_back(in_dir + s + ".bam");
+    } else {
+        assert(input_type == In::refbased_list);
+    }
+
     o_prefix = out_dir + prog_name;
     check_or_mk_dir(out_dir);
+
+    if (in_bams.empty())
+        DOES_NOT_HAPPEN;
 
 } catch (std::invalid_argument&) {
     bad_args();
@@ -2254,13 +2303,30 @@ try {
 }
 
 void report_options(ostream& os) {
-    os << "Configuration for this run:\n"
-       << "  Input mode: " << (
-           input_type == GStacksInputT::denovo ?
-            "de novo"
-            : (refbased_cfg.paired ? "reference-based, paired-end" : "reference-based, single-end")
-            ) << "\n"
-       << "  Input file: '" << in_bams.front() << "'\n" //TODO Also, popmap_path.
+    os << "Configuration for this run:\n";
+
+    switch (input_type) {
+    case GStacksInputT::denovo_popmap:
+    case GStacksInputT::denovo_merger:
+        os << "  Input mode: denovo\n";
+        break;
+    case GStacksInputT::refbased_popmap:
+    case GStacksInputT::refbased_list:
+        os << "  Input mode: reference-based";
+        if (refbased_cfg.paired)
+            os << ", paired-end\n";
+        else
+            os << ", single-end\n";
+        break;
+    default:
+        DOES_NOT_HAPPEN;
+        break;
+    }
+
+    if (!popmap_path.empty())
+        os << "  Population map: '" << popmap_path << "'\n";
+
+    os << "  Input files: " << in_bams.size() << ", e.g. '" << in_bams.front()<< "'\n"
        << "  Output to: '" << o_prefix << ".*'\n"
        << "  Model: " << *model << "\n";
 
