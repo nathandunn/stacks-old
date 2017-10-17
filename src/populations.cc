@@ -75,7 +75,8 @@ bool      phylip_out        = false;
 bool      phylip_var        = false;
 bool      phylip_var_all    = false;
 bool      ordered_export    = false;
-bool      kernel_smoothed   = false;
+bool      smooth_fstats     = false;
+bool      smooth_popstats   = false;
 bool      loci_ordered      = false;
 bool      log_fst_comp      = false;
 bool      verbose           = false;
@@ -186,7 +187,7 @@ int main (int argc, char* argv[]) {
     // Setup the kernel smoothing apparatus.
     //
     LocusSmoothing *smooth = NULL;
-    if (kernel_smoothed)
+    if (smooth_fstats || smooth_popstats)
         smooth = new LocusSmoothing(&mpopi, log_fh);
 
     //
@@ -259,18 +260,19 @@ int main (int argc, char* argv[]) {
         //
         // Smooth population statistics across individual populations, and between populations.
         //
-        if (kernel_smoothed && loci_ordered) {
+        if ( (smooth_fstats || smooth_popstats) && loci_ordered == false) {
+            cerr << "    Notice: Smoothing was requested (-k), but will not be performed as the loci are not ordered.\n";
+        } else {
             cerr << "    Generating kernel-smoothed population statistics...";
-            smooth->snpstats(bloc.loci(), log_fh);
-            smooth->hapstats(bloc.loci(), log_fh);
-
-            if (calc_fstats) {
+            if (smooth_popstats) {
+                smooth->snpstats(bloc.loci(), log_fh);
+                smooth->hapstats(bloc.loci(), log_fh);
+            }
+            if (smooth_fstats) {
                 smooth->snp_divergence(bloc.loci(), ldiv->snp_values(), log_fh);
                 smooth->hap_divergence(bloc.loci(), ldiv->haplotype_values(), ldiv->metapop_haplotype_values(), log_fh);
             }
             cerr << "done.\n";
-        } else if (kernel_smoothed) {
-            cerr << "    Notice: Smoothing was requested (-k), but will not be performed as the loci are not ordered.\n";
         }
 
         if (calc_fstats) {
@@ -306,7 +308,7 @@ int main (int argc, char* argv[]) {
     bloc.write_distributions(log_fh);
     bloc.cleanup();
 
-    if (kernel_smoothed)
+    if (smooth_fstats || smooth_popstats)
         delete smooth;
     if (calc_fstats)
         delete ldiv;
@@ -3173,12 +3175,11 @@ LocusSmoothing::snpstats(const vector<LocBin *> &loci, ofstream &log_fh)
 int
 LocusSmoothing::hapstats(const vector<LocBin *> &loci, ofstream &log_fh)
 {
-    map<uint, uint> locstats_key;
     
     for (uint i = 0; i < this->_mpopi->pops().size(); i++) {
         vector<const LocStat *> sites;
 
-        this->_ord_ls->order(sites, locstats_key, loci);
+        this->_ord_ls->order(sites, loci);
         this->_ks_ls->smooth(sites);
     }
 
@@ -3191,10 +3192,9 @@ LocusSmoothing::snp_divergence(const vector<LocBin *> &loci, const vector<vector
     for (uint i = 0; i < div.size(); i++) {
         assert(div[i].size() == loci.size());
 
-        map<uint, uint> sites_key;
         vector<const PopPair *> sites;
         
-        if (this->_ord_pp->order(sites, sites_key, loci, div[i]))
+        if (this->_ord_pp->order(sites, loci, div[i]))
             this->_ks_pp->smooth(sites);
     }
 
@@ -3210,20 +3210,18 @@ LocusSmoothing::hap_divergence(const vector<LocBin *> &loci,
     for (uint i = 0; i < div.size(); i++) {
         assert(div[i].size() == loci.size());
 
-        map<uint, uint> sites_key;
         vector<const HapStat *> sites;
         
-        this->_ord_hs->order(sites, sites_key, loci, div[i]);
+        this->_ord_hs->order(sites, loci, div[i]);
         this->_ks_hs->smooth(sites);
     }
 
     //
     // Kernel-smooth the haplotype divergence statistics for the metapopulation.
     //
-    map<uint, uint> sites_key;
     vector<const HapStat *> sites;
         
-    this->_ord_hs->order(sites, sites_key, loci, metadiv);
+    this->_ord_hs->order(sites, loci, metadiv);
     this->_ks_hs->smooth(sites);
     
     return 0;
@@ -3836,12 +3834,6 @@ output_parameters(ostream &fh)
     fh << "populations parameters selected:\n";
     if (input_mode == InputMode::vcf)
         fh << "  Input mode: VCF\n";
-    fh << "  Fst kernel smoothing: " << (kernel_smoothed == true ? "on" : "off") << "\n"
-         << "  Bootstrap resampling: ";
-    if (bootstrap)
-        fh << "on, " << (bootstrap_type == bs_exact ? "exact; " : "approximate; ") << bootstrap_reps << " reptitions\n";
-    else
-        fh << "off\n";
     fh
         << "  Percent samples limit per population: " << sample_limit << "\n"
         << "  Locus Population limit: " << population_limit << "\n"
@@ -3864,6 +3856,14 @@ output_parameters(ostream &fh)
         fh << "none.\n";
         break;
     }
+    fh << "  Pi/Fis kernel smoothing: " << (smooth_popstats == true ? "on" : "off") << "\n"
+       << "  Fstats kernel smoothing: " << (smooth_fstats   == true ? "on" : "off") << "\n"
+       << "  Bootstrap resampling: ";
+    if (bootstrap)
+        fh << "on, " << (bootstrap_type == bs_exact ? "exact; " : "approximate; ") << bootstrap_reps << " reptitions\n";
+    else
+        fh << "off\n";
+
     fh << "\n";
 }
 
@@ -3912,7 +3912,9 @@ parse_command_line(int argc, char* argv[])
             {"write_single_snp",  no_argument,       NULL, 'I'},
             {"write_random_snp",  no_argument,       NULL, 'j'},
             {"ordered_export",    no_argument,       NULL, 1002},
-            {"kernel_smoothed",   no_argument,       NULL, 'k'},
+            {"smooth",            no_argument,       NULL, 'k'},
+            {"smooth_fstats",     no_argument,       NULL, 1007},
+            {"smooth_popstats",   no_argument,       NULL, 1008},
             {"fstats",            no_argument,       NULL, '6'},
             {"log_fst_comp",      no_argument,       NULL, 'l'},
             {"bootstrap_type",    required_argument, NULL, 1001},
@@ -4010,9 +4012,17 @@ parse_command_line(int argc, char* argv[])
             population_limit = atoi(optarg);
             break;
         case 'k':
-            kernel_smoothed = true;
+            smooth_popstats = true;
+            smooth_fstats   = true;
             calc_fstats     = true;
             break;
+        case 1007:
+            smooth_fstats   = true;
+            calc_fstats     = true;
+            break;
+        case 1008:
+            smooth_popstats = true;
+            break;    
         case '6':
             calc_fstats = true;
             break;
@@ -4315,7 +4325,9 @@ void help() {
          << "  --p_value_cutoff [float]: maximum p-value to keep an Fst measurement. Default: 0.05. (Also used as base for Bonferroni correction.)\n"
          << "\n"
          << "Kernel-smoothing algorithm:\n"
-         << "  -k,--kernel_smoothed: enable kernel-smoothed Pi, Fis, Fst, Fst', and Phi_st calculations.\n"
+         << "  -k,--smooth: enable kernel-smoothed Pi, Fis, Fst, Fst', and Phi_st calculations.\n"
+         << "  --smooth_fstats: enable kernel-smoothed Fst, Fst', and Phi_st calculations.\n"
+         << "  --smooth_popstats: enable kernel-smoothed Pi and Fis calculations.\n"
          << "  --sigma [int]: standard deviation of the kernel smoothing weight distribution. Default 150kb.\n"
          << "  --bootstrap: turn on boostrap resampling for all smoothed statistics.\n"
          << "  -N,--bootstrap_reps [int]: number of bootstrap resamplings to calculate (default 100).\n"
