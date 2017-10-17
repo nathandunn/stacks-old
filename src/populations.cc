@@ -246,6 +246,12 @@ int main (int argc, char* argv[]) {
             exports[i]->write_batch(bloc.loci());
 
         //
+        // Calculate and report the extent of overlap between different RAD loci.
+        //
+        if (loci_ordered)
+            cerr << "    " << bloc.report_locus_overlap( (verbose ? &logger->l : NULL) ) << "\n";
+
+        //
         // Calculate divergence statistics (Fst), if requested.
         //
         if (calc_fstats) {
@@ -261,7 +267,7 @@ int main (int argc, char* argv[]) {
         //
         if ( (smooth_fstats || smooth_popstats) && loci_ordered == false) {
             cerr << "    Notice: Smoothing was requested (-k), but will not be performed as the loci are not ordered.\n";
-        } else {
+        } else if (smooth_fstats || smooth_popstats) {
             cerr << "    Generating kernel-smoothed population statistics...";
             if (smooth_popstats) {
                 smooth->snpstats(bloc.loci(), logger->l);
@@ -917,6 +923,82 @@ BatchLocusProcessor::cleanup()
     
     return 0;
 }
+
+string
+BatchLocusProcessor::report_locus_overlap(ofstream *log_fh)
+{
+    const CSLocus  *loc;
+    const LocSum   *lsum;
+
+    //
+    // Create a vector of maps, to record for each population, which sites overlap between different loci.
+    //
+    vector<map<uint, set<uint>>> sites;
+    for (uint i = 0; i < this->_mpopi->pops().size(); i++) {
+        sites.push_back(map<uint, set<uint>>());
+        map<uint, set<uint>> &pop_sites = sites.back();
+        
+        for (uint pos = 0; pos < this->_loci.size(); pos++) {            
+            loc  = this->_loci[pos]->cloc;
+            lsum = this->_loci[pos]->s->per_pop(i);
+
+            for (uint k = 0; k < loc->len; k++) {
+                if (lsum->nucs[k].num_indv == 0)
+                    continue;
+
+                if (pop_sites.count(lsum->nucs[k].bp) == 0)
+                    pop_sites[lsum->nucs[k].bp] = set<uint>();
+                pop_sites[lsum->nucs[k].bp].insert(loc->id);
+            }
+        }
+    }
+
+    map<uint, set<uint>> final_map;
+
+    size_t multiple_sites = 0;
+    //
+    // Iterate over each population and combine all sites that overlap in one or more populations.
+    //
+    for (uint i = 0; i < sites.size(); i++) {
+        for (map<uint, set<uint>>::iterator it = sites[i].begin(); it != sites[i].end(); it++) {
+
+            if (final_map.count(it->first) == 0)
+                final_map[it->first] = set<uint>();
+
+            for (set<uint>::iterator j = it->second.begin(); j != it->second.end(); j++)
+                final_map[it->first].insert(*j);
+        }
+    }
+
+    size_t uniq_sites = final_map.size();
+
+    if (verbose && log_fh != NULL)
+        *log_fh << "The following loci overlap on genomic segment " << this->_loci[0]->cloc->loc.chr() << ":\n";
+
+    for (map<uint, set<uint>>::iterator it = final_map.begin(); it != final_map.end(); it++) {
+        if (it->second.size() > 1) {
+            multiple_sites++;
+
+            if (verbose && log_fh != NULL) {
+                for (set<uint>::iterator j = it->second.begin(); j != it->second.end(); j++)
+                    *log_fh << "    " << *j << ", ";
+                *log_fh << it->first + 1  << "bp\t" << "\n";
+            }
+        }
+    }
+
+    char   buf[max_len];
+    double pct;
+
+    pct = (double) multiple_sites / (double) uniq_sites * 100;
+
+    snprintf(buf, max_len,
+             "%ld unique genomic sites, %ld sites covered by multiple loci (%.03f%%)",
+             uniq_sites, multiple_sites, pct);
+
+    return string(buf);
+}
+
 
 void
 LocusFilter::batch_clear()
