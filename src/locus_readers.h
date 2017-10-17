@@ -239,6 +239,7 @@ BamPopInfo::BamPopInfo(const vector<Bam*>& bam_fs)
     for (size_t bam_f_i=0; bam_f_i<bam_fs.size(); ++bam_f_i)
         for (const SampleData& d : readgroups_per_f[bam_f_i])
             names_all.push_back(d.name);
+    std::sort(names_all.begin(), names_all.end());
     names_all.erase(std::unique(names_all.begin(), names_all.end()), names_all.end());
     mpopi_->init_names(names_all);
 
