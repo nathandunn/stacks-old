@@ -20,13 +20,6 @@ const uint32_t cigar_c2i[128] = {
     o,o,o,o, o,o,o,o, o,o,o,o, o,o,o,o,
 };
 
-void check_open(const htsFile* bam_f, const string& path) {
-    if (bam_f == NULL) {
-        cerr << "Error: Failed to open BAM file '" << path << "'.\n";
-        throw exception();
-    }
-}
-
 void write_bam_header(
         htsFile* bam_f,
         const string& header
@@ -46,63 +39,6 @@ void write_bam_header(
 
     // Clean up.
     bam_hdr_destroy(hdr);
-}
-
-BamHeader::ReadGroups BamHeader::read_groups() const {
-    ReadGroups rgs;
-
-    // xxx (Feb2017) I currently store the sample ID in the read group ID, but
-    // BAM read group IDs are unstable. It would be better to use a custom field
-    // such as 'si' (sample id).
-
-    const char* end = h_-> text + h_->l_text;
-    const char* p = h_->text;
-    while (*p) {
-        // Process a line.
-
-        if (p + 3 < end && strncmp(p, "@RG\t", 4) == 0) {
-            // This is a @RG line.
-            map<string, string> rg;
-
-            p+=4;
-            while (*p && *p != '\n') {
-                // Process a tag.
-
-                string tag;
-                while (*p && *p != '\n' && *p != '\t' && *p != ':') {
-                    tag += *p;
-                    ++p;
-                }
-                if (*p == ':')
-                    ++p;
-
-                string value;
-                while (*p && *p != '\n' && *p != '\t') {
-                    value += *p;
-                    ++p;
-                }
-
-                if (tag.size() == 2 && !value.empty())
-                    rg.insert({tag, value});
-
-                if (*p == '\t')
-                    ++p;
-            }
-
-            try {
-                string id = rg.at("ID"); // might throw
-                rgs.insert({move(id), move(rg)});
-            } catch (out_of_range&) {} // ignore
-        }
-
-        while(*p && *p != '\n')
-            ++p;
-
-        if (*p == '\n')
-            ++p;
-    }
-
-    return rgs;
 }
 
 void BamRecord::assign(
@@ -216,3 +152,262 @@ Bam::Bam(const char *path)
     }
     hdr.reinit(bam_fh);
 };
+
+void Bam::check_open(const htsFile* bam_f, const string& path) {
+    if (bam_f == NULL) {
+        cerr << "Error: Failed to open BAM file '" << path << "'.\n";
+        throw exception();
+    }
+}
+
+Seq *
+Bam::next_seq()
+{
+    Seq* s = new Seq();
+    if(next_seq(*s) != 1) {
+        delete s;
+        s = NULL;
+    }
+    return s;
+}
+
+int
+Bam::next_seq(Seq& s)
+{
+    //
+    // Read a record
+    //
+    BamRecord rec;
+    if (!next_record(rec))
+        return false;
+
+    //
+    // Fetch the sequence.
+    //
+    string  seq;
+    seq.reserve(rec.hts()->core.l_qseq);
+    for (int i = 0; i < rec.hts()->core.l_qseq; i++) {
+        uint8_t j = bam_seqi(bam_get_seq(rec.hts()), i);
+        switch(j) {
+        case 1:
+            seq += 'A';
+            break;
+        case 2:
+            seq += 'C';
+            break;
+        case 4:
+            seq += 'G';
+            break;
+        case 8:
+            seq += 'T';
+            break;
+        case 15:
+            seq += 'N';
+            break;
+        default:
+            DOES_NOT_HAPPEN;
+            break;
+        }
+    }
+
+    //
+    // Fetch the quality score.
+    //
+    string   qual;
+    uint8_t *q = bam_get_qual(rec.hts());
+    for (int i = 0; i < rec.hts()->core.l_qseq; i++) {
+        qual += char(int(q[i]) + 33);
+    }
+
+    AlnT aln_type;
+    if (rec.is_unmapped())
+        aln_type = AlnT::null;
+    else if (rec.is_secondary())
+        aln_type = AlnT::secondary;
+    else if (rec.is_supplementary())
+        aln_type = AlnT::supplementary;
+    else
+        aln_type = AlnT::primary;
+
+    if (aln_type == AlnT::null) {
+        s = Seq(rec.qname(), seq.c_str(), qual.c_str());
+    } else {
+        //
+        // Check which strand this is aligned to:
+        //   SAM reference: FLAG bit 0x10 - sequence is reverse complemented
+        //
+        strand_type strand = rec.is_rev_compl() ? strand_minus : strand_plus;
+
+        //
+        // Parse the alignment CIGAR string.
+        // If aligned to the negative strand, sequence has been reverse complemented and
+        // CIGAR string should be interpreted in reverse.
+        //
+        Cigar cigar = rec.cigar();
+        if (strand == strand_minus)
+            std::reverse(cigar.begin(), cigar.end());
+
+        //
+        // If the read was aligned on the reverse strand (and is therefore reverse complemented)
+        // alter the start point of the alignment to reflect the right-side of the read, at the
+        // end of the RAD cut site.
+        //
+        uint bp = bam_find_start_bp(rec.pos(), strand, cigar);
+
+        //
+        // Calculate the percentage of the sequence that was aligned to the reference.
+        //
+        uint clipped = 0;
+        for (auto& op : cigar)
+            if (op.first == 'S')
+                clipped += op.second;
+        double pct_clipped = (double) clipped / seq.length();
+
+        string name = rec.qname();
+        if (rec.is_read1())
+            name += "/1";
+        else if (rec.is_read2())
+            name += "/2";
+        s = Seq(name.c_str(), seq.c_str(), qual.c_str(),
+                hdr.chrom_str(rec.chrom()), bp, strand,
+                aln_type, pct_clipped, rec.mapq());
+
+        if (cigar.size() > 0)
+            bam_edit_gaps(cigar, s.seq);
+    }
+
+    return true;
+}
+
+int
+bam_find_start_bp(int aln_bp, strand_type strand, const Cigar& cigar)
+{
+    if (strand == strand_plus) {
+        if (cigar.at(0).first == 'S')
+            aln_bp -= cigar.at(0).second;
+    } else {
+        // assert(strand == strand_minus);
+        for (uint i = 0; i < cigar.size(); i++)  {
+            char op   = cigar[i].first;
+            uint dist = cigar[i].second;
+
+            switch(op) {
+            case 'I':
+            case 'H':
+                break;
+            case 'S':
+                if (i < cigar.size() - 1)
+                    aln_bp += dist;
+                break;
+            case 'M':
+            case '=':
+            case 'X':
+            case 'D':
+            case 'N':
+                aln_bp += dist;
+                break;
+            default:
+                break;
+            }
+        }
+        aln_bp -= 1;
+    }
+
+    return aln_bp;
+}
+
+int
+bam_edit_gaps(const Cigar& cigar, char *seq)
+{
+    char *buf;
+    uint  size = cigar.size();
+    char  op;
+    uint  dist, bp, len, buf_len, buf_size, j, k, stop;
+
+    len = strlen(seq);
+    bp  = 0;
+
+    buf      = new char[len + 1];
+    buf_size = len + 1;
+
+    for (uint i = 0; i < size; i++)  {
+        op   = cigar[i].first;
+        dist = cigar[i].second;
+
+        switch(op) {
+        case 'S':
+            stop = bp + dist;
+            stop = stop > len ? len : stop;
+            while (bp < stop) {
+                seq[bp] = 'N';
+                bp++;
+            }
+            break;
+        case 'D':
+            //
+            // A deletion has occured in the read relative to the reference genome.
+            // Pad the read with sufficent Ns to match the deletion, shifting the existing
+            // sequence down. Trim the final length to keep the read length consistent.
+            //
+            k = bp >= len ? len : bp;
+
+            strncpy(buf, seq + k, buf_size - 1);
+            buf[buf_size - 1] = '\0';
+            buf_len         = strlen(buf);
+
+            stop = bp + dist;
+            stop = stop > len ? len : stop;
+            while (bp < stop) {
+                seq[bp] = 'N';
+                bp++;
+            }
+
+            j = bp;
+            k = 0;
+            while (j < len && k < buf_len) {
+                seq[j] = buf[k];
+                k++;
+                j++;
+            }
+            break;
+        case 'I':
+            //
+            // An insertion has occurred in the read relative to the reference genome. Delete the
+            // inserted bases and pad the end of the read with Ns.
+            //
+            if (bp >= len) break;
+
+            k = bp + dist > len ? len : bp + dist;
+            strncpy(buf, seq + k, buf_size - 1);
+            buf[buf_size - 1] = '\0';
+            buf_len           = strlen(buf);
+
+            j = bp;
+            k = 0;
+            while (j < len && k < buf_len) {
+                seq[j] = buf[k];
+                k++;
+                j++;
+            }
+
+            stop = j + dist;
+            stop = stop > len ? len : stop;
+            while (j < stop) {
+                seq[j] = 'N';
+                j++;
+            }
+            break;
+        case 'M':
+        case '=':
+        case 'X':
+            bp += dist;
+            break;
+        default:
+            break;
+        }
+    }
+
+    delete [] buf;
+
+    return 0;
+}

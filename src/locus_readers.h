@@ -428,7 +428,7 @@ bool BamCLocReader::read_one_locus(CLocReadSet& readset) {
             Bam* bam_f = bam_fs_[bam_f_i];
             BamRecord& rec = next_records_[bam_f_i];
             uchar& eof = eofs_[bam_f_i];
-            if ((eof = !bam_f->next_record(rec, true))) {
+            if ((eof = !bam_f->next_record_ordered(rec))) {
                 cerr << "Error: No records in BAM file '" << bam_f->path << "'.\n";
                 throw exception();
             } else if (!rec.is_primary()) {
@@ -469,7 +469,7 @@ bool BamCLocReader::read_one_locus(CLocReadSet& readset) {
                 // read names were left unchanged, so we also don't touch them.
                 readset.add(SRead(Read(rec.seq(), string(rec.qname())), bpopi_.sample_of(rec, bam_f_i)));
 
-            eof = !bam_f->next_record(rec, true);
+            eof = !bam_f->next_record_ordered(rec);
         }
     }
 
@@ -524,7 +524,7 @@ bool BamCLocBuilder::next_record(size_t bam_f_i)
     uchar& treat_as_fw = treat_next_records_as_fw_[bam_f_i];
 
     while (true) {
-        if(!bam_f->next_record(r, true))
+        if(!bam_f->next_record_ordered(r))
             return false;
 
         if (cfg_.ign_pe_reads && r.is_read2())
