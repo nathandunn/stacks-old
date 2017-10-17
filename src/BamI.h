@@ -204,9 +204,12 @@ bool Bam::next_record_ordered(BamRecord& rec) {
     if (rec.chrom() < prev_chrom_
             || (rec.pos() < prev_pos_ && rec.chrom() == prev_chrom_)
     ) {
-        cerr << "Error: BAM file is not properly sorted; " << n_records_read_ << "th record '" << rec.qname()
-             << "' at " << hdr.chrom_str(rec.chrom()) << ':' << rec.pos()
-             << " should come before previously seen position " << hdr.chrom_str(prev_chrom_)
+        cerr << "Error: BAM file is not properly sorted; " << n_records_read_ << "th record '" << rec.qname();
+        if (rec.chrom() == -1)
+            cerr << " is unmapped and should come before any mapped record.\n";
+        else
+            cerr << "' at " << hdr.chrom_str(rec.chrom()) << ':' << rec.pos()
+            << " should come before previously seen position " << hdr.chrom_str(prev_chrom_)
              << ':' << prev_pos_ << ".\n";
         throw exception();
     }
