@@ -30,6 +30,7 @@
 #include "MetaPopInfo.h"
 #include "PopSum.h"
 
+extern bool verbose;
 extern MetaPopInfo mpopi;
 
 enum loc_type {haplotype, snp};
@@ -39,10 +40,12 @@ class Ordered {
 public:
     ofstream *log_fh;
 
-    int incompatible_loci;
-    int multiple_loci;
+    size_t incompatible_sites; // Sites containing more than two alleles.
+    size_t total_sites;        // Total number of sites in the data set.
+    size_t uniq_sites;         // Total number of sites in the genome.
+    size_t multiple_sites;     // Sites covered by more than one locus.
 
-    Ordered()  {}
+    Ordered(): incompatible_sites(0), total_sites(0), uniq_sites(0), multiple_sites(0) {}
     virtual ~Ordered() {}
 
     int init_sites(vector<const StatT *> &, map<uint, uint> &, const vector<LocBin *> &);
@@ -255,8 +258,9 @@ OPopPair<StatT>::order(vector<const StatT *> &sites, const vector<LocBin *> &sor
     uint     cloc_len;
     bool     found = false;
 
-    this->incompatible_loci = 0;
-    this->multiple_loci     = 0;
+    this->incompatible_sites = 0;
+    this->total_sites        = 0;
+    this->multiple_sites     = 0;
 
     uint pop_1=UINT_MAX, pop_2=UINT_MAX;
     for (uint i = 0; i < div.size(); i++) {
@@ -280,12 +284,16 @@ OPopPair<StatT>::order(vector<const StatT *> &sites, const vector<LocBin *> &sor
 
     this->init_sites(sites, sites_key, sorted_loci, pop_1, pop_2);
 
+    this->uniq_sites = sites_key.size();
+
     for (uint i = 0; i < div.size(); i++) {
         loc      = sorted_loci[i]->cloc;
         cloc_len = loc->len;
         pair     = div[i];
 
         for (uint pos = 0; pos < cloc_len; pos++) {
+            this->total_sites++;
+
             if (pair[pos] == NULL)
                 continue;
 
@@ -293,19 +301,10 @@ OPopPair<StatT>::order(vector<const StatT *> &sites, const vector<LocBin *> &sor
             // Check if this basepair position is already covered by a RAD site.
             //
             if (sites[sites_key[pair[pos]->bp]] != NULL) {
-                this->multiple_loci++;
-                *(this->log_fh) << "between_population\t"
-                                << "multiple_locus\t"
-                                << loc->id << "\t"
-                                << loc->loc.chr() << "\t"
-                                << pair[pos]->bp + 1   << "\t"
-                                << pos << "\t"
-                                << mpopi.pops()[pair[pos]->pop_1].name << "\t"
-                                << mpopi.pops()[pair[pos]->pop_2].name << "\n";
-                continue;
+                this->multiple_sites++;
+            } else {
+                sites[sites_key[pair[pos]->bp]] = pair[pos];
             }
-
-            sites[sites_key[pair[pos]->bp]] = pair[pos];
         }
     }
 
@@ -326,12 +325,15 @@ template<class StatT>
 int
 OSumStat<StatT>::order(vector<const StatT *> &sites, const vector<LocBin *> &sorted_loci, uint pop_id)
 {
-    this->incompatible_loci = 0;
-    this->multiple_loci     = 0;
+    this->incompatible_sites = 0;
+    this->total_sites        = 0;
+    this->multiple_sites     = 0;
 
     map<uint, uint> sites_key;
 
     this->init_sites(sites, sites_key, sorted_loci, pop_id);
+
+    this->uniq_sites = sites_key.size();
 
     const CSLocus *loc;
     const LocSum  *lsum;
@@ -347,22 +349,13 @@ OSumStat<StatT>::order(vector<const StatT *> &sites, const vector<LocBin *> &sor
         for (uint k = 0; k < loc->len; k++) {
             if (lsum->nucs[k].num_indv == 0) continue;
 
-            if (sites_key.count(lsum->nucs[k].bp) == 0) {
-                cerr << "Error: locus " << lsum->nucs[k].loc_id << " at " << lsum->nucs[k].bp +1 << "bp is not defined in the sites map.\n";
-
-            } else if (sites[sites_key[lsum->nucs[k].bp]] == NULL) {
+            assert(sites_key.count(lsum->nucs[k].bp) > 0);
+            this->total_sites++;
+            
+            if (sites[sites_key[lsum->nucs[k].bp]] == NULL) {
                 sites[sites_key[lsum->nucs[k].bp]] = &(lsum->nucs[k]);
-
             } else {
-                this->multiple_loci++;
-                *(this->log_fh) << "within_population\t"
-                                << "multiple_locus\t"
-                                << loc->id << "\t"
-                                << loc->loc.chr() << "\t"
-                                << lsum->nucs[k].bp +1 << "\t"
-                                << k << "\t"
-                                << mpopi.pops()[pop_id].name << "\t"
-                                << "conflicts with locus " << sites[sites_key[lsum->nucs[k].bp]]->loc_id << "\n";
+                this->multiple_sites++;
             }
         }
     }
@@ -387,45 +380,37 @@ template<class StatT>
 int
 OLocTally<StatT>::order(vector<const StatT *> &sites, const vector<LocBin *> &sorted_loci)
 {
-    this->incompatible_loci = 0;
-    this->multiple_loci     = 0;
+    this->incompatible_sites = 0;
+    this->total_sites        = 0;
+    this->multiple_sites     = 0;
 
     map<uint, uint> sites_key;
 
     this->init_sites(sites, sites_key, sorted_loci);
 
+    this->uniq_sites = sites_key.size();
+    
     const CSLocus  *loc;
     const LocTally *ltally;
-    int len;
-
+ 
     //
     // Assign nucleotides to their proper, ordered location in the genome,
     // checking that a site hasn't already been covered by another RAD locus.
     //
     for (uint pos = 0; pos < sorted_loci.size(); pos++) {
         loc    = sorted_loci[pos]->cloc;
-        len    = loc->len;
         ltally = sorted_loci[pos]->s->meta_pop();
 
-        for (int k = 0; k < len; k++) {
+        for (uint k = 0; k < loc->len; k++) {
             if (ltally->nucs[k].allele_cnt != 2) continue;
 
-            if (sites_key.count(ltally->nucs[k].bp) == 0) {
-                cerr << "Error: locus " << ltally->nucs[k].loc_id << " at " << ltally->nucs[k].bp +1 << "bp is not defined in the sites map.\n";
+            assert(sites_key.count(ltally->nucs[k].bp) > 0);
+            this->total_sites++;
 
-            } else if (sites[sites_key[ltally->nucs[k].bp]] == NULL) {
+            if (sites[sites_key[ltally->nucs[k].bp]] == NULL) {
                 sites[sites_key[ltally->nucs[k].bp]] = &(ltally->nucs[k]);
-
             } else {
-                this->multiple_loci++;
-                if (this->log_fh != NULL)
-                    *(this->log_fh) << "within_population\t"
-                                    << "multiple_locus\t"
-                                    << loc->id << "\t"
-                                    << loc->loc.chr() << "\t"
-                                    << ltally->nucs[k].bp +1 << "\t"
-                                    << k << "\t"
-                                    << "conflicts with locus " << sites[sites_key[ltally->nucs[k].bp]]->loc_id << "\n";
+                this->multiple_sites++;
             }
         }
     }
