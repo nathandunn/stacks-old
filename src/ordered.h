@@ -58,7 +58,6 @@ Ordered<StatT>::init_sites(vector<const StatT *> &sites, map<uint, uint> &sites_
 {
     const CSLocus  *loc;
     const LocTally *ltally;
-    int      len;
     set<int> bps;
 
     //
@@ -67,10 +66,9 @@ Ordered<StatT>::init_sites(vector<const StatT *> &sites, map<uint, uint> &sites_
     //
     for (uint pos = 0; pos < sorted_loci.size(); pos++) {
         loc    = sorted_loci[pos]->cloc;
-        len    = loc->len;
         ltally = sorted_loci[pos]->s->meta_pop();
 
-        for (int k = 0; k < len; k++) {
+        for (uint k = 0; k < loc->len; k++) {
             if (ltally->nucs[k].allele_cnt == 2)
                 bps.insert(ltally->nucs[k].bp);
         }
@@ -97,7 +95,6 @@ Ordered<StatT>::init_sites(vector<const StatT *> &sites, map<uint, uint> &sites_
 {
     const CSLocus *loc;
     const LocSum  *lsum;
-    int      len;
     set<int> bps;
 
     //
@@ -106,10 +103,9 @@ Ordered<StatT>::init_sites(vector<const StatT *> &sites, map<uint, uint> &sites_
     //
     for (uint pos = 0; pos < sorted_loci.size(); pos++) {
         loc  = sorted_loci[pos]->cloc;
-        len  = strlen(loc->con);
         lsum = sorted_loci[pos]->s->per_pop(pop_id);
 
-        for (int k = 0; k < len; k++) {
+        for (uint k = 0; k < loc->len; k++) {
             if (lsum->nucs[k].num_indv > 0)
                 bps.insert(lsum->nucs[k].bp);
         }
@@ -136,7 +132,6 @@ Ordered<StatT>::init_sites(vector<const StatT *> &sites, map<uint, uint> &sites_
 {
     const CSLocus *loc;
     const LocSum  *lsum_1, *lsum_2;
-    int      len;
     set<int> bps;
 
     //
@@ -145,11 +140,10 @@ Ordered<StatT>::init_sites(vector<const StatT *> &sites, map<uint, uint> &sites_
     //
     for (uint pos = 0; pos < sorted_loci.size(); pos++) {
         loc    = sorted_loci[pos]->cloc;
-        len    = strlen(loc->con);
         lsum_1 = sorted_loci[pos]->s->per_pop(pop_id_1);
         lsum_2 = sorted_loci[pos]->s->per_pop(pop_id_2);
 
-        for (int k = 0; k < len; k++) {
+        for (uint k = 0; k < loc->len; k++) {
             if (lsum_1->nucs[k].num_indv > 0 &&
                 lsum_2->nucs[k].num_indv > 0)
                 bps.insert(lsum_1->nucs[k].bp); // slow
@@ -206,14 +200,16 @@ class OHaplotypes: public Ordered<StatT> {
 public:
     OHaplotypes(): Ordered<StatT>() { }
 
-    int order(vector<const StatT *> &, map<uint, uint> &, const vector<LocBin *> &);
-    int order(vector<const StatT *> &, map<uint, uint> &, const vector<LocBin *> &, const vector<StatT *> &);
+    int order(vector<const StatT *> &, const vector<LocBin *> &);
+    int order(vector<const StatT *> &, const vector<LocBin *> &, const vector<StatT *> &);
 };
 
 template<class StatT>
 int
-OHaplotypes<StatT>::order(vector<const StatT *> &sites, map<uint, uint> &sites_key, const vector<LocBin *> &sorted_loci)
+OHaplotypes<StatT>::order(vector<const StatT *> &sites, const vector<LocBin *> &sorted_loci)
 {
+    map<uint, uint> sites_key;
+
     this->init_haplotypes(sites, sites_key, sorted_loci);
 
     return 0;
@@ -221,9 +217,10 @@ OHaplotypes<StatT>::order(vector<const StatT *> &sites, map<uint, uint> &sites_k
 
 template<class StatT>
 int
-OHaplotypes<StatT>::order(vector<const StatT *> &sites, map<uint, uint> &sites_key, const vector<LocBin *> &sorted_loci, const vector<StatT *> &div)
+OHaplotypes<StatT>::order(vector<const StatT *> &sites, const vector<LocBin *> &sorted_loci, const vector<StatT *> &div)
 {
     StatT *pair;
+    map<uint, uint> sites_key;
 
     this->init_haplotypes(sites, sites_key, sorted_loci);
 
@@ -246,12 +243,12 @@ public:
         this->log_fh = &log_fh;
     }
 
-    bool order(vector<const StatT *> &, map<uint, uint> &, const vector<LocBin *> &, const vector<StatT **> &);
+    bool order(vector<const StatT *> &, const vector<LocBin *> &, const vector<StatT **> &);
 };
 
 template<class StatT>
 bool
-OPopPair<StatT>::order(vector<const StatT *> &sites, map<uint, uint> &sites_key, const vector<LocBin *> &sorted_loci, const vector<StatT **> &div)
+OPopPair<StatT>::order(vector<const StatT *> &sites, const vector<LocBin *> &sorted_loci, const vector<StatT **> &div)
 {
     CSLocus *loc;
     StatT  **pair;
@@ -278,6 +275,8 @@ OPopPair<StatT>::order(vector<const StatT *> &sites, map<uint, uint> &sites_key,
     }
     if (found == false)
         return found;
+
+    map<uint, uint> sites_key;
 
     this->init_sites(sites, sites_key, sorted_loci, pop_1, pop_2);
 
@@ -336,7 +335,6 @@ OSumStat<StatT>::order(vector<const StatT *> &sites, const vector<LocBin *> &sor
 
     const CSLocus *loc;
     const LocSum  *lsum;
-    int            len;
 
     //
     // Assign nucleotides to their proper, ordered location in the genome,
@@ -344,10 +342,9 @@ OSumStat<StatT>::order(vector<const StatT *> &sites, const vector<LocBin *> &sor
     //
     for (uint pos = 0; pos < sorted_loci.size(); pos++) {
         loc  = sorted_loci[pos]->cloc;
-        len  = strlen(loc->con);
         lsum = sorted_loci[pos]->s->per_pop(pop_id);
 
-        for (int k = 0; k < len; k++) {
+        for (uint k = 0; k < loc->len; k++) {
             if (lsum->nucs[k].num_indv == 0) continue;
 
             if (sites_key.count(lsum->nucs[k].bp) == 0) {
