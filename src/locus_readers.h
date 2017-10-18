@@ -38,8 +38,7 @@ class BamCLocReader {
 
     int32_t loc_i_; // Index of the next locus (chromosome). Incremented by read_one_locus().
 
-    vector<uchar> eofs_; // For each BAM file. (Vector of bools; `uchar`s because std specializes `vector<bool>`.)
-    vector<BamRecord> next_records_; // The next record, for each file.
+    vector<BamRecord> next_records_; // The next available record, for each file.
 
 public:
     BamCLocReader(vector<Bam*>&& bam_fs, const vector<string>& samples={});
@@ -115,14 +114,12 @@ private:
     Config cfg_;
     BamStats stats_;
 
-    Bam* bam_f_;
     vector<Bam*> bam_fs_;
     BamPopInfo bpopi_;
 
     bool next_record(size_t bam_f_i);
     bool next_record() {return next_record(0);}
-    vector<uchar> eofs_; // For each BAM file. (Vector of bools; `uchar`s because std specializes `vector<bool>`.)
-    vector<BamRecord> next_records_; // The next record, for each file.
+    vector<BamRecord> next_records_; // The next record past the current window, for each file.
     vector<uchar> treat_next_records_as_fw_; // Whether to treat the above as forward reads. c.f. `cfg_.paired`/--paired.
 
     // Buffers to store the reads of the sliding window.
@@ -353,7 +350,6 @@ BamCLocReader::BamCLocReader(vector<Bam*>&& bam_fs, const vector<string>& sample
     bam_fs_(move(bam_fs)),
     bpopi_(samples.empty() ? BamPopInfo(bam_fs_) : BamPopInfo(bam_fs_, samples)),
     loc_i_(-1),
-    eofs_(bam_fs_.size(), false),
     next_records_(bam_fs_.size())
 {
     // Check that headers are consistent.
@@ -427,8 +423,7 @@ bool BamCLocReader::read_one_locus(CLocReadSet& readset) {
         for (size_t bam_f_i=0; bam_f_i<bam_fs_.size(); ++bam_f_i) {
             Bam* bam_f = bam_fs_[bam_f_i];
             BamRecord& rec = next_records_[bam_f_i];
-            uchar& eof = eofs_[bam_f_i];
-            if ((eof = !bam_f->next_record_ordered(rec))) {
+            if (!bam_f->next_record_ordered(rec)) {
                 cerr << "Error: No records in BAM file '" << bam_f->path << "'.\n";
                 throw exception();
             } else if (!rec.is_primary()) {
@@ -438,7 +433,10 @@ bool BamCLocReader::read_one_locus(CLocReadSet& readset) {
             }
         }
     } else if (loc_i_ == int32_t(n_loci())) {
-        assert(std::accumulate(eofs_.begin(), eofs_.end(), size_t(0)) == eofs_.size());
+        #ifndef NDEBUG
+        for (Bam* bam_f : bam_fs_)
+            assert(bam_f->eof());
+        #endif
         return false;
     }
 
@@ -456,10 +454,9 @@ bool BamCLocReader::read_one_locus(CLocReadSet& readset) {
     for (size_t bam_f_i=0; bam_f_i<bam_fs_.size(); ++bam_f_i) {
         Bam* bam_f = bam_fs_[bam_f_i];
         BamRecord& rec = next_records_[bam_f_i];
-        uchar& eof = eofs_[bam_f_i];
 
         // Read all the reads of the locus, and one more.
-        while (!eof && rec.chrom() == loc_i_) {
+        while (!bam_f->eof() && rec.chrom() == loc_i_) {
             if (rec.is_read2())
                 readset.add_pe(SRead(Read(rec.seq(), string(rec.qname())+"/2"), bpopi_.sample_of(rec, bam_f_i)));
             else if (rec.is_read1())
@@ -469,7 +466,7 @@ bool BamCLocReader::read_one_locus(CLocReadSet& readset) {
                 // read names were left unchanged, so we also don't touch them.
                 readset.add(SRead(Read(rec.seq(), string(rec.qname())), bpopi_.sample_of(rec, bam_f_i)));
 
-            eof = !bam_f->next_record_ordered(rec);
+            bam_f->next_record_ordered(rec);
         }
     }
 
@@ -495,7 +492,6 @@ BamCLocBuilder::BamCLocBuilder(
     stats_(),
     bam_fs_(move(bam_fs)),
     bpopi_(samples.empty() ? BamPopInfo(bam_fs_) : BamPopInfo(bam_fs_, samples)),
-    eofs_(bam_fs_.size(), false),
     next_records_(bam_fs_.size()),
     treat_next_records_as_fw_(bam_fs_.size())
 {
@@ -673,12 +669,12 @@ bool BamCLocBuilder::fill_window()
      */
 
     for (size_t bam_f_i=0; bam_f_i<bam_fs_.size(); ++bam_f_i) {
-    try {
-        uchar& eof = eofs_[bam_f_i];
+        Bam* bam_f = bam_fs_[bam_f_i];
         BamRecord& rec = next_records_[bam_f_i];
-        if (!eof) {
+    try {
+        if (!bam_f->eof()) {
             if (rec.empty()) {
-                if ((eof = !next_record(bam_f_i))) {
+                if (!next_record(bam_f_i)) {
                     if (bam_fs_[bam_f_i]->n_records_read() == 0)
                         cerr << "Error: No BAM records.\n";
                     else
@@ -687,17 +683,13 @@ bool BamCLocBuilder::fill_window()
                 }
                 assert(!rec.empty());
             }
-            while (!eof && fw_reads_by_5prime_pos_.empty()) {
-                add_next_record_to_the_window(bam_f_i); // (Note: `next_record_` may be a paired-end read.)
-                eof = !next_record(bam_f_i);
-            }
-            while (!eof
+            while (!bam_f->eof() && fw_reads_by_5prime_pos_.empty())
+                add_next_record_to_the_window(bam_f_i); // (Note: We may have read a paired-end read.)
+
+            while (!bam_f->eof()
                     && rec.chrom() == fw_reads_by_5prime_pos_.begin()->first.chrom
-                    && size_t(rec.pos()) <= fw_reads_by_5prime_pos_.begin()->first.bp + cfg_.max_insert_refsize
-            ) {
+                    && size_t(rec.pos()) <= fw_reads_by_5prime_pos_.begin()->first.bp + cfg_.max_insert_refsize)
                 add_next_record_to_the_window(bam_f_i);
-                eof = !next_record(bam_f_i);
-            }
         }
     } catch (exception& e) {
         cerr << "Error: (At the " << bam_fs_[bam_f_i]->n_records_read()
@@ -706,7 +698,10 @@ bool BamCLocBuilder::fill_window()
     }}
 
     if (fw_reads_by_5prime_pos_.empty()) {
-        assert(std::accumulate(eofs_.begin(), eofs_.end(), size_t(0)) == eofs_.size());
+        #ifndef NDEBUG
+        for (Bam* bam_f : bam_fs_)
+            assert(bam_f->eof());
+        #endif
         return false;
     }
 

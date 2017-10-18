@@ -146,6 +146,7 @@ public:
 class Bam: public Input {
     htsFile*  bam_fh;
     BamHeader hdr;
+    bool eof_;
 
     size_t  n_records_read_;
     int32_t prev_chrom_;
@@ -163,6 +164,7 @@ public:
 
     bool next_record(BamRecord& rec);
     bool next_record_ordered(BamRecord& rec);
+    bool eof() const {return eof_;}
     size_t n_records_read() const {return n_records_read_;}
 
     Seq *next_seq();
@@ -185,11 +187,11 @@ bool Bam::next_record(BamRecord& rec) {
         rec.reinit();
     int rv = bam_read1(bam_fh->fp.bgzf, rec.hts());
     if (rv == -1) {
-        // EOF.
+        eof_ = true;
         rec.destroy();
         return false;
     } else if (rv < -1) {
-        cerr << "Error: while reading BAM file.\n";
+        cerr << "Error: while reading BAM file '" << this->path << "'.\n";
         throw ios::failure("hts::bam_read1");
     }
     ++n_records_read_;
