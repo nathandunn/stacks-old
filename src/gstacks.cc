@@ -459,18 +459,26 @@ try {
         cout << '\n';
 
         // Report statistics on the input BAM.
-        const BamCLocBuilder::BamStats& bam_stats = bam_cloc_builder->bam_stats();
-        cout << "Read " << bam_stats.n_records << " BAM records:\n"
-             << "  kept " << bam_stats.n_primary_kept() << " primary alignments\n"
-             << "  skipped " << bam_stats.n_primary_mapq << " primary alignments with insufficient mapping qualities ("
-             << as_percentage((double)bam_stats.n_primary_mapq / bam_stats.n_primary) << ")\n"
-             << "  skipped " << bam_stats.n_primary_softclipped << " excessively soft-clipped primary alignments ("
-             << as_percentage((double)bam_stats.n_primary_softclipped / bam_stats.n_primary) << ")\n"
-             << "  Skipped " << bam_stats.n_secondary << " secondary alignments\n"
-             << "  Skipped " << bam_stats.n_supplementary << " supplementary alignments\n"
-             << "  Skipped " << bam_stats.n_unmapped << " unmapped reads\n"
-             << "\n"
-             ;
+        {
+            const BamCLocBuilder::BamStats& bam_stats = bam_cloc_builder->bam_stats();
+            size_t p = bam_stats.n_primary;
+            size_t u = bam_stats.n_unmapped;
+            cout << "Read " << bam_stats.n_records << " BAM records:\n"
+                 << "  found " << p << " primary alignments ("
+                 << as_percentage((double) p / (p+u)) << " of primary/unmapped records).\n"
+                 << "  kept " << bam_stats.n_primary_kept() << " primary alignments ("
+                 << as_percentage((double) bam_stats.n_primary_kept() / p) << " of primary alignments)\n"
+                 << "  skipped " << bam_stats.n_primary_mapq << " primary alignments with insufficient mapping qualities ("
+                 << as_percentage((double)bam_stats.n_primary_mapq / p) << ")\n"
+                 << "  skipped " << bam_stats.n_primary_softclipped << " excessively soft-clipped primary alignments ("
+                 << as_percentage((double)bam_stats.n_primary_softclipped / p) << ")\n"
+                 << "  skipped " << bam_stats.n_secondary << " secondary alignments\n"
+                 << "  skipped " << bam_stats.n_supplementary << " supplementary alignments\n"
+                 << "  skipped " << u << " unmapped reads ("
+                 << as_percentage((double) u / (p+u)) << " of primary/unmapped records).\n"
+                 << "\n"
+                 ;
+        }
 
         if (refbased_cfg.paired) {
             // Report statistics on paired-ends reads.
