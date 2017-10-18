@@ -65,6 +65,34 @@ bool almost_equal(double x, double y) {
     return std::abs(x-y) <= precision * std::abs(std::min(x,y));
 }
 
+struct OnlineMeanVar {
+    // Computes the mean and variance in a numerically stable way.
+    // Uses the online algorithm, as described in:
+    // B. P. Welford. (1962) Note on a Method for Calculating Corrected Sums of
+    // Squares and Products. Technometrics: 4(3), pp. 419-420.
+    double n_;
+    double mean_;
+    double M2_;
+public:
+    OnlineMeanVar() : n_(0.0), mean_(0.0), M2_(0.0) {}
+
+    size_t n()     const {return std::round(n_);}
+    double n_dbl() const {return n_;}
+    double mean()  const {return mean_;}
+    double var_p() const {return n_ > 0 ? M2_/n_ : NAN;}
+    double var_s() const {return n_ > 1 ? M2_/(n_-1) : NAN;}
+    double sd_p()  const {return std::sqrt(var_p());}
+    double sd_s()  const {return std::sqrt(var_s());}
+
+    void increment(double x) {
+        n_ += 1.0;
+        double delta1 = x - mean_;
+        mean_ += delta1 / n_;
+        double delta2 = x - mean_;
+        M2_ += delta1 * delta2;
+    }
+};
+
 //
 // Comparison functions for the STL sort routine
 //
