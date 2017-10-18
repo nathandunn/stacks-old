@@ -133,7 +133,7 @@ private:
 
     // Buffers to store the reads of the sliding window.
     bool fill_window();
-    void add_next_record_to_the_window(size_t bam_f_i);
+    void move_next_record_to_the_window(size_t bam_f_i);
     typedef size_t SampleIdx;
     map<Pos5,vector<pair<BamRecord,SampleIdx>>> fw_reads_by_5prime_pos_;
     std::multimap<Pos5,pair<BamRecord,SampleIdx>> pe_reads_by_5prime_pos_;
@@ -614,7 +614,7 @@ bool BamCLocBuilder::next_record(size_t bam_f_i)
 }
 
 inline
-void BamCLocBuilder::add_next_record_to_the_window(size_t bam_f_i)
+void BamCLocBuilder::move_next_record_to_the_window(size_t bam_f_i)
 {
     //
     // See `fill_window()`.
@@ -680,35 +680,36 @@ bool BamCLocBuilder::fill_window()
     for (size_t bam_f_i=0; bam_f_i<bam_fs_.size(); ++bam_f_i) {
         Bam* bam_f = bam_fs_[bam_f_i];
         BamRecord& rec = next_records_[bam_f_i];
-    try {
-        if (!bam_f->eof()) {
-            if (rec.empty()) {
-                if (!next_record(bam_f_i)) {
-                    if (bam_fs_[bam_f_i]->n_records_read() == 0)
-                        cerr << "Error: No BAM records.\n";
-                    else
-                        cerr << "Error: All records were discarded.\n";
-                    throw exception();
+        try {
+            if (!bam_f->eof()) {
+                if (rec.empty()) {
+                    if (!next_record(bam_f_i)) {
+                        if (bam_fs_[bam_f_i]->n_records_read() == 0)
+                            cerr << "Error: No BAM records.\n";
+                        else
+                            cerr << "Error: All records were discarded.\n";
+                        throw exception();
+                    }
+                    assert(!rec.empty());
                 }
-                assert(!rec.empty());
-            }
-            while (!bam_f->eof() && fw_reads_by_5prime_pos_.empty()) {
-                add_next_record_to_the_window(bam_f_i); // (Note: We may have read a paired-end read.)
-                next_record(bam_f_i);
-            }
+                while (!bam_f->eof() && fw_reads_by_5prime_pos_.empty()) {
+                    move_next_record_to_the_window(bam_f_i); // (Note: We may have read a paired-end read.)
+                    next_record(bam_f_i);
+                }
 
-            while (!bam_f->eof()
-                    && rec.chrom() <= fw_reads_by_5prime_pos_.begin()->first.chrom
-                    && size_t(rec.pos()) <= fw_reads_by_5prime_pos_.begin()->first.bp + cfg_.max_insert_refsize) {
-                add_next_record_to_the_window(bam_f_i);
-                next_record(bam_f_i);
+                while (!bam_f->eof()
+                        && rec.chrom() <= fw_reads_by_5prime_pos_.begin()->first.chrom
+                        && size_t(rec.pos()) <= fw_reads_by_5prime_pos_.begin()->first.bp + cfg_.max_insert_refsize) {
+                    move_next_record_to_the_window(bam_f_i);
+                    next_record(bam_f_i);
+                }
             }
+        } catch (exception&) {
+            cerr << "Error: (At the " << bam_fs_[bam_f_i]->n_records_read()
+                 << "th record in file '" << bam_fs_[bam_f_i]->path << "'.)\n";
+            throw;
         }
-    } catch (exception& e) {
-        cerr << "Error: (At the " << bam_fs_[bam_f_i]->n_records_read()
-             << "th record in file '" << bam_fs_[bam_f_i]->path << "'.)\n";
-        throw;
-    }}
+    }
 
     if (fw_reads_by_5prime_pos_.empty()) {
         #ifndef NDEBUG
