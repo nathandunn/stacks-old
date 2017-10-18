@@ -698,7 +698,7 @@ bool BamCLocBuilder::fill_window()
             }
 
             while (!bam_f->eof()
-                    && rec.chrom() == fw_reads_by_5prime_pos_.begin()->first.chrom
+                    && rec.chrom() <= fw_reads_by_5prime_pos_.begin()->first.chrom
                     && size_t(rec.pos()) <= fw_reads_by_5prime_pos_.begin()->first.bp + cfg_.max_insert_refsize) {
                 add_next_record_to_the_window(bam_f_i);
                 next_record(bam_f_i);
@@ -730,8 +730,14 @@ bool BamCLocBuilder::fill_window()
             pe_reads_by_name_.erase(pe_reads_by_5prime_pos_.begin()->second.first.qname());
             pe_reads_by_5prime_pos_.erase(pe_reads_by_5prime_pos_.begin());
         }
-        // As we enforce sorting there shouldn't be reads from further-ranked chromosomes.
-        assert(pe_reads_by_5prime_pos_.empty() || pe_reads_by_5prime_pos_.rbegin()->first.chrom == leftmost_cutsite.chrom);
+        // N.B. `pe_reads_by_5prime_pos_` may contain reads for further-ranked
+        // chromosomes. This happens when:
+        // * we are reading from multiple BAM,
+        // * the window starts out empty,
+        // * the first BAM file misses loci at the end of the last chromosome,
+        //   that exist in other samples, so that the window jumps back to the
+        //   previous chromosome when we arrive to a sample that still has
+        //   alignments there.
     } else {
         assert(pe_reads_by_5prime_pos_.empty());
     }
@@ -851,7 +857,8 @@ bool BamCLocBuilder::build_one_locus(CLocAlnSet& aln_loc)
             // extend past one another. //xxx Oct 2017 @Nick: This may actually
             // be okay (c.f. the "clocaln::juxtapose" assert failures upon assembly
             // of the barcode behind READ1), but should we allow it?
-            assert(pe_pos5.chrom == cutsite.chrom); // By construction of the window.
+            if (pe_pos5.chrom != cutsite.chrom)
+                continue;
             if (pe_pos5.strand == cutsite.strand)
                 continue;
             size_t pe_ref_len;
