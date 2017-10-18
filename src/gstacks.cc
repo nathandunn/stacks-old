@@ -486,7 +486,7 @@ try {
             ostream os (cout.rdbuf());
             os << std::fixed << std::setprecision(1);
             size_t n_pairs = loc_stats.n_read_pairs();
-            os << "Found " << n_pairs << " paired reads;"
+            os << "Found " << n_pairs << " paired-end reads;"
                << " mean insert length was " << loc_stats.insert_lengths_mv.mean()
                << " (sd: " << loc_stats.insert_lengths_mv.sd_p() << ").\n\n";
         }
@@ -495,14 +495,15 @@ try {
 
     // Report statistics on genotyping and haplotyping.
     {
-        size_t tot = gt_stats.n_genotyped_loci;
-        size_t ph  = gt_stats.n_loci_phasing_issues();
-        auto   pct = [tot](size_t n) { return as_percentage((double) n / tot); };
+        size_t n_hap_attempts = gt_stats.n_halplotyping_attempts();
+        size_t n_hap_pairs = gt_stats.n_consistent_hap_pairs();
 
-        cout << "Genotyped " << tot << " loci:\n"
+        cout << "Genotyped " << gt_stats.n_genotyped_loci << " loci:\n"
              << "  mean number of sites per locus: " << gt_stats.mean_n_sites_per_loc() << "\n"
-             << "  (All loci are always conserved)\n"
-             << "  one or more samples were excluded in " << ph << " loci (" << pct(ph) << ") because of phasing issues\n\n";
+             << "  a consistent phasing was found for " << n_hap_pairs << " of out " << n_hap_attempts
+             << " (" << as_percentage((double) n_hap_pairs / n_hap_attempts)
+             << ") diploid loci with data\n"
+             << "\n";
 
         logger->l << "BEGIN badly_phased\n"
                   << "n_tot_samples\tn_bad_samples\tn_loci\n";
@@ -864,7 +865,7 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
         calls.push_back(model->call(depths.back()));
         if (!calls.back().alleles().empty()) {
             new_consensus.set(site.col(), calls.back().most_frequent_allele());
-            ++gt_stats_.n_sites_tot;
+            ++gt_stats_.n_sites_tot; // Sites "with data".
         } else {
             // For the high/low Maruki" models this actually only happens when
             // there is no coverage; for the Hohenlohe model it may also happen
@@ -880,8 +881,7 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
     if (!dbg_no_haplotypes) {
         set<size_t> inconsistent_samples;
         phase_data = phase_hets(calls, aln_loc, inconsistent_samples);
-        if (!inconsistent_samples.empty())
-            ++gt_stats_.n_badly_phased_samples[ {inconsistent_samples.size(), aln_loc.n_samples()} ];
+        ++gt_stats_.n_badly_phased_samples[ {inconsistent_samples.size(), aln_loc.n_samples()} ];
     }
     timers_.geno_haplotyping.stop();
 
