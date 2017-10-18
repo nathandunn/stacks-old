@@ -182,7 +182,8 @@ try {
     // Process every locus
     //
     GenotypeStats gt_stats {};
-
+    ContigStats denovo_ctg_stats {};
+    
     // For clocking.
     Timers t_threads_totals;
     Timer t_parallel;
@@ -199,15 +200,14 @@ try {
     size_t next_vcf_to_write = 0;
     size_t next_det_to_write = 0;
 
+    cout << "Processing all loci...\n" << flush;
+    bool eof = false;
+    ProgressMeter progress =
+            (input_type == GStacksInputT::denovo_popmap || input_type == GStacksInputT::denovo_merger) ?
+            ProgressMeter(cout, true, bam_cloc_reader->n_loci())
+            : ProgressMeter(cout, false, 1000);
+    t_parallel.restart();
     if (input_type == GStacksInputT::denovo_popmap || input_type == GStacksInputT::denovo_merger) {
-
-        const size_t n_loci = bam_cloc_reader->n_loci();
-        ContigStats ctg_stats {};
-
-        cout << "Processing all loci...\n" << flush;
-        ProgressMeter progress (cout, true, n_loci);
-
-        t_parallel.restart();
         #pragma omp parallel
         {
             LocusProcessor loc_proc;
@@ -215,7 +215,7 @@ try {
             CLocReadSet loc (*bam_mpopi);
 
             #pragma omp for schedule(dynamic)
-            for (size_t i=0; i<n_loci; ++i) {
+            for (size_t i=0; i<bam_cloc_reader->n_loci(); ++i) {
                 if (omp_return != 0)
                     continue;
                 try {
@@ -305,54 +305,13 @@ try {
             // Tally the thread statistics.
             #pragma omp critical(stats)
             {
-                ctg_stats += loc_proc.ctg_stats();
+                denovo_ctg_stats += loc_proc.ctg_stats();
                 gt_stats  += loc_proc.gt_stats();
                 t_threads_totals += loc_proc.timers();
             }
-        }
-        if (omp_return != 0)
-            return omp_return;
-        t_parallel.stop();
-        progress.done();
-        cout << '\n';
-        assert(gt_stats.n_genotyped_loci == ctg_stats.n_nonempty_loci);
-
-        // Report assembly statistics.
-        if (ctg_stats.n_loci_w_pe_reads > 0) {
-            assert(!ignore_pe_reads);
-            size_t no_pe   = ctg_stats.n_loci_no_pe_reads() + ctg_stats.n_loci_almost_no_pe_reads;
-            size_t pe_ndag  = ctg_stats.n_loci_pe_graph_not_dag;
-            size_t pe_ctg = ctg_stats.n_loci_ctg();
-            auto pct = [&ctg_stats](size_t n) { return as_percentage((double) n / ctg_stats.n_nonempty_loci); };
-
-            ostream os (cout.rdbuf());
-            os << std::fixed << std::setprecision(1);
-            os << "Attempted to assemble and align paired-end reads for " << ctg_stats.n_nonempty_loci << " loci:\n"
-               << "  " << no_pe << " loci had no or almost no paired-end reads (" << pct(no_pe) << ");\n"
-               << "  " << pe_ndag << " loci had paired-end reads that couldn't be assembled into a contig ("
-               << pct(pe_ndag) << ");\n"
-               << "  For the remaining " << pe_ctg << " loci (" << pct(pe_ctg) << "), a paired-end contig was assembled;\n"
-               << "  Average contig size was " << ctg_stats.ctg_avg_length() << " bp;\n"
-               << "  Out of " << ctg_stats.n_tot_reads << " paired-end reads in these loci (mean "
-               << (double) ctg_stats.n_aln_reads / pe_ctg << " reads per locus),\n"
-               << "    " << ctg_stats.n_aln_reads << " were successfuly aligned ("
-               << as_percentage((double) ctg_stats.n_aln_reads / ctg_stats.n_tot_reads) << ");\n"
-               << "  " << ctg_stats.n_overlaps << " paired-end contigs overlapped the forward region ("
-               << as_percentage((double) ctg_stats.n_overlaps / ctg_stats.n_loci_ctg()) << "; mean overlap: "
-               << ctg_stats.mean_olap_length() << "bp; mean size of overlapped loci after merging: "
-               << ctg_stats.mean_olapd_locus_length() << ").\n"
-               << "\n";
-        } else {
-            cout << "Input appears to be single-end (no paired-end reads were seen).\n\n";
-        }
+        } //omp parallel
 
     } else if (input_type == GStacksInputT::refbased_popmap || input_type == GStacksInputT::refbased_list) {
-
-        cout << "Processing all loci...\n" << flush;
-        ProgressMeter progress (cout, false, 1000);
-        bool eof = false;
-
-        t_parallel.restart();
         #pragma omp parallel
         try {
             LocusProcessor loc_proc;
@@ -453,30 +412,68 @@ try {
         } catch (exception& e) {
             #pragma omp critical (exc)
             omp_return = stacks_handle_exceptions(e);
-        }
-        if (omp_return != 0)
-            return omp_return;
-        t_parallel.stop();
-        progress.done();
-        cout << '\n';
+        } //omp parallel
+    } else DOES_NOT_HAPPEN; //input_type
 
-        // Report statistics on the input BAM.
-        {
-            const BamCLocBuilder::BamStats& bam_stats = bam_cloc_builder->bam_stats();
-            size_t tot = bam_stats.n_primary + bam_stats.n_unmapped;
-            cout << "Read " << bam_stats.n_records << " BAM records:\n"
-                 << "  kept " << bam_stats.n_primary_kept() << " primary alignments ("
-                 << as_percentage((double) bam_stats.n_primary_kept() / tot) << ")\n"
-                 << "  skipped " << bam_stats.n_primary_mapq << " primary alignments with insufficient mapping qualities ("
-                 << as_percentage((double) bam_stats.n_primary_mapq / tot) << ")\n"
-                 << "  skipped " << bam_stats.n_primary_softclipped << " excessively soft-clipped primary alignments ("
-                 << as_percentage((double) bam_stats.n_primary_softclipped / tot) << ")\n"
-                 << "  skipped " << bam_stats.n_unmapped << " unmapped reads ("
-                 << as_percentage((double) bam_stats.n_unmapped / tot) << ")\n";
-            if (bam_stats.n_secondary > 0 || bam_stats.n_supplementary > 0)
-                cout << "  skipped suboptimal alignment (secondary/supplementary) records\n";
-            cout << "\n";
+    if (omp_return != 0)
+        return omp_return;
+    t_parallel.stop();
+    progress.done();
+    cout << '\n';
+
+    //
+    // Report statistics.
+    //
+
+    if (input_type == GStacksInputT::denovo_popmap || input_type == GStacksInputT::denovo_merger) {
+        assert(gt_stats.n_genotyped_loci == denovo_ctg_stats.n_nonempty_loci);
+
+        if (denovo_ctg_stats.n_loci_w_pe_reads > 0) {
+            // Report assembly statistics.
+            assert(!ignore_pe_reads);
+            const ContigStats& cs = denovo_ctg_stats;
+            size_t no_pe   = cs.n_loci_no_pe_reads() + cs.n_loci_almost_no_pe_reads;
+            size_t pe_ndag  = cs.n_loci_pe_graph_not_dag;
+            size_t pe_ctg = cs.n_loci_ctg();
+            auto pct = [&cs](size_t n) { return as_percentage((double) n / cs.n_nonempty_loci); };
+
+            ostream os (cout.rdbuf());
+            os << std::fixed << std::setprecision(1);
+            os << "Attempted to assemble and align paired-end reads for " << cs.n_nonempty_loci << " loci:\n"
+               << "  " << no_pe << " loci had no or almost no paired-end reads (" << pct(no_pe) << ");\n"
+               << "  " << pe_ndag << " loci had paired-end reads that couldn't be assembled into a contig ("
+               << pct(pe_ndag) << ");\n"
+               << "  For the remaining " << pe_ctg << " loci (" << pct(pe_ctg) << "), a paired-end contig was assembled;\n"
+               << "  Average contig size was " << cs.ctg_avg_length() << " bp;\n"
+               << "  Out of " << cs.n_tot_reads << " paired-end reads in these loci (mean "
+               << (double) cs.n_aln_reads / pe_ctg << " reads per locus),\n"
+               << "    " << cs.n_aln_reads << " were successfuly aligned ("
+               << as_percentage((double) cs.n_aln_reads / cs.n_tot_reads) << ");\n"
+               << "  " << cs.n_overlaps << " paired-end contigs overlapped the forward region ("
+               << as_percentage((double) cs.n_overlaps / cs.n_loci_ctg()) << "; mean overlap: "
+               << cs.mean_olap_length() << "bp; mean size of overlapped loci after merging: "
+               << cs.mean_olapd_locus_length() << ").\n"
+               << "\n";
+        } else {
+            cout << "Input appears to be single-end (no paired-end reads were seen).\n\n";
         }
+
+    } else if (input_type == GStacksInputT::refbased_popmap || input_type == GStacksInputT::refbased_list) {
+        // Report statistics on the input BAM.
+        const BamCLocBuilder::BamStats& bam_stats = bam_cloc_builder->bam_stats();
+        size_t tot = bam_stats.n_primary + bam_stats.n_unmapped;
+        cout << "Read " << bam_stats.n_records << " BAM records:\n"
+                << "  kept " << bam_stats.n_primary_kept() << " primary alignments ("
+                << as_percentage((double) bam_stats.n_primary_kept() / tot) << ")\n"
+                << "  skipped " << bam_stats.n_primary_mapq << " primary alignments with insufficient mapping qualities ("
+                << as_percentage((double) bam_stats.n_primary_mapq / tot) << ")\n"
+                << "  skipped " << bam_stats.n_primary_softclipped << " excessively soft-clipped primary alignments ("
+                << as_percentage((double) bam_stats.n_primary_softclipped / tot) << ")\n"
+                << "  skipped " << bam_stats.n_unmapped << " unmapped reads ("
+                << as_percentage((double) bam_stats.n_unmapped / tot) << ")\n";
+        if (bam_stats.n_secondary > 0 || bam_stats.n_supplementary > 0)
+            cout << "  skipped suboptimal alignment (secondary/supplementary) records\n";
+        cout << "\n";
 
         if (refbased_cfg.paired) {
             // Report statistics on paired-ends reads.
@@ -488,36 +485,24 @@ try {
                << " mean insert length was " << loc_stats.insert_lengths_mv.mean()
                << " (sd: " << loc_stats.insert_lengths_mv.sd_p() << ").\n\n";
         }
-
-    } else DOES_NOT_HAPPEN; //input_type
-
-    // Report statistics on genotyping and haplotyping.
-    {
-        size_t n_hap_attempts = gt_stats.n_halplotyping_attempts();
-        size_t n_hap_pairs = gt_stats.n_consistent_hap_pairs();
-
-        cout << "Genotyped " << gt_stats.n_genotyped_loci << " loci:\n"
-             << "  mean number of sites per locus: " << gt_stats.mean_n_sites_per_loc() << "\n"
-             << "  a consistent phasing was found for " << n_hap_pairs << " of out " << n_hap_attempts
-             << " (" << as_percentage((double) n_hap_pairs / n_hap_attempts)
-             << ") diploid loci with data\n"
-             << "\n";
-
-        logger->l << "BEGIN badly_phased\n"
-                  << "n_tot_samples\tn_bad_samples\tn_loci\n";
-        for (auto& elem : gt_stats.n_badly_phased_samples)
-            logger->l << elem.first.second << '\t' << elem.first.first << '\t' << elem.second << '\n';
-        logger->l << "END badly_phased\n\n";
     }
 
-    #ifdef DEBUG
-    if (typeid(*model) == typeid(MarukiLowModel&))
-        cerr << "DEBUG: marukilow: " << ((const MarukiLowModel&)*model).n_underflows() << " underflows occurred.\n\n";
-    #endif
+    // Report statistics on genotyping and haplotyping.
+    size_t n_hap_attempts = gt_stats.n_halplotyping_attempts();
+    size_t n_hap_pairs = gt_stats.n_consistent_hap_pairs();
+    cout << "Genotyped " << gt_stats.n_genotyped_loci << " loci:\n"
+            << "  mean number of sites per locus: " << gt_stats.mean_n_sites_per_loc() << "\n"
+            << "  a consistent phasing was found for " << n_hap_pairs << " of out " << n_hap_attempts
+            << " (" << as_percentage((double) n_hap_pairs / n_hap_attempts)
+            << ") diploid loci with data\n"
+            << "\n";
+    logger->l << "BEGIN badly_phased\n"
+                << "n_tot_samples\tn_bad_samples\tn_loci\n";
+    for (auto& elem : gt_stats.n_badly_phased_samples)
+        logger->l << elem.first.second << '\t' << elem.first.first << '\t' << elem.second << '\n';
+    logger->l << "END badly_phased\n\n";
 
-    //
     // Report clockings.
-    //
     {
         double ll  = t_parallel.elapsed();
         double v   = t_writing_vcf.elapsed();
@@ -572,9 +557,16 @@ try {
            ;
     }
 
+    #ifdef DEBUG
+    if (typeid(*model) == typeid(MarukiLowModel&))
+        // Report how many times the "underflow" likelihood equations were used (we'd need to know the total number of calls...)
+        cerr << "DEBUG: marukilow: handled " << ((const MarukiLowModel&)*model).n_underflows() << " underflows.\n\n";
+    #endif
+
     //
     // Cleanup & return.
     //
+
     gzclose(o_gzfasta_f);
     model.reset();
     if (dbg_write_hapgraphs)
