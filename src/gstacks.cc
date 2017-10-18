@@ -337,7 +337,8 @@ try {
                << as_percentage((double) ctg_stats.n_aln_reads / ctg_stats.n_tot_reads) << ");\n"
                << "  " << ctg_stats.n_overlaps << " paired-end contigs overlapped the forward region ("
                << as_percentage((double) ctg_stats.n_overlaps / ctg_stats.n_loci_ctg()) << "; mean overlap: "
-               << ctg_stats.mean_olap_length() << "bp).\n"
+               << ctg_stats.mean_olap_length() << "bp; mean size of overlapped loci after merging: "
+               << ctg_stats.mean_olapd_locus_length() << ").\n"
                << "\n";
         } else {
             cout << "Input appears to be single-end (no paired-end reads were seen).\n\n";
@@ -608,6 +609,7 @@ ContigStats& ContigStats::operator+= (const ContigStats& other) {
     this->n_tot_reads               += other.n_tot_reads;
     this->n_overlaps                += other.n_overlaps;
     this->length_overlap_tot        += other.length_overlap_tot;
+    this->length_olapd_loci_tot     += other.length_olapd_loci_tot;
 
     return *this;
 }
@@ -733,6 +735,7 @@ LocusProcessor::process(CLocReadSet& loc)
                 this->loc_.ctg_status = LocData::overlapped;
                 this->ctg_stats_.n_overlaps++;
                 this->ctg_stats_.length_overlap_tot += overlap;
+                this->ctg_stats_.length_olapd_loci_tot += aln_loc.ref().length() + ctg.length() - overlap;
             } else {
                 this->loc_.ctg_status = LocData::separate;
             }
