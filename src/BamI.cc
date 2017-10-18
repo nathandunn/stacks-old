@@ -122,8 +122,8 @@ Bam::Bam(const char *path)
     bam_fh(hts_open(path, "r")),
     hdr(),
     n_records_read_(0),
-    prev_chrom_(-1),
-    prev_pos_(-1)
+    prev_chrom_(0),
+    prev_pos_(0)
 {
     this->path   = string(path);
     check_open(bam_fh, path);
@@ -144,8 +144,8 @@ Bam::Bam(const string& path, BamHeader&& header)
     bam_fh(hts_open(path.c_str(), "wb")),
     hdr(move(header)),
     n_records_read_(0),
-    prev_chrom_(-1),
-    prev_pos_(-1)
+    prev_chrom_(0),
+    prev_pos_(0)
 {
     this->path   = path;
     check_open(bam_fh, path);
