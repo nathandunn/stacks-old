@@ -698,8 +698,12 @@ bool BamCLocBuilder::fill_window()
                 }
 
                 while (!bam_f->eof()
-                        && rec.chrom() <= fw_reads_by_5prime_pos_.begin()->first.chrom
-                        && size_t(rec.pos()) <= fw_reads_by_5prime_pos_.begin()->first.bp + cfg_.max_insert_refsize) {
+                        && (
+                            rec.chrom() < fw_reads_by_5prime_pos_.begin()->first.chrom
+                            || (rec.chrom() == fw_reads_by_5prime_pos_.begin()->first.chrom
+                                && size_t(rec.pos()) <= fw_reads_by_5prime_pos_.begin()->first.bp + cfg_.max_insert_refsize)
+                        )
+                ) {
                     move_next_record_to_the_window(bam_f_i);
                     next_record(bam_f_i);
                 }
@@ -724,8 +728,9 @@ bool BamCLocBuilder::fill_window()
         Pos5 leftmost_cutsite = fw_reads_by_5prime_pos_.begin()->first;
         while (!pe_reads_by_5prime_pos_.empty()
                 && (
-                    pe_reads_by_5prime_pos_.begin()->first.chrom != leftmost_cutsite.chrom
-                    || pe_reads_by_5prime_pos_.begin()->first.bp + cfg_.max_insert_refsize < size_t(leftmost_cutsite.bp) + 1
+                    pe_reads_by_5prime_pos_.begin()->first.chrom < leftmost_cutsite.chrom
+                    || (pe_reads_by_5prime_pos_.begin()->first.chrom == leftmost_cutsite.chrom
+                        && pe_reads_by_5prime_pos_.begin()->first.bp + cfg_.max_insert_refsize < size_t(leftmost_cutsite.bp) + 1)
                 )
         ) {
             pe_reads_by_name_.erase(pe_reads_by_5prime_pos_.begin()->second.first.qname());
