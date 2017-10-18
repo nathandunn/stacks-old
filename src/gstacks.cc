@@ -128,6 +128,8 @@ try {
     } else if (input_type == GStacksInputT::refbased_popmap || input_type == GStacksInputT::refbased_list) {
         bam_cloc_builder.reset(new BamCLocBuilder(move(bam_f_ptrs), refbased_cfg, sample_names));
         bam_mpopi = &bam_cloc_builder->mpopi();
+    } else {
+        DOES_NOT_HAPPEN;
     }
 
     //
