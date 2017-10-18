@@ -121,6 +121,7 @@ Bam::Bam(const char *path)
     Input(),
     bam_fh(hts_open(path, "r")),
     hdr(),
+    eof_(false),
     n_records_read_(0),
     prev_chrom_(0),
     prev_pos_(0)
@@ -143,6 +144,7 @@ Bam::Bam(const string& path, BamHeader&& header)
     Input(),
     bam_fh(hts_open(path.c_str(), "wb")),
     hdr(move(header)),
+    eof_(false),
     n_records_read_(0),
     prev_chrom_(0),
     prev_pos_(0)
