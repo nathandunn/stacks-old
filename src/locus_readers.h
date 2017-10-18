@@ -84,7 +84,7 @@ public:
         OnlineMeanVar insert_lengths_mv;
 
         size_t n_read_pairs() const {return insert_lengths_mv.n();}
-};
+    };
 
     // Constructs the object from a list of BAM file objects. If `samples` is
     // given, its size must be the same as that of `bam_fs`, and
@@ -692,13 +692,17 @@ bool BamCLocBuilder::fill_window()
                 }
                 assert(!rec.empty());
             }
-            while (!bam_f->eof() && fw_reads_by_5prime_pos_.empty())
+            while (!bam_f->eof() && fw_reads_by_5prime_pos_.empty()) {
                 add_next_record_to_the_window(bam_f_i); // (Note: We may have read a paired-end read.)
+                next_record(bam_f_i);
+            }
 
             while (!bam_f->eof()
                     && rec.chrom() == fw_reads_by_5prime_pos_.begin()->first.chrom
-                    && size_t(rec.pos()) <= fw_reads_by_5prime_pos_.begin()->first.bp + cfg_.max_insert_refsize)
+                    && size_t(rec.pos()) <= fw_reads_by_5prime_pos_.begin()->first.bp + cfg_.max_insert_refsize) {
                 add_next_record_to_the_window(bam_f_i);
+                next_record(bam_f_i);
+            }
         }
     } catch (exception& e) {
         cerr << "Error: (At the " << bam_fs_[bam_f_i]->n_records_read()
