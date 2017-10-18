@@ -459,7 +459,7 @@ try {
         cout << '\n';
 
         // Report statistics on the input BAM.
-        const BamCLocBuilder::BamStats& bam_stats = bam_cloc_builder->stats();
+        const BamCLocBuilder::BamStats& bam_stats = bam_cloc_builder->bam_stats();
         cout << "Read " << bam_stats.n_records << " BAM records:\n"
              << "  kept " << bam_stats.n_primary_kept() << " primary alignments\n"
              << "  skipped " << bam_stats.n_primary_mapq << " primary alignments with insufficient mapping qualities ("
@@ -472,6 +472,17 @@ try {
              << "\n"
              ;
 
+        if (refbased_cfg.paired) {
+            // Report statistics on paired-ends reads.
+            const BamCLocBuilder::LocStats& loc_stats = bam_cloc_builder->loc_stats();
+            ostream os (cout.rdbuf());
+            os << std::fixed << std::setprecision(1);
+            size_t n_pairs = loc_stats.n_read_pairs();
+            os << "Found " << n_pairs << " paired reads;"
+               << " mean insert length was " << loc_stats.insert_lengths_mv.mean()
+               << " (sd: " << loc_stats.insert_lengths_mv.sd_p() << ").\n\n";
+        }
+
     } else DOES_NOT_HAPPEN; //input_type
 
     // Report statistics on genotyping and haplotyping.
@@ -480,7 +491,8 @@ try {
         size_t ph  = gt_stats.n_loci_phasing_issues();
         auto   pct = [tot](size_t n) { return as_percentage((double) n / tot); };
 
-        cout << "Built and genotyped " << tot << " loci:\n"
+        cout << "Genotyped " << tot << " loci:\n"
+             << "  mean number of sites per locus: " << gt_stats.mean_n_sites_per_loc() << "\n"
              << "  (All loci are always conserved)\n"
              << "  one or more samples were excluded in " << ph << " loci (" << pct(ph) << ") because of phasing issues\n\n";
 
@@ -592,7 +604,9 @@ void SnpAlleleCooccurrenceCounter::clear() {
 //
 
 GenotypeStats& GenotypeStats::operator+= (const GenotypeStats& other) {
-    this->n_genotyped_loci           += other.n_genotyped_loci;
+    this->n_genotyped_loci += other.n_genotyped_loci;
+    this->n_sites_tot      += other.n_sites_tot;
+
     for (auto count : other.n_badly_phased_samples)
         this->n_badly_phased_samples[count.first] += count.second;
 
@@ -840,14 +854,16 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
     for (CLocAlnSet::site_iterator site (aln_loc); bool(site); ++site) {
         depths.push_back(site.counts());
         calls.push_back(model->call(depths.back()));
-        if (!calls.back().alleles().empty())
+        if (!calls.back().alleles().empty()) {
             new_consensus.set(site.col(), calls.back().most_frequent_allele());
-        else
+            ++gt_stats_.n_sites_tot;
+        } else {
             // For the high/low Maruki" models this actually only happens when
             // there is no coverage; for the Hohenlohe model it may also happen
             // when there isn't a single significant call.
             // Keep the already computed majority-rule nucleotide/don't do anything.
             ;
+        }
     }
     aln_loc.ref(move(new_consensus));
 
