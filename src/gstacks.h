@@ -118,11 +118,13 @@ public:
 
     size_t n_overlaps;
     size_t length_overlap_tot;
+    size_t length_olapd_loci_tot;
 
     size_t n_loci_no_pe_reads() const { return n_nonempty_loci - n_loci_w_pe_reads; }
     size_t n_loci_ctg() const { return n_loci_w_pe_reads - n_loci_almost_no_pe_reads - n_loci_pe_graph_not_dag; }
     double ctg_avg_length() const {return (double) length_ctg_tot / n_loci_ctg();}
     double mean_olap_length() const {return (double) length_overlap_tot / n_overlaps;}
+    double mean_olapd_locus_length() const {return (double) length_olapd_loci_tot / n_overlaps;}
 
     ContigStats& operator+= (const ContigStats& other);
 };
