@@ -472,7 +472,7 @@ try {
                  << "  skipped " << bam_stats.n_unmapped << " unmapped reads ("
                  << as_percentage((double) bam_stats.n_unmapped / tot) << ")\n";
             if (bam_stats.n_secondary > 0 || bam_stats.n_supplementary > 0)
-                cout << "  skipped suboptimal alignment (secondary/supplementary) records\n"
+                cout << "  skipped suboptimal alignment (secondary/supplementary) records\n";
             cout << "\n";
         }
 
