@@ -93,6 +93,9 @@ public:
 class GenotypeStats {
 public:
     size_t n_genotyped_loci;
+    size_t n_sites_tot;
+
+    double mean_n_sites_per_loc() const {return (double) n_sites_tot / n_genotyped_loci;}
 
     map<pair<size_t,size_t>,size_t> n_badly_phased_samples; // { {n_bad_samples, n_tot_samples} : count }
     size_t n_loci_phasing_issues()  const { size_t n = 0; for (auto& e: n_badly_phased_samples) n+=e.second; return n; }

@@ -79,6 +79,13 @@ public:
         size_t n_primary_kept() const {return n_primary - n_primary_mapq - n_primary_softclipped;}
     };
 
+    struct LocStats {
+        size_t n_loci_built;
+        OnlineMeanVar insert_lengths_mv;
+
+        size_t n_read_pairs() const {return insert_lengths_mv.n();}
+};
+
     // Constructs the object from a list of BAM file objects. If `samples` is
     // given, its size must be the same as that of `bam_fs`, and
     BamCLocBuilder(vector<Bam*>&& bam_fs, const Config& cfg, const vector<string>& samples={});
@@ -89,7 +96,8 @@ public:
 
     const MetaPopInfo& mpopi() const {return bpopi_.mpopi();}
     const vector<Bam*>& bam_fs() const {return bam_fs_;}
-    const BamStats& stats() const {return stats_;}
+    const BamStats& bam_stats() const {return bam_stats_;}
+    const LocStats& loc_stats() const {return loc_stats_;}
 
 private:
     // Structure to store the reads' 5prime positions.
@@ -112,7 +120,8 @@ private:
     };
 
     Config cfg_;
-    BamStats stats_;
+    BamStats bam_stats_;
+    LocStats loc_stats_;
 
     vector<Bam*> bam_fs_;
     BamPopInfo bpopi_;
@@ -489,7 +498,7 @@ BamCLocBuilder::BamCLocBuilder(
         const vector<string>& samples
 ) :
     cfg_(cfg),
-    stats_(),
+    bam_stats_(),
     bam_fs_(move(bam_fs)),
     bpopi_(samples.empty() ? BamPopInfo(bam_fs_) : BamPopInfo(bam_fs_, samples)),
     next_records_(bam_fs_.size()),
@@ -526,25 +535,25 @@ bool BamCLocBuilder::next_record(size_t bam_f_i)
         if (cfg_.ign_pe_reads && r.is_read2())
             continue;
 
-        ++stats_.n_records;
+        ++bam_stats_.n_records;
 
         // Check if the record is primary.
         if (r.is_unmapped()) {
-            ++stats_.n_unmapped;
+            ++bam_stats_.n_unmapped;
             continue;
         } else if (r.is_secondary()) {
-            ++stats_.n_secondary;
+            ++bam_stats_.n_secondary;
             continue;
         } else if (r.is_supplementary()) {
-            ++stats_.n_supplementary;
+            ++bam_stats_.n_supplementary;
             continue;
         }
         assert(r.is_primary());
-        ++stats_.n_primary;
+        ++bam_stats_.n_primary;
 
         // Check the MAPQ
         if (r.mapq() < cfg_.min_mapq) {
-            ++stats_.n_primary_mapq;
+            ++bam_stats_.n_primary_mapq;
             continue;
         }
 
@@ -579,12 +588,12 @@ bool BamCLocBuilder::next_record(size_t bam_f_i)
             if (r.is_rev_compl()) {
                 if(BamRecord::cig_op_t(r.hts_cigar()[r.hts_n_cigar()-1]) != BAM_CMATCH) {
                     // A cutsite is expected, and it is not aligned.
-                    ++stats_.n_primary_softclipped;
+                    ++bam_stats_.n_primary_softclipped;
                     continue;
                 }
             } else {
                 if(BamRecord::cig_op_t(r.hts_cigar()[0]) != BAM_CMATCH) {
-                    ++stats_.n_primary_softclipped;
+                    ++bam_stats_.n_primary_softclipped;
                     continue;
                 }
             }
@@ -596,7 +605,7 @@ bool BamCLocBuilder::next_record(size_t bam_f_i)
         // xxx Terminal insertions should count as soft-clipping.
         if ((double) softclipped / r.hts_l_seq() > cfg_.max_clipped) {
             // Too much soft-clipping.
-            ++stats_.n_primary_softclipped;
+            ++bam_stats_.n_primary_softclipped;
             continue;
         }
         break;
@@ -891,13 +900,14 @@ bool BamCLocBuilder::build_one_locus(CLocAlnSet& aln_loc)
             }
             pe_reads.push_back(SAlnRead(AlnRead(Read(move(seq), move(name)), move(cigar)), pe_sample));
 
+            loc_stats_.insert_lengths_mv.increment(insert_length);
             pe_reads_by_name_.erase(pe_name_itr);
             pe_reads_by_5prime_pos_.erase(pe_rec_itr);
         }
     }
 
     // Build the actual object.
-    aln_loc.reinit(++stats_.n_loci_built, loc_pos, &mpopi());
+    aln_loc.reinit(++loc_stats_.n_loci_built, loc_pos, &mpopi());
     aln_loc.ref(DNASeq4(max_ref_span));
     for (SAlnRead& read : fw_reads) {
         cigar_extend_right(read.cigar, max_ref_span - cigar_length_ref(read.cigar));
