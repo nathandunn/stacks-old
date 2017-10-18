@@ -339,6 +339,8 @@ try {
                << as_percentage((double) ctg_stats.n_overlaps / ctg_stats.n_loci_ctg()) << "; mean overlap: "
                << ctg_stats.mean_olap_length() << "bp).\n"
                << "\n";
+        } else {
+            cout << "Input appears to be single-end (no paired-end reads were seen).\n\n";
         }
 
     } else if (input_type == GStacksInputT::refbased_popmap || input_type == GStacksInputT::refbased_list) {
@@ -2138,6 +2140,10 @@ try {
             break;
         case 1001://kmer-length
             km_length = atoi(optarg);
+            if (km_length < 2 || km_length > 31) {
+                cerr << "Error: Illegal -t option value '" << optarg << "'.\n";
+                bad_args();
+            }
             break;
         case 1002://min-cov
             min_km_count = atoi(optarg);

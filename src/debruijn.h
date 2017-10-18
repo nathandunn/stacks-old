@@ -241,6 +241,10 @@ void Graph::clear() {
 
 inline
 Kmer::Kmer(size_t km_len, DNASeq4::iterator& first, DNASeq4::iterator past) : a_() {
+
+    if (km_len > 31)
+        DOES_NOT_HAPPEN;
+
     // Find a series of km_len good nucleotides.
     DNASeq4::iterator km_start = first;
     size_t n_good = 0;
