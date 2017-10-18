@@ -1999,19 +1999,22 @@ const string help_string = string() +
         "De novo mode:\n"
         "  gstacks -P stacks_dir -M popmap\n"
         "\n"
-        "  -P: input directory\n"
+        "  -P: input directory containg '*.matches.bam' files created by the\n"
+        "      de novo Stacks pipeline, ustacks-cstacks-sstacks-tsv2bam\n"
         "\n"
         "Reference-based mode:\n"
-        "  gstacks -I in_dir -M popmap -O out_dir [--paired]\n"
+        "  gstacks -I in_dir -M popmap [-s spacer] -O out_dir [--paired]\n"
         "  gstacks -B bam_file [-B ...] -O out_dir [--paired]\n"
         "\n"
-        "  -I: input directory containing '[SAMPLE_NAME].bam' files (or such-named\n"
-        "      symbolic links).\n"
+        "  -I: input directory containing BAM files\n"
+        "  -s: with -I/-M, spacer for file names: by default this is empty\n"
+        "      and the program looks for files named 'SAMPLE_NAME.bam'; if this\n"
+        "      option is given the program looks for 'SAMPLE_NAME.SPACER.bam'\n"
         "  -B: input BAM file(s)\n"
         "  --paired: reads are paired (RAD loci will be defined by READ1 alignments)\n"
         "\n"
         "  The input BAM file(s) must be sorted by coordinate. With -B, records\n"
-        "  must be assigned to samples using BAM \"reads groups\" (gstacks uses"
+        "  must be assigned to samples using BAM \"reads groups\" (gstacks uses\n"
         "  the ID \"identifier\" and SM \"sample name\" fields). Read groups,\n"
         "  if repeated in several files, must be consistent. With -I, read groups\n"
         "  are ignored.\n"
@@ -2021,7 +2024,6 @@ const string help_string = string() +
         "  -O: output directory (default: none with -B; with -P same as the input\n"
         "      directory)\n"
         "  -t,--threads: number of threads to use (default: 1)\n"
-        "  --details: write a more detailed output\n"
         "  --ignore-pe-reads: ignore paired-end reads even if present in the input\n"
         "                     (in reference-based mode, this implies --paired)\n"
         "\n"
@@ -2039,8 +2041,9 @@ const string help_string = string() +
         "  (Reference-based mode)\n"
         "  --min-mapq: minimum PHRED-scaled mapping quality to consider a read (default: 10)\n"
         "  --max-clipped: maximum soft-clipping level, in fraction of read length (default: 0.20)\n"
-        "  -m,--min-spl-reads: minimum number of reads for a sample to be considered at a locus (default: 1)\n"
         "  --max-insert-len: maximum allowed sequencing insert length (for --paired; default: 1000)\n"
+        "\n"
+        "  --details: write a heavier output\n"
         "\n"
 #ifdef DEBUG
         "Debug options:\n"
@@ -2073,6 +2076,7 @@ try {
         {"stacks-dir",   required_argument, NULL,  'P'},
         {"in-dir",       required_argument, NULL,  'I'},
         {"in-bam",       required_argument, NULL,  'B'},
+        {"spacer",       required_argument, NULL,  's'},
         {"popmap",       required_argument, NULL,  'M'},
         {"out-dir",      required_argument, NULL,  'O'},
         {"paired",       no_argument,       NULL,  1007},
@@ -2103,6 +2107,8 @@ try {
     string stacks_dir;
     string in_dir;
     string out_dir;
+    string bam_spacer;
+
     double gt_alpha = 0.05;
     double var_alpha = 0.05;
 
@@ -2110,7 +2116,7 @@ try {
     int long_options_i;
     while (true) {
 
-        c = getopt_long(argc, argv, "hqP:I:B:M:O:W:t:m:", long_options, &long_options_i);
+        c = getopt_long(argc, argv, "hqP:I:B:s:M:O:W:t:m:", long_options, &long_options_i);
 
         if (c == -1)
             break;
@@ -2135,6 +2141,14 @@ try {
             break;
         case 'B':
             in_bams.push_back(optarg);
+            break;
+        case 's':
+            bam_spacer = optarg;
+            while(!bam_spacer.empty() && bam_spacer.back() == '.')
+                bam_spacer.pop_back();
+            while(!bam_spacer.empty() && bam_spacer.front() == '.')
+                bam_spacer.erase(bam_spacer.begin());
+            bam_spacer.insert(bam_spacer.begin(), '.');
             break;
         case 'M':
             popmap_path = optarg;
@@ -2323,8 +2337,8 @@ try {
         if (out_dir.empty())
             out_dir = stacks_dir;
     } else if (input_type == In::refbased_popmap) {
-        for (const string& s : sample_names)
-            in_bams.push_back(in_dir + s + ".bam");
+        for (const string& sample : sample_names)
+            in_bams.push_back(in_dir + sample + bam_spacer + ".bam");
     } else {
         assert(input_type == In::refbased_list);
     }
