@@ -882,10 +882,14 @@ bool BamCLocBuilder::build_one_locus(CLocAlnSet& aln_loc)
 
             // Check that the read groups are consistent.
             if (pe_sample != fw_pair.second) {
-                cerr << "Warning: Paired reads '" << fw_rec.qname() << "' and '"
-                     << pe_rec.qname() << "' belong to different samples ('"
-                     << mpopi().samples()[fw_pair.second].name << "' and '"
-                     << mpopi().samples()[pe_sample].name << "').\n";
+                static bool emitted = false;
+                if (!emitted) {
+                    cerr << "Warning: Ignoring reads '" << fw_rec.qname() << "' and '"
+                         << pe_rec.qname() << "' that seem to belong to different samples ('"
+                         << mpopi().samples()[fw_pair.second].name << "' and '"
+                         << mpopi().samples()[pe_sample].name << "').\n";
+                    emitted = true;
+                }
                 continue;
             }
 
