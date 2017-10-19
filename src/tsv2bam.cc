@@ -355,7 +355,7 @@ void run(const vector<int>& cloc_ids,
     // Open the BAM file.
     //
     string matches_bam_path = prefix_path + ".matches.bam";
-    Bam bam_f (matches_bam_path, header);
+    Bam bam_f (matches_bam_path, BamHeader(header));
 
     //
     // Write the BAM records.
