@@ -401,7 +401,7 @@ LocPopSum::tally_metapop(const CSLocus *cloc)
     for (col = 0; col < cloc->len; col++) {
 
         mp->nucs[col].reset();
-        
+
         mp->nucs[col].col    = col;
         mp->nucs[col].bp     = cloc->sort_bp(col);
         mp->nucs[col].loc_id = cloc->id;
@@ -417,7 +417,7 @@ LocPopSum::tally_metapop(const CSLocus *cloc)
         //
         if (mp->nucs[col].allele_cnt > 1)
             mp->nucs[col].fixed = false;
-        
+
         for (uint j = 0; j < this->_pop_cnt; j++) {
             //
             // Sum the number of individuals examined at this locus across populations.
@@ -641,7 +641,7 @@ int
 LocPopSum::calc_hapstats(const CSLocus *cloc, const Datum **d, const MetaPopInfo &mpopi)
 {
     const vector<Pop> &pops = mpopi.pops();
-    
+
     for (uint j = 0; j < pops.size(); j++) {
 
         this->_hapstats_per_pop[j] = this->haplotype_diversity(pops[j].first_sample, pops[j].last_sample, d);
@@ -847,7 +847,7 @@ LocusDivergence::LocusDivergence(const MetaPopInfo *mpopi)
 {
     this->_mpopi = mpopi;
 
-    for (uint pop_1 = 0; pop_1 < this->_mpopi->pops().size(); pop_1++)    
+    for (uint pop_1 = 0; pop_1 < this->_mpopi->pops().size(); pop_1++)
         for (uint pop_2 = pop_1 + 1; pop_2 < this->_mpopi->pops().size(); pop_2++) {
             this->_mean_fst.push_back(0.0);
             this->_mean_fst_cnt.push_back(0.0);
@@ -894,7 +894,7 @@ LocusDivergence::snp_divergence(const vector<LocBin *> &loci)
     uint i = 0;
 
     for (uint pop_1 = 0; pop_1 < this->_mpopi->pops().size(); pop_1++) {
-       
+
         for (uint pop_2 = pop_1 + 1; pop_2 < this->_mpopi->pops().size(); pop_2++) {
 
             double fmean = 0.0;
@@ -927,13 +927,13 @@ LocusDivergence::snp_divergence(const vector<LocBin *> &loci)
                             pp[pos] = NULL;
                             continue;
                         }
-                    
+
                         pp[pos]->loc_id = loc->cloc->id;
                         pp[pos]->bp     = loc->cloc->sort_bp(pos);
                         pp[pos]->col    = pos;
                         pp[pos]->pop_1  = pop_1;
                         pp[pos]->pop_2  = pop_2;
-            
+
                         //
                         // Apply user-selected correction to the Fst values.
                         //
@@ -976,7 +976,7 @@ LocusDivergence::Fst(const CSLocus *cloc, const LocPopSum *s, int pop_1, int pop
 {
     const LocSum *s_1 = s->per_pop(pop_1);
     const LocSum *s_2 = s->per_pop(pop_2);
-    
+
     PopPair *pair = new PopPair();
 
     //
@@ -1352,7 +1352,7 @@ LocusDivergence::haplotype_divergence_pairwise(const vector<LocBin *> &loci)
             #pragma omp parallel
             {
                 vector<HapStat *> *haps = &this->_haplotypes.back();
-            
+
                 #pragma omp for schedule(dynamic, 1) reduction(+:pmean, pcnt, fmean, fcnt)
                 for (uint k = 0; k < loci.size(); k++) {
                     const CSLocus *loc = (const CSLocus *) loci[k]->cloc;
@@ -1365,10 +1365,10 @@ LocusDivergence::haplotype_divergence_pairwise(const vector<LocBin *> &loci)
                     // do not calculate haplotype F stats.
                     //
                     if (loc->snps.size() == 0 || fixed_locus(d, subpop_ids))
-                        h = NULL;                        
+                        h = NULL;
                     else
                         h = this->haplotype_amova(d, s, subpop_ids);
-                    
+
                     if (h != NULL) {
                         h->pop_1   = pop_1;
                         h->pop_2   = pop_2;
@@ -2193,7 +2193,7 @@ LocusDivergence::write_summary(string path)
 
         for (uint j = i + 1; j < this->_mpopi->pops().size(); j++) {
             cerr << "  " << this->_mpopi->pops()[i].name << "-"
-                 << this->_mpopi->pops()[j].name 
+                 << this->_mpopi->pops()[j].name
                  << ": mean Fst: "    << this->_mean_fst[n]   / this->_mean_fst_cnt[n]
                  << "; mean Phi_st: " << this->_mean_phist[n] / this->_mean_phist_cnt[n]
                  << "; mean Fst': "   << this->_mean_fstp[n]  / this->_mean_fstp_cnt[n] << "\n";
@@ -2201,6 +2201,6 @@ LocusDivergence::write_summary(string path)
         }
         fh << "\n";
     }
-    
+
     return 0;
 }

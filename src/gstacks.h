@@ -126,6 +126,8 @@ public:
     size_t length_overlap_tot;
     size_t length_olapd_loci_tot;
 
+    OnlineMeanVar insert_length_olap_mv;
+
     size_t n_loci_no_pe_reads() const { return n_nonempty_loci - n_loci_w_pe_reads; }
     size_t n_loci_ctg() const { return n_loci_w_pe_reads - n_loci_almost_no_pe_reads - n_loci_pe_graph_not_dag; }
     double ctg_avg_length() const {return (double) length_ctg_tot / n_loci_ctg();}
@@ -173,6 +175,7 @@ struct Timers {
     Timer olap_aligning;
     Timer geno_haplotyping;
     Timer building_vcf;
+    Timer cpt_consensus;
 
     Timers& operator+= (const Timers& other);
 };
@@ -212,7 +215,7 @@ private:
             SRead&& read,
             GappedAln* aligner,
             SuffixTree* stree
-            ) const;
+            );
 
     bool align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 &query, AlignRes &aln_res) const;
     int suffix_tree_hits_to_dag(size_t query_len, vector<STAln> &alns, vector<STAln> &final_alns) const;

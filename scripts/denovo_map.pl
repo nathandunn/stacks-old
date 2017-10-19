@@ -77,9 +77,6 @@ my $cnf = (-e $ENV{"HOME"} . "/.my.cnf") ? $ENV{"HOME"} . "/.my.cnf" : $mysql_co
 foreach my $prog ("ustacks", "cstacks", "sstacks", "tsv2bam", "gstacks", "genotypes", "populations", "index_radtags.pl") {
     die "Unable to find '" . $exe_path . $prog . "'.\n" if (!-e $exe_path . $prog || !-x $exe_path . $prog);
 }
-if (! which "samtools") {
-    die("Unable to find 'samtools'.\n");
-}
 
 my ($log, $log_fh, $sample);
 
@@ -833,6 +830,7 @@ sub parse_command_line {
             push(@_ustacks, "-p " . $arg);
             push(@_cstacks, "-p " . $arg);
             push(@_sstacks, "-p " . $arg);
+            push(@_tsv2bam, "-t " . $arg);
             push(@_gstacks, "-t " . $arg);
             push(@_populations, "-t " . $arg);
 

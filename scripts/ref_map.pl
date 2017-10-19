@@ -59,7 +59,7 @@ my @parents;
 my @progeny;
 my @samples;
 
-my (@_pstacks, @_cstacks, @_sstacks, @_tsv2bam, @_samtools_merge, @_gstacks, @_genotypes, @_populations);
+my (@_pstacks, @_cstacks, @_sstacks, @_tsv2bam, @_gstacks, @_genotypes, @_populations);
 
 my $cmd_str = $0 . " " . join(" ", @ARGV);
 
@@ -73,7 +73,6 @@ my $cnf = (-e $ENV{"HOME"} . "/.my.cnf") ? $ENV{"HOME"} . "/.my.cnf" : $mysql_co
 foreach my $prog ("gstacks", "populations") {
     die "Unable to find '" . $exe_path . $prog . "'.\n" if (!-e $exe_path . $prog || !-x $exe_path . $prog);
 }
-die("Unable to find 'samtools'.\n") if (! which "samtools");
 
 my ($log, $log_fh, $sample);
 
@@ -121,95 +120,12 @@ sub execute_stacks {
     my ($pop_cnt, $sample, $num_files, $i, $cmd, $pipe_fh, $path, $cat_file);
 
     #
-    # Sort the input BAM files, add read groups, and merge them.
-    #
-    my $bam_d = "$out_path/bamfiles_sorted_rgs";
-    $cmd = "mkdir $bam_d";
-    print STDERR "Creating a directory where to merge BAM files...\n  $cmd\n\n";
-    print $log_fh "$cmd\n\n";
-    if (!$dry_run) {
-    	if (-d $bam_d) {
-    		my $msg = "ref_map.pl: Error: Directory '$bam_d' already exists.\n";
-    		print $log_fh $msg;
-    		print STDERR $msg;
-    		exit 1;
-    	} elsif (!mkdir($bam_d)) {
-    		my $msg = "ref_map.pl: Error: Failed to create directory '$bam_d'.\n";
-    		print $log_fh $msg;
-    		print STDERR $msg;
-    		exit 1;
-    	}
-    }
-
-    # Check whether the BAM files are sorted and/or have read groups.
-    print STDERR "Checking BAM headers...\n";
-    my %not_sorted;
-    my %no_readgroup;
-    foreach $sample (@samples) {
-    	my $name = $sample->{'file'};
-    	# Insert the sample in both sets.
-    	$not_sorted{$name} = undef;
-    	$no_readgroup{$name} = undef;
-    	# Then remove it when we find the @HD, @RG lines in the BAM header.
-    	my $bam_path = $sample->{'path'} . $sample->{'file'} . "." . $sample->{'suffix'};
-    	open($pipe_fh, "samtools view -H $bam_path |");
-    	while (<$pipe_fh>) {
-    		if ($_ =~ /^\@HD\t.*SO:coordinate/) {
-    			delete $not_sorted{$name};
-    		} elsif ($_ =~ /^\@RG\t.*SM:/) {
-    			delete $no_readgroup{$name};
-    		}
-    	}
-    	close($pipe_fh);
-    	check_return_value($?, $log_fh);		
-    }
-    # Add read groups, sort and merge the sample BAMs.
-    my $merge_cmd = "samtools merge $bam_d/all_merged.bam";
-    if (scalar(keys(%not_sorted)) == 0 and scalar(keys(%no_readgroup)) == 0) {
-    	# All sample BAMs are sorted and have read groups.
-    	foreach $sample (@samples) {
-    		$merge_cmd .= " " . $sample->{'path'} . $sample->{'file'} . "." . $sample->{'suffix'};
-    	}
-    } else {
-    	# At least one sample is not sorted or is missing a read group.
-        print STDERR "At least one sample is not sorted or doesn't have a read group; adding read groups and/or sorting BAM files...\n";
-        print $log_fh "\nsamtools addreplacerg and/or sort\n==========\n";
-    	foreach $sample (@samples) {
-    		my $bam_path = $sample->{'path'} . $sample->{'file'} . "." . $sample->{'suffix'};
-    		my $name = $sample->{'file'};
-    		my $new_bam_path = "$bam_d/$name.rg_sorted.bam";
-    		$cmd = "cat $bam_path | samtools addreplacerg -r ID:$name -r SM:$name - | samtools sort > $new_bam_path";
-    	    print STDERR "  $cmd\n";
-    	    print $log_fh "$cmd\n";
-    	    if (!$dry_run) {
-    			system($cmd);
-    		}
-    		$merge_cmd .= " $new_bam_path";
-    	}
-    	print STDERR "\n";
-    	print $log_fh "\n";
-    }
-    print STDERR "Merging BAM files...\n  $merge_cmd\n\n";
-    print $log_fh "\nsamtools merge\n==========\n$merge_cmd\n";
-    if (!$dry_run) {
-    	system($merge_cmd);
-    }
-    check_return_value($?, $log_fh);
-
-    if (-z "$bam_d/all_merged.bam") {
-    	my $msg = "\nref_map.pl: Error: Failed to add read groups and/or merge.\n";
-    	print $log_fh $msg;
-    	print STDERR $msg;
-    	exit 1;
-    }
-
-    #
     # Call genotypes.
     #
     print STDERR "Calling variants, genotypes and haplotypes...\n";
     print $log_fh "\ngstacks\n==========\n";
 
-    $cmd = $exe_path . "gstacks -B $bam_d/all_merged.bam -O $out_path";
+    $cmd = $exe_path . "gstacks -I $sample_path -M $popmap_path -O $out_path";
     foreach (@_gstacks) {
         $cmd .= " " . $_;
     }
@@ -319,8 +235,8 @@ sub initialize_samples {
     my ($local_gzip, $file, $prefix, $suffix, $path, $found, $i);
 
     if (scalar(@{$sample_list}) > 0 && scalar(@{$samples}) == 0) {
-        my @suffixes = ("sam", "bam");
-        my @fmts     = ("sam", "bam");
+        my @suffixes = ("bam");
+        my @fmts     = ("bam");
 
         #
         # If a population map was specified and no samples were provided on the command line.
@@ -345,7 +261,7 @@ sub initialize_samples {
             }
 
             if ($found == false) {
-                die("Error: Failed to open '$sample_path$sample.(bam|sam)'.\n");
+                die("Error: Failed to open '$sample_path$sample.bam'.\n");
             }
         }
     }
@@ -742,11 +658,12 @@ sub parse_command_line {
             #	usage();
             #    }
 
+        } elsif ($_ =~ /^--paired$/) {
+            push(@_gstacks, "--paired");
+
         } elsif ($_ =~ /^-T$/) {
             $arg = shift @ARGV;
-            push(@_pstacks, "-p " . $arg);
-            push(@_cstacks, "-p " . $arg);
-            push(@_sstacks, "-p " . $arg);
+            push(@_gstacks,     "-t " . $arg);
             push(@_populations, "-t " . $arg);
 
         } elsif ($_ =~ /^--bound_low$/) {
@@ -821,12 +738,16 @@ sub usage {
     version();
 
     print STDERR <<EOQ;
-ref_map.pl --samples dir --popmap path -o dir (database options) [-X prog:"opts" ...]
+ref_map.pl --samples dir --popmap path [-s spacer] [--paired] -o dir (database options) [-X prog:"opts" ...]
 
   Input/Output files:
     --samples: path to the directory containing the samples BAM (or SAM) alignment files.
     --popmap: path to a population map file (format is "<name> TAB <pop>", one sample per line).
+    s: spacer for file names: by default this is empty and the program looks for files
+       named 'SAMPLE_NAME.bam'; if this option is given the program looks for files
+        named 'SAMPLE_NAME.SPACER.bam'.
     o: path to an output directory.
+    --paired: assume reads in the BAM file are paired; build loci based on READ1.
 
   General options:
     A: (To be reimplemented) for a mapping cross, specify the type; one of 'CP', 'F2', 'BC1', 'DH', or 'GEN'.
@@ -834,21 +755,19 @@ ref_map.pl --samples dir --popmap path -o dir (database options) [-X prog:"opts"
     T: the number of threads/CPUs to use (default: 1).
     d: Dry run. Do not actually execute anything, just print the commands that would be executed.
 
+  SNP model options:
+    --alpha: significance level at which to call genotypes (for pstacks; default: 0.05).
+    For the bounded model:
+      --bound_low <num>: lower bound for epsilon, the error rate, between 0 and 1.0 (default 0.0).
+      --bound_high <num>: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1.0).
 
-SNP model options:
-  --alpha: significance level at which to call genotypes (for pstacks; default: 0.05).
-  For the bounded model:
-    --bound_low <num>: lower bound for epsilon, the error rate, between 0 and 1.0 (default 0.0).
-    --bound_high <num>: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1.0).
-
-Database options:
-  (To be reimplemented.)
-  S: disable database interaction.
-  B: specify an SQL database to load data into.
-  D: a description of this batch to be stored in the database.
-  i: starting sample_id, this is determined automatically if database interaction is enabled.
-  --create_db: create the database specified by '-B' and populate the tables.
-  --overw_db: delete the database before creating a new copy of it (turns on --create_db).
+  Database options (To be reimplemented):
+    S: disable database interaction.
+    B: specify an SQL database to load data into.
+    D: a description of this batch to be stored in the database.
+    i: starting sample_id, this is determined automatically if database interaction is enabled.
+    --create_db: create the database specified by '-B' and populate the tables.
+    --overw_db: delete the database before creating a new copy of it (turns on --create_db).
 
 EOQ
     exit 1;

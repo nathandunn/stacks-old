@@ -46,7 +46,7 @@ void MetaPopInfo::reset_group_map() {
             cerr << "Error: Two or more groups have the same name '" << groups_[i].name << "'.\n";
             throw exception();
         }
-    }        
+    }
 }
 
 void MetaPopInfo::init_popmap(const string& pmap_path) {
@@ -346,7 +346,7 @@ MetaPopInfo::status(ostream &fh)
         size_t indent   = p->name.length() + 6;
         size_t line_lim = 120;
         size_t line_len = 0;
-        
+
         fh << "    " << p->name << ": ";
         for (size_t s = p->first_sample; s < p->last_sample; ++s) {
             fh << this->samples()[s].name << ", ";

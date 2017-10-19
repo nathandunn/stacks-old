@@ -152,7 +152,7 @@ int main (int argc, char* argv[]) {
     BatchLocusProcessor bloc(input_mode, batch_size, &mpopi);
 
     bloc.init(in_path, pmap_path);
-    
+
     //
     // Report information on the structure of the populations specified.
     //
@@ -181,7 +181,7 @@ int main (int argc, char* argv[]) {
         hdiv_exp = new HapDivergenceExport();
         exports.push_back(hdiv_exp);
     }
-    
+
     //
     // Setup the kernel smoothing apparatus.
     //
@@ -306,7 +306,7 @@ int main (int argc, char* argv[]) {
 
     if (calc_fstats)
         ldiv->write_summary(out_path + out_prefix);
-    
+
     //
     // Write out the distributions of catalog loci.
     //
@@ -377,7 +377,7 @@ int main (int argc, char* argv[]) {
         exports[i]->close();
         delete exports[i];
     }
-    
+
     // //
     // // Read the bootstrap-whitelist.
     // //
@@ -411,7 +411,7 @@ BatchLocusProcessor::init(string in_path, string pmap_path)
         cerr << "Loaded " << cnt << " whitelisted markers.\n";
         this->_user_supplied_whitelist = true;
     }
-    
+
     if (this->_input_mode == InputMode::vcf)
         this->init_external_loci(in_vcf_path, pmap_path);
     else
@@ -433,7 +433,7 @@ BatchLocusProcessor::next_batch(ostream &log_fh)
     this->_loci.clear();
 
     this->_batch_num++;
-    
+
     if (this->_input_mode == InputMode::vcf)
         loc_cnt = this->next_batch_external_loci(log_fh);
     else
@@ -504,7 +504,7 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
 
     this->_loci.clear();
     this->_loc_filter.batch_clear();
-    
+
     //
     // Check if we queued a LocBin object from the last round of reading.
     //
@@ -516,10 +516,10 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
         this->_next_loc = NULL;
         loc_cnt++;
     }
-    
+
     do {
         if (!this->_cloc_reader.read_one_locus(records)) break;
-        
+
         //
         // Get the current locus ID.
         //
@@ -551,7 +551,7 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
         //
         cur_chr = loc->cloc->loc.chr();
         if (prev_chr.length() == 0)
-            prev_chr = cur_chr;       
+            prev_chr = cur_chr;
 
         //
         // If we are in ordered mode, and there were no loci analyzed on the previous chromosome,
@@ -647,7 +647,7 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
         if (cur_chr == prev_chr) {
             this->_loci.push_back(loc);
             loc_cnt++;
-            
+
             this->_loc_filter.keep_locus(loc);
 
         } else {
@@ -735,7 +735,7 @@ BatchLocusProcessor::next_batch_external_loci(ostream &log_fh)
 {
     //
     // VCF mode
-    //    
+    //
     LocBin   *loc;
     string    prev_chr, cur_chr;
     size_t    loc_cnt = 0;
@@ -846,7 +846,7 @@ BatchLocusProcessor::next_batch_external_loci(ostream &log_fh)
         cur_chr = loc->cloc->loc.chr();
         if (prev_chr.length() == 0)
             prev_chr = cur_chr;
-        
+
         //
         // Tabulate haplotypes present and in what combinations.
         //
@@ -895,7 +895,7 @@ BatchLocusProcessor::summarize(ostream &log_fh)
         }
     } else {
     }
-    
+
     return 0;
 }
 
@@ -916,11 +916,11 @@ BatchLocusProcessor::cleanup()
 {
     if (this->_input_mode == InputMode::vcf) {
         delete this->_vcf_header;
-        
+
     } else {
         delete this->_vcf_header;
     }
-    
+
     return 0;
 }
 
@@ -937,8 +937,8 @@ BatchLocusProcessor::report_locus_overlap(ofstream *log_fh)
     for (uint i = 0; i < this->_mpopi->pops().size(); i++) {
         sites.push_back(map<uint, set<uint>>());
         map<uint, set<uint>> &pop_sites = sites.back();
-        
-        for (uint pos = 0; pos < this->_loci.size(); pos++) {            
+
+        for (uint pos = 0; pos < this->_loci.size(); pos++) {
             loc  = this->_loci[pos]->cloc;
             lsum = this->_loci[pos]->s->per_pop(i);
 
@@ -1031,7 +1031,7 @@ LocusFilter::keep_locus(LocBin *loc)
     //
     // Count up the number of sites and variable sites.
     //
-    const LocTally *t = loc->s->meta_pop();            
+    const LocTally *t = loc->s->meta_pop();
 
     for (uint i = 0; i < loc->cloc->len; i++) {
         if (t->nucs[i].fixed == false)
@@ -1142,7 +1142,7 @@ LocusFilter::init(MetaPopInfo *mpopi)
 
     assert(this->_pop_cnt > 0);
     assert(this->_sample_cnt > 0);
-    
+
     if (this->_pop_order != NULL)
         delete [] this->_pop_order;
     if (this->_samples != NULL)
@@ -1214,7 +1214,7 @@ LocusFilter::keep_single_snp(const CSLocus *cloc, const LocTally *t)
     }
 
     this->_whitelist[cloc->id] = new_wl;
-    
+
     return 0;
 }
 
@@ -1409,7 +1409,7 @@ LocusFilter::prune_sites_with_filters(MetaPopInfo *mpopi, CSLocus *cloc, Datum *
 
         for (size_t p = 0; p < s->pop_cnt(); ++p) {
             sum = s->per_pop(p);
-            
+
             if (sum->nucs[cloc->snps[i]->col].incompatible_site)
                 inc_prune = true;
 
@@ -1617,7 +1617,7 @@ CatalogDists::accumulate_pre_filtering(const CSLocus *loc)
         this->_pre_snps_per_loc[loc->snps.size()] = 1;
     else
         this->_pre_snps_per_loc[loc->snps.size()]++;
-    
+
     return 0;
 }
 
@@ -1653,7 +1653,7 @@ CatalogDists::accumulate(const vector<LocBin *> &loci)
             this->_post_snps_per_loc[loc->snps.size()]++;
 
     }
-    
+
     return 0;
 }
 
@@ -2683,25 +2683,25 @@ SumStatsSummary::SumStatsSummary(size_t pop_cnt)
     this->_var_sites         = new double[this->_pop_cnt];
 
     this->_num_indv_mean     = new double[this->_pop_cnt];
-    this->_num_indv_acc_mean = new double[this->_pop_cnt];    
+    this->_num_indv_acc_mean = new double[this->_pop_cnt];
     this->_num_indv_var      = new double[this->_pop_cnt];
     this->_p_mean            = new double[this->_pop_cnt];
-    this->_p_acc_mean        = new double[this->_pop_cnt];    
+    this->_p_acc_mean        = new double[this->_pop_cnt];
     this->_p_var             = new double[this->_pop_cnt];
     this->_obs_het_mean      = new double[this->_pop_cnt];
-    this->_obs_het_acc_mean  = new double[this->_pop_cnt];    
+    this->_obs_het_acc_mean  = new double[this->_pop_cnt];
     this->_obs_het_var       = new double[this->_pop_cnt];
     this->_obs_hom_mean      = new double[this->_pop_cnt];
-    this->_obs_hom_acc_mean  = new double[this->_pop_cnt];    
+    this->_obs_hom_acc_mean  = new double[this->_pop_cnt];
     this->_obs_hom_var       = new double[this->_pop_cnt];
     this->_exp_het_mean      = new double[this->_pop_cnt];
-    this->_exp_het_acc_mean  = new double[this->_pop_cnt];    
+    this->_exp_het_acc_mean  = new double[this->_pop_cnt];
     this->_exp_het_var       = new double[this->_pop_cnt];
     this->_exp_hom_mean      = new double[this->_pop_cnt];
-    this->_exp_hom_acc_mean  = new double[this->_pop_cnt];    
+    this->_exp_hom_acc_mean  = new double[this->_pop_cnt];
     this->_exp_hom_var       = new double[this->_pop_cnt];
     this->_pi_mean           = new double[this->_pop_cnt];
-    this->_pi_acc_mean       = new double[this->_pop_cnt];    
+    this->_pi_acc_mean       = new double[this->_pop_cnt];
     this->_pi_var            = new double[this->_pop_cnt];
     this->_fis_mean          = new double[this->_pop_cnt];
     this->_fis_acc_mean      = new double[this->_pop_cnt];
@@ -2709,28 +2709,28 @@ SumStatsSummary::SumStatsSummary(size_t pop_cnt)
 
     this->_n_all                 = new double[this->_pop_cnt];
     this->_num_indv_mean_all     = new double[this->_pop_cnt];
-    this->_num_indv_acc_mean_all = new double[this->_pop_cnt];    
+    this->_num_indv_acc_mean_all = new double[this->_pop_cnt];
     this->_num_indv_var_all      = new double[this->_pop_cnt];
     this->_p_mean_all            = new double[this->_pop_cnt];
-    this->_p_acc_mean_all        = new double[this->_pop_cnt];    
+    this->_p_acc_mean_all        = new double[this->_pop_cnt];
     this->_p_var_all             = new double[this->_pop_cnt];
     this->_obs_het_mean_all      = new double[this->_pop_cnt];
-    this->_obs_het_acc_mean_all  = new double[this->_pop_cnt];    
+    this->_obs_het_acc_mean_all  = new double[this->_pop_cnt];
     this->_obs_het_var_all       = new double[this->_pop_cnt];
     this->_obs_hom_mean_all      = new double[this->_pop_cnt];
-    this->_obs_hom_acc_mean_all  = new double[this->_pop_cnt];    
+    this->_obs_hom_acc_mean_all  = new double[this->_pop_cnt];
     this->_obs_hom_var_all       = new double[this->_pop_cnt];
     this->_exp_het_mean_all      = new double[this->_pop_cnt];
-    this->_exp_het_acc_mean_all  = new double[this->_pop_cnt];    
+    this->_exp_het_acc_mean_all  = new double[this->_pop_cnt];
     this->_exp_het_var_all       = new double[this->_pop_cnt];
     this->_exp_hom_mean_all      = new double[this->_pop_cnt];
-    this->_exp_hom_acc_mean_all  = new double[this->_pop_cnt];    
+    this->_exp_hom_acc_mean_all  = new double[this->_pop_cnt];
     this->_exp_hom_var_all       = new double[this->_pop_cnt];
     this->_pi_mean_all           = new double[this->_pop_cnt];
-    this->_pi_acc_mean_all       = new double[this->_pop_cnt];    
+    this->_pi_acc_mean_all       = new double[this->_pop_cnt];
     this->_pi_var_all            = new double[this->_pop_cnt];
     this->_fis_mean_all          = new double[this->_pop_cnt];
-    this->_fis_acc_mean_all      = new double[this->_pop_cnt];    
+    this->_fis_acc_mean_all      = new double[this->_pop_cnt];
     this->_fis_var_all           = new double[this->_pop_cnt];
 
     this->_sq_n     = new double[this->_pop_cnt];
@@ -2741,28 +2741,28 @@ SumStatsSummary::SumStatsSummary(size_t pop_cnt)
         this->_n[j]                 = 0.0;
         this->_var_sites[j]         = 0.0;
         this->_num_indv_mean[j]     = 0.0;
-        this->_num_indv_acc_mean[j] = 0.0;        
+        this->_num_indv_acc_mean[j] = 0.0;
         this->_num_indv_var[j]      = 0.0;
         this->_p_mean[j]            = 0.0;
-        this->_p_acc_mean[j]        = 0.0;        
+        this->_p_acc_mean[j]        = 0.0;
         this->_p_var[j]             = 0.0;
         this->_obs_het_mean[j]      = 0.0;
-        this->_obs_het_acc_mean[j]  = 0.0;        
+        this->_obs_het_acc_mean[j]  = 0.0;
         this->_obs_het_var[j]       = 0.0;
         this->_obs_hom_mean[j]      = 0.0;
-        this->_obs_hom_acc_mean[j]  = 0.0;        
+        this->_obs_hom_acc_mean[j]  = 0.0;
         this->_obs_hom_var[j]       = 0.0;
         this->_exp_het_mean[j]      = 0.0;
-        this->_exp_het_acc_mean[j]  = 0.0;        
+        this->_exp_het_acc_mean[j]  = 0.0;
         this->_exp_het_var[j]       = 0.0;
         this->_exp_hom_mean[j]      = 0.0;
-        this->_exp_hom_acc_mean[j]  = 0.0;        
+        this->_exp_hom_acc_mean[j]  = 0.0;
         this->_exp_hom_var[j]       = 0.0;
         this->_pi_mean[j]           = 0.0;
-        this->_pi_acc_mean[j]       = 0.0;        
+        this->_pi_acc_mean[j]       = 0.0;
         this->_pi_var[j]            = 0.0;
         this->_fis_mean[j]          = 0.0;
-        this->_fis_acc_mean[j]      = 0.0;        
+        this->_fis_acc_mean[j]      = 0.0;
         this->_fis_var[j]           = 0.0;
 
         this->_n_all[j]                 = 0.0;
@@ -2833,7 +2833,7 @@ SumStatsSummary::accumulate(const vector<LocBin *> &loci)
 
                     //
                     // Accumulate sums for each variable to calculate the means.
-                    // 
+                    //
                     _num_indv_mean[pop] += s->nucs[pos].num_indv;
                     _p_mean[pop]        += s->nucs[pos].p;
                     _obs_het_mean[pop]  += s->nucs[pos].obs_het;
@@ -2876,7 +2876,7 @@ SumStatsSummary::accumulate(const vector<LocBin *> &loci)
                 }
 
             } else if (t->nucs[pos].allele_cnt == 1) {
-                
+
                 for (uint pop = 0; pop < this->_pop_cnt; pop++) {
                     s = loci[i]->s->per_pop(pop);
 
@@ -2904,7 +2904,7 @@ SumStatsSummary::accumulate(const vector<LocBin *> &loci)
             }
         }
     }
-    
+
     return 0;
 }
 
@@ -2916,7 +2916,7 @@ SumStatsSummary::online_variance(double x, double &acc_mean, double n)
     delta1    = x - acc_mean;
     acc_mean += delta1 / n;
     delta2    = x - acc_mean;
-    return delta1 * delta2;    
+    return delta1 * delta2;
 }
 
 int
@@ -2943,7 +2943,7 @@ SumStatsSummary::final_calculation()
         _exp_hom_mean_all[j]  = _exp_hom_mean_all[j]  / _n_all[j];
         _pi_mean_all[j]       = _pi_mean_all[j]       / _n_all[j];
         _fis_mean_all[j]      = _fis_mean_all[j]      / _n_all[j];
-    }    
+    }
 
     //
     // Finish the online variance calculation.
@@ -3051,14 +3051,14 @@ SumStatsSummary::write_results()
            << sqrt(_num_indv_var[j])  / _sq_n[j] << "\n";
 
     cerr << "\nPopulation summary statistics (more detail in populations.sumstats_summary.tsv):\n";
-    
+
     for (uint j = 0; j < this->_pop_cnt; j++)
         cerr << "  " << mpopi.pops()[j].name << ": "
              << setprecision(fieldw) << _num_indv_mean[j] << " samples per locus; "
              << "pi: " << _pi_mean[j] << "; "
              << setprecision(10) << "all/variant/polymorphic sites: " << _n_all[j] << "/" << _n[j] << "/" << _var_sites[j] << "; "
              << setprecision(fieldw) << "private alleles: " << _private_cnt[j] << "\n";
-    
+
     fh << "# All positions (variant and fixed)\n"
        << "# Pop ID\t"
        << "Private\t"
@@ -3125,7 +3125,7 @@ SumStatsSummary::write_results()
     }
 
     fh.close();
-    
+
     return 0;
 }
 
@@ -3256,7 +3256,7 @@ LocusSmoothing::snpstats(const vector<LocBin *> &loci, ofstream &log_fh)
 int
 LocusSmoothing::hapstats(const vector<LocBin *> &loci, ofstream &log_fh)
 {
-    
+
     for (uint i = 0; i < this->_mpopi->pops().size(); i++) {
         vector<const LocStat *> sites;
 
@@ -3274,7 +3274,7 @@ LocusSmoothing::snp_divergence(const vector<LocBin *> &loci, const vector<vector
         assert(div[i].size() == loci.size());
 
         vector<const PopPair *> sites;
-        
+
         if (this->_ord_pp->order(sites, loci, div[i]))
             this->_ks_pp->smooth(sites);
     }
@@ -3292,7 +3292,7 @@ LocusSmoothing::hap_divergence(const vector<LocBin *> &loci,
         assert(div[i].size() == loci.size());
 
         vector<const HapStat *> sites;
-        
+
         this->_ord_hs->order(sites, loci, div[i]);
         this->_ks_hs->smooth(sites);
     }
@@ -3301,10 +3301,10 @@ LocusSmoothing::hap_divergence(const vector<LocBin *> &loci,
     // Kernel-smooth the haplotype divergence statistics for the metapopulation.
     //
     vector<const HapStat *> sites;
-        
+
     this->_ord_hs->order(sites, loci, metadiv);
     this->_ks_hs->smooth(sites);
-    
+
     return 0;
 }
 
@@ -4090,7 +4090,7 @@ parse_command_line(int argc, char* argv[])
             break;
         case 1008:
             smooth_popstats = true;
-            break;    
+            break;
         case '6':
             calc_fstats = true;
             break;
