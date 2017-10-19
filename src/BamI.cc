@@ -164,7 +164,10 @@ Bam::Bam(const string& path, BamHeader&& header)
 
 void Bam::check_open(const htsFile* bam_f, const string& path) {
     if (bam_f == NULL) {
-        cerr << "Error: Failed to open BAM file '" << path << "'.\n";
+        #pragma omp critical (bam_check_open)
+        {
+            cerr << "Error: Failed to open BAM file '" << path << "'.\n";
+        }
         throw exception();
     }
 }
