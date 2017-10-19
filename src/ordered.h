@@ -232,7 +232,7 @@ OHaplotypes<StatT>::order(vector<const StatT *> &sites, const vector<LocBin *> &
 
         if (pair == NULL)
             continue;
-        
+
         sites[sites_key[pair->bp]] = pair;
     }
 
@@ -266,7 +266,7 @@ OPopPair<StatT>::order(vector<const StatT *> &sites, const vector<LocBin *> &sor
     for (uint i = 0; i < div.size(); i++) {
         cloc_len = sorted_loci[i]->cloc->len;
         pair     = div[i];
-        
+
         for (uint j = 0; j < cloc_len; j++) {
             if (pair[j] != NULL) {
                 pop_1 = pair[j]->pop_1;
@@ -351,7 +351,7 @@ OSumStat<StatT>::order(vector<const StatT *> &sites, const vector<LocBin *> &sor
 
             assert(sites_key.count(lsum->nucs[k].bp) > 0);
             this->total_sites++;
-            
+
             if (sites[sites_key[lsum->nucs[k].bp]] == NULL) {
                 sites[sites_key[lsum->nucs[k].bp]] = &(lsum->nucs[k]);
             } else {
@@ -389,10 +389,10 @@ OLocTally<StatT>::order(vector<const StatT *> &sites, const vector<LocBin *> &so
     this->init_sites(sites, sites_key, sorted_loci);
 
     this->uniq_sites = sites_key.size();
-    
+
     const CSLocus  *loc;
     const LocTally *ltally;
- 
+
     //
     // Assign nucleotides to their proper, ordered location in the genome,
     // checking that a site hasn't already been covered by another RAD locus.

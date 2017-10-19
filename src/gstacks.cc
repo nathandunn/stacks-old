@@ -176,7 +176,7 @@ try {
     //
     GenotypeStats gt_stats {};
     ContigStats denovo_ctg_stats {};
-    
+
     // For clocking.
     Timers t_threads_totals;
     Timer t_parallel;
@@ -587,7 +587,7 @@ LocusProcessor::process(CLocReadSet& loc)
         timers_.cpt_consensus.restart();
         aln_loc.recompute_consensus();
         timers_.cpt_consensus.stop();
-        
+
         //
         // Sometimes the consensus in the catalog.tags.tsv file extends further
         // than any of the validly matching loci. In this case there's no
@@ -736,7 +736,7 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
     timers_.cpt_consensus.restart();
     aln_loc.recompute_consensus();
     timers_.cpt_consensus.stop();
-    
+
     if (detailed_output) {
         loc_.details_ss << "BEGIN aln_matrix\n";
         for (const SAlnRead& read : aln_loc.reads())
@@ -908,10 +908,10 @@ LocusProcessor::suffix_tree_hits_to_dag(size_t query_len, vector<STAln> &alns, v
     }
 
     //
-    // 3. Find the terminal node with the highest score. 
+    // 3. Find the terminal node with the highest score.
     //
     double max_score = alns[term_nodes.front()].max._score;
-    size_t max_index = term_nodes.front(); 
+    size_t max_index = term_nodes.front();
     for (uint i = 1; i < term_nodes.size(); i++) {
         if (alns[term_nodes[i]].max._score > max_score) {
             max_index = term_nodes[i];
@@ -936,7 +936,7 @@ LocusProcessor::suffix_tree_hits_to_dag(size_t query_len, vector<STAln> &alns, v
                 max_score = alns[term_nodes[i]].aln_len;
             }
         optimal.push_back(max_index);
-                
+
     } else {
 
         uint n = max_index;
@@ -945,7 +945,7 @@ LocusProcessor::suffix_tree_hits_to_dag(size_t query_len, vector<STAln> &alns, v
             n = alns[n].max._index;
         }
         optimal.push_back(n);
-    }    
+    }
     assert(optimal.size() > 0);
 
     final_alns.clear();
@@ -2125,7 +2125,7 @@ try {
         case 1016://max-insert
             refbased_cfg.max_insert_refsize = stoi(optarg);
             break;
-    
+
         //
         // Debug options
         //

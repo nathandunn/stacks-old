@@ -89,7 +89,7 @@ class MarkersExport: public Export {
     // Output a list of heterozygous loci and the associated haplotype frequencies.
     //
     const MetaPopInfo *_mpopi;
-    
+
  public:
     MarkersExport();
     ~MarkersExport() {};
@@ -108,7 +108,7 @@ class GenotypesExport: public Export {
     // Output a list of heterozygous loci and the associated haplotype frequencies.
     //
     const MetaPopInfo *_mpopi;
-    
+
  public:
     GenotypesExport();
     ~GenotypesExport() {};
@@ -168,7 +168,7 @@ class SnpDivergenceExport: public Export {
     //
     const MetaPopInfo *_mpopi;
     vector<ofstream *> _fhs;
-    
+
  public:
     SnpDivergenceExport();
     ~SnpDivergenceExport() {
@@ -194,7 +194,7 @@ class HapDivergenceExport: public Export {
     const MetaPopInfo *_mpopi;
     vector<ofstream *> _fhs;
     ofstream *_metapop_fh;
-    
+
  public:
     HapDivergenceExport();
     ~HapDivergenceExport() {
@@ -239,7 +239,7 @@ class FastaLociExport: public Export {
     // Output a list of heterozygous loci and the associated haplotype frequencies.
     //
     const MetaPopInfo *_mpopi;
-    
+
  public:
     FastaLociExport();
     ~FastaLociExport() {};
@@ -258,7 +258,7 @@ class FastaRawExport: public Export {
     // Output a list of heterozygous loci and the associated haplotype frequencies.
     //
     const MetaPopInfo *_mpopi;
-    
+
  public:
     FastaRawExport();
     ~FastaRawExport() {};
@@ -277,7 +277,7 @@ class FastaSamplesExport: public Export {
     // Output a list of heterozygous loci and the associated haplotype frequencies.
     //
     const MetaPopInfo *_mpopi;
-    
+
  public:
     FastaSamplesExport();
     ~FastaSamplesExport() {};

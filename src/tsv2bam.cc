@@ -239,7 +239,7 @@ void run(const vector<int>& cloc_ids,
             // We have already aligned this sample locus.
             continue;
         prev_sloc = m->tag_id;
-            
+
         auto itr = sloci.find(m->tag_id);
         if (itr == sloci.end())
             // Loci that aren't bijective with the catalog have been removed.
@@ -248,7 +248,7 @@ void run(const vector<int>& cloc_ids,
 
         if (cloc_lengths.at(m->cat_id) == l->len)
             // No alignment to do.
-            continue;        
+            continue;
         if (m->cigar == NULL || m->cigar[0] == '\0') {
             c.clear();
             c.push_back({'M', l->len});
