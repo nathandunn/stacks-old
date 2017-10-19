@@ -29,6 +29,8 @@ void BamRecord::assign(
         const DNASeq4& seq,
         size_t read_group
         ) {
+    if (empty())
+        reinit();
 
     // bam1_t::core
     r_->core.tid = chr_index;
@@ -86,12 +88,12 @@ void BamRecord::assign(
 }
 
 BamHeader::BamHeader(const string& text) {
-    bam_hdr_t* hdr = sam_hdr_parse(text.length()+1, text.c_str());
-    if (hdr == NULL)
+    h_ = sam_hdr_parse(text.length()+1, text.c_str());
+    if (h_ == NULL)
         throw ios::failure("sam_hdr_parse");
-    hdr->l_text = text.length()+1; // null-terminated
-    hdr->text = (char*) malloc(hdr->l_text);
-    strcpy(hdr->text, text.c_str());
+    h_->l_text = text.length()+1; // null-terminated
+    h_->text = (char*) malloc(h_->l_text);
+    strcpy(h_->text, text.c_str());
 }
 
 void BamHeader::check_same_ref_chroms(
