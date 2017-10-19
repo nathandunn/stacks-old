@@ -38,7 +38,7 @@ use constant true  => 1;
 use constant false => 0;
 
 my $dry_run      = false;
-my $sql          = true;
+my $sql          = false;
 my $create_db    = false;
 my $overw_db     = false;
 my $gapped_alns  = false;
@@ -64,7 +64,7 @@ my @parents;
 my @progeny;
 my @samples;
 
-my (@_ustacks, @_cstacks, @_sstacks, @_tsv2bam, @_samtools_merge, @_gstacks, @_genotypes, @_populations);
+my (@_ustacks, @_cstacks, @_sstacks, @_tsv2bam, @_gstacks, @_genotypes, @_populations);
 
 my $cmd_str = $0 . " " . join(" ", @ARGV);
 
@@ -77,9 +77,6 @@ my $cnf = (-e $ENV{"HOME"} . "/.my.cnf") ? $ENV{"HOME"} . "/.my.cnf" : $mysql_co
 #
 foreach my $prog ("ustacks", "cstacks", "sstacks", "tsv2bam", "gstacks", "genotypes", "populations", "index_radtags.pl") {
     die "Unable to find '" . $exe_path . $prog . "'.\n" if (!-e $exe_path . $prog || !-x $exe_path . $prog);
-}
-if (! which "samtools") {
-    die("Unable to find 'samtools'.\n");
 }
 
 my ($log, $log_fh, $sample);
@@ -239,82 +236,57 @@ sub execute_stacks {
         check_return_value($?, $log_fh);
     }
 
-    if (!$v1) {
-        #
-        # Sort the reads according by catalog locus / run tsv2bam.
-        #
-        print STDERR "Sorting reads by RAD locus...\n";
-        print $log_fh "\ntsv2bam\n==========\n";
+	#
+	# Sort the reads according by catalog locus / run tsv2bam.
+	#
+	print STDERR "Sorting reads by RAD locus...\n";
+	print $log_fh "\ntsv2bam\n==========\n";
 
-        $cmd = $exe_path . "tsv2bam -P $out_path";
-        if ($popmap_path) {
-            $cmd .= " -M $popmap_path";
-        } else {
-            foreach $sample (@parents, @progeny, @samples) {
-                $cmd .= " -s $sample->{'file'}";
-            }
-        }
-        if ($paired) {
-            $cmd .= " -R $sample_path";
-        }
-        foreach (@_tsv2bam) {
-            $cmd .= " " . $_;
-        }
-        print STDERR  "  $cmd\n";
-        print $log_fh "$cmd\n";
-        if (!$dry_run) {
-            open($pipe_fh, "$cmd 2>&1 |");
-            while (<$pipe_fh>) {
-                print $log_fh $_;
-            }
-            close($pipe_fh);
-            check_return_value($?, $log_fh);
-        }
+	$cmd = $exe_path . "tsv2bam -P $out_path";
+	if ($popmap_path) {
+		$cmd .= " -M $popmap_path";
+	} else {
+		foreach $sample (@parents, @progeny, @samples) {
+			$cmd .= " -s $sample->{'file'}";
+		}
+	}
+	if ($paired) {
+		$cmd .= " -R $sample_path";
+	}
+	foreach (@_tsv2bam) {
+		$cmd .= " " . $_;
+	}
+	print STDERR  "  $cmd\n\n";
+	print $log_fh "$cmd\n\n";
+	if (!$dry_run) {
+		open($pipe_fh, "$cmd 2>&1 |");
+		while (<$pipe_fh>) {
+			print $log_fh $_;
+		}
+		close($pipe_fh);
+		check_return_value($?, $log_fh);
+	}
 
-        #
-        # Merge the matches.bam files / run samtools merge.
-        #
-        print $log_fh "\nsamtools merge\n----------\n";
+	#
+	# Call genotypes / run gstacks.
+	#
+	print STDERR "Calling variants, genotypes and haplotypes...\n";
+	print $log_fh "\ngstacks\n==========\n";
 
-        $cmd = "samtools merge -f $out_path/catalog.bam";
-        foreach $sample (@parents, @progeny, @samples) {
-            $cmd .= " $out_path/$sample->{'file'}.matches.bam";
-        }
-        foreach (@_samtools_merge) {
-            $cmd .= " " . $_;
-        }
-        print STDERR  "  $cmd\n\n";
-        print $log_fh "$cmd\n\n";
-        if (!$dry_run) {
-            open($pipe_fh, "$cmd 2>&1 |");
-            while (<$pipe_fh>) {
-                print $log_fh $_;
-            }
-            close($pipe_fh);
-            check_return_value($?, $log_fh);
-        }
-
-        #
-        # Call genotypes / run gstacks.
-        #
-        print STDERR "Calling variants, genotypes and haplotypes...\n";
-        print $log_fh "\ngstacks\n==========\n";
-
-        $cmd = $exe_path . "gstacks -P $out_path";
-        foreach (@_gstacks) {
-            $cmd .= " " . $_;
-        }
-        print STDERR  "  $cmd\n\n";
-        print $log_fh "$cmd\n\n";
-        if (!$dry_run) {
-            open($pipe_fh, "$cmd 2>&1 |");
-            while (<$pipe_fh>) {
-                print $log_fh $_;
-            }
-            close($pipe_fh);
-            check_return_value($?, $log_fh);
-        }
-    }
+	$cmd = $exe_path . "gstacks -P $out_path -M $popmap_path";
+	foreach (@_gstacks) {
+		$cmd .= " " . $_;
+	}
+	print STDERR  "  $cmd\n\n";
+	print $log_fh "$cmd\n\n";
+	if (!$dry_run) {
+		open($pipe_fh, "$cmd 2>&1 |");
+		while (<$pipe_fh>) {
+			print $log_fh $_;
+		}
+		close($pipe_fh);
+		check_return_value($?, $log_fh);
+	}
 
     if ($data_type eq "map") {
         #
@@ -929,6 +901,7 @@ sub parse_command_line {
             push(@_ustacks, "-p " . $arg);
             push(@_cstacks, "-p " . $arg);
             push(@_sstacks, "-p " . $arg);
+            push(@_tsv2bam, "-t " . $arg);
             push(@_gstacks, "-t " . $arg);
             push(@_populations, "-t " . $arg);
 
@@ -971,8 +944,6 @@ sub parse_command_line {
             	push(@_sstacks, $opt);
             } elsif ($prog eq "tsv2bam") {
             	push(@_tsv2bam, $opt);
-            } elsif ($prog eq "samtools_merge") {
-            	push(@_samtools_merge, $opt);
             } elsif ($prog eq "gstacks") {
             	push(@_gstacks, $opt);
             } elsif ($prog eq "genotypes") {
