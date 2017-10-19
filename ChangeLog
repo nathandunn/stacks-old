@@ -1,4 +1,4 @@
-Stacks 2.0 Beta 2 - 
+Stacks 2.0 Beta 2 - Oct 19, 2017
 --------------------------------
     Feature: gstacks: Made it possible to read from multiple BAM files at the same time; modified the
              interface accordingly.
@@ -7,7 +7,7 @@ Stacks 2.0 Beta 2 -
     Feature: gstacks: Improved how the forward & paired-end reads are merged (in denovo mode; no more trimming).
     Feature: populations: Added code to calculate the overlap between RAD loci when a reference is available.
     Feature: populations: Added VCF ouput (--vcf).
-    Feature: Updated the denovo_map.pl and ref_map.pl wrappers with the gstacks changes.
+    Feature: Updated the denovo_map.pl and ref_map.pl wrappers, samples must now be specified using --samples and --popmap.
     Bugfix: Fixed three memory leaks in populations; improved reference-aligned batch logic.
     Bugfix: Improved overlapping code in gstacks to merge more single and paired-end contigs together.
     Bugfix: Now compiles on Apple OS X.
