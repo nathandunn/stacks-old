@@ -76,7 +76,7 @@ public:
     STLink(size_t index, double score): _index(index), _score(score) {};
     STLink(): _index(0), _score(0) {};
 };
-    
+
 class STAln {
 public:
     size_t id;

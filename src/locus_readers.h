@@ -92,7 +92,7 @@ public:
     ~BamCLocBuilder() {for(Bam* bam_f : bam_fs_) delete bam_f;}
 
     // Reads one locus. Returns false on EOF.
-    bool build_one_locus(CLocAlnSet& readset);    
+    bool build_one_locus(CLocAlnSet& readset);
 
     const MetaPopInfo& mpopi() const {return bpopi_.mpopi();}
     const vector<Bam*>& bam_fs() const {return bam_fs_;}
@@ -958,7 +958,7 @@ inline int
 VcfCLocReader::open(string &vcf_path)
 {
     this->vcf_f_.open(vcf_path);
-    
+
     // Read the very first record.
     if(!this->vcf_f_.next_record(next_rec_))
         eof_ = true;

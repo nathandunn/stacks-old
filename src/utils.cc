@@ -360,7 +360,7 @@ void check_or_mk_dir(const string& path) {
         //
         cerr << "Error: Failed to create directory '" << *path_p << "'.\n";
         throw exception();
-    }    
+    }
 }
 
 VersatileLineReader::VersatileLineReader()
@@ -399,7 +399,7 @@ int
 VersatileLineReader::open(string &path)
 {
     this->path_ = path;
-    
+
     std::smatch m;
     std::regex_search(this->path_, m, std::regex("\\.[Gg][Zz]$"));
     this->is_gzipped_ = !m.empty();

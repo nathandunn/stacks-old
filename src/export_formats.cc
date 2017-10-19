@@ -57,7 +57,7 @@ Export::transpose(ifstream &ifh, vector<string> &transposed)
     char   line[max_len];
 
     transposed.clear();
-    
+
     do {
         buf.clear();
 
@@ -69,7 +69,7 @@ Export::transpose(ifstream &ifh, vector<string> &transposed)
         if (!ifh.good()) {
             return 0;
         }
-    
+
         //
         // Check if we read a full line.
         //
@@ -100,7 +100,7 @@ Export::transpose(ifstream &ifh, vector<string> &transposed)
                 transposed.at(i) += "\t" + fields[i];
         }
     } while (!ifh.eof());
-    
+
     return 1;
 }
 
@@ -114,7 +114,7 @@ SumstatsExport::open(const MetaPopInfo *mpopi)
 {
     this->_mpopi   = mpopi;
     this->_pop_cnt = this->_mpopi->pops().size();
-    
+
     this->_fh.open(this->_path.c_str(), ofstream::out);
     if (this->_fh.fail()) {
         cerr << "Error opening sumstats file '" << this->_path << "'\n";
@@ -189,7 +189,7 @@ SumstatsExport::write_batch(const vector<LocBin *> &loci)
                     if (s->nucs[pos].num_indv == 0)
                         continue;
 
-                    this->_fh 
+                    this->_fh
                        << cloc->id << "\t"
                        << cloc->loc.chr() << "\t"
                        << cloc->sort_bp(pos) + 1 << "\t"
@@ -231,7 +231,7 @@ SumstatsExport::write_batch(const vector<LocBin *> &loci)
             }
         }
     }
-    
+
     return 0;
 }
 
@@ -245,7 +245,7 @@ HapstatsExport::open(const MetaPopInfo *mpopi)
 {
     this->_mpopi   = mpopi;
     this->_pop_cnt = this->_mpopi->pops().size();
-    
+
     this->_fh.open(this->_path.c_str(), ofstream::out);
     if (this->_fh.fail()) {
         cerr << "Error opening sumstats file '" << this->_path << "'\n";
@@ -267,7 +267,7 @@ HapstatsExport::write_header()
     //
     for (auto& pop : this->_mpopi->pops()) {
         this->_fh << "# " << pop.name << "\t";
-        
+
         for (size_t i = pop.first_sample; i <= pop.last_sample; i++) {
             this->_fh << this->_mpopi->samples()[i].name;
             if (i < pop.last_sample)
@@ -301,7 +301,7 @@ HapstatsExport::write_batch(const vector<LocBin *> &loci)
 
     for (uint i = 0; i < loci.size(); i++) {
         const vector<Pop> &pops = this->_mpopi->pops();
-        
+
         for (uint pop = 0; pop < this->_pop_cnt; pop++) {
 
             l = loci[i]->s->hapstats_per_pop(pop);
@@ -309,7 +309,7 @@ HapstatsExport::write_batch(const vector<LocBin *> &loci)
             if (l == NULL)
                 continue;
 
-            this->_fh 
+            this->_fh
                 << loci[i]->cloc->id        << "\t"
                 << loci[i]->cloc->loc.chr() << "\t"
                 << l->bp + 1        << "\t"
@@ -338,7 +338,7 @@ int
 SnpDivergenceExport::open(const MetaPopInfo *mpopi)
 {
     this->_mpopi = mpopi;
-    
+
     //
     // Open an SNP Divergence output file for each pair of populations.
     //
@@ -347,7 +347,7 @@ SnpDivergenceExport::open(const MetaPopInfo *mpopi)
 
     for (uint pop_1 = 0; pop_1 < this->_mpopi->pops().size(); pop_1++) {
         const Pop& pop_1p = this->_mpopi->pops()[pop_1];
-        
+
         for (uint pop_2 = pop_1 + 1; pop_2 < this->_mpopi->pops().size(); pop_2++) {
             const Pop& pop_2p = this->_mpopi->pops()[pop_2];
 
@@ -451,7 +451,7 @@ SnpDivergenceExport::write_batch_pairwise(const vector<LocBin *> &loci, const ve
             loc      = loci[j];
             cloc_len = loc->cloc->len;
             pp       = div[i][j];
-            
+
             for (uint pos = 0; pos < cloc_len; pos++) {
 
                 if (pp[pos] == NULL)
@@ -524,7 +524,7 @@ HapDivergenceExport::open(const MetaPopInfo *mpopi)
 
     for (uint pop_1 = 0; pop_1 < this->_mpopi->pops().size(); pop_1++) {
         const Pop& pop_1p = this->_mpopi->pops()[pop_1];
-        
+
         for (uint pop_2 = pop_1 + 1; pop_2 < this->_mpopi->pops().size(); pop_2++) {
             const Pop& pop_2p = this->_mpopi->pops()[pop_2];
 
@@ -694,7 +694,7 @@ HapDivergenceExport::write_batch_pairwise(const vector<LocBin *> &loci,
     ofstream *fh;
     HapStat  *h;
     LocBin   *loc;
-    
+
     for (uint i = 0; i < div.size(); i++) {
 
         fh = this->_fhs[i];
@@ -1049,7 +1049,7 @@ FastaRawExport::open(const MetaPopInfo *mpopi)
         cerr << "Error opening FASTA raw samples file '" << this->_path << "'\n";
         exit(1);
     }
-    
+
     cerr << "Raw FASTA consensus sequences for each sample will be written to '" << this->_path << "'\n";
 
     return 0;
@@ -1133,7 +1133,7 @@ FastaSamplesExport::open(const MetaPopInfo *mpopi)
         cerr << "Error opening FASTA samples file '" << this->_path << "'\n";
         exit(1);
     }
-    
+
     cerr << "FASTA consensus sequences for each sample will be written to '" << this->_path << "'\n";
 
     return 0;
@@ -1561,7 +1561,7 @@ GenePopExport::open(const MetaPopInfo *mpopi)
     //
     // Write a GenePop file as defined here: http://kimura.univ-montp2.fr/~rousset/Genepop.htm
     //
-    this->_path = out_path + out_prefix + ".genepop";    
+    this->_path = out_path + out_prefix + ".genepop";
 
     //
     // Open a temporary file.
@@ -1619,7 +1619,7 @@ OrderableExport::write_batch(const vector<LocBin*> &loci)
 
             this->write_site(loc->cloc, loc->s, loc->d, col, snp_index);
         }
-        
+
     } else {
         for (uint k = 0; k < loci.size(); k++) {
             const LocBin* loc = loci[k];
@@ -1637,7 +1637,7 @@ OrderableExport::write_batch(const vector<LocBin*> &loci)
             }
         }
     }
-    
+
     return 0;
 }
 
@@ -1660,7 +1660,7 @@ GenePopExport::write_site(const CSLocus *loc, const LocPopSum *lps, Datum const*
         s = lps->per_pop(p);
 
         for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
-                    
+
             if (s->nucs[col].incompatible_site ||
                 s->nucs[col].filtered_site) {
                 //

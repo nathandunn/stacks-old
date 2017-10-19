@@ -323,13 +323,13 @@ CSLocus *
 new_cslocus(const VcfRecord rec, int id)
 {
     CSLocus* loc = new CSLocus();
-    
+
     loc->sample_id = 0;
     loc->id        = id;
     loc->len       = 1;
     loc->con       = new char[2];
     strcpy(loc->con, rec.allele0());
-    
+
     loc->loc.set(rec.chrom(), (uint)rec.pos(), strand_plus);
 
     for (auto a = rec.begin_alleles(); a != rec.end_alleles(); ++a) {
@@ -337,7 +337,7 @@ new_cslocus(const VcfRecord rec, int id)
             continue;
         loc->alleles.insert({string(*a), 0});
     }
-    
+
     loc->depth = 0;
     loc->lnl   = 0;
 
@@ -391,7 +391,7 @@ CSLocus* new_cslocus(const Seq& consensus, const vector<VcfRecord>& records, int
     // If the analysis is reference-based, there will be a ' pos=...' field on
     // the fasta ID line, placed as a comment adjacent to the locus ID..
     assert(loc->loc.empty());
-    
+
     const char *p, *q;
     p = consensus.comment;
 
@@ -407,9 +407,9 @@ CSLocus* new_cslocus(const Seq& consensus, const vector<VcfRecord>& records, int
         }
 
         p = *q == '\0' ? q : q + 1;
-        
+
     } while (*p != '\0');
-    
+
     if (loc->loc.empty())
         loc->loc = PhyLoc("", 0, strand_plus); // n.b. Not the same as PhyLoc(); with this `PhyLoc::chr != NULL`.
 
