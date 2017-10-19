@@ -236,7 +236,8 @@ try {
             } else {
                 assert(aln_loc.id() >= 1);
                 loc_i = aln_loc.id() - 1;
-                aln_loc.merge_paired_reads();
+                if (refbased_cfg.paired)
+                    aln_loc.merge_paired_reads();
                 loc_proc.process(aln_loc);
             }
             t.processing.stop();
