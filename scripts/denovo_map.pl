@@ -943,7 +943,7 @@ sub usage {
     version();
 
     print STDERR <<EOQ;
-denovo_map.pl --samples dir --popmap path -o dir [--paried] (assembly options) (database options) [-X prog:"opts" ...]
+denovo_map.pl --samples dir --popmap path -o dir [--paired] (assembly options) (database options) [-X prog:"opts" ...]
 
   Input/Output files:
     --samples: path to the directory containing the samples reads files.
