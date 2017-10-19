@@ -4336,6 +4336,7 @@ parse_command_line(int argc, char* argv[])
         else if (fname.length() > 7 && fname.substr(fname.length()-7) == ".vcf.gz")
             trim = 7;
         out_prefix = fname.substr(0, fname.length()-trim);
+        out_prefix += ".p";
     }
 
     // Other
