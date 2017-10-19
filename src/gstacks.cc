@@ -140,13 +140,6 @@ try {
     cout << "\n" << flush;
 
     //
-    // Initialize OPENMP.
-    //
-    #ifdef _OPENMP
-    omp_set_num_threads(num_threads);
-    #endif
-
-    //
     // Open the output files.
     //
     string o_gzfasta_path = o_prefix + ".fa.gz";
@@ -201,220 +194,125 @@ try {
     size_t next_det_to_write = 0;
 
     cout << "Processing all loci...\n" << flush;
-    bool eof = false;
     ProgressMeter progress =
             (input_type == GStacksInputT::denovo_popmap || input_type == GStacksInputT::denovo_merger) ?
             ProgressMeter(cout, true, bam_cloc_reader->n_loci())
             : ProgressMeter(cout, false, 1000);
+
     t_parallel.restart();
-    if (input_type == GStacksInputT::denovo_popmap || input_type == GStacksInputT::denovo_merger) {
-        #pragma omp parallel
-        {
-            LocusProcessor loc_proc;
-            Timers& t = loc_proc.timers();
-            CLocReadSet loc (*bam_mpopi);
+    bool eof = false;
+    #pragma omp parallel num_threads(num_threads)
+    try {
+        LocusProcessor loc_proc;
+        Timers& t = loc_proc.timers();
 
-            #pragma omp for schedule(dynamic)
-            for (size_t i=0; i<bam_cloc_reader->n_loci(); ++i) {
-                if (omp_return != 0)
-                    continue;
-                try {
-                    // Read a locus from the BAM file.
-                    t.reading.restart();
-                    #pragma omp critical(read)
-                    try {
-                        if (omp_return == 0)
-                            bam_cloc_reader->read_one_locus(loc);
-                    } catch (exception& e) {
-                        omp_return = stacks_handle_exceptions(e);
-                    }
-                if (omp_return == 0) {
-                    size_t loc_i = loc.bam_i();
-                    t.reading.stop();
-
-                    // Process it.
-                    t.processing.restart();
-                    loc_proc.process(loc);
-                    t.processing.stop();
-
-                    // Write the FASTA output.
-                    t.writing_fa.restart();
-                    #pragma omp critical(write_fa)
-                    {
-                        for (size_t i=next_fa_to_write+fa_outputs.size(); i<=loc_i; ++i)
-                            fa_outputs.push_back( {false, string()} );
-                        fa_outputs[loc_i - next_fa_to_write] = {true, move(loc_proc.fasta_out())};
-
-                        while (!fa_outputs.empty() && fa_outputs.front().first) {
-                            const string& fa = fa_outputs.front().second;
-                            if (!fa.empty() && gzwrite(o_gzfasta_f, fa.c_str(), fa.length()) <= 0)
-                                throw std::ios::failure("gzwrite");
-                            fa_outputs.pop_front();
-                            ++next_fa_to_write;
-                        }
-                    }
-                    t.writing_fa.stop();
-
-                    // Write the VCF output.
-                    t.writing_vcf.restart();
-                    #pragma omp critical(write_vcf)
-                    {
-                        for (size_t i=next_vcf_to_write+vcf_outputs.size(); i<=loc_i; ++i)
-                            vcf_outputs.push_back( {false, string()} );
-                        vcf_outputs[loc_i - next_vcf_to_write] = {true, move(loc_proc.vcf_out()) };
-
-                        if (vcf_outputs.front().first) {
-                            ++n_writes;
-                            if (vcf_outputs.size() > max_size_before_write)
-                                max_size_before_write = vcf_outputs.size();
-                            t_writing_vcf.restart();
-                            do {
-                                o_vcf_f->file() << vcf_outputs.front().second;
-                                vcf_outputs.pop_front();
-                                ++next_vcf_to_write;
-                                ++progress;
-                            } while (!vcf_outputs.empty() && vcf_outputs.front().first);
-                            t_writing_vcf.stop();
-                        }
-                    }
-                    t.writing_vcf.stop();
-
-                    // Write the detailed output.
-                    if (detailed_output) {
-                        t.writing_details.restart();
-                        #pragma omp critical(write_details)
-                        {
-                            for (size_t i=next_det_to_write+det_outputs.size(); i<=loc_i; ++i)
-                                det_outputs.push_back( {false, string()} );
-                            det_outputs[loc_i - next_det_to_write] = {true, move(loc_proc.details_out())};
-
-                            while (!det_outputs.empty() && det_outputs.front().first) {
-                                *o_details_f << det_outputs.front().second;
-                                det_outputs.pop_front();
-                                ++next_det_to_write;
-                            }
-                        }
-                        t.writing_details.stop();
-                    }
-                }} catch (exception& e) {
-                    #pragma omp critical(exc)
-                    omp_return = stacks_handle_exceptions(e);
+        CLocReadSet loc (*bam_mpopi); // For denovo.
+        CLocAlnSet aln_loc; // For ref-based.
+        bool thread_eof = false;
+        while(omp_return == 0) {
+            t.reading.restart();
+            #pragma omp critical(read)
+            try {
+                if (!eof && omp_return == 0) {
+                    if (input_type == GStacksInputT::denovo_popmap || input_type == GStacksInputT::denovo_merger)
+                        eof = !bam_cloc_reader->read_one_locus(loc);
+                    else
+                        eof = !bam_cloc_builder->build_one_locus(aln_loc);
                 }
+                thread_eof = eof;
+            } catch (exception& e) {
+                omp_return = stacks_handle_exceptions(e);
             }
+            t.reading.stop();
+            if (thread_eof || omp_return != 0)
+                break;
 
-            // Tally the thread statistics.
-            #pragma omp critical(stats)
-            {
-                denovo_ctg_stats += loc_proc.ctg_stats();
-                gt_stats  += loc_proc.gt_stats();
-                t_threads_totals += loc_proc.timers();
-            }
-        } //omp parallel
-
-    } else if (input_type == GStacksInputT::refbased_popmap || input_type == GStacksInputT::refbased_list) {
-        #pragma omp parallel
-        try {
-            LocusProcessor loc_proc;
-            Timers& t = loc_proc.timers();
-            CLocAlnSet aln_loc;
-
-            bool thread_eof;
-            #pragma omp atomic read
-            thread_eof = eof;
-            while(!thread_eof && omp_return == 0) {
-                // Read a locus from the BAM file.
-                t.reading.restart();
-                #pragma omp critical(read)
-                try {
-                    if (!(thread_eof = eof) && omp_return == 0)
-                        thread_eof = eof = !bam_cloc_builder->build_one_locus(aln_loc);
-                } catch (exception& e) {
-                    omp_return = stacks_handle_exceptions(e);
-                }
-                t.reading.stop();
-                if (thread_eof || omp_return != 0)
-                    break;
-
-                // Process it.
-                t.processing.restart();
+            // Process it.
+            t.processing.restart();
+            size_t loc_i;
+            if (input_type == GStacksInputT::denovo_popmap || input_type == GStacksInputT::denovo_merger) {
+                loc_i = loc.bam_i();
+                loc_proc.process(loc);
+            } else {
                 assert(aln_loc.id() >= 1);
-                size_t loc_i = aln_loc.id() - 1;
+                loc_i = aln_loc.id() - 1;
                 aln_loc.merge_paired_reads();
                 loc_proc.process(aln_loc);
-                t.processing.stop();
-
-                // Write the FASTA output.
-                t.writing_fa.restart();
-                #pragma omp critical(write_fa)
-                {
-                    for (size_t i=next_fa_to_write+fa_outputs.size(); i<=loc_i; ++i)
-                        fa_outputs.push_back( {false, string()} );
-                    fa_outputs[loc_i - next_fa_to_write] = {true, move(loc_proc.fasta_out())};
-
-                    while (!fa_outputs.empty() && fa_outputs.front().first) {
-                        const string& fa = fa_outputs.front().second;
-                        if (!fa.empty() && gzwrite(o_gzfasta_f, fa.c_str(), fa.length()) <= 0)
-                            throw std::ios::failure("gzwrite");
-                        fa_outputs.pop_front();
-                        ++next_fa_to_write;
-                    }
-                }
-                t.writing_fa.stop();
-
-                // Write the VCF output.
-                t.writing_vcf.restart();
-                #pragma omp critical(write_vcf)
-                {
-                    for (size_t i=next_vcf_to_write+vcf_outputs.size(); i<=loc_i; ++i)
-                        vcf_outputs.push_back( {false, string()} );
-                    vcf_outputs[loc_i - next_vcf_to_write] = {true, move(loc_proc.vcf_out()) };
-
-                    if (vcf_outputs.front().first) {
-                        ++n_writes;
-                        if (vcf_outputs.size() > max_size_before_write)
-                            max_size_before_write = vcf_outputs.size();
-                        t_writing_vcf.restart();
-                        do {
-                            o_vcf_f->file() << vcf_outputs.front().second;
-                            vcf_outputs.pop_front();
-                            ++next_vcf_to_write;
-                            ++progress;
-                        } while (!vcf_outputs.empty() && vcf_outputs.front().first);
-                        t_writing_vcf.stop();
-                    }
-                }
-                t.writing_vcf.stop();
-
-                // Write the detailed output.
-                if (detailed_output) {
-                    t.writing_details.restart();
-                    #pragma omp critical(write_details)
-                    {
-                        for (size_t i=next_det_to_write+det_outputs.size(); i<=loc_i; ++i)
-                            det_outputs.push_back( {false, string()} );
-                        det_outputs[loc_i - next_det_to_write] = {true, move(loc_proc.details_out())};
-
-                        while (!det_outputs.empty() && det_outputs.front().first) {
-                            *o_details_f << det_outputs.front().second;
-                            det_outputs.pop_front();
-                            ++next_det_to_write;
-                        }
-                    }
-                    t.writing_details.stop();
-                }
-
-                #pragma omp atomic read
-                thread_eof = eof;
             }
+            t.processing.stop();
 
-            gt_stats += loc_proc.gt_stats();
+            // Write the FASTA output.
+            t.writing_fa.restart();
+            #pragma omp critical(write_fa)
+            {
+                for (size_t i=next_fa_to_write+fa_outputs.size(); i<=loc_i; ++i)
+                    fa_outputs.push_back( {false, string()} );
+                fa_outputs[loc_i - next_fa_to_write] = {true, move(loc_proc.fasta_out())};
+
+                while (!fa_outputs.empty() && fa_outputs.front().first) {
+                    const string& fa = fa_outputs.front().second;
+                    if (!fa.empty() && gzwrite(o_gzfasta_f, fa.c_str(), fa.length()) <= 0)
+                        throw std::ios::failure("gzwrite");
+                    fa_outputs.pop_front();
+                    ++next_fa_to_write;
+                }
+            }
+            t.writing_fa.stop();
+
+            // Write the VCF output.
+            t.writing_vcf.restart();
+            #pragma omp critical(write_vcf)
+            {
+                for (size_t i=next_vcf_to_write+vcf_outputs.size(); i<=loc_i; ++i)
+                    vcf_outputs.push_back( {false, string()} );
+                vcf_outputs[loc_i - next_vcf_to_write] = {true, move(loc_proc.vcf_out()) };
+
+                if (vcf_outputs.front().first) {
+                    ++n_writes;
+                    if (vcf_outputs.size() > max_size_before_write)
+                        max_size_before_write = vcf_outputs.size();
+                    t_writing_vcf.restart();
+                    do {
+                        o_vcf_f->file() << vcf_outputs.front().second;
+                        vcf_outputs.pop_front();
+                        ++next_vcf_to_write;
+                        ++progress;
+                    } while (!vcf_outputs.empty() && vcf_outputs.front().first);
+                    t_writing_vcf.stop();
+                }
+            }
+            t.writing_vcf.stop();
+
+            // Write the detailed output.
+            if (detailed_output) {
+                t.writing_details.restart();
+                #pragma omp critical(write_details)
+                {
+                    for (size_t i=next_det_to_write+det_outputs.size(); i<=loc_i; ++i)
+                        det_outputs.push_back( {false, string()} );
+                    det_outputs[loc_i - next_det_to_write] = {true, move(loc_proc.details_out())};
+
+                    while (!det_outputs.empty() && det_outputs.front().first) {
+                        *o_details_f << det_outputs.front().second;
+                        det_outputs.pop_front();
+                        ++next_det_to_write;
+                    }
+                }
+                t.writing_details.stop();
+            }
+        }
+
+        // Tally the per-thread statistics.
+        #pragma omp critical(stats)
+        if (omp_return == 0) {
+            denovo_ctg_stats += loc_proc.ctg_stats();
+            gt_stats  += loc_proc.gt_stats();
             t_threads_totals += loc_proc.timers();
-        } catch (exception& e) {
-            #pragma omp critical (exc)
-            omp_return = stacks_handle_exceptions(e);
-        } //omp parallel
-    } else DOES_NOT_HAPPEN; //input_type
-
+        }
+    } catch (exception& e) {
+        #pragma omp critical(exc)
+        omp_return = stacks_handle_exceptions(e);
+    }
     if (omp_return != 0)
         return omp_return;
     t_parallel.stop();
