@@ -776,9 +776,6 @@ sub parse_command_line {
         $_ = shift @ARGV;
         if    ($_ =~ /^-v$/) { version(); exit 1; }
         elsif ($_ =~ /^-h$/) { usage(); }
-        elsif ($_ =~ /^-p$/) { push(@parents, { 'path' => shift @ARGV }); }
-        elsif ($_ =~ /^-r$/) { push(@progeny, { 'path' => shift @ARGV }); }
-        elsif ($_ =~ /^-s$/) { push(@samples, { 'path' => shift @ARGV }); }
         elsif ($_ =~ /^-d$/ || $_ =~ /^--dry-run$/) { $dry_run   = true; }
         elsif ($_ =~ /^-o$/) { $out_path  = shift @ARGV; }
         elsif ($_ =~ /^-e$/) { $exe_path  = shift @ARGV; }
@@ -797,6 +794,7 @@ sub parse_command_line {
             push(@_cstacks,     "-M " . $popmap_path);
             push(@_sstacks,     "-M " . $popmap_path);
             push(@_tsv2bam,     "-M " . $popmap_path);
+            push(@_gstacks,     "-M " . $popmap_path);
             push(@_populations, "-M " . $popmap_path);
 
         } elsif ($_ =~ /^--gapped$/) {
