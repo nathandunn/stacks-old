@@ -344,14 +344,16 @@ try {
                << pct(pe_ndag) << ");\n"
                << "  For the remaining " << pe_ctg << " loci (" << pct(pe_ctg) << "), a paired-end contig was assembled;\n"
                << "  Average contig size was " << cs.ctg_avg_length() << " bp;\n"
+               << "  " << cs.n_overlaps << " paired-end contigs overlapped the forward region ("
+               << as_percentage((double) cs.n_overlaps / cs.n_loci_ctg()) << ";\n"
+               << "  mean overlap: " << cs.mean_olap_length() << "bp; mean size of overlapped loci after merging: "
+               << cs.mean_olapd_locus_length() << ")\n"
                << "  Out of " << cs.n_tot_reads << " paired-end reads in these loci (mean "
                << (double) cs.n_aln_reads / pe_ctg << " reads per locus),\n"
                << "    " << cs.n_aln_reads << " were successfuly aligned ("
                << as_percentage((double) cs.n_aln_reads / cs.n_tot_reads) << ");\n"
-               << "  " << cs.n_overlaps << " paired-end contigs overlapped the forward region ("
-               << as_percentage((double) cs.n_overlaps / cs.n_loci_ctg()) << "; mean overlap: "
-               << cs.mean_olap_length() << "bp; mean size of overlapped loci after merging: "
-               << cs.mean_olapd_locus_length() << ").\n"
+               << "  mean insert length was " << cs.insert_length_olap_mv.mean() << ", stdev: "
+               << cs.insert_length_olap_mv.sd_p() << " (based on aligned reads in overlapped loci).\n"
                << "\n";
         } else {
             cout << "Input appears to be single-end (no paired-end reads were seen).\n\n";
@@ -522,6 +524,7 @@ ContigStats& ContigStats::operator+= (const ContigStats& other) {
     this->n_overlaps                += other.n_overlaps;
     this->length_overlap_tot        += other.length_overlap_tot;
     this->length_olapd_loci_tot     += other.length_olapd_loci_tot;
+    this->insert_length_olap_mv    += other.insert_length_olap_mv;
 
     return *this;
 }
@@ -1067,7 +1070,7 @@ bool LocusProcessor::add_read_to_aln(
         SRead&& r,
         GappedAln* aligner,
         SuffixTree* stree
-) const {
+) {
 
     if (!this->align_reads_to_contig(stree, aligner, r.seq, aln_res))
         return false;
@@ -1081,6 +1084,19 @@ bool LocusProcessor::add_read_to_aln(
     cigar_extend_left(cigar, aln_res.subj_pos);
     assert(cigar_length_ref(cigar) <= aln_loc.ref().length());
     cigar_extend_right(cigar, aln_loc.ref().length() - cigar_length_ref(cigar));
+
+    if (loc_.ctg_status == LocData::overlapped) {
+        // Record the insert length.
+        assert(!cigar.empty());
+        size_t insert_length = aln_loc.ref().length();
+        if (cigar.back().first == 'D') {
+            insert_length -= cigar.back().second;
+            if (cigar.size() >=2 && (*++cigar.rbegin()).first == 'I')
+                // Soft clipping on the far end.
+                insert_length += (*++cigar.rbegin()).second;
+        }
+        ctg_stats_.insert_length_olap_mv.increment(insert_length);
+    }
 
     aln_loc.add(SAlnRead(move((Read&)r), move(cigar), r.sample));
     return true;
