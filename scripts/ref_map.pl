@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 #
-# Copyright 2010-2016, Julian Catchen <jcatchen@illinois.edu>
+# Copyright 2010-2017, Julian Catchen <jcatchen@illinois.edu>
 #
 # This file is part of Stacks.
 #
@@ -49,14 +49,11 @@ my $popmap_path  = "";
 my $sample_path  = "";
 my $db           = "";
 my $data_type    = "map";
-my $min_cov      = 0;
-my $min_rcov     = 0;
 my $batch_id     = 1;
 my $sample_id    = 1;
 my $desc         = ""; # Database description of this dataset
 my $date         = ""; # Date relevent to this data, formatted for SQL: 2009-05-31
 my $gzip         = false;
-my $v1           = false;
 
 my @parents;
 my @progeny;
@@ -122,9 +119,6 @@ sub execute_stacks {
 
     my (@results, @depths_of_cov);
     my ($pop_cnt, $sample, $num_files, $i, $cmd, $pipe_fh, $path, $cat_file);
-
-    my $minc  = $min_cov  > 0 ? "-m $min_cov"  : "";
-    my $minrc = $min_rcov > 0 ? "-m $min_rcov" : $minc;
 
     #
     # Sort the input BAM files, add read groups, and merge them.
@@ -237,7 +231,7 @@ sub execute_stacks {
         printf(STDERR "Generating genotypes...\n");
         print $log_fh "\ngenotypes\n==========\n";
 
-        $cmd = $exe_path . "genotypes" . ($v1 ? " --v1" : "") . " -b $batch_id -P $out_path -r 1 -c -s " . join(" ", @_genotypes);
+        $cmd = $exe_path . "genotypes" . " -b $batch_id -P $out_path -r 1 -c -s " . join(" ", @_genotypes);
         print STDERR  "$cmd\n\n";
         print $log_fh "$cmd\n\n";
 
@@ -254,7 +248,7 @@ sub execute_stacks {
         printf(STDERR "Calculating population-level summary statistics\n");
         print $log_fh "\npopulations\n==========\n";
 
-        $cmd = $exe_path . "populations" . ($v1 ? " --v1" : "") . " -P $out_path " . join(" ", @_populations);
+        $cmd = $exe_path . "populations" . " -P $out_path " . join(" ", @_populations);
         print STDERR  "  $cmd\n\n";
         print $log_fh "$cmd\n\n";
 
@@ -338,9 +332,7 @@ sub initialize_samples {
                 $path = $sample_path . $sample . "." . $suffixes[$i];
                 if (-e $path) {
 
-                    if ($i == 1) {
-                        $gzip = true;
-                    }
+                    $gzip = true if ($i == 1);
 
                     push(@{$samples}, {'path'   => $sample_path,
                                        'file'   => $sample,
@@ -353,58 +345,8 @@ sub initialize_samples {
             }
 
             if ($found == false) {
-                die("Error: Failed to open '$sample_path$sample.(bam|sam|etc.)'.\n");
+                die("Error: Failed to open '$sample_path$sample.(bam|sam)'.\n");
             }
-        }
-
-    } else {
-        #
-        # Process any samples were specified on the command line.
-        #
-        foreach $sample (@{$parents}, @{$progeny}, @{$samples}) {
-
-            ($prefix, $suffix) = ($sample->{'path'} =~ /^(.+)\.(.+)$/);
-
-            $sample->{'suffix'}  = $suffix;
-
-            if ($prefix =~ /^.*\/.+$/) {
-                ($path, $file) = ($prefix =~ /^(.*\/)(.+)$/);
-            } else {
-                $file = $prefix;
-                $path = "";
-            }
-
-            $sample->{'path'} = $path;
-            $sample->{'file'} = $file;
-
-        if ($suffix =~ /^bam$/) {
-    	$sample->{'fmt'} = "bam";
-    	$gzip            = true;
-        } elsif ($suffix =~ /^sam$/) {
-    	$sample->{'fmt'} = "sam";
-        } elsif ($suffix =~ /^map$/) {
-    	$sample->{'fmt'} = "map";
-        } elsif ($suffix =~ /^bowtie$/) {
-    	$sample->{'fmt'} = "bowtie";
-        } else {
-    	die("Unknown input file type for file '" . $sample->{'path'} . "'.\n");
-        }
-
-            $path = $sample->{'path'} . $sample->{'file'} . "." . $sample->{'suffix'};
-
-            if (!-e $path) {
-                die("Unable to locate sample file '$path'\n");
-            }
-        }
-
-        foreach $sample (@{$parents}) {
-            $sample->{'type'} = "parent";
-        }
-        foreach $sample (@{$progeny}) {
-            $sample->{'type'} = "progeny";
-        }
-        foreach $sample (@{$samples}) {
-            $sample->{'type'} = "sample";
         }
     }
 
@@ -765,111 +707,99 @@ sub parse_command_line {
     my ($arg);
 
     while (@ARGV) {
-    $_ = shift @ARGV;
+        $_ = shift @ARGV;
         if    ($_ =~ /^-v$/) { version(); exit 1; }
-    elsif ($_ =~ /^-h$/) { usage(); }
-    elsif ($_ =~ /^-d$/ || $_ =~ /^--dry-run$/) { $dry_run = true; }
-    elsif ($_ =~ /^-o$/) { $out_path  = shift @ARGV; }
-    #elsif ($_ =~ /^-D$/) { $desc      = shift @ARGV; }
-    elsif ($_ =~ /^-e$/) { $exe_path  = shift @ARGV; }
-    #elsif ($_ =~ /^-b$/) { $batch_id  = shift @ARGV; }
-    #elsif ($_ =~ /^-i$/) { $sample_id = shift @ARGV; }
-    #elsif ($_ =~ /^-a$/) { $date      = shift @ARGV; }
-    #elsif ($_ =~ /^-S$/) { $sql       = false; }
-    #elsif ($_ =~ /^-B$/) { $db        = shift @ARGV; }
-    elsif ($_ =~ /^-m$/) { $min_cov   = shift @ARGV; }
-    elsif ($_ =~ /^-P$/) { $min_rcov  = shift @ARGV; }
-    elsif ($_ =~ /^--samples$/) {
-    	$sample_path = shift @ARGV;
-    } elsif ($_ =~ /^-O$/ || $_ =~ /^--popmap$/) {
-        $popmap_path = shift @ARGV;
-        push(@_populations, "-M " . $popmap_path);
+        elsif ($_ =~ /^-h$/) { usage(); }
+        elsif ($_ =~ /^-d$/ || $_ =~ /^--dry-run$/) { $dry_run = true; }
+        elsif ($_ =~ /^-o$/) { $out_path  = shift @ARGV; }
+        elsif ($_ =~ /^-e$/) { $exe_path  = shift @ARGV; }
+        # elsif ($_ =~ /^-D$/) { $desc      = shift @ARGV; }
+        # elsif ($_ =~ /^-b$/) { $batch_id  = shift @ARGV; }
+        # elsif ($_ =~ /^-i$/) { $sample_id = shift @ARGV; }
+        # elsif ($_ =~ /^-a$/) { $date      = shift @ARGV; }
+        # elsif ($_ =~ /^-S$/) { $sql       = false; }
+        # elsif ($_ =~ /^-B$/) { $db        = shift @ARGV; }
+        elsif ($_ =~ /^--samples$/) {
+            $sample_path = shift @ARGV;
+        } elsif ($_ =~ /^-O$/ || $_ =~ /^--popmap$/) {
+            $popmap_path = shift @ARGV;
+            push(@_populations, "-M " . $popmap_path);
 
-    #} elsif ($_ =~ /^--create_db$/) {
-    #        $create_db = true;
+            #} elsif ($_ =~ /^--create_db$/) {
+            #        $create_db = true;
 
-    #    } elsif ($_ =~ /^--overw_db$/) {
-    #        $overw_db  = true;
-    #        $create_db = true;
+            #    } elsif ($_ =~ /^--overw_db$/) {
+            #        $overw_db  = true;
+            #        $create_db = true;
 
-    #    } elsif ($_ =~ /^-A$/) {
-    #    $arg = shift @ARGV;
-    #    push(@_genotypes, "-t " . $arg);
+            #    } elsif ($_ =~ /^-A$/) {
+            #    $arg = shift @ARGV;
+            #    push(@_genotypes, "-t " . $arg);
 
-    #    $arg = lc($arg);
-    #    if ($arg ne "gen" && $arg ne "cp" && $arg ne "f2" && $arg ne "bc1" && $arg ne "dh") {
-    #	print STDERR "Unknown genetic mapping cross specified: '$arg'\n";
-    #	usage();
-    #    }
+            #    $arg = lc($arg);
+            #    if ($arg ne "gen" && $arg ne "cp" && $arg ne "f2" && $arg ne "bc1" && $arg ne "dh") {
+            #	print STDERR "Unknown genetic mapping cross specified: '$arg'\n";
+            #	usage();
+            #    }
 
-    } elsif ($_ =~ /^-T$/) {
-        $arg = shift @ARGV;
-        push(@_pstacks, "-p " . $arg);
-        push(@_cstacks, "-p " . $arg);
-        push(@_sstacks, "-p " . $arg);
-        push(@_populations, "-t " . $arg);
+        } elsif ($_ =~ /^-T$/) {
+            $arg = shift @ARGV;
+            push(@_pstacks, "-p " . $arg);
+            push(@_cstacks, "-p " . $arg);
+            push(@_sstacks, "-p " . $arg);
+            push(@_populations, "-t " . $arg);
 
-    } elsif ($_ =~ /^--bound_low$/) {
-        push(@_pstacks, "--bound_low " . shift @ARGV);
-        push(@_pstacks, "--model_type bounded");
+        } elsif ($_ =~ /^--bound_low$/) {
+            push(@_pstacks, "--bound_low " . shift @ARGV);
+            push(@_pstacks, "--model_type bounded");
 
-    } elsif ($_ =~ /^--bound_high$/) {
-        push(@_pstacks, "--bound_high " . shift @ARGV);
-        push(@_pstacks, "--model_type bounded");
+        } elsif ($_ =~ /^--bound_high$/) {
+            push(@_pstacks, "--bound_high " . shift @ARGV);
+            push(@_pstacks, "--model_type bounded");
 
-    } elsif ($_ =~ /^--alpha$/) {
-        push(@_pstacks, "--alpha " . shift @ARGV);
+        } elsif ($_ =~ /^--alpha$/) {
+            push(@_pstacks, "--alpha " . shift @ARGV);
 
-    } elsif ($_ =~ /^-X$/) {
-        #
-        # Pass an arbitrary command-line option to a pipeline program.
-        #
-        # Command line option must be of the form '-X "program:option"'
-        #
-        $arg = shift @ARGV;
-        my ($prog, $opt) = ($arg =~ /^(\w+):(.+)$/);
+        } elsif ($_ =~ /^-X$/) {
+            #
+            # Pass an arbitrary command-line option to a pipeline program.
+            #
+            # Command line option must be of the form '-X "program:option"'
+            #
+            $arg = shift @ARGV;
+            my ($prog, $opt) = ($arg =~ /^(\w+):(.+)$/);
 
-        if ($prog eq "gstacks") {
+            if ($prog eq "gstacks") {
                 push(@_gstacks, $opt);
 
-        } elsif ($prog eq "populations") {
-    	push(@_populations, $opt);
-        } else {
-    	print STDERR "Unknown pipeline program, '$arg'\n";
-    	usage();
+            } elsif ($prog eq "populations") {
+                push(@_populations, $opt);
+            } else {
+                print STDERR "Unknown pipeline program, '$arg'\n";
+                usage();
+            }
         }
-    }
-    else {
-        print STDERR "Unknown command line option: '$_'\n";
-        usage();
-    }
+        else {
+            print STDERR "Unknown command line option: '$_'\n";
+            usage();
+        }
     }
 
     $exe_path = $exe_path . "/"          if (substr($exe_path, -1) ne "/");
     $out_path = substr($out_path, 0, -1) if (substr($out_path, -1) eq "/");
 
-    if ($batch_id !~ /^\d+$/ || $batch_id < 0) {
-    print STDERR "You must specify a batch ID and it must be an integer (e.g. 1, 2, 3).\n";
-    usage();
-    }
-
     if ($sql == true && length($date) == 0) {
-    $date = strftime("%Y-%m-%d", (localtime(time)));
+        $date = strftime("%Y-%m-%d", (localtime(time)));
     }
 
-    if (scalar(@parents) > 0 && scalar(@samples) > 0) {
-    print STDERR "You must specify either parent or sample files, but not both.\n";
-    usage();
+    if (length($popmap_path) == 0) {
+        print STDERR "You must specify a population map that lists your sample names (--popmap).\n";
+        usage();
     }
 
-    if (scalar(@parents) == 0 && scalar(@samples) == 0 && length($popmap_path) == 0) {
-    print STDERR "You must specify at least one parent or sample file.\n";
-    usage();
-    }
-
-    if (scalar(@parents) == 0 && scalar(@samples) == 0 && length($popmap_path) > 0 && length($sample_path) == 0) {
-    print STDERR "If you are using a population map to specify samples, you must specify the path to the directory containing the samples (--samples).\n";
-    usage();
+    if (length($sample_path) == 0) {
+        print STDERR "You must specify the path to the directory containing the samples (--samples).\n";
+        usage();
     }
 
     if (length($sample_path) > 0) {
@@ -877,9 +807,9 @@ sub parse_command_line {
     }
 
     if (scalar(@samples) > 0 || length($popmap_path) > 0) {
-    $data_type = "population";
+        $data_type = "population";
     } else {
-    $data_type = "map";
+        $data_type = "map";
     }
 }
 
@@ -893,16 +823,17 @@ sub usage {
     print STDERR <<EOQ;
 ref_map.pl --samples dir --popmap path -o dir (database options) [-X prog:"opts" ...]
 
-General options:
-  --samples: path to the directory containing the samples BAM (or SAM) alignment files.
-  --popmap: path to a population map file (format is "<name> TAB <pop>", one sample per line).
-  o: path to an output directory.
-  X: additional options for specific pipeline components, e.g. -X "populations: -p 3 -r 0.50"
-  T: the number of threads/CPUs to use (default: 1).
-  d: Dry run. Do not actually execute anything, just print the commands that would be executed.
+  Input/Output files:
+    --samples: path to the directory containing the samples BAM (or SAM) alignment files.
+    --popmap: path to a population map file (format is "<name> TAB <pop>", one sample per line).
+    o: path to an output directory.
 
-  A: (To be reimplemented) for a mapping cross, specify the type; one of 'CP', 'F2',
-     'BC1', 'DH', or 'GEN'.
+  General options:
+    A: (To be reimplemented) for a mapping cross, specify the type; one of 'CP', 'F2', 'BC1', 'DH', or 'GEN'.
+    X: additional options for specific pipeline components, e.g. -X "populations: -p 3 -r 0.50"
+    T: the number of threads/CPUs to use (default: 1).
+    d: Dry run. Do not actually execute anything, just print the commands that would be executed.
+
 
 SNP model options:
   --alpha: significance level at which to call genotypes (for pstacks; default: 0.05).

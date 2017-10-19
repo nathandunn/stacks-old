@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 #
-# Copyright 2010-2016, Julian Catchen <jcatchen@illinois.edu>
+# Copyright 2010-2017, Julian Catchen <jcatchen@illinois.edu>
 #
 # This file is part of Stacks.
 #
@@ -38,7 +38,7 @@ use constant true  => 1;
 use constant false => 0;
 
 my $dry_run      = false;
-my $sql          = true;
+my $sql          = false;
 my $create_db    = false;
 my $overw_db     = false;
 my $gapped_alns  = false;
@@ -57,14 +57,13 @@ my $sample_id    = 1;
 my $desc         = ""; # Database description of this dataset
 my $date         = ""; # Date relevent to this data, formatted for SQL: 2009-05-31
 my $gzip         = false;
-my $v1           = false;
 my $paired       = false;
 
 my @parents;
 my @progeny;
 my @samples;
 
-my (@_ustacks, @_cstacks, @_sstacks, @_tsv2bam, @_samtools_merge, @_gstacks, @_genotypes, @_populations);
+my (@_ustacks, @_cstacks, @_sstacks, @_tsv2bam, @_gstacks, @_genotypes, @_populations);
 
 my $cmd_str = $0 . " " . join(" ", @ARGV);
 
@@ -110,8 +109,10 @@ print $log_fh "\ndenovo_map.pl completed at ", strftime("%Y-%m-%d %H:%M:%S", (lo
 close($log_fh);
 
 sub check_return_value {
+    #
     # $? is a 16 bit int. Exit code is given by `$? & 255` if the process was
     # terminated by a signal, and by `$? >> 8` if it exited normally.
+    #
     my ($rv, $log_fh) = @_;
     if ($rv != 0) {
         my $msg = "\ndenovo_map.pl: Aborted because the last command failed. (" . ($rv & 255 ? $rv : $rv >> 8) . ")\n";
@@ -195,12 +196,7 @@ sub execute_stacks {
     print STDERR "Generating catalog...\n";
     print $log_fh "\ncstacks\n==========\n";
 
-    my $file_paths = "";
-    foreach $sample (@parents, @samples) {
-        $file_paths .= "-s $out_path/$sample->{'file'} ";
-    }
-
-    $cmd      = $exe_path . "cstacks -b $batch_id -o $out_path $file_paths " . join(" ", @_cstacks);
+    $cmd = $exe_path . "cstacks -P $out_path " . join(" ", @_cstacks);
     print STDERR  "  $cmd\n\n";
     print $log_fh "$cmd\n\n";
 
@@ -217,16 +213,11 @@ sub execute_stacks {
     #
     # Match parents, progeny, or samples to the catalog.
     #
-    $file_paths = "";
     print STDERR "Matching samples to the catalog...\n";
     print $log_fh "\nsstacks\n==========\n";
 
-    foreach $sample (@parents, @progeny, @samples) {
-        $file_paths .= "-s $out_path/$sample->{'file'} ";
-    }
-
     $cat_file = "batch_" . $batch_id;
-    $cmd      = $exe_path . "sstacks -b $batch_id -c $out_path/$cat_file -o $out_path $file_paths " . join(" ", @_sstacks);
+    $cmd      = $exe_path . "sstacks -P $out_path " . join(" ", @_sstacks);
     print STDERR  "  $cmd\n\n";
     print $log_fh "$cmd\n\n";
 
@@ -239,81 +230,49 @@ sub execute_stacks {
         check_return_value($?, $log_fh);
     }
 
-    if (!$v1) {
-        #
-        # Sort the reads according by catalog locus / run tsv2bam.
-        #
-        print STDERR "Sorting reads by RAD locus...\n";
-        print $log_fh "\ntsv2bam\n==========\n";
+    #
+    # Sort the reads according by catalog locus / run tsv2bam.
+    #
+    print STDERR "Sorting reads by RAD locus...\n";
+    print $log_fh "\ntsv2bam\n==========\n";
 
-        $cmd = $exe_path . "tsv2bam -P $out_path";
-        if ($popmap_path) {
-            $cmd .= " -M $popmap_path";
-        } else {
-            foreach $sample (@parents, @progeny, @samples) {
-                $cmd .= " -s $sample->{'file'}";
-            }
-        }
-        if ($paired) {
-            $cmd .= " -R $sample_path";
-        }
-        foreach (@_tsv2bam) {
-            $cmd .= " " . $_;
-        }
-        print STDERR  "  $cmd\n";
-        print $log_fh "$cmd\n";
-        if (!$dry_run) {
-            open($pipe_fh, "$cmd 2>&1 |");
-            while (<$pipe_fh>) {
-                print $log_fh $_;
-            }
-            close($pipe_fh);
-            check_return_value($?, $log_fh);
-        }
-
-        #
-        # Merge the matches.bam files / run samtools merge.
-        #
-        print $log_fh "\nsamtools merge\n----------\n";
-
-        $cmd = "samtools merge -f $out_path/catalog.bam";
+    my $file_paths = "";
+    if (length($popmap_path) == 0) {
         foreach $sample (@parents, @progeny, @samples) {
-            $cmd .= " $out_path/$sample->{'file'}.matches.bam";
+            $file_paths .= " -s $sample->{'file'}";
         }
-        foreach (@_samtools_merge) {
-            $cmd .= " " . $_;
-        }
-        print STDERR  "  $cmd\n\n";
-        print $log_fh "$cmd\n\n";
-        if (!$dry_run) {
-            open($pipe_fh, "$cmd 2>&1 |");
-            while (<$pipe_fh>) {
-                print $log_fh $_;
-            }
-            close($pipe_fh);
-            check_return_value($?, $log_fh);
-        }
+    }
 
-        #
-        # Call genotypes / run gstacks.
-        #
-        print STDERR "Calling variants, genotypes and haplotypes...\n";
-        print $log_fh "\ngstacks\n==========\n";
+    $cmd = $exe_path . "tsv2bam -P $out_path $file_paths " . join(" ", @_tsv2bam);
+    print STDERR  "  $cmd\n";
+    print $log_fh "$cmd\n";
 
-        $cmd = $exe_path . "gstacks -P $out_path";
-        foreach (@_gstacks) {
-            $cmd .= " " . $_;
+    if (!$dry_run) {
+        open($pipe_fh, "$cmd 2>&1 |");
+        while (<$pipe_fh>) {
+            print $log_fh $_;
         }
-        print STDERR  "  $cmd\n\n";
-        print $log_fh "$cmd\n\n";
-        if (!$dry_run) {
-            open($pipe_fh, "$cmd 2>&1 |");
-            while (<$pipe_fh>) {
-                print $log_fh $_;
-            }
-            close($pipe_fh);
-            check_return_value($?, $log_fh);
+        close($pipe_fh);
+        check_return_value($?, $log_fh);
+    }
+
+    #
+    # Call genotypes / run gstacks.
+    #
+    print STDERR "Calling variants, genotypes and haplotypes...\n";
+    print $log_fh "\ngstacks\n==========\n";
+
+    $cmd = $exe_path . "gstacks -P $out_path " . join(" ", @_gstacks);
+    print STDERR  "  $cmd\n\n";
+    print $log_fh "$cmd\n\n";
+
+    if (!$dry_run) {
+        open($pipe_fh, "$cmd 2>&1 |");
+        while (<$pipe_fh>) {
+            print $log_fh $_;
         }
+        close($pipe_fh);
+        check_return_value($?, $log_fh);
     }
 
     if ($data_type eq "map") {
@@ -323,7 +282,7 @@ sub execute_stacks {
         printf(STDERR "Generating genotypes...\n");
         print $log_fh "\ngenotypes\n==========\n";
 
-        $cmd = $exe_path . "genotypes" . ($v1 ? " --v1" : "") . " -b $batch_id -P $out_path -r 1 -c -s " . join(" ", @_genotypes);
+        $cmd = $exe_path . "genotypes" . " -b $batch_id -P $out_path -r 1 -c -s " . join(" ", @_genotypes);
         print STDERR  "$cmd\n\n";
         print $log_fh "$cmd\n\n";
 
@@ -340,7 +299,7 @@ sub execute_stacks {
         printf(STDERR "Calculating population-level summary statistics\n");
         print $log_fh "\npopulations\n==========\n";
 
-        $cmd = $exe_path . "populations" . ($v1 ? " --v1" : "") . " -P $out_path " . join(" ", @_populations);
+        $cmd = $exe_path . "populations" . " -P $out_path " . join(" ", @_populations);
         print STDERR  "  $cmd\n\n";
         print $log_fh "$cmd\n\n";
 
@@ -438,121 +397,63 @@ sub initialize_samples {
                 }
             }
 
-            my $path = $sample_path . $sample . $extension;
-            if (! -e $path) {
-                print STDERR "Error: Failed to open '$path'.\n";
-                exit 1;
-            }
-            push(@{$samples}, {'path'   => $path,
-                               'file'   => $sample,
-                               'suffix' => $suffixes[$i],
-                               'type'   => "sample",
-                               'fmt'    => $fmts[$i]});
-            if ($paired) {
-                my $path_pe = $sample_path . $sample . $extension_pe;
-                if (! -e $path_pe) {
-                    print STDERR "Error: Failed to open '$path'.\n";
-                    exit 1;
-                }
-                $samples[-1]->{'path_pe'} = $path_pe;
-            }
-        }
+            my ($path, $path_pe);
 
-    } else {
-        #
-        # Process any samples that were specified on the command line.
-        #
-        my ($prefix, $suffix, $dir, $file, $local_gzip);
-        foreach $sample (@{$parents}, @{$progeny}, @{$samples}) {
-            $local_gzip = false;
+            $path    = $sample_path . $sample . $extension;
+            $path_pe = ($paired ? $sample_path . $sample . $extension_pe : "");
+            
+            die("Error: Failed to open single-end file '$path'.\n") if (! -e $path);
+            die("Error: Failed to open paired-end file '$path_pe'.\n") if ($paired && ! -e $path_pe);
+            die("Unable to find an entry for '" . $sample . "' in the population map, '$popmap_path'.\n") if (!defined($pop_ids->{$sample}));
 
-            ($prefix, $suffix) = ($sample->{'path'} =~ /^(.+)\.(.+)$/);
-
-            if ($suffix eq "gz") {
-                $gzip = true;
-                $local_gzip = true;
-                ($prefix, $suffix) = ($prefix =~ /^(.+)\.(.+)$/);
-            }
-
-            $sample->{'suffix'}  = $suffix;
-            $sample->{'suffix'} .= ".gz" if ($local_gzip == true);
-
-            if ($prefix =~ /^.*\/.+$/) {
-                ($dir, $file) = ($prefix =~ /^(.*\/)(.+)$/);
+            if ($pop_ids->{$sample} eq "parent") {
+                push(@{$parents}, {'path'   => $path,
+                                       'file'   => $sample,
+                                       'suffix' => $suffixes[$i],
+                                       'type'   => "parent",
+                                       'fmt'    => $fmts[$i],
+                                       'path_pe' => $path_pe});
+            } elsif ($pop_ids->{$sample} eq "progeny") {
+                push(@{$progeny}, {'path'   => $path,
+                                       'file'   => $sample,
+                                       'suffix' => $suffixes[$i],
+                                       'type'   => "progeny",
+                                       'fmt'    => $fmts[$i],
+                                       'path_pe' => $path_pe});
             } else {
-                $dir = "";
-                $file = $prefix;
+                push(@{$samples}, {'path'   => $path,
+                                       'file'   => $sample,
+                                       'suffix' => $suffixes[$i],
+                                       'type'   => "sample",
+                                       'fmt'    => $fmts[$i],
+                                       'path_pe' => $path_pe});
             }
-            $sample->{'file'} = $file;
-
-            if ($local_gzip == true) {
-                if ($suffix =~ /^fa$/ || $suffix =~ /^fasta$/) {
-                    $sample->{'fmt'} = "gzfasta";
-                } elsif ($suffix =~ /^fq$/ || $suffix =~ /^fastq$/) {
-                    $sample->{'fmt'} = "gzfastq";
-                } else {
-                    die("Unknown input file type for file '" . $sample->{'path'} . "'.\n");
-                }
-            } else {
-                if ($suffix =~ /^fa$/ || $suffix =~ /^fasta$/) {
-                    $sample->{'fmt'} = "fasta";
-                } elsif ($suffix =~ /^fq$/ || $suffix =~ /^fastq$/) {
-                    $sample->{'fmt'} = "fastq";
-                } else {
-                    die("Unknown input file type for file '" . $sample->{'path'} . "'.\n");
-                }
-            }
-
-            if ($sample->{'path'} != $dir . $sample->{'file'} . "." . $sample->{'suffix'}) {
-                die("This should never happen.");
-            }
-        }
-
-        foreach $sample (@{$parents}) {
-            $sample->{'type'} = "parent";
-        }
-        foreach $sample (@{$progeny}) {
-            $sample->{'type'} = "progeny";
-        }
-        foreach $sample (@{$samples}) {
-            $sample->{'type'} = "sample";
         }
     }
 
     #
     # If a population map was specified, make sure all samples in the list were found (and vice versa) and assign popualtion IDs.
     #
-    if (scalar(@{$sample_list}) > 0) {
+    my %sample_hash;
 
-        my %sample_hash;
+    foreach $sample (@{$samples}) {
+        $sample_hash{$sample->{'file'}}++;
 
-        foreach $sample (@{$samples}) {
-            $sample_hash{$sample->{'file'}}++;
-
-            if (!defined($pop_ids->{$sample->{'file'}})) {
-                die("Unable to find an entry for '" . $sample->{'file'} . "' in the population map, '$popmap_path'.\n");
-            } else {
-                $sample->{'pop_id'} = $pop_ids->{$sample->{'file'}};
-            }
-            if (!defined($grp_ids->{$sample->{'file'}})) {
-                die("Unable to find an entry for '" . $sample->{'file'} . "' in the population map, '$popmap_path'.\n");
-            } else {
-                $sample->{'grp_id'} = $grp_ids->{$sample->{'file'}};
-            }
+        if (!defined($pop_ids->{$sample->{'file'}})) {
+            die("Unable to find an entry for '" . $sample->{'file'} . "' in the population map, '$popmap_path'.\n");
+        } else {
+            $sample->{'pop_id'} = $pop_ids->{$sample->{'file'}};
         }
-
-        foreach $sample (@{$sample_list}) {
-            if (!defined($sample_hash{$sample})) {
-                die("Unable to find a file corresponding to the population map entry '" . $sample . "' in the population map, '$popmap_path'.\n");
-            }
+        if (!defined($grp_ids->{$sample->{'file'}})) {
+            die("Unable to find an entry for '" . $sample->{'file'} . "' in the population map, '$popmap_path'.\n");
+        } else {
+            $sample->{'grp_id'} = $grp_ids->{$sample->{'file'}};
         }
+    }
 
-    } else {
-        foreach $sample (@{$parents}, @{$progeny}, @{$samples}) {
-            $sample->{'pop_id'} = "1";
-            $sample->{'grp_id'} = "1";
-            $pop_ids->{$sample->{'file'}} = $sample->{'pop_id'};
-            $grp_ids->{$sample->{'file'}} = $sample->{'grp_id'};
+    foreach $sample (@{$sample_list}) {
+        if (!defined($sample_hash{$sample})) {
+            die("Unable to find a file corresponding to the population map entry '" . $sample . "' in the population map, '$popmap_path'.\n");
         }
     }
 
@@ -561,12 +462,12 @@ sub initialize_samples {
     #
     my (%files, $file);
     foreach $file (@{$parents}, @{$progeny}, @{$samples}) {
-    $files{$file}++;
+        $files{$file}++;
     }
     foreach $file (keys %files) {
-    if ($files{$file} > 1) {
-        die("A duplicate file was specified which may create undefined results, '$file'\n");
-    }
+        if ($files{$file} > 1) {
+            die("A duplicate file was specified which may create undefined results, '$file'\n");
+        }
     }
 
     print STDERR "Found ", scalar(@{$parents}), " parental file(s).\n\n" if (scalar(@{$parents}) > 0);
@@ -871,6 +772,9 @@ sub import_gzsql_file {
 sub parse_command_line {
     my ($arg);
 
+    my $ustacks_mismatch = -1;
+    my $cstacks_mismatch = -1;
+
     while (@ARGV) {
         $_ = shift @ARGV;
         if    ($_ =~ /^-v$/) { version(); exit 1; }
@@ -880,46 +784,46 @@ sub parse_command_line {
         elsif ($_ =~ /^-s$/) { push(@samples, { 'path' => shift @ARGV }); }
         elsif ($_ =~ /^-d$/ || $_ =~ /^--dry-run$/) { $dry_run   = true; }
         elsif ($_ =~ /^-o$/) { $out_path  = shift @ARGV; }
-        elsif ($_ =~ /^-D$/) { $desc      = shift @ARGV; }
         elsif ($_ =~ /^-e$/) { $exe_path  = shift @ARGV; }
-        elsif ($_ =~ /^-b$/) { $batch_id  = shift @ARGV; }
-        elsif ($_ =~ /^-i$/) { $sample_id = shift @ARGV; }
-        elsif ($_ =~ /^-a$/) { $date      = shift @ARGV; }
-        elsif ($_ =~ /^-S$/) { $sql       = false; }
-        elsif ($_ =~ /^-B$/) { $db        = shift @ARGV; }
-        elsif ($_ =~ /^-m$/) { $min_cov   = shift @ARGV; }
-        elsif ($_ =~ /^-P$/) { $min_rcov  = shift @ARGV; }
-        elsif ($_ =~ /^--v1$/) { $v1  = true; }
-        elsif ($_ =~ /^--paired-ends$/) { $paired  = true; }
-            elsif ($_ =~ /^--samples$/) {
-                $sample_path = shift @ARGV;
-
-            } elsif ($_ =~ /^-O$/ || $_ =~ /^--popmap$/) {
+        # elsif ($_ =~ /^-D$/) { $desc      = shift @ARGV; }
+        # elsif ($_ =~ /^-b$/) { $batch_id  = shift @ARGV; }
+        # elsif ($_ =~ /^-i$/) { $sample_id = shift @ARGV; }
+        # elsif ($_ =~ /^-a$/) { $date      = shift @ARGV; }
+        # elsif ($_ =~ /^-S$/) { $sql       = false; }
+        # elsif ($_ =~ /^-B$/) { $db        = shift @ARGV; }
+        elsif ($_ =~ /^-m$/)        { $min_cov     = shift @ARGV; }
+        elsif ($_ =~ /^-P$/)        { $min_rcov    = shift @ARGV; }
+        elsif ($_ =~ /^--paired$/)  { $paired      = true; } 
+        elsif ($_ =~ /^--samples$/) { $sample_path = shift @ARGV; } 
+        elsif ($_ =~ /^-O$/ || $_ =~ /^--popmap$/) {
             $popmap_path = shift @ARGV;
+            push(@_cstacks,     "-M " . $popmap_path);
+            push(@_sstacks,     "-M " . $popmap_path);
+            push(@_tsv2bam,     "-M " . $popmap_path);
             push(@_populations, "-M " . $popmap_path);
 
         } elsif ($_ =~ /^--gapped$/) {
-                $gapped_alns = true;
+            $gapped_alns = true;
             push(@_ustacks, "--gapped ");
             push(@_cstacks, "--gapped ");
             push(@_sstacks, "--gapped ");
 
-        } elsif ($_ =~ /^--create_db$/) {
-                $create_db = true;
+        # } elsif ($_ =~ /^--create_db$/) {
+        #         $create_db = true;
 
-            } elsif ($_ =~ /^--overw_db$/) {
-                $overw_db  = true;
-                $create_db = true;
+        #     } elsif ($_ =~ /^--overw_db$/) {
+        #         $overw_db  = true;
+        #         $create_db = true;
 
-            } elsif ($_ =~ /^-A$/) {
-            $arg = shift @ARGV;
-            push(@_genotypes, "-t " . $arg);
+        #     } elsif ($_ =~ /^-A$/) {
+        #     $arg = shift @ARGV;
+        #     push(@_genotypes, "-t " . $arg);
 
-            $arg = lc($arg);
-            if ($arg ne "gen" && $arg ne "cp" && $arg ne "f2" && $arg ne "bc1" && $arg ne "dh") {
-        	print STDERR "Unknown genetic mapping cross specified: '$arg'\n";
-        	usage();
-            }
+        #     $arg = lc($arg);
+        #     if ($arg ne "gen" && $arg ne "cp" && $arg ne "f2" && $arg ne "bc1" && $arg ne "dh") {
+        # 	print STDERR "Unknown genetic mapping cross specified: '$arg'\n";
+        # 	usage();
+        #     }
 
         } elsif ($_ =~ /^-t$/) {
             push(@_ustacks, "-d ");
@@ -933,16 +837,15 @@ sub parse_command_line {
             push(@_populations, "-t " . $arg);
 
         } elsif ($_ =~ /^-M$/) {
-            push(@_ustacks,   "-M " . shift @ARGV);
+            $ustacks_mismatch = shift(@ARGV);
+            push(@_ustacks,   "-M " . $ustacks_mismatch);
 
         } elsif ($_ =~ /^-N$/) {
             push(@_ustacks,   "-N " . shift @ARGV);
 
         } elsif ($_ =~ /^-n$/) {
-            push(@_cstacks, "-n " . shift @ARGV);
-
-        } elsif ($_ =~ /^-H$/) {
-            push(@_ustacks, "-H ");
+            $cstacks_mismatch = shift @ARGV;
+            push(@_cstacks, "-n " . $cstacks_mismatch);
 
         } elsif ($_ =~ /^--bound_low$/) {
             push(@_ustacks, "--bound_low " . shift @ARGV);
@@ -971,8 +874,6 @@ sub parse_command_line {
             	push(@_sstacks, $opt);
             } elsif ($prog eq "tsv2bam") {
             	push(@_tsv2bam, $opt);
-            } elsif ($prog eq "samtools_merge") {
-            	push(@_samtools_merge, $opt);
             } elsif ($prog eq "gstacks") {
             	push(@_gstacks, $opt);
             } elsif ($prog eq "genotypes") {
@@ -992,32 +893,22 @@ sub parse_command_line {
     $exe_path = $exe_path . "/"          if (substr($exe_path, -1) ne "/");
     $out_path = substr($out_path, 0, -1) if (substr($out_path, -1) eq "/");
 
-    if ($batch_id !~ /^\d+$/ || $batch_id < 0) {
-    print STDERR "You must specify a batch ID and it must be an integer (e.g. 1, 2, 3).\n";
-    usage();
-    }
-
     if ($sql == true && length($date) == 0) {
-    $date = strftime("%Y-%m-%d", (localtime(time)));
+        $date = strftime("%Y-%m-%d", (localtime(time)));
     }
 
     if (scalar(@parents) > 0 && scalar(@samples) > 0) {
-    print STDERR "You must specify either parent or sample files, but not both.\n";
-    usage();
+        print STDERR "You must specify either parent or sample files, but not both.\n";
+        usage();
     }
 
-    if (scalar(@parents) == 0 && scalar(@samples) == 0 && length($popmap_path) == 0) {
-    print STDERR "You must specify at least one parent or sample file.\n";
-    usage();
+    if (length($popmap_path) == 0) {
+        print STDERR "You must specify a population map that lists your sample names (--popmap).\n";
+        usage();
     }
 
-    if (scalar(@parents) == 0 && scalar(@samples) == 0 && length($popmap_path) > 0 && length($sample_path) == 0) {
-    print STDERR "If you are using a population map to specify samples, you must specify the path to the directory containing the samples (--samples).\n";
-    usage();
-    }
-
-    if ($v1 && $paired) {
-        print STDERR "Error: Option --paired and --v1 are incompatible.\n";
+    if (length($sample_path) == 0) {
+        print STDERR "You must specify the path to the directory containing the samples (--samples).\n";
         usage();
     }
 
@@ -1026,9 +917,25 @@ sub parse_command_line {
     }
 
     if (scalar(@samples) > 0 || length($popmap_path) > 0) {
-    $data_type = "population";
+        $data_type = "population";
     } else {
-    $data_type = "map";
+        $data_type = "map";
+    }
+
+    if ($paired == true) {
+        if (length($sample_path) == 0) {
+            print STDERR "If you want to assemble paired-ends, you must use a population map to specify samples.\n";
+            usage();
+        } else {
+            push(@_tsv2bam, "-R $sample_path");
+        }
+    }
+
+    #
+    # By default, we want ustacks -M to equal cstacks -n.
+    #
+    if ($cstacks_mismatch == -1 && $ustacks_mismatch > 0) {
+        push(@_cstacks, "-n " . $ustacks_mismatch);
     }
 }
 
@@ -1040,21 +947,14 @@ sub usage {
     version();
 
     print STDERR <<EOQ;
-denovo_map.pl --samples dir --popmap path -o dir (assembly options) (database options) [-X prog:"opts" ...]
-denovo_map.pl -s path [-s path ...] -o dir (assembly options) (database options) [-X prog:"opts" ...]
-denovo_map.pl -p path -r path -o path -A type (assembly options) (database options) [-X prog:"opts" ...]
+denovo_map.pl --samples dir --popmap path -o dir [--paried] (assembly options) (database options) [-X prog:"opts" ...]
 
-  Input files:
+  Input/Output files:
     --samples: path to the directory containing the samples reads files.
     --popmap: path to a population map file (format is "<name> TAB <pop>", one sample per line).
-  or
-    s: path to a file containing the reads of one sample.
-  or
-    p: path to a file containing the reads of one parent, in a mapping cross.
-    r: path to a file containing the reads of one progeny, in a mapping cross.
+    o: path to an output directory.
 
   General options:
-    o: path to an output directory.
     A: for a mapping cross, specify the type; one of 'CP', 'F2', 'BC1', 'DH', or 'GEN'.
     X: additional options for specific pipeline components, e.g. -X "populations: -p 3 -r 0.50".
     T: the number of threads/CPUs to use (default: 1).
@@ -1072,9 +972,9 @@ denovo_map.pl -p path -r path -o path -A type (assembly options) (database optio
       --bound_high <num>: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1.0).
 
   Paired-end options:
-    --paired-ends: after assembling RAD loci, assemble mini-contigs with paired-end reads.
+    --paired: after assembling RAD loci, assemble mini-contigs with paired-end reads.
 
-  Database options:
+  Database options (currently disabled in beta):
     S: disable database interaction.
     B: specify an SQL database to load data into.
     D: a description of this batch to be stored in the database.
