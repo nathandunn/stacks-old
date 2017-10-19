@@ -416,6 +416,7 @@ try {
 
         double a   = t_threads_totals.assembling.elapsed() / num_threads;
         double o   = t_threads_totals.olap_aligning.elapsed() / num_threads;
+        double u   = t_threads_totals.cpt_consensus.elapsed() / num_threads;
         double g   = t_threads_totals.geno_haplotyping.elapsed() / num_threads;
         double b_v = t_threads_totals.building_vcf.elapsed() / num_threads;
 
@@ -426,6 +427,7 @@ try {
                  + t_threads_totals.writing_vcf.consumed() / num_threads
                  + t_threads_totals.writing_details.consumed() / num_threads
                  + t_threads_totals.assembling.consumed() / num_threads
+                 + t_threads_totals.cpt_consensus.consumed() / num_threads
                  + t_threads_totals.olap_aligning.consumed() / num_threads
                  + t_threads_totals.geno_haplotyping.consumed() / num_threads
                  + t_threads_totals.building_vcf.consumed() / num_threads
@@ -444,7 +446,8 @@ try {
             // De novo mode & paired-ends.
             os << std::setw(16) << a << "  assembling (" << as_percentage(a / ll) << ")\n"
                << std::setw(16) << o << "  aligning/overlapping (" << as_percentage(o / ll) << ")\n";
-        os << std::setw(16) << g << "  genotyping/haplotyping (" << as_percentage(g / ll) << ")\n"
+        os << std::setw(16) << u << "  computing consensus (" << as_percentage(u / ll) << ")\n"
+           << std::setw(16) << g << "  genotyping/haplotyping (" << as_percentage(g / ll) << ")\n"
            << std::setw(16) << b_v << "  building_vcf (" << as_percentage(b_v / ll) << ")\n"
            << std::setw(8) << w_f << "  writing_fa (" << as_percentage(w_f / ll) << ")\n"
            << std::setw(8) << w_v << "  writing_vcf (" << as_percentage(w_v / ll) << ")\n";
@@ -581,8 +584,10 @@ LocusProcessor::process(CLocReadSet& loc)
         aln_loc.ref(DNASeq4(loc.reads().at(0).seq.length())); // Just N's.
         for (SRead& r : loc.reads())
             aln_loc.add(SAlnRead(Read(move(r.seq), move(r.name)), {{'M',r.seq.length()}}, r.sample));
+        timers_.cpt_consensus.restart();
         aln_loc.recompute_consensus();
-
+        timers_.cpt_consensus.stop();
+        
         //
         // Sometimes the consensus in the catalog.tags.tsv file extends further
         // than any of the validly matching loci. In this case there's no
@@ -728,8 +733,10 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
             this->loc_.details_ss << "BEGIN locus " << loc_.id << "\n";
     }
 
+    timers_.cpt_consensus.restart();
     aln_loc.recompute_consensus();
-
+    timers_.cpt_consensus.stop();
+    
     if (detailed_output) {
         loc_.details_ss << "BEGIN aln_matrix\n";
         for (const SAlnRead& read : aln_loc.reads())
@@ -1889,6 +1896,7 @@ Timers& Timers::operator+= (const Timers& other) {
     olap_aligning += other.olap_aligning;
     geno_haplotyping += other.geno_haplotyping;
     building_vcf += other.building_vcf;
+    cpt_consensus += other.cpt_consensus;
 
     return *this;
 }

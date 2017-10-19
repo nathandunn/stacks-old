@@ -175,6 +175,7 @@ struct Timers {
     Timer olap_aligning;
     Timer geno_haplotyping;
     Timer building_vcf;
+    Timer cpt_consensus;
 
     Timers& operator+= (const Timers& other);
 };
