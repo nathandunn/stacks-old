@@ -57,7 +57,7 @@ int main(int argc, char* argv[]) {
     parse_command_line(argc, argv);
 
     // Open the log
-    string lg_path = in_dir + "batch_" + to_string(batch_id) + "." + prog_name + ".log";
+    string lg_path = in_dir + prog_name + ".log";
     logger.reset(new LogAlterator(lg_path, quiet, argc, argv));
     report_options(cout);
     cout << "\n";
