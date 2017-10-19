@@ -150,7 +150,7 @@ Seq::Seq(const char *id, const char *seq, const char *qual, const char *chr, uin
     this->qual    = new char[strlen(qual) + 1];
     this->loc_str = new char[strlen(chr)  + 15];
     this->comment = NULL;
-    
+
     strcpy(this->id,   id);
     strcpy(this->qual, qual);
     this->loc.set(chr, bp, strand);

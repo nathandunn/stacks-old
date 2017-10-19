@@ -67,9 +67,12 @@ bool almost_equal(double x, double y) {
 
 struct OnlineMeanVar {
     // Computes the mean and variance in a numerically stable way.
-    // Uses the online algorithm, as described in:
+    // Uses the algorithm described in:
     // B. P. Welford. (1962) Note on a Method for Calculating Corrected Sums of
     // Squares and Products. Technometrics: 4(3), pp. 419-420.
+    // Chan TF, Golub GH, LeVeque RJ (1979), "Updating Formulae and a Pairwise
+    // Algorithm for Computing Sample Variances.", Technical Report STAN-CS-79-773,
+    // Dpt. Comp. Sci., Stanford University.
     double n_;
     double mean_;
     double M2_;
@@ -90,6 +93,16 @@ public:
         mean_ += delta1 / n_;
         double delta2 = x - mean_;
         M2_ += delta1 * delta2;
+    }
+
+    OnlineMeanVar& operator+=(const OnlineMeanVar& other) {
+        double delta = other.mean_ - mean_;
+        double n_tot = n_ + other.n_;
+        double w_other = other.n_ / n_tot;
+        mean_ += delta * w_other;
+        M2_ += other.M2_ + delta * delta * n_ * w_other;
+        n_ = n_tot;
+        return *this;
     }
 };
 

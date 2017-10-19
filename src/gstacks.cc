@@ -176,7 +176,7 @@ try {
     //
     GenotypeStats gt_stats {};
     ContigStats denovo_ctg_stats {};
-    
+
     // For clocking.
     Timers t_threads_totals;
     Timer t_parallel;
@@ -236,7 +236,8 @@ try {
             } else {
                 assert(aln_loc.id() >= 1);
                 loc_i = aln_loc.id() - 1;
-                aln_loc.merge_paired_reads();
+                if (refbased_cfg.paired)
+                    aln_loc.merge_paired_reads();
                 loc_proc.process(aln_loc);
             }
             t.processing.stop();
@@ -343,14 +344,16 @@ try {
                << pct(pe_ndag) << ");\n"
                << "  For the remaining " << pe_ctg << " loci (" << pct(pe_ctg) << "), a paired-end contig was assembled;\n"
                << "  Average contig size was " << cs.ctg_avg_length() << " bp;\n"
+               << "  " << cs.n_overlaps << " paired-end contigs overlapped the forward region ("
+               << as_percentage((double) cs.n_overlaps / cs.n_loci_ctg()) << ";\n"
+               << "  mean overlap: " << cs.mean_olap_length() << "bp; mean size of overlapped loci after merging: "
+               << cs.mean_olapd_locus_length() << ")\n"
                << "  Out of " << cs.n_tot_reads << " paired-end reads in these loci (mean "
                << (double) cs.n_aln_reads / pe_ctg << " reads per locus),\n"
                << "    " << cs.n_aln_reads << " were successfuly aligned ("
                << as_percentage((double) cs.n_aln_reads / cs.n_tot_reads) << ");\n"
-               << "  " << cs.n_overlaps << " paired-end contigs overlapped the forward region ("
-               << as_percentage((double) cs.n_overlaps / cs.n_loci_ctg()) << "; mean overlap: "
-               << cs.mean_olap_length() << "bp; mean size of overlapped loci after merging: "
-               << cs.mean_olapd_locus_length() << ").\n"
+               << "  mean insert length was " << cs.insert_length_olap_mv.mean() << ", stdev: "
+               << cs.insert_length_olap_mv.sd_p() << " (based on aligned reads in overlapped loci).\n"
                << "\n";
         } else {
             cout << "Input appears to be single-end (no paired-end reads were seen).\n\n";
@@ -413,6 +416,7 @@ try {
 
         double a   = t_threads_totals.assembling.elapsed() / num_threads;
         double o   = t_threads_totals.olap_aligning.elapsed() / num_threads;
+        double u   = t_threads_totals.cpt_consensus.elapsed() / num_threads;
         double g   = t_threads_totals.geno_haplotyping.elapsed() / num_threads;
         double b_v = t_threads_totals.building_vcf.elapsed() / num_threads;
 
@@ -423,6 +427,7 @@ try {
                  + t_threads_totals.writing_vcf.consumed() / num_threads
                  + t_threads_totals.writing_details.consumed() / num_threads
                  + t_threads_totals.assembling.consumed() / num_threads
+                 + t_threads_totals.cpt_consensus.consumed() / num_threads
                  + t_threads_totals.olap_aligning.consumed() / num_threads
                  + t_threads_totals.geno_haplotyping.consumed() / num_threads
                  + t_threads_totals.building_vcf.consumed() / num_threads
@@ -441,7 +446,8 @@ try {
             // De novo mode & paired-ends.
             os << std::setw(16) << a << "  assembling (" << as_percentage(a / ll) << ")\n"
                << std::setw(16) << o << "  aligning/overlapping (" << as_percentage(o / ll) << ")\n";
-        os << std::setw(16) << g << "  genotyping/haplotyping (" << as_percentage(g / ll) << ")\n"
+        os << std::setw(16) << u << "  computing consensus (" << as_percentage(u / ll) << ")\n"
+           << std::setw(16) << g << "  genotyping/haplotyping (" << as_percentage(g / ll) << ")\n"
            << std::setw(16) << b_v << "  building_vcf (" << as_percentage(b_v / ll) << ")\n"
            << std::setw(8) << w_f << "  writing_fa (" << as_percentage(w_f / ll) << ")\n"
            << std::setw(8) << w_v << "  writing_vcf (" << as_percentage(w_v / ll) << ")\n";
@@ -521,6 +527,7 @@ ContigStats& ContigStats::operator+= (const ContigStats& other) {
     this->n_overlaps                += other.n_overlaps;
     this->length_overlap_tot        += other.length_overlap_tot;
     this->length_olapd_loci_tot     += other.length_olapd_loci_tot;
+    this->insert_length_olap_mv    += other.insert_length_olap_mv;
 
     return *this;
 }
@@ -577,7 +584,9 @@ LocusProcessor::process(CLocReadSet& loc)
         aln_loc.ref(DNASeq4(loc.reads().at(0).seq.length())); // Just N's.
         for (SRead& r : loc.reads())
             aln_loc.add(SAlnRead(Read(move(r.seq), move(r.name)), {{'M',r.seq.length()}}, r.sample));
+        timers_.cpt_consensus.restart();
         aln_loc.recompute_consensus();
+        timers_.cpt_consensus.stop();
 
         //
         // Sometimes the consensus in the catalog.tags.tsv file extends further
@@ -724,7 +733,9 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
             this->loc_.details_ss << "BEGIN locus " << loc_.id << "\n";
     }
 
+    timers_.cpt_consensus.restart();
     aln_loc.recompute_consensus();
+    timers_.cpt_consensus.stop();
 
     if (detailed_output) {
         loc_.details_ss << "BEGIN aln_matrix\n";
@@ -897,10 +908,10 @@ LocusProcessor::suffix_tree_hits_to_dag(size_t query_len, vector<STAln> &alns, v
     }
 
     //
-    // 3. Find the terminal node with the highest score. 
+    // 3. Find the terminal node with the highest score.
     //
     double max_score = alns[term_nodes.front()].max._score;
-    size_t max_index = term_nodes.front(); 
+    size_t max_index = term_nodes.front();
     for (uint i = 1; i < term_nodes.size(); i++) {
         if (alns[term_nodes[i]].max._score > max_score) {
             max_index = term_nodes[i];
@@ -925,7 +936,7 @@ LocusProcessor::suffix_tree_hits_to_dag(size_t query_len, vector<STAln> &alns, v
                 max_score = alns[term_nodes[i]].aln_len;
             }
         optimal.push_back(max_index);
-                
+
     } else {
 
         uint n = max_index;
@@ -934,7 +945,7 @@ LocusProcessor::suffix_tree_hits_to_dag(size_t query_len, vector<STAln> &alns, v
             n = alns[n].max._index;
         }
         optimal.push_back(n);
-    }    
+    }
     assert(optimal.size() > 0);
 
     final_alns.clear();
@@ -1066,7 +1077,7 @@ bool LocusProcessor::add_read_to_aln(
         SRead&& r,
         GappedAln* aligner,
         SuffixTree* stree
-) const {
+) {
 
     if (!this->align_reads_to_contig(stree, aligner, r.seq, aln_res))
         return false;
@@ -1080,6 +1091,19 @@ bool LocusProcessor::add_read_to_aln(
     cigar_extend_left(cigar, aln_res.subj_pos);
     assert(cigar_length_ref(cigar) <= aln_loc.ref().length());
     cigar_extend_right(cigar, aln_loc.ref().length() - cigar_length_ref(cigar));
+
+    if (loc_.ctg_status == LocData::overlapped) {
+        // Record the insert length.
+        assert(!cigar.empty());
+        size_t insert_length = aln_loc.ref().length();
+        if (cigar.back().first == 'D') {
+            insert_length -= cigar.back().second;
+            if (cigar.size() >=2 && (*++cigar.rbegin()).first == 'I')
+                // Soft clipping on the far end.
+                insert_length += (*++cigar.rbegin()).second;
+        }
+        ctg_stats_.insert_length_olap_mv.increment(insert_length);
+    }
 
     aln_loc.add(SAlnRead(move((Read&)r), move(cigar), r.sample));
     return true;
@@ -1872,6 +1896,7 @@ Timers& Timers::operator+= (const Timers& other) {
     olap_aligning += other.olap_aligning;
     geno_haplotyping += other.geno_haplotyping;
     building_vcf += other.building_vcf;
+    cpt_consensus += other.cpt_consensus;
 
     return *this;
 }
@@ -2100,7 +2125,7 @@ try {
         case 1016://max-insert
             refbased_cfg.max_insert_refsize = stoi(optarg);
             break;
-    
+
         //
         // Debug options
         //

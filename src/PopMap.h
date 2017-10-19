@@ -479,7 +479,7 @@ int PopMap<LocusT>::populate(map<int, LocusT*>& catalog,
 
     loc_index = 0;
     for (typename map<int, LocusT*>::iterator l = catalog.begin(); l != catalog.end(); ++l) {
-        
+
         LocusT* loc = l->second;
 
         const VcfRecord& rec = records[loc->id]; // n.b. assumes locus ID == record index.

@@ -122,17 +122,17 @@ SuffixTree::align(const char *query, vector<pair<size_t, size_t> > &alns)
 
     } else {
         //
-        // Otherwise, we now traverse the remaining paths out of active_node, in a breadth first traversal, 
+        // Otherwise, we now traverse the remaining paths out of active_node, in a breadth first traversal,
         // to determine all the alignments for this fragment.
         //
         vector<size_t> dists;
 
         //
-        // If we are in the middle or at the end of an edge, record the distance to the end of the edge, and 
+        // If we are in the middle or at the end of an edge, record the distance to the end of the edge, and
         // start the traversal from the following node.
         //
         size_t query_start = active_edge != Nt4::$ ? node_stop - node_pos : 0;
-        
+
         find_all_leaf_dists( (active_edge == Nt4::$ ? active_node : active_node->edge(active_edge)->succ()), dists, query_start);
 
         for (uint i = 0; i < dists.size(); i++)
@@ -178,9 +178,9 @@ SuffixTree::find_all_leaf_dists(STNode *node, vector<size_t> &dists, size_t cur_
             size_t end = node->edge(i)->end() == -1 ? this->seq_.length() - 1 : node->edge(i)->end();
             size_t len = end - node->edge(i)->start() + 1;
 
-            if (node->edge(i)->succ() != NULL) 
+            if (node->edge(i)->succ() != NULL)
                 this->find_all_leaf_dists(node->edge(i)->succ(), dists, cur_depth + len);
-            else 
+            else
                 dists.push_back(this->seq_.length() - 1 - len - cur_depth);
         }
     }

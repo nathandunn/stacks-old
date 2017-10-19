@@ -70,7 +70,7 @@ Seq *Fasta::next_seq() {
     const char *p, *q;
     p = this->line + 1;
     for (q = this->line; *q != '\0' && *q != ' ' && *q != '\t'; q++);
-    
+
     if (*q == '\0') {
         // Comment not present.
         s->id = new char[len + 1];
@@ -149,12 +149,12 @@ int Fasta::next_seq(Seq &s) {
     const char *p, *q;
     p = this->line + 1;
     for (q = this->line; *q != '\0' && *q != ' ' && *q != '\t'; q++);
-    
+
     if (*q == '\0') {
         // Comment not present.
         strncpy(s.id, p, id_len);
         s.id[id_len - 1] = '\0';
-        
+
     } else {
         // Comment present.
         int l = q - p;

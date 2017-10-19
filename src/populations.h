@@ -100,10 +100,10 @@ private:
 // Class for storing distributions of data related to catalog loci.
 //
 class CatalogDists {
-    map<size_t, size_t> _pre_valid,  _pre_absent,  _pre_confounded;  // Prior to any filtering. 
+    map<size_t, size_t> _pre_valid,  _pre_absent,  _pre_confounded;  // Prior to any filtering.
     map<size_t, size_t> _post_valid, _post_absent, _post_confounded; // After filtering.
     map<size_t, size_t> _pre_snps_per_loc, _post_snps_per_loc;
-    
+
 public:
     int accumulate_pre_filtering(const CSLocus *);
     int accumulate(const vector<LocBin *> &);
@@ -190,7 +190,7 @@ public:
             delete [] this->_pop_tot;
     }
     // Remove the copy and move constructors.
-    LocusFilter(const LocusFilter &) = delete; 
+    LocusFilter(const LocusFilter &) = delete;
     LocusFilter(LocusFilter &&) = delete;
 
     int    load_whitelist(string);
@@ -204,7 +204,7 @@ public:
     int    keep_random_snp(const CSLocus *cloc, const LocTally *t);
     int    prune_sites_with_whitelist(MetaPopInfo *mpopi, CSLocus *cloc, Datum **d, bool user_wl);
     bool   prune_sites_with_filters(MetaPopInfo *mpopi, CSLocus *cloc, Datum **d, LocPopSum *s, ostream &log_fh);
-    
+
     size_t filtered()       const { return this->_filtered_loci; }
     size_t total()          const { return this->_total_loci; }
     size_t seen()           const { return this->_seen_loci; }
@@ -218,7 +218,7 @@ public:
     void   locus_unsee();
     void   keep_locus(LocBin *);
     void   batch_clear();
-    
+
     const set<int>&            blacklist() { return this->_blacklist; }
     const map<int, set<int>>&  whitelist() { return this->_whitelist; }
 
@@ -259,7 +259,7 @@ public:
     BatchLocusProcessor(InputMode mode, size_t batch_size, MetaPopInfo *popi):
         _input_mode(mode), _user_supplied_whitelist(false), _batch_size(batch_size), _batch_num(0),
         _mpopi(popi), _vcf_header(NULL), _next_loc(NULL), _unordered_bp(1) {}
-    BatchLocusProcessor(InputMode mode, size_t batch_size): 
+    BatchLocusProcessor(InputMode mode, size_t batch_size):
         _input_mode(mode), _user_supplied_whitelist(false), _batch_size(batch_size), _batch_num(0),
         _mpopi(NULL), _vcf_header(NULL), _next_loc(NULL), _unordered_bp(1) {}
     ~BatchLocusProcessor() {
@@ -274,7 +274,7 @@ public:
     int            summarize(ostream &);
     int            hapstats(ostream &);
     int            write_distributions(ostream &log_fh) { return this->_dists.write_results(log_fh); }
-    
+
     MetaPopInfo*   pop_info()      { return this->_mpopi; }
     int            pop_info(MetaPopInfo *popi) { this->_mpopi = popi; return 0; }
     VcfParser&     vcf_reader()    { return this->_vcf_parser; }
@@ -284,7 +284,7 @@ public:
     size_t         batch_size()    { return this->_batch_size; }
     size_t         batch_size(size_t bsize) { this->_batch_size = bsize; return bsize; }
     string         report_locus_overlap(ofstream *);
-    
+
     const LocusFilter&      filter() { return this->_loc_filter; }
     const vector<LocBin *>& loci()   { return this->_loci; }
     const CatalogDists&     dists()  { return this->_dists; }
