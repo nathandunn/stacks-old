@@ -232,11 +232,6 @@ load_loci(const string& sample,  map<int, LocusT *> &loci, int store_reads, bool
         c->lumberjackstack = (parts[12] == "1" ? true : false);
 
         //
-        // Read in the log likelihood of the locus.
-        //
-        c->lnl = is_double(parts[13].c_str());
-
-        //
         // Parse the physical genome location of this locus.
         //
         c->loc.set(parts[3].c_str(), atoi(parts[4].c_str()), (parts[5] == "+" ? strand_plus : strand_minus));

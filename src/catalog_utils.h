@@ -82,10 +82,15 @@ int reduce_catalog_snps(map<int, CSLocus *> &, map<int, set<int> > &, PopMap<CSL
  * "populations" does not use them :
  * model, blacklisted, deleveraged, lumberjack, components, reads, comp_cnt,
  * comp_type, annotation, uncor_marker, hap_cnts, f, trans_gcnt, chisq.
- */
-map<int, CSLocus*>* create_catalog(const vector<VcfRecord>& vcf_records);
-
-/*
+ *
+ * REMOVED 2017-10-20 (~v2.0Beta2b), prototype was:
+ * ```
+ * map<int, CSLocus*>* create_catalog(const vector<VcfRecord>& vcf_records);
+ * ```
+ *
+ * new_cslocus
+ * ===========
+ *
  * Creates a CSLocus based on a consensus sequence and a set of VCF records for
  * the locus. The fasta identifier and all the VCF records should have the same
  * locus ID.

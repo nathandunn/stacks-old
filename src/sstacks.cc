@@ -1309,7 +1309,7 @@ write_matches(string sample_path, map<int, QLocus *> &sample)
                  << qloc->id    << "\t"
                  << qloc->matches[j]->cat_type << "\t"
                  << match_depth << "\t"
-                 << qloc->lnl   << "\t"
+                 << 1.0         << "\t" // (formerly `qloc->lnl`.)
                  << qloc->matches[j]->cigar    << "\n";
         }
 
