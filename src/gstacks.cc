@@ -606,15 +606,6 @@ LocusProcessor::process(CLocReadSet& loc)
             if (loc.pe_reads().empty())
                 break;
             ++this->ctg_stats_.n_loci_w_pe_reads;
-            if (detailed_output) {
-                loc_.details_ss << "BEGIN pe_reads\n";
-                for (const SRead& r : loc.pe_reads())
-                    loc_.details_ss << "pe_read"
-                                    << '\t' << r.name
-                                    << '\t' << loc_.mpopi->samples()[r.sample].name
-                                    << '\t' << r.seq << '\n';
-                loc_.details_ss << "END pe_reads\n";
-            }
 
             // Assemble a contig.
             timers_.assembling.restart();
