@@ -56,7 +56,6 @@ class Locus {
     char       *con; // Consensus sequence
     char     *model; // Model calls for each nucleotide
     uint        len; // Sequence length
-    double      lnl; // Log likelihood of this locus
 
     //
     // Flags
@@ -81,7 +80,6 @@ class Locus {
         model           = NULL;
         con             = NULL;
         len             = 0;
-        lnl             = 0.0;
         blacklisted     = false;
         deleveraged     = false;
         lumberjackstack = false;

@@ -1011,20 +1011,6 @@ LocusFilter::filter(MetaPopInfo *mpopi, Datum **d)
 {
     this->reset();
 
-    for (size_t i = 0; i < this->_sample_cnt; i++) {
-        //
-        // Check that each sample is over the log likelihood threshold.
-        //
-        if (d[i] != NULL &&
-            filter_lnl   &&
-            d[i]->lnl < lnl_limit) {
-            // below_lnl_thresh++;
-            delete d[i];
-            d[i] = NULL;
-            // loc->hcnt--;
-        }
-    }
-
     //
     // Tally up the count of samples in this population.
     //
@@ -1298,12 +1284,10 @@ LocusFilter::prune_sites(CSLocus *cloc, Datum **d, set<int> &keep)
             for (uint k = 0; k < cols.size(); k++)
                 d[i]->obshap[j][k] = d[i]->obshap[j][cols[k]];
             d[i]->obshap[j][cols.size()] = '\0';
-            obshaps[d[i]->obshap[j]] += d[i]->depth[j];
         }
         uint j = 0;
         for (sit = obshaps.begin(); sit != obshaps.end(); sit++) {
             strcpy(d[i]->obshap[j], sit->first.c_str());
-            d[i]->depth[j] = sit->second;
             j++;
         }
         while (j < d[i]->obshap.size()) {
@@ -1311,7 +1295,6 @@ LocusFilter::prune_sites(CSLocus *cloc, Datum **d, set<int> &keep)
             j++;
         }
         d[i]->obshap.resize(obshaps.size());
-        d[i]->depth.resize(obshaps.size());
         obshaps.clear();
     }
 
@@ -1611,7 +1594,6 @@ log_haplotype_cnts(map<int, CSLocus *> &catalog, ofstream &log_fh)
 int
 tabulate_locus_haplotypes(CSLocus *cloc, Datum **d, int sample_cnt)
 {
-    double mean = 0.0;
     double cnt  = 0.0;
 
     for (int i = 0; i < sample_cnt; i++) {
@@ -1621,7 +1603,6 @@ tabulate_locus_haplotypes(CSLocus *cloc, Datum **d, int sample_cnt)
         if (d[i]->obshap.size() > 1)
             cloc->marker = "heterozygous";
 
-        mean += d[i]->lnl;
         cnt++;
     }
 
@@ -1630,12 +1611,10 @@ tabulate_locus_haplotypes(CSLocus *cloc, Datum **d, int sample_cnt)
         call_population_genotypes(cloc, d, sample_cnt);
     }
 
-    cloc->lnl = mean / cnt;
-
     return 0;
 }
 
-int
+/*int
 tabulate_haplotypes(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
 {
     map<int, CSLocus *>::iterator it;
@@ -1671,7 +1650,7 @@ tabulate_haplotypes(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
     }
 
     return 0;
-}
+}*/
 
 /*
 int
@@ -1865,7 +1844,7 @@ merge_shared_cutsite_loci(map<int, CSLocus *> &catalog,
     return 0;
 }
 */
-phaset
+/*phaset
 merge_and_phase_loci(PopMap<CSLocus> *pmap, CSLocus *cur, CSLocus *next,
                      set<int> &loci_to_destroy,
                      ofstream &log_fh)
@@ -2050,9 +2029,9 @@ merge_and_phase_loci(PopMap<CSLocus> *pmap, CSLocus *cur, CSLocus *next,
     if (phased_results.count(complex_phase) > 0)
         return complex_phase;
     return simple_merge;
-}
+}*/
 
-int
+/*int
 merge_csloci(CSLocus *sink, CSLocus *src, set<string> &phased_haplotypes)
 {
     //
@@ -2138,9 +2117,9 @@ merge_csloci(CSLocus *sink, CSLocus *src, set<string> &phased_haplotypes)
     //  cerr << "    " << ait->first << "\n";
 
     return 1;
-}
+}*/
 
-int
+/*int
 merge_datums(int sample_cnt,
              int sink_locus_len,
              Datum **sink, Datum **src,
@@ -2315,7 +2294,7 @@ merge_datums(int sample_cnt,
     }
 
     return 1;
-}
+}*/
 
 int
 create_genotype_map(CSLocus *locus, Datum **d, int sample_cnt)

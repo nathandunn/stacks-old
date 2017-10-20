@@ -152,7 +152,7 @@ reduce_catalog(map<int, CSLocus *> &catalog, map<int, set<int> > &whitelist, set
     return i;
 }
 
-int
+/*int
 reduce_catalog_snps(map<int, CSLocus *> &catalog, map<int, set<int> > &whitelist, PopMap<CSLocus> *pmap)
 {
     map<int, CSLocus *>::iterator it;
@@ -261,63 +261,7 @@ reduce_catalog_snps(map<int, CSLocus *> &catalog, map<int, set<int> > &whitelist
     }
 
     return 0;
-}
-
-map<int, CSLocus*>* create_catalog(const vector<VcfRecord>& records) {
-    map<int, CSLocus*> *catalog = new map<int, CSLocus *>();
-
-    for (size_t i = 0; i < records.size(); ++i) {
-        const VcfRecord& rec = records[i];
-
-        CSLocus* loc = new CSLocus();
-        catalog->insert(make_pair(i, loc));
-        loc->sample_id = 0;
-        loc->id = i;
-        loc->len = 1;
-        loc->con = new char[2];
-        strcpy(loc->con, rec.allele0());
-        loc->loc.set(rec.chrom(), (uint)rec.pos(), strand_plus);
-        for (auto a=rec.begin_alleles(); a!=rec.end_alleles(); ++a) {
-            if (strcmp(*a,"*")==0)
-                continue;
-            loc->alleles.insert({string(*a), 0});
-        }
-        loc->depth = 0;
-        loc->lnl = 0;
-
-        loc->snps.push_back(new SNP());
-        SNP& snp = *loc->snps.back();
-        snp.col = 0;
-        snp.type = snp_type_unk;
-        vector<char*> snp_alleles = {&snp.rank_1, &snp.rank_2, &snp.rank_3, &snp.rank_4};
-        try {
-            uint j = 0;
-            for (auto a=rec.begin_alleles(); a!=rec.end_alleles(); ++a) {
-                assert(strlen(*a) == 1);
-                if (**a == '*')
-                    continue;
-                *snp_alleles.at(j) = **a;
-                j++;
-            }
-        } catch (out_of_range& e) {
-            cerr << "Warning: Skipping malformed VCF SNP record '"
-                 << rec.chrom() << ":" << rec.pos() << "'."
-                 << " Alleles were:";
-            for (auto a=rec.begin_alleles(); a!=rec.end_alleles(); ++a)
-                cerr << " '" << *a << "';";
-            cerr << ".\n";
-            delete loc->snps[0];
-            delete loc->con;
-            delete loc;
-            catalog->erase(i);
-            continue;
-        }
-
-        loc->populate_alleles();
-    }
-
-    return catalog;
-}
+}*/
 
 CSLocus *
 new_cslocus(const VcfRecord rec, int id)
@@ -339,7 +283,6 @@ new_cslocus(const VcfRecord rec, int id)
     }
 
     loc->depth = 0;
-    loc->lnl   = 0;
 
     loc->snps.push_back(new SNP());
     SNP& snp = *loc->snps.back();
@@ -465,9 +408,6 @@ CSLocus* new_cslocus(const Seq& consensus, const vector<VcfRecord>& records, int
 
     // depth
     loc->depth = 0;
-
-    // lnl
-    loc->lnl = 0;
 
     return loc;
 }

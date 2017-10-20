@@ -947,7 +947,7 @@ MarkersExport::write_batch(const vector<LocBin *> &loci)
             << max                << "\t"
             << freq               << "\t"
             << loci[i]->cloc->f   << "\t"
-            << loci[i]->cloc->lnl << "\t"
+            << 1.0                << "\t" //(Formerly `cloc->lnl`.)
             << gtype_map.str()    << "\t"
             << "\n";
     }
@@ -1838,30 +1838,30 @@ int VcfExport::write_site(
             sample << "./.:0:.,.";
         } else if (d[s]->model[col] == 'U') {
             // Data exists, but the model call was uncertain.
-            sample << "./.:" << d[s]->tot_depth << ":.,.";
+            sample << "./.:" << d[s]->tot_depth(index) << ":.,.";
         } else {
             char allele1, allele2;
             tally_observed_haplotypes(d[s]->obshap, index, allele1, allele2);
 
             if (allele1 == 0) {
                 // More than two alleles in this sample
-                sample << "./.:" << d[s]->tot_depth << ":.,.";
+                sample << "./.:" << d[s]->tot_depth(index) << ":.,.";
             } else {
                 // Write the genotype.
 
-                int dp1, dp2;
-                find_datum_allele_depths(d[s], index, allele1, allele2, dp1, dp2);
+                size_t dp1 = d[s]->allele_depth(index, allele1);
+                size_t dp2 = d[s]->allele_depth(index, allele2);
 
                 if (allele2 == 0) {
                     // homozygote
                     if (allele1 == ref) {
-                        sample << "0/0:" << d[s]->tot_depth << ":" << dp1 << "," << dp2;
+                        sample << "0/0:" << d[s]->tot_depth(index) << ":" << dp1 << "," << dp2;
                     } else {
-                        sample << "1/1:" << d[s]->tot_depth << ":" << dp2 << "," << dp1;
+                        sample << "1/1:" << d[s]->tot_depth(index) << ":" << dp2 << "," << dp1;
                     }
                 } else {
                     // heterozygote
-                    sample << "0/1:" << d[s]->tot_depth
+                    sample << "0/1:" << d[s]->tot_depth(index)
                            << ":" << (allele1 == ref ? dp1 : dp2) << "," << (allele1 == ref ? dp2 : dp1);
                 }
             }
@@ -3950,28 +3950,6 @@ write_fullseq_phylip(map<int, CSLocus *> &catalog,
     return 0;
 }
 */
-
-/*
- * Calculate the SNP-wise allelic depths by adding up the haplotype depths.
- */
-int
-find_datum_allele_depths(const Datum *d, int snp_index, char allele1, char allele2, int &dp1, int &dp2)
-{
-    dp1 = 0;
-    dp2 = 0;
-
-    for(uint i = 0; i < d->obshap.size(); i++) {
-        char nt = d->obshap[i][snp_index];
-        if(nt == allele1)
-            dp1 += d->depth[i];
-        else if(nt == allele2)
-            dp2 += d->depth[i];
-        else
-            throw exception();
-    }
-
-    return 0;
-}
 
 int
 tally_observed_haplotypes(const vector<char *> &obshap, int snp_index, char &p_allele, char &q_allele)

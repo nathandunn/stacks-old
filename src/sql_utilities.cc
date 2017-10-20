@@ -72,7 +72,6 @@ void load_catalog_matches(string sample,  vector<CatMatch *> &matches, bool verb
         m->haplotype = new char[parts[5].length() + 1];
         strcpy(m->haplotype, parts[5].c_str());
         m->depth     = atoi(parts[6].c_str());
-        m->lnl       = is_double(parts[7].c_str());
 
         if (cnt == num_matches_fields && parts[8].length() > 0) {
             m->cigar = new char[parts[8].length() + 1];

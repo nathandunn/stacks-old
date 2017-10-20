@@ -40,22 +40,15 @@ using std::accumulate;
 
 class Datum {
 public:
-    struct SiteData {
-        uint nt_depths[4];
-        float gt_liks[3];
-    };
-
     int            id;            // Stack ID
     int            merge_partner; // Stack ID of merged datum, if this datum was merged/phased from two, overlapping datums.
     int            len;           // Length of locus
-    int            tot_depth;     // Stack depth
     vector<int>    depth;         // Stack depth of each matching allele
     bool           corrected;     // Has this genotype call been corrected
     char          *model;         // String representing SNP model output for each nucleotide at this locus.
     char          *gtype;         // Genotype
     char          *trans_gtype;   // Translated Genotype
     char          *cigar;         // CIGAR string describing how the datum aligns to the catalog locus.
-    double         lnl;           // Log likelihood of this locus.
     vector<char *> obshap;        // Observed Haplotypes
 
     Datum()  {
@@ -65,9 +58,7 @@ public:
         this->trans_gtype   = NULL;
         this->model         = NULL;
         this->cigar         = NULL;
-        this->tot_depth     = 0;
         this->len           = 0;
-        this->lnl           = 0.0;
         this->merge_partner = 0;
     }
     ~Datum() {
@@ -78,6 +69,9 @@ public:
         delete [] this->model;
         delete [] this->cigar;
     }
+
+    size_t tot_depth(size_t snp_index) const; // TODO
+    size_t allele_depth(size_t snp_index, char allele) const; //TODO
 };
 
 template<class LocusT=Locus>
@@ -266,10 +260,6 @@ void PopMap<LocusT>::populate_locus(Datum** locdata,
                     }
                 }
             }
-            for (size_t i=0; i<d->obshap.size(); ++i)
-                d->depth.push_back(0);
-            d->tot_depth = 0;
-            d->lnl = 0;
         }
     }
 }
@@ -361,7 +351,6 @@ PopMap<LocusT>::populate_locus(Datum **locdata, LocusT &cloc, const VcfRecord re
         // id, len, lnl
         d->id  = cloc.id;
         d->len = cloc.len;
-        d->lnl = 0;
 
         // model, obshap, depth
         d->model = new char[2];
@@ -390,9 +379,6 @@ PopMap<LocusT>::populate_locus(Datum **locdata, LocusT &cloc, const VcfRecord re
             else
                 d->depth = {0, 0};
         }
-
-        // tot_depth
-        d->tot_depth = std::accumulate(d->depth.begin(), d->depth.end(), 0);
     }
 }
 
