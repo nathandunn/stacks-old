@@ -31,7 +31,6 @@ use strict;
 use POSIX;
 use File::Temp qw/ mktemp /;
 use File::Spec;
-use File::Which;
 use constant stacks_version => "_VERSION_";
 
 use constant true  => 1;
