@@ -2199,8 +2199,8 @@ LocusDivergence::write_summary(string path)
                  << "; mean Fst': "   << this->_mean_fstp[n]  / this->_mean_fstp_cnt[n] << "\n";
             n++;
         }
-        fh << "\n";
     }
+    cerr << "\n";
 
     return 0;
 }
