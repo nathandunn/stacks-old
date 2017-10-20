@@ -318,57 +318,6 @@ int main (int argc, char* argv[]) {
     if (calc_fstats)
         delete ldiv;
 
-    // //
-    // // Merge loci that overlap on a common restriction enzyme cut site.
-    // //
-    // map<int, pair<merget, int> > merge_map;
-    // if (merge_sites && loci_ordered)
-    //     merge_shared_cutsite_loci(catalog, pmap, psum, merge_map, logger->l);
-
-    // if (debug_flags.count("VCFCOMP"))
-    //     vcfcomp_simplify_pmap(catalog, pmap);
-
-    // if (structure_out && ordered_export)
-    //     write_structure_ordered(catalog, pmap, psum, logger->l);
-    // else if (structure_out)
-    //     write_structure(catalog, pmap, psum);
-
-    // if (fastphase_out)
-    //     write_fastphase(catalog, pmap, psum);
-
-    // if (phase_out)
-    //     write_phase(catalog, pmap, psum);
-
-    // if (beagle_out)
-    //     write_beagle(catalog, pmap, psum);
-
-    // if (beagle_phased_out)
-    //     write_beagle_phased(catalog, pmap, psum);
-
-    // if (plink_out)
-    //     write_plink(catalog, pmap, psum);
-
-    // if (hzar_out)
-    //     write_hzar(catalog, pmap, psum);
-
-    // if (treemix_out)
-    //     write_treemix(catalog, pmap, psum);
-
-    // if (phylip_out || phylip_var)
-    //     write_phylip(catalog, pmap, psum);
-
-    // if (phylip_var_all)
-    //     write_fullseq_phylip(catalog, pmap, psum);
-
-    // if (vcf_haplo_out)
-    //     write_vcf_haplotypes(catalog, pmap, psum);
-
-    // //
-    // // Output nucleotide-level genotype calls for each individual.
-    // //
-    // if (genomic_out)
-    //     write_genomic(catalog, pmap);
-
     //
     // Close the export files and do any required post processing.
     //
@@ -377,14 +326,6 @@ int main (int argc, char* argv[]) {
         exports[i]->close();
         delete exports[i];
     }
-
-    // //
-    // // Read the bootstrap-whitelist.
-    // //
-    // if (bs_wl_file.length() > 0) {
-    //     load_marker_list(bs_wl_file, bootstraplist);
-    //     cerr << "Loaded " << bootstraplist.size() << " markers to include when bootstrapping.\n";
-    // }
 
     delete logger;
 
@@ -581,7 +522,7 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
         //
         loc->d = new Datum *[loc->sample_cnt];
         for (size_t i = 0; i < this->_mpopi->samples().size(); i++) loc->d[i] = NULL;
-        PopMap<CSLocus>::populate_locus(loc->d, *loc->cloc, records, (const VcfHeader &) *this->_vcf_header, (const MetaPopInfo &) *this->_mpopi);
+        PopMap<CSLocus>::populate_locus(loc->d, *loc->cloc, records, *this->_vcf_header, *this->_mpopi);
         records.clear();
 
         this->_dists.accumulate_pre_filtering(loc->cloc);
@@ -597,8 +538,8 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
         //
         // Create the PopSum object and compute the summary statistics for this locus.
         //
-        loc->s = new LocPopSum(strlen(loc->cloc->con), (const MetaPopInfo &) *this->_mpopi);
-        loc->s->sum_pops(loc->cloc, (const Datum **) loc->d, (const MetaPopInfo &) *this->_mpopi, verbose, cerr);
+        loc->s = new LocPopSum(strlen(loc->cloc->con), *this->_mpopi);
+        loc->s->sum_pops(loc->cloc, (const Datum **) loc->d, *this->_mpopi, verbose, cerr);
         loc->s->tally_metapop(loc->cloc);
 
         //
@@ -1499,96 +1440,6 @@ LocusFilter::prune_sites_with_filters(MetaPopInfo *mpopi, CSLocus *cloc, Datum *
     }
 
     return false;
-}
-
-void
-vcfcomp_simplify_pmap (map<int, CSLocus*>& catalog, PopMap<CSLocus>* pmap)
-{
-    cerr << "DEBUG Deleting information from the pmap & catalog so that they resemble what can be retrieved from a VCF.\n";
-    // n.b. In this configuration we only have one SNP per locus so we don't have
-    // to worry about what U's imply regarding haplotypes.
-    size_t n_deleted = 0;
-    size_t n_loci = pmap->loci_cnt();
-    size_t n_samples = pmap->sample_cnt();
-    for (size_t l=0; l<n_loci; ++l) {
-        CSLocus* loc = catalog.at(pmap->rev_locus_index(l));
-        if (loc->snps.empty())
-            continue;
-        if (loc->snps.size() > 1) {
-            cerr << "Error: This requires --write_single_snp.\n";
-            throw exception();
-        }
-        size_t col = loc->snps.at(0)->col;
-        Datum** datums = pmap->locus(loc->id);
-        for (size_t s=0; s<n_samples; ++s) {
-            if (datums[s] == NULL)
-                continue;
-            if (size_t(datums[s]->len) <= col
-                    || datums[s]->model[col] == 'U'
-                    || datums[s]->obshap.empty()
-                    || strcmp(datums[s]->obshap[0], "N") == 0
-                    ) {
-                delete datums[s];
-                datums[s] = NULL;
-                --loc->cnt;
-                --loc->hcnt;
-                ++n_deleted;
-            }
-        }
-    }
-    cerr << "? Deleted " << n_deleted << " 'Datums'.\n";
-
-    set<int> myblacklist;
-    // All NULL.
-    for (auto& l : catalog) {
-        Datum** data = pmap->locus(l.second->id);
-        size_t non_null = 0;
-        for (size_t i=0; i < size_t(pmap->sample_cnt()); ++i)
-            if (data[i]!=NULL)
-                ++non_null;
-        if (non_null == 0)
-            myblacklist.insert(l.second->id);
-    }
-    // Not two alleles.
-    for (auto& l : catalog) {
-        if (l.second->snps.empty()
-                || l.second->snps[0]->rank_2 == 0
-                || l.second->snps[0]->rank_3 != 0
-                || l.second->alleles.size() != 2) {
-            myblacklist.insert(l.second->id);
-        } else {
-            // Check the actual number of alleles
-            Datum** data = pmap->locus(l.second->id);
-            set<char> seen_alleles;
-            for (size_t i=0; i<size_t(pmap->sample_cnt()); ++i) {
-                Datum* d = data[i];
-                if (d != NULL)
-                    for(char* hapl : d->obshap)
-                        seen_alleles.insert(hapl[0]);
-            }
-            if ((int((seen_alleles.count('A') || seen_alleles.count('a')))
-                    + (seen_alleles.count('C') || seen_alleles.count('c'))
-                    + (seen_alleles.count('T') || seen_alleles.count('t'))
-                    + (seen_alleles.count('G') || seen_alleles.count('g')))
-                    != 2)
-                myblacklist.insert(l.second->id);
-        }
-    }
-    // Same SNP in different loci.
-    for (auto& chr : pmap->ordered_loci()) {
-        map<size_t,vector<size_t> > seen_bp0; // (bp, [loc_id's])
-        for (CSLocus* loc : chr.second)
-            if (not loc->snps.empty())
-                seen_bp0[loc->sort_bp(loc->snps[0]->col)].push_back(loc->id);
-        for (auto& bp : seen_bp0)
-            if (bp.second.size() > 1)
-                for (size_t loc_id : bp.second)
-                    myblacklist.insert(loc_id);
-    }
-    set<int> empty;
-    reduce_catalog(catalog, empty, myblacklist);
-    pmap->prune(myblacklist);
-    cerr << "? Now working on " << catalog.size() << " loci (deleted " << myblacklist.size() << " loci).\n";
 }
 
 int
@@ -2560,117 +2411,6 @@ call_population_genotypes(CSLocus *locus, Datum **d, int sample_cnt)
 
         //cerr << "Assigning datum, marker: " << locus->marker << ", string: " << m << ", haplotype: " << d[i]->obshap[0] << ", gtype: " << gtype << "\n";
      }
-
-    return 0;
-}
-
-int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
-    string file = out_path + out_prefix + ".genomic.tsv";
-
-    ofstream fh(file.c_str(), ofstream::out);
-
-    if (fh.fail()) {
-        cerr << "Error opening genomic output file '" << file << "'\n";
-        exit(1);
-    }
-
-    uint rcnt = enz.length() ? renz_cnt[enz] : 0;
-    uint rlen = enz.length() ? renz_len[enz] : 0;
-
-    //
-    // Count the number of markers that have enough samples to output.
-    //
-    map<int, CSLocus *>::iterator cit;
-    const CSLocus *loc;
-    int num_loci = 0;
-
-    for (cit = catalog.begin(); cit != catalog.end(); cit++) {
-        loc = cit->second;
-
-        uint start = 0;
-        uint end   = loc->len;
-        if (end > rlen) {
-            for (uint n = 0; n < rcnt; n++)
-                if (strncmp(loc->con, renz[enz][n], rlen) == 0)
-                    start += renz_len[enz];
-        }
-        num_loci += end - start;
-    }
-    cerr << "Writing " << num_loci << " nucleotide positions to genomic file, '" << file << "'\n";
-
-    //
-    // Write the header
-    //
-    fh << num_loci << "\t" << pmap->sample_cnt() << "\n";
-
-    //
-    // Output each locus.
-    //
-    map<string, vector<CSLocus *> >::const_iterator it;
-    int  a, b;
-
-    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
-        for (uint i = 0; i < it->second.size(); i++) {
-            loc = it->second[i];
-
-            Datum **d = pmap->locus(loc->id);
-            set<int> snp_locs;
-            string   obshap;
-
-            for (uint i = 0; i < loc->snps.size(); i++)
-                snp_locs.insert(loc->snps[i]->col);
-
-            uint start = 0;
-            uint end   = loc->len;
-            //
-            // Check for the existence of the restriction enzyme cut site, mask off
-            // its output.
-            //
-            if (end > rlen) {
-                for (uint n = 0; n < rcnt; n++)
-                    if (strncmp(loc->con, renz[enz][n], rlen) == 0)
-                        start += renz_len[enz];
-            }
-
-            uint k = 0;
-            for (uint n = start; n < end; n++) {
-                fh << loc->id << "\t" << loc->loc.chr() << "\t" << loc->sort_bp(n) +1;
-
-                if (snp_locs.count(n) == 0) {
-                    for (int j = 0; j < pmap->sample_cnt(); j++) {
-                        a = encode_gtype(loc->con[n]);
-                        fh << "\t" << encoded_gtypes[a][a];
-                    }
-                } else {
-                    for (int j = 0; j < pmap->sample_cnt(); j++) {
-                        fh << "\t";
-
-                        if (d[j] == NULL)
-                            fh << "0";
-                        else
-                            switch (d[j]->obshap.size()) {
-                            case 1:
-                                a = encode_gtype(d[j]->obshap[0][k]);
-                                fh << encoded_gtypes[a][a];
-                                break;
-                            case 2:
-                                a = encode_gtype(d[j]->obshap[0][k]);
-                                b = encode_gtype(d[j]->obshap[1][k]);
-                                fh << encoded_gtypes[a][b];
-                                break;
-                            default:
-                                fh << "0";
-                                break;
-                            }
-                    }
-                    k++;
-                }
-                fh << "\n";
-            }
-        }
-    }
-
-    fh.close();
 
     return 0;
 }
