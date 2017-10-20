@@ -150,6 +150,7 @@ public:
 
     enum ContigStatus {unknown, separate, overlapped};
     ContigStatus ctg_status = unknown;
+    size_t olap_length;
 
     string o_vcf;
     string o_fa;

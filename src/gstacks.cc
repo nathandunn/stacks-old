@@ -541,6 +541,7 @@ void LocData::clear() {
     pos.clear();
     mpopi = NULL;
     ctg_status = unknown;
+    olap_length = SIZE_MAX;
     o_vcf.clear();
     o_fa.clear();
     o_details.clear();
@@ -644,6 +645,7 @@ LocusProcessor::process(CLocReadSet& loc)
 
             if (overlap > 0) {
                 this->loc_.ctg_status = LocData::overlapped;
+                this->loc_.olap_length = overlap;
                 this->ctg_stats_.n_overlaps++;
                 this->ctg_stats_.length_overlap_tot += overlap;
                 this->ctg_stats_.length_olapd_loci_tot += aln_loc.ref().length() + ctg.length() - overlap;
@@ -1646,36 +1648,46 @@ void LocusProcessor::write_one_locus (
         if (sample_n_sites > 0)
             ++n_remaining_samples;
 
+
     // Write the record.
     string& fa = loc_.o_fa;
     assert(fa.empty());
+    char cstr_buf[32];
     fa += '>';
     fa += loc_id;
+    // Genomic position.
     if (!aln_loc.pos().empty()) {
         const PhyLoc& p = aln_loc.pos();
-        char pos[16];
-        sprintf(pos, "%u", p.bp+1);
+        sprintf(cstr_buf, "%u", p.bp+1);
         fa += " pos=";
         fa += p.chr();
         fa += ':';
-        fa += pos;
+        fa += cstr_buf;
         fa += ':';
         fa += (p.strand == strand_plus ? '+' : '-');
     }
-    char n_spls[32];
-    sprintf(n_spls, "%zu", n_remaining_samples);
+    // Number of samples
+    sprintf(cstr_buf, "%zu", n_remaining_samples);
     fa += " NS=";
-    fa += n_spls;
+    fa += cstr_buf;
     if (n_remaining_samples != samples_w_reads.size()) {
         assert(n_remaining_samples < samples_w_reads.size());
-        sprintf(n_spls, "%zu", samples_w_reads.size() - n_remaining_samples);
+        sprintf(cstr_buf, "%zu", samples_w_reads.size() - n_remaining_samples);
         fa += " n_discarded_samples=";
-        fa += n_spls;
+        fa += cstr_buf;
     }
+    // Contig status.
     switch (loc_.ctg_status) {
-    case LocData::overlapped: fa += " contig=overlapped"; break;
-    case LocData::separate:   fa += " contig=separate";   break;
-    default: break;
+    case LocData::overlapped:
+        sprintf(cstr_buf, "%zu", loc_.olap_length);
+        fa += " contig=overlapped:";
+        fa += cstr_buf;
+        break;
+    case LocData::separate:
+        fa += " contig=separate";
+        break;
+    default:
+        break;
     }
     fa += '\n';
     fa += ref.str();
