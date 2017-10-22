@@ -238,9 +238,11 @@ void VcfRecord::util::build_haps(
             haplotypes.second[i] = nt;
         } else {
             // Sample is heterozygote for this SNP.
-            const char* ps = sample;
-            util::skip_gt_subfields(&ps, 1);
-            assert(ps != NULL);
+            const char* ps = util::find_gt_subfield(sample, 1);
+            if (ps == NULL) {
+                cerr << "Error: PS field is missing.\n";
+                throw exception();
+            }
             if (ps[0] == '.') {
                 // This genotype couldn't be phased.
                 haplotypes.first[i] = 'N';

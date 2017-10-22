@@ -279,6 +279,7 @@ public:
 
     void clear() {for (Nt nt : Nt::all) counts_[size_t(nt)]=0;}
     void increment(Nt nt) {++counts_[size_t(nt)];}
+    void increment(Nt nt, size_t cnt) {counts_[size_t(nt)] += cnt;}
 
     // Get the count for a given nucleotide.
     size_t operator[] (Nt nt) const {return counts_[size_t(nt)];}

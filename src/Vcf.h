@@ -199,6 +199,7 @@ public:
         static string fmt_gt_gl(const vector<Nt2>& alleles, const GtLiks& liks);
         static GtLiks parse_gt_gl(const vector<Nt2>& alleles, const string& gl);
 
+        static const char* find_gt_subfield(const char* sample, size_t n);
         static void skip_gt_subfields(const char** start, size_t n);
         static size_t n_genotypes(size_t n_alleles) {return (n_alleles*(n_alleles+1))/2;}
 
@@ -461,8 +462,7 @@ size_t VcfRecord::index_of_gt_subfield(const char* key) const {
 inline
 string VcfRecord::parse_gt_subfield(const char* sample, size_t index) const {
     // Got to the subfield.
-    const char* first = sample;
-    util::skip_gt_subfields(&first, index);
+    const char* first = util::find_gt_subfield(sample, index);
 
     // Make it a std::string.
     string subf;
@@ -567,14 +567,15 @@ bool VcfRecord::is_snp() const {
 }
 
 inline
-void VcfRecord::util::skip_gt_subfields(const char** start, size_t n) {
+const char* VcfRecord::util::find_gt_subfield(const char* sample, size_t n) {
+    const char* subf = sample;
     for(size_t i=0; i<n; ++i) {
-        *start = strchr(*start, ':');
-        if (*start == NULL)
-            return;
-        ++*start;
+        subf = strchr(subf, ':');
+        if (subf == NULL)
+            break;
+        ++subf;
     }
-    return;
+    return subf;
 }
 
 #endif // __VCF_H__
