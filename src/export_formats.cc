@@ -1833,38 +1833,28 @@ int VcfExport::write_site(
     for (size_t s=0; s<this->_mpopi->samples().size(); s++) {
         stringstream sample;
 
-        if (d[s] == NULL || col >= uint(d[s]->len)) {
+        if (d[s] == NULL || col >= uint(d[s]->len) || d[s]->model[col] == 'U') {
             // Data does not exist.
-            sample << "./.:0:.,.";
-        } else if (d[s]->model[col] == 'U') {
-            // Data exists, but the model call was uncertain.
-            sample << "./.:" << d[s]->tot_depth(index) << ":.,.";
+            sample << ".";
         } else {
-            char allele1, allele2;
-            tally_observed_haplotypes(d[s]->obshap, index, allele1, allele2);
-
-            if (allele1 == 0) {
-                // More than two alleles in this sample
-                sample << "./.:" << d[s]->tot_depth(index) << ":.,.";
+            if (d[s]->model[col] == 'O') {
+                assert(d[s]->obshap.size() == 1
+                       || (d[s]->obshap.size() == 2 && d[s]->obshap[0][index] == d[s]->obshap[1][index]));
+                sample << (d[s]->obshap[0][index] == ref ? "0/0" : "1/1");
             } else {
-                // Write the genotype.
-
-                size_t dp1 = d[s]->allele_depth(index, allele1);
-                size_t dp2 = d[s]->allele_depth(index, allele2);
-
-                if (allele2 == 0) {
-                    // homozygote
-                    if (allele1 == ref) {
-                        sample << "0/0:" << d[s]->tot_depth(index) << ":" << dp1 << "," << dp2;
-                    } else {
-                        sample << "1/1:" << d[s]->tot_depth(index) << ":" << dp2 << "," << dp1;
-                    }
-                } else {
-                    // heterozygote
-                    sample << "0/1:" << d[s]->tot_depth(index)
-                           << ":" << (allele1 == ref ? dp1 : dp2) << "," << (allele1 == ref ? dp2 : dp1);
-                }
+                assert(d[s]->model[col] == 'E');
+                assert(d[s]->obshap.size() == 2 && d[s]->obshap[0][index] != d[s]->obshap[1][index]);
+                sample << "0/1";
             }
+
+            // DP.
+            sample << ":" << d[s]->snpdata[index].tot_depth;
+            // AD.
+            if (d[s]->snpdata[index].nt_depths.sum() > 0)
+                sample << ":" << d[s]->snpdata[index].nt_depths[Nt2(ref)]
+                       << "," << d[s]->snpdata[index].nt_depths[Nt2(alt)];
+            else
+                sample << ":.";
         }
         rec.append_sample(sample.str());
     }

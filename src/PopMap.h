@@ -40,16 +40,23 @@ using std::accumulate;
 
 class Datum {
 public:
+    struct SNPData {
+        size_t tot_depth;
+        Counts<Nt2> nt_depths;
+
+        SNPData() : tot_depth(0) {}
+    };
+
     int            id;            // Stack ID
     int            merge_partner; // Stack ID of merged datum, if this datum was merged/phased from two, overlapping datums.
     int            len;           // Length of locus
-    vector<int>    depth;         // Stack depth of each matching allele
     bool           corrected;     // Has this genotype call been corrected
     char          *model;         // String representing SNP model output for each nucleotide at this locus.
     char          *gtype;         // Genotype
     char          *trans_gtype;   // Translated Genotype
     char          *cigar;         // CIGAR string describing how the datum aligns to the catalog locus.
     vector<char *> obshap;        // Observed Haplotypes
+    vector<SNPData> snpdata;
 
     Datum()  {
         this->id            = -1;
@@ -69,9 +76,6 @@ public:
         delete [] this->model;
         delete [] this->cigar;
     }
-
-    size_t tot_depth(size_t snp_index) const; // TODO
-    size_t allele_depth(size_t snp_index, char allele) const; //TODO
 };
 
 template<class LocusT=Locus>
@@ -159,26 +163,29 @@ void PopMap<LocusT>::populate_locus(Datum** locdata,
      * We observe the following rules to create the Datums (@ when the value
      * is obvious) :
      * [id] the c-locus ID.
-     * [len] the full length of the c-locus
+     * [len] the length of the c-locus
      * [model] @
      * [cigar] is left to NULL.
      * [obshap] haplotypes, relative to [model].
-     * [tot_depth], [depths] set to 0 as they don't make sense for
-     *     variable-coverage data.
-     * [lnl] is set to 0.
+     * [tot_depth], [nt_depths] @
      *
-     * Other members need not be set, c.f. `populate(vector<VcfRecord>&)`.
+     * Other members need not be set, c.f. `populate(VcfRecord>&)`.
      */
+
     string model;
     model.resize(cloc.len, 'U');
     pair<string,string> obshaps;
 
     for (size_t sample = 0; sample < mpopi.samples().size(); ++sample) {
+    try {
 
         size_t sample_vcf_i = header.sample_index(mpopi.samples()[sample].name);
         bool   no_data      = true;
 
+        //
         // Get the sample's model string.
+        //
+
         auto rec = cloc_records.begin();
         for (size_t col = 0; col < cloc.len; ++col) {
             if (rec == cloc_records.end()) {
@@ -217,7 +224,10 @@ void PopMap<LocusT>::populate_locus(Datum** locdata,
         assert(rec == cloc_records.end());
 
         if (!no_data) {
+            //
             // Create the Datum (see rules above).
+            //
+
             Datum* d = new Datum();
             locdata[sample] = d;
 
@@ -227,23 +237,82 @@ void PopMap<LocusT>::populate_locus(Datum** locdata,
             strncpy(d->model, model.c_str(), cloc.len+1);
             d->cigar = NULL;
             if (cloc.snps.empty()) {
+                //
+                // Monomorphic locus.
+                //
+
                 d->obshap.push_back(new char[10]);
                 strncpy(d->obshap[0], "consensus", 10);
+
             } else {
-                // Build the haplotypes from the records. (Note: We can't get
-                // the indexes of the SNP records directly from `cloc.snps`
-                // as the records vector skips columns without any calls.
+                //
+                // Polymorphic locus.
+                //
+
+                // Get the list of SNP records.
                 vector<const VcfRecord*> snp_records;
                 for (auto& rec : cloc_records) {
+                    // N.B. Columns and record indexes can be out of phase as
+                    // columns without coverage don't have a record.
                     if (!rec.is_monomorphic()) {
                         assert(rec.pos() == cloc.snps.at(snp_records.size())->col);
                         snp_records.push_back(&rec);
                     }
                 }
                 assert(snp_records.size() == cloc.snps.size());
-                VcfRecord::util::build_haps(obshaps, snp_records, sample_vcf_i);
 
-                // Record the haplotypes.
+                // Save extra information for the SNP records.
+                for (const VcfRecord* rec : snp_records) {
+                try {
+                    d->snpdata.push_back(Datum::SNPData());
+                    const char* sample_gt = rec->find_sample(sample);
+                    if (d->model[rec->pos()] == 'U')
+                        continue;
+
+                    // DP.
+                    size_t dp_index = rec->index_of_gt_subfield("DP");
+                    const char* dp_str = VcfRecord::util::find_gt_subfield(sample_gt, dp_index);
+                    if (dp_str == NULL) {
+                        cerr << "Error: DP field is missing.\n";
+                        throw exception();
+                    }
+                    long tot_depth = strtol(dp_str, NULL, 10);
+                    if (tot_depth < 0) {
+                        cerr << "Error: Bad DP field.\n";
+                        throw exception();
+                    }
+                    d->snpdata.back().tot_depth = tot_depth;
+
+                    // AD.
+                    size_t ad_index = rec->index_of_gt_subfield("AD");
+                    const char* ad_str = VcfRecord::util::find_gt_subfield(sample_gt, ad_index);
+                    if (ad_str == NULL) {
+                        cerr << "Error: AD field is missing.\n";
+                        throw exception();
+                    }
+                    size_t i = 0;
+                    --ad_str;
+                    do {
+                        ++ad_str;
+                        long ad = strtol(ad_str, const_cast<char**>(&ad_str), 10);
+                        if (ad < 0)
+                            throw exception();
+                        d->snpdata.back().nt_depths.increment(Nt2(*rec->find_allele(i)), ad);
+                        ++i;
+                    } while (*ad_str == ',');
+                    if (i != rec->count_alleles()) {
+                        cerr << "Error: Bad AD field.\n";
+                        throw exception();
+                    }
+
+                } catch (exception&) {
+                    cerr << "Error: In VCF record '" << rec->chrom() << ":" << rec->pos()+1 << "'.\n";
+                    throw;
+                }
+                }
+
+                // Build the haplotypes from the records.
+                VcfRecord::util::build_haps(obshaps, snp_records, sample_vcf_i);
                 for (size_t i=0; i<2; ++i)
                     d->obshap.push_back(new char[snp_records.size()+1]);
                 strncpy(d->obshap[0], obshaps.first.c_str(), snp_records.size()+1);
@@ -261,6 +330,12 @@ void PopMap<LocusT>::populate_locus(Datum** locdata,
                 }
             }
         }
+    } catch (exception&) {
+        cerr << "Error: At the " << (sample+1) << "th sample.\n"
+             << "Error: (Locus " << cloc.id << ")\n"
+             << "Error: Bad GStacksVCF file.\n";
+        throw;
+    }
     }
 }
 
@@ -284,9 +359,9 @@ PopMap<LocusT>::populate_locus(Datum **locdata, LocusT &cloc, const VcfRecord re
      * When no depth information is available, [tot_depth] and the [depths]
      * of all alleles are set to 0.
      *
-     * When no likelihood information is available, [lnl] is set to 0.
-     * (n.b. the parsing of depth information in VCF is not implemented as
-     * of Mar 21, 2016.)
+     * When no likelihood information is available, the [gt+liks] are not set.
+     * xxx (n.b. the parsing of depth information in VCF is not implemented as
+     * of Oct, 2017.)
      *
      * The following members are left unset, on the premise that
      * "populations" does not use them :
@@ -295,18 +370,22 @@ PopMap<LocusT>::populate_locus(Datum **locdata, LocusT &cloc, const VcfRecord re
      * [merge_partner] is set later by [merge_datums()] (in populations.cc).
      */
     array<const char*,5> alleles; // Max. "ACGT*"
-    {
-        size_t i=0;
-        for (auto a=rec.begin_alleles(); a!=rec.end_alleles(); ++a) {
-            alleles.at(i) = *a;
-            ++i;
+    size_t n_alleles = 0;
+    try {
+        for (auto a = rec.begin_alleles(); a != rec.end_alleles(); ++a) {
+            alleles.at(n_alleles) = *a;
+            ++n_alleles;
         }
+    } catch (std::out_of_range&) {
+        // Max. "ACGT*"
+        cerr << "Error: Expected at most 5 SNP alleles; in VCF record '"
+             << rec.chrom() << ":" << rec.pos() << "'.\n";
+        throw exception();
     }
-    size_t ad_index;
-    ad_index = rec.index_of_gt_subfield("AD");
-    size_t n_alleles = rec.count_alleles();
 
-    vector<int> ad;
+    size_t dp_index = rec.index_of_gt_subfield("DP");
+    size_t ad_index = rec.index_of_gt_subfield("AD");
+
     for (size_t s = 0; s < mpopi.samples().size(); ++s) {
         size_t vcf_index = header.sample_index(mpopi.samples()[s].name);
         const char* sample = rec.find_sample(vcf_index);
@@ -314,32 +393,43 @@ PopMap<LocusT>::populate_locus(Datum **locdata, LocusT &cloc, const VcfRecord re
         pair<int, int> gt = rec.parse_genotype(sample);
         if (gt.first < 0
             || gt.second < 0
-            || strcmp(alleles.at(gt.first),"*")==0
-            || strcmp(alleles.at(gt.second),"*")==0)
+            || *alleles.at(gt.first) == '*'
+            || *alleles.at(gt.second) == '*')
             // Missing or incomplete genotype.
             continue;
 
+        long tot_depth = 0;
+        if (dp_index != SIZE_MAX) {
+            const char* dp_str = VcfRecord::util::find_gt_subfield(sample, dp_index);
+            tot_depth = strtol(dp_str, NULL, 10);
+            if (tot_depth < 0) {
+                cerr << "Warning: Bad DP field; in VCF record '"
+                     << rec.chrom() << ":" << rec.pos() << "'.\n";
+                tot_depth = 0;
+            }
+        }
+
+        array<long,5> ad;
+        ad.fill(0);
         if (ad_index != SIZE_MAX) {
-            ad.clear();
-            string ad_str = rec.parse_gt_subfield(sample, ad_index);
-            size_t start = 0;
-            size_t coma;
+            const char* ad_str = VcfRecord::util::find_gt_subfield(sample, ad_index);
             try {
-                while ((coma = ad_str.find(',', start)) != string::npos) {
-                    ad.push_back(stoi(ad_str.substr(start,coma)));
-                    if (ad.back() < 0)
+                size_t i = 0;
+                const char* start = ad_str;
+                --start;
+                do {
+                    ++start;
+                    ad.at(i) = strtol(start, const_cast<char**>(&start), 10);
+                    if (ad[i] < 0)
                         throw exception();
-                    start=coma+1;
-                }
-                ad.push_back(stoi(ad_str.substr(start)));
-                if (ad.back() < 0)
-                    throw exception();
-                if (ad.size() != n_alleles)
+                    ++i;
+                } while (*start == ',');
+                if (i != n_alleles)
                     throw exception();
             } catch (exception& e) {
-                cerr << "Warning: Badly formatted AD string '" << ad_str
+                cerr << "Warning: Badly formatted AD field '" << ad_str
                      << "' in VCF record '" << rec.chrom() << ":" << rec.pos() << "'.\n";
-                ad = vector<int>(n_alleles, 0);
+                ad.fill(0);
             }
         }
 
@@ -351,33 +441,32 @@ PopMap<LocusT>::populate_locus(Datum **locdata, LocusT &cloc, const VcfRecord re
         // id, len, lnl
         d->id  = cloc.id;
         d->len = cloc.len;
-
-        // model, obshap, depth
         d->model = new char[2];
+        d->model[1] = '\0';
+
+        // depth
+        d->snpdata.push_back(Datum::SNPData());
+        d->snpdata[0].tot_depth = tot_depth;
+        for (size_t i = 0; i < n_alleles; ++i)
+            d->snpdata[0].nt_depths.increment(Nt2(*alleles.at(i)), ad[i]);
+
+        // model, obshap
         if (gt.first == gt.second) {
-            strcpy(d->model, "O");
-            const char* allele = alleles.at(gt.first);
-            size_t len = strlen(allele);
-            d->obshap.push_back(new char[len+1]);
-            memcpy(d->obshap[0], allele, len+1);
-            if (ad_index != SIZE_MAX)
-                d->depth = { ad[gt.first] };
-            else
-                d->depth = {0};
+            d->model[0] = 'O';
+            char* a = new char[2];
+            a[1] = '\0';
+            a[0] = *alleles.at(gt.first);
+            d->obshap.push_back(a);
         } else {
-            strcpy(d->model, "E");
-            const char* allele0 = alleles.at(gt.first);
-            const char* allele1 = alleles.at(gt.second);
-            size_t len0 = strlen(allele0);
-            size_t len1 = strlen(allele1);
-            d->obshap.push_back(new char[len0+1]);
-            d->obshap.push_back(new char[len1+1]);
-            memcpy(d->obshap[0], allele0, len0+1);
-            memcpy(d->obshap[1], allele1, len1+1);
-            if (ad_index != SIZE_MAX)
-                d->depth = {ad[gt.first], ad[gt.second]};
-            else
-                d->depth = {0, 0};
+            d->model[0] = 'E';
+            char* a0 = new char[2];
+            char* a1 = new char[2];
+            a0[0] = *alleles.at(gt.first);
+            a1[0] = *alleles.at(gt.second);
+            a0[1] = '\0';
+            a1[1] = '\0';
+            d->obshap.push_back(a0);
+            d->obshap.push_back(a1);
         }
     }
 }

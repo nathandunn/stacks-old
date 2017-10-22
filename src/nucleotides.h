@@ -75,7 +75,7 @@ class Nt2 {
 
 public:
     Nt2() : nt_(Nt2::a) {}
-    Nt2(char c) : nt_(from_ch[size_t(c)]) {}
+    Nt2(char c) : nt_(from_ch[size_t(c)]) {assert(Nt4(c).is_acgt());}
     Nt2(Nt4 nt4) : nt_(from_nt4[size_t(nt4)]) {assert(nt4.is_acgt());}
     Nt2(size_t i) : nt_(i) {}
     Nt2(int i) : nt_(i) {}

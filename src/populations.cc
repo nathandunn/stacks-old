@@ -1215,88 +1215,62 @@ int
 LocusFilter::prune_sites(CSLocus *cloc, Datum **d, set<int> &keep)
 {
     //
-    // We want to prune out SNP objects that are not in the whitelist.
+    // Prune out SNP objects that are not in the whitelist.
+    // We need to update:
+    // * `Locus::snps`
+    // * `Locus::alleles`
+    // * `Datum::model`
+    // * `Datum::snpdata`
+    // * `Datum::obshap`
     //
-    int              pos;
-    vector<SNP *>    tmp;
-    vector<uint>     cols;
-    map<string, int> obshaps;
-    map<string, int>::iterator sit;
 
-    for (uint i = 0; i < cloc->snps.size(); i++) {
-        if (keep.count(cloc->snps[i]->col) > 0) {
-            tmp.push_back(cloc->snps[i]);
-            cols.push_back(i);
-        } else {
-            //
-            // Change the model calls in the samples to no longer contain this SNP.
-            //
-            pos = cloc->snps[i]->col;
-            for (uint j = 0; j < this->_sample_cnt; j++) {
-                if (d[j] == NULL || pos >= d[j]->len)
-                    continue;
-                if (d[j]->model != NULL) {
-                    d[j]->model[pos] = 'U';
+    size_t n_snps = cloc->snps.size();
+    vector<pair<size_t,size_t>> rm;
+    for (size_t snp_i = n_snps; snp_i > 0;) {
+        --snp_i;
+        if (!keep.count(cloc->snps[snp_i]->col)) {
+            rm.push_back({snp_i, cloc->snps[snp_i]->col});
+            delete cloc->snps[snp_i];
+            cloc->snps.erase(cloc->snps.begin() + snp_i);
+        }
+    }
+
+    // Correct the Datums.
+    for (size_t s=0; s<this->_sample_cnt; ++s) {
+        if (d[s] == NULL)
+            continue;
+        assert(d[s]->model);
+        assert(!d[s]->obshap.empty() && strlen(d[s]->obshap[0]) == n_snps);
+        assert(d[s]->snpdata.size() == n_snps);
+
+        for (pair<size_t,size_t> snp : rm) {
+            // Correct the model calls.
+            char& m = d[s]->model[snp.second];
+            assert(m == 'O' || m == 'E' || m == 'U');
+            if (m == 'E' || (m == 'O' && d[s]->obshap[0][snp.first] != cloc->con[snp.second]))
+                m = 'U';
+
+            // Splice the Datum haplotypes.
+            for (char* hap : d[s]->obshap) {
+                hap += snp.first;
+                while(*hap) {
+                    *hap = *(hap+1);
+                    ++hap;
                 }
             }
 
-            delete cloc->snps[i];
+            // Splice the depths.
+            d[s]->snpdata.erase(d[s]->snpdata.begin() + snp.first);
         }
     }
-    cloc->snps.clear();
-    for (uint i = 0; i < tmp.size(); i++)
-        cloc->snps.push_back(tmp[i]);
 
-    map<string, int>::iterator it;
-    char allele_old[id_len], allele_new[id_len];
-    //
-    // We need to adjust the catalog's list of haplotypes/alleles
-    // for this locus to account for the pruned SNPs.
-    //
-    for (it = cloc->alleles.begin(); it != cloc->alleles.end(); it++) {
-        strncpy(allele_old, it->first.c_str(), id_len - 1);
-        allele_old[id_len - 1] = '\0';
-
-        for (uint k = 0; k < cols.size(); k++)
-            allele_new[k] = allele_old[cols[k]];
-        allele_new[cols.size()] = '\0';
-        obshaps[string(allele_new)] += it->second;
-    }
+    // Splice the Locus haplotypes.
+    vector<pair<string,int>> alleles (cloc->alleles.begin(), cloc->alleles.end());
+    for (pair<string,int>& allele : alleles)
+        for (pair<size_t,size_t> snp : rm)
+            allele.first.erase(snp.first);
     cloc->alleles.clear();
-    for (sit = obshaps.begin(); sit != obshaps.end(); sit++) {
-        cloc->alleles[sit->first] = sit->second;
-    }
-    obshaps.clear();
-
-    cloc->populate_alleles();
-
-    //
-    // Now we need to adjust the matched haplotypes to sync to
-    // the SNPs left in the catalog.
-    //
-    // Reducing the lengths of the haplotypes  may create
-    // redundant (shorter) haplotypes, we need to remove these.
-    //
-    for (uint i = 0; i < this->_sample_cnt; i++) {
-        if (d[i] == NULL) continue;
-
-        for (uint j = 0; j < d[i]->obshap.size(); j++) {
-            for (uint k = 0; k < cols.size(); k++)
-                d[i]->obshap[j][k] = d[i]->obshap[j][cols[k]];
-            d[i]->obshap[j][cols.size()] = '\0';
-        }
-        uint j = 0;
-        for (sit = obshaps.begin(); sit != obshaps.end(); sit++) {
-            strcpy(d[i]->obshap[j], sit->first.c_str());
-            j++;
-        }
-        while (j < d[i]->obshap.size()) {
-            delete [] d[i]->obshap[j];
-            j++;
-        }
-        d[i]->obshap.resize(obshaps.size());
-        obshaps.clear();
-    }
+    cloc->alleles.insert(std::make_move_iterator(alleles.begin()), std::make_move_iterator(alleles.end()));
 
     return 0;
 }
