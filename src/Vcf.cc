@@ -136,7 +136,8 @@ string VcfRecord::util::fmt_info_af(const vector<double>& alt_freqs) {
 }
 
 string VcfRecord::util::fmt_gt_gl(const vector<Nt2>& alleles, const GtLiks& liks) {
-    static const size_t n_digits = 5;
+    stringstream ss;
+    ss << std::fixed << std::setprecision(2);
 
     assert(!alleles.empty());
     vector<double> v;
@@ -148,8 +149,6 @@ string VcfRecord::util::fmt_gt_gl(const vector<Nt2>& alleles, const GtLiks& liks
             v.push_back(liks.at(a1nt, a2nt) / log(10));
         }
     }
-    stringstream ss;
-    ss << std::setprecision(n_digits);
     join(v, ',', ss);
     return ss.str();
 }
