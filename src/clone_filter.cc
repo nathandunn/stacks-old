@@ -295,7 +295,7 @@ write_clonereduced_sequence(string prefix_1, string prefix_2,
                             map<string, long> &counters)
 {
     ofstream  out_fh_1,   out_fh_2, discard_fh_1, discard_fh_2;
-    gzFile    out_gzfh_1, out_gzfh_2, discard_gzfh_1, discard_gzfh_2;
+    gzFile    out_gzfh_1=NULL, out_gzfh_2=NULL, discard_gzfh_1=NULL, discard_gzfh_2=NULL;
 
     int return_val = 1;
 
@@ -664,6 +664,8 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
         offset_1 = 0;
         offset_2 = oligo_len_2;
     default:
+        DOES_NOT_HAPPEN;
+        offset_1 = offset_2 = -1;
         break;
     }
 
@@ -849,7 +851,7 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
 int
 process_reads(string prefix_1, map<string, long> &counters, OligoHash &oligo_map)
 {
-    Input   *fh_1;
+    Input   *fh_1 = NULL;
     RawRead *r_1;
     ofstream out_fh_1, discard_fh_1;
     gzFile   out_gzfh_1, discard_gzfh_1;
@@ -974,6 +976,7 @@ process_reads(string prefix_1, map<string, long> &counters, OligoHash &oligo_map
     int    result_1 = 1;
     bool   clone    = false;
     string key, oligo_1;
+
 
     do {
         if (i % 10000 == 0) cerr << "  Processing RAD-Tag " << i << "       \r";
