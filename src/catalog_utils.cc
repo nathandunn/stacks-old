@@ -330,9 +330,14 @@ CSLocus* new_cslocus(const Seq& consensus, const vector<VcfRecord>& records, int
     assert(consensus.seq != NULL);
     loc->add_consensus(consensus.seq);
 
-    // loc
-    // If the analysis is reference-based, there will be a ' pos=...' field on
-    // the fasta ID line, placed as a comment adjacent to the locus ID..
+    //
+    // Locus position:
+    //   If the analysis is reference-based, there will be a ' pos=...' field on
+    //   the fasta ID line, placed as a comment adjacent to the locus ID.
+    //
+    // Overlap: if this data is de novo, there will potentially be an overlap length
+    //          between the single and paired-end contigs.
+    //
     assert(loc->loc.empty());
 
     const char *p, *q;
@@ -346,7 +351,10 @@ CSLocus* new_cslocus(const Seq& consensus, const vector<VcfRecord>& records, int
         if (strncmp(p, "pos=", 4) == 0) {
             p += 4;
             loc->loc = PhyLoc(string(p, q));
-            break;
+
+        } else if (strncmp(p, "contig=overlapped:", 18) == 0) {
+            p += 18;
+            loc->overlap = is_integer(p);
         }
 
         p = *q == '\0' ? q : q + 1;

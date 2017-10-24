@@ -141,28 +141,30 @@ class CLocus : public Locus {
 class CSLocus : public Locus {
 public:
     CSLocus() : Locus() {
-        this->f          = 0.0;
-        this->cnt        = 0;
-        this->hcnt       = 0;
-        this->gcnt       = 0;
-        this->trans_gcnt = 0;
-        this->chisq      = 1.0;
+        this->f              = 0.0;
+        this->chisq          = 1.0;
+        this->cnt            = 0;
+        this->hcnt           = 0;
+        this->gcnt           = 0;
+        this->trans_gcnt     = 0;
+        this->overlap        = 0;
         this->confounded_cnt = 0;
     };
     string annotation;
     string marker;
     string uncor_marker;
-    map<string, int> hap_cnts;    // Counts of each observed haplotype for this locus in the population.
-    double f;                     // Inbreeder's coefficient
+    map<string, int>    hap_cnts; // Counts of each observed haplotype for this locus in the population.
     map<string, string> gmap;     // Observed haplotype to genotype map for this locus.
-    int confounded_cnt;           // Number of samples/progeny containing confounded loci (more than one
+    uint16_t confounded_cnt;           // Number of samples containing confounded loci (more than one
                                   //   locus from an individual sample matches this catalog locus).
-    int hcnt;                     // Number of samples/progeny containing a haplotype for this locus.
-    int cnt;                      // Number of samples/progeny containing data for this locus.
-    int gcnt;                     // Number of progeny containing a valid genotype.
-    int trans_gcnt;               // Number of progeny containing a valid
+    uint16_t overlap;             // Size of overlap between single and paired-end contigs for this locus.
+    uint16_t hcnt;                // Number of samples containing a haplotype for this locus.
+    uint16_t cnt;                 // Number of samples containing data for this locus.
+    uint16_t gcnt;                // Number of progeny containing a valid genotype.
+    uint16_t trans_gcnt;          // Number of progeny containing a valid
                                   //   genotype, translated for a particular map type.
-    double chisq;             // Chi squared p-value testing the null hypothesis of no segregation distortion.
+    double f;                     // Inbreeder's coefficient
+    double chisq;                 // Chi squared p-value testing the null hypothesis of no segregation distortion.
 };
 
 // SRead: a Read belonging to a Sample.
