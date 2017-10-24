@@ -2,7 +2,7 @@
 
 usage="\
 Usage:
-  $(basename $0) -P stacks_dir -B bam_file -O out_dir
+  $(basename "$0") -P stacks_dir -B bam_file -O out_dir
 
 Extracts the coordinates of the RAD loci from the given BAM file into a
 'locus_coordinates.tsv' table, then rewrites the 'gstacks.fa.gz' and
@@ -59,15 +59,17 @@ fi
 [[ "$out_d" ]]    || { echo -n "Error: -O is required." >&2; exit 1; }
 
 [[ -e "$stacks_d" ]] || { ls "$stacks_d"; exit 1; }
-[[ -e "$bam_f" ]]    || { ls "$bam_f_d"; exit 1; }
+[[ -e "$bam_f" ]]    || { ls "$bam_f"; exit 1; }
 
 fa="$stacks_d/gstacks.fa.gz"
 vcf="$stacks_d/gstacks.vcf.gz"
 [[ -e "$fa" ]]  || { ls "$fa"; exit 1; }
 [[ -e "$vcf" ]] || { ls "$vcf"; exit 1; }
 
+o_coords="$out_d/locus_coordinates.tsv"
 o_fa="$out_d/gstacks.fa.gz"
 o_vcf="$out_d/gstacks.vcf.gz"
+[[ ! -e "$o_coords" ]]  || { echo "Error: Refusing to overwrite '$o_coords'." >&2; exit 1; }
 [[ ! -e "$o_fa" ]]  || { echo "Error: Refusing to overwrite '$o_fa'." >&2; exit 1; }
 [[ ! -e "$o_vcf" ]] || { echo "Error: Refusing to overwrite '$o_vcf'." >&2; exit 1; }
 
@@ -97,7 +99,7 @@ echo
 # ==========
 
 echo "Extracting locus coordinates..."
-samtools view -F 0x4,0x100,0x800 $bam_f |
+samtools view -F 0x4,0x100,0x800 "$bam_f" |
     # Convert the format to `LOCUS_ID \t CHR \t POS \t STRAND`.
     awk -F '\t' -v OFS='\t' '{
             if (!and($2, 0x10)) {
@@ -116,7 +118,7 @@ samtools view -F 0x4,0x100,0x800 $bam_f |
     # Pull the reference chromosome order from the BAM header.
     join -t $'\t' -12 -22 -o "1.1 1.2 2.1 1.3 1.4" \
         - \
-        <(samtools view -H $bam_f |
+        <(samtools view -H "$bam_f" |
             grep '^@SQ' | grep -oE 'SN:[^\t]+' | cut -c4- |
             awk '{printf NR"\t"$1"\n"}' |
             sort -k2,2
@@ -126,11 +128,11 @@ samtools view -F 0x4,0x100,0x800 $bam_f |
     # Create the new IDs (we start at the power of 10 above the current max).
     awk 'BEGIN{id = 10 ^ int( log('"$id"') / log(10) + 1) + 1} {printf id++ "\t" $1 "\t" $2 ":" $3 ":" $4 "\n"}' |
     # Add a header.
-    { echo -e "id_new\tid_old\taln_pos"; cat; } \
-    > "$out_d/loci_by_coord.tsv"
+    { echo -e 'id_new\tid_old\taln_pos'; cat; } \
+    > "$o_coords"
 
-[[ $(wc -l < "$out_d/loci_by_coord.tsv") -gt 1 ]] || { echo "Error: Extraction of coordinates failed; check BAM file." >&2; exit 1; }
-echo "Wrote '$out_d/locus_coordinates.tsv'."
+[[ $(wc -l < "$o_coords") -gt 1 ]] || { echo "Error: Extraction of coordinates failed; check BAM file." >&2; exit 1; }
+echo "Wrote '$o_coords'."
 echo
 
 # Write the new FASTA file.
@@ -141,7 +143,7 @@ zcat "$fa" |
     tr -d '\r' | paste -d '\r' - - | sed 's/^>//' |
     awk -F' ' -v OFS=' ' '
         BEGIN{
-            while(getline < "'"$out_d/locus_coordinates.tsv"'") {
+            while(getline < "'"$o_coords"'") {
                 if (! /^id_new/) {
                     old2new[$2] = $1
                     old2pos[$2] = $3
@@ -174,7 +176,7 @@ echo "Rewriting variants..."
 zcat "$vcf" | grep -v '^#' |
     awk -F'\t' -v OFS='\t' '
         BEGIN{
-            while(getline < "'"$out_d/locus_coordinates.tsv"'") {
+            while(getline < "'"$o_coords"'") {
                 if (! /^id_new/) {
                     old2new[$2] = $1
                 }
@@ -194,4 +196,4 @@ echo "Wrote '$out_d/gstacks.vcf.gz'."
 echo
 
 trap - EXIT
-echo "$(basename $0) is done."
+echo "$(basename "$0") is done."
