@@ -84,7 +84,10 @@ class SumStatsSummary {
     double *_num_indv_var_all,      *_p_var_all,      *_obs_het_var_all,      *_obs_hom_var_all,      *_exp_het_var_all,      *_exp_hom_var_all,      *_pi_var_all,      *_fis_var_all;
     double *_n, *_n_all, *_var_sites;
     double *_sq_n, *_sq_n_all;
-
+    double _locus_len_mean, _locus_len_acc_mean, _locus_len_var;
+    double _overlap_mean,   _overlap_acc_mean,   _overlap_var;
+    double _locus_n, _locus_overlap_n, _sq_locus_n;
+    
 public:
     SumStatsSummary(size_t pop_cnt);
     ~SumStatsSummary();
