@@ -99,7 +99,7 @@ echo
 # ==========
 
 echo "Extracting locus coordinates..."
-samtools view -F 0x4,0x100,0x800 "$bam_f" |
+samtools view -F 0x904 "$bam_f" |
     # Convert the format to `LOCUS_ID \t CHR \t POS \t STRAND`.
     awk -F '\t' -v OFS='\t' '{
             if (!and($2, 0x10)) {
@@ -152,16 +152,16 @@ zcat "$fa" |
         } {
             old_id = $1
             if (old_id in old2new) {
-                $1 = old2new[old_id] " " old2pos[old_id]
+                $1 = old2new[old_id] " pos=" old2pos[old_id]
                 print
             }
         }' |
     sort -k1,1n |
     sed 's/^/>/' | tr '\r' '\n' |
     gzip \
-    > "$out_d/gstacks.fa.gz"
+    > "$o_fa"
 
-echo "Wrote '$out_d/gstacks.fa.gz'."
+echo "Wrote '$o_fa'."
 echo
 
 # Write the new VCF file.
@@ -190,9 +190,9 @@ zcat "$vcf" | grep -v '^#' |
        }' |
     sort -k1,1n -k2,2n
 } | gzip \
-> "$out_d/gstacks.vcf.gz"
+> "$o_vcf"
 
-echo "Wrote '$out_d/gstacks.vcf.gz'."
+echo "Wrote '$o_vcf'."
 echo
 
 trap - EXIT
