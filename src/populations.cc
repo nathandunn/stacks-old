@@ -2490,7 +2490,6 @@ SumStatsSummary::SumStatsSummary(size_t pop_cnt)
  
     this->_locus_n            = 0.0;
     this->_locus_overlap_n    = 0.0;
-    this->_sq_locus_n         = 0.0;
     this->_locus_len_mean     = 0.0;
     this->_locus_len_acc_mean = 0.0;
     this->_locus_len_var      = 0.0;
@@ -2613,12 +2612,18 @@ SumStatsSummary::accumulate(const vector<LocBin *> &loci)
         // Accumulate the locus length and overlap.
         //
         _locus_n++;
-        if (cloc->overlap > 0) {
-            _locus_overlap_n++;
-            _locus_len_mean += cloc->len;
-            _locus_len_var  += this->online_variance(cloc->len, _locus_len_acc_mean, _locus_overlap_n);
-            _overlap_mean   += cloc->overlap;
-            _overlap_var    += this->online_variance(cloc->overlap, _overlap_acc_mean, _locus_overlap_n);
+        if (cloc->pe_ctg) {
+            _locus_pe_ctg_n++;
+            _locus_len_mean_all += cloc->len - 10;
+            _locus_len_var_all  += this->online_variance(cloc->len - 10, _locus_len_acc_mean_all, _locus_pe_ctg_n);
+
+            if (cloc->overlap > 0) {
+                _locus_overlap_n++;
+                _locus_len_mean += cloc->len;
+                _locus_len_var  += this->online_variance(cloc->len, _locus_len_acc_mean, _locus_overlap_n);
+                _overlap_mean   += cloc->overlap;
+                _overlap_var    += this->online_variance(cloc->overlap, _overlap_acc_mean, _locus_overlap_n);
+            }
         }
     }
 
@@ -2662,8 +2667,9 @@ SumStatsSummary::final_calculation()
         _fis_mean_all[j]      = _fis_mean_all[j]      / _n_all[j];
     }
 
-    _locus_len_mean = _locus_len_mean / _locus_overlap_n;
-    _overlap_mean   = _overlap_mean   / _locus_overlap_n;
+    _locus_len_mean     = _locus_len_mean     / _locus_overlap_n;
+    _locus_len_mean_all = _locus_len_mean_all / _locus_pe_ctg_n;
+    _overlap_mean       = _overlap_mean       / _locus_overlap_n;
 
     //
     // Finish the online variance calculation.
@@ -2688,8 +2694,9 @@ SumStatsSummary::final_calculation()
         _fis_var_all[j]      = _fis_var_all[j]      / (_n_all[j] - 1);
     }
 
-    _locus_len_var = _locus_len_var / (_locus_overlap_n - 1);
-    _overlap_var   = _overlap_var   / (_locus_overlap_n - 1);
+    _locus_len_var     = _locus_len_var     / (_locus_overlap_n - 1);
+    _locus_len_var_all = _locus_len_var_all / (_locus_pe_ctg_n  - 1);
+    _overlap_var       = _overlap_var       / (_locus_overlap_n - 1);
 
     //
     // Calculate the first half of the standard deviation.
@@ -2698,8 +2705,6 @@ SumStatsSummary::final_calculation()
         _sq_n[j]     = sqrt(_n[j]);
         _sq_n_all[j] = sqrt(_n_all[j]);
     }
-
-    _sq_locus_n = sqrt(_locus_overlap_n);
 
     return 0;
 }
@@ -2719,11 +2724,19 @@ SumStatsSummary::write_results()
     //
     // Write out locus length and overlap statistics.
     //
-    cerr << "Number of loci with SE/PE overlap: " << this->_locus_overlap_n << " ("
-         << setprecision(3) << this->_locus_overlap_n / this->_locus_n * 100 << "%); " << setprecision(fieldw)
-         << "mean length of overlapping loci: " << this->_locus_len_mean << "bp "
-         << "(stderr " << sqrt(this->_locus_len_var) / this->_sq_locus_n << "); "
-         << "mean overlap: " << this->_overlap_mean << "bp (stderr " << sqrt(this->_overlap_var) / this->_sq_locus_n << ")\n";
+    cerr << "Number of loci with PE contig: " << this->_locus_pe_ctg_n << " ("
+         << setprecision(3)
+         << this->_locus_pe_ctg_n / this->_locus_n * 100 << "%);\n"
+         << setprecision(7)
+         << "  Mean length of loci: " << this->_locus_len_mean_all << "bp "
+         << "(stderr " << sqrt(this->_locus_len_var_all) / sqrt(this->_locus_n) << ");\n"
+         << "Number of loci with SE/PE overlap: " << this->_locus_overlap_n << " ("
+         << setprecision(3)
+         << this->_locus_overlap_n / this->_locus_n * 100 << "%);\n"
+         << setprecision(fieldw)
+         << "  Mean length of overlapping loci: " << this->_locus_len_mean << "bp "
+         << "(stderr " << sqrt(this->_locus_len_var) / sqrt(this->_locus_n) << "); "
+         << "mean overlap: " << this->_overlap_mean << "bp (stderr " << sqrt(this->_overlap_var) / sqrt(this->_locus_n) << ")\n";
 
     //
     // Write out summary statistics of the summary statistics.
@@ -3639,7 +3652,6 @@ output_parameters(ostream &fh)
     fh
         << "  Percent samples limit per population: " << sample_limit << "\n"
         << "  Locus Population limit: " << population_limit << "\n"
-        << "  Minimum stack depth: " << min_stack_depth << "\n"
         << "  Log liklihood filtering: " << (filter_lnl == true ? "on"  : "off") << "; threshold: " << lnl_limit << "\n"
         << "  Minor allele frequency cutoff: " << minor_allele_freq << "\n"
         << "  Maximum observed heterozygosity cutoff: " << max_obs_het << "\n"
