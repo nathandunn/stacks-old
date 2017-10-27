@@ -45,7 +45,11 @@ extern double bound_low;  // For the bounded-snp model.
 extern double bound_high; // For the bounded-snp model.
 extern double p_freq;     // For the fixed model.
 
+extern const std::array<double,40> chisq1ddf_gq;
+
+
 bool lrtest(double lnl_althyp, double lnl_nullhyp, double threshold); // Where threshold is a value in the Chi2 distribution.
+long vcf_lnl2gq(double lnl_gt, double lnl_gt_alt); // Returns VCF's GQ field `floor(-10 * log10(p-value))`
 
 double qchisq(double alpha, size_t df);
 modelt parse_model_type(const string& arg);
@@ -78,8 +82,9 @@ class SampleCall {
     // For hets, the two nucleotides are sorted lexically (A<C<G<T).
     snp_type call_;
     array<Nt2,2> nts_;
+    long gq_;
 public:
-    SampleCall() : lnls_(), call_(snp_type_unk), nts_{Nt2(),Nt2()} {}
+    SampleCall() : lnls_(), call_(snp_type_unk), nts_{Nt2(),Nt2()}, gq_(-1) {}
 
     const GtLiks& lnls() const {return lnls_;}
           GtLiks& lnls()       {return lnls_;}
@@ -88,8 +93,9 @@ public:
     Nt2 nt0() const {assert(call_==snp_type_hom || call_==snp_type_het); return nts_[0];}
     Nt2 nt1() const {assert(call_==snp_type_het); return nts_[1];}
     array<Nt2,2> nts() const {assert(call_==snp_type_het); return nts_;}
+    long gq() const {assert(call_==snp_type_hom || call_==snp_type_het); return gq_;}
 
-    void set_call(snp_type c, Nt2 rank0_nt, Nt2 rank1_nt);
+    void set_call(snp_type c, Nt2 rank0_nt, Nt2 rank1_nt, long gq);
 
     // For debugging.
     friend ostream& operator<<(ostream& os, const SampleCall& sc);
@@ -212,6 +218,13 @@ public:
 inline
 bool lrtest(double lnl_althyp, double lnl_nullhyp, double threshold) {
     return 2.0 * (lnl_althyp - lnl_nullhyp) > threshold;
+}
+
+inline
+long vcf_lnl2gq(double lnl_gt, double lnl_gt_alt) {
+    double lr = 2.0 * (lnl_gt - lnl_gt_alt);
+    auto itr = std::upper_bound(chisq1ddf_gq.begin(), chisq1ddf_gq.end(), lr);
+    return itr - chisq1ddf_gq.begin();
 }
 
 inline
@@ -354,15 +367,18 @@ double lr_bounded_multinomial_model (double nuc_1, double nuc_2, double nuc_3, d
 }
 
 inline
-void SampleCall::set_call(snp_type c, Nt2 rank0_nt, Nt2 rank1_nt) {
+void SampleCall::set_call(snp_type c, Nt2 rank0_nt, Nt2 rank1_nt, long gq) {
+    assert(gq >= 0 && gq <= 40);
     call_ = c;
     if (call_ == snp_type_hom) {
         nts_[0] = rank0_nt;
+        gq_ = gq;
     } else if (call_ == snp_type_het) {
         if (rank0_nt < rank1_nt)
             nts_ = {rank0_nt, rank1_nt};
         else
             nts_ = {rank1_nt, rank0_nt};
+        gq_ = gq;
     }
 }
 

@@ -52,6 +52,19 @@ const map<string,modelt> model_strings = {
     {"marukilow", ::marukilow},
 };
 
+// Quantiles of the Chi2 distribution for VCF's GQ.
+//$ Rscript -e "cat(paste(qchisq(1-10^(-(1:40)/10), 1), '\n', sep=''))"
+const std::array<double,40> chisq1ddf_gq = {
+    0.0679615365255401, 0.230764766661193, 0.452421556097698, 0.714036104152315, 1.00448471501902,
+    1.31668063342863, 1.64583886397469, 1.98858107774449, 2.34243609502603, 2.70554345409542,
+    3.07646857913928, 3.45408274293754, 3.83748240184564, 4.22593339019369, 4.61883133337202,
+    5.01567294625387, 5.41603482049954, 5.81955747770787, 6.22593319775977, 6.63489660102121,
+    7.04621727098416, 7.45969391025114, 7.87514966368955, 8.29242834051146, 8.71139133617301,
+    9.13191510451069, 9.55388906647803, 9.97721386826398, 10.4017999212068, 10.8275661706627,
+    11.2544390521783, 11.6823516018745, 12.1112426945654, 12.5410563882771, 12.9717413578738,
+    13.403250403671, 13.8355400234795, 14.2685700385079, 14.7023032652319, 15.1367052266236
+};
+
 double qchisq(double alpha, size_t df) {
     //
     // Quantiles (1-alpha) of the Chi2 distribution, as given by
@@ -447,7 +460,8 @@ SiteCall MultinomialModel::call(const SiteCounts& depths) const {
         c.lnls().set(sorted[0].second, sorted[1].second, lnl_het);
 
         snp_type gt_call = call_snp(lnl_hom, lnl_het);
-        c.set_call(gt_call, sorted[0].second, sorted[1].second);
+        long gq = vcf_lnl2gq(std::max(lnl_hom, lnl_het), std::min(lnl_hom, lnl_het));
+        c.set_call(gt_call, sorted[0].second, sorted[1].second, gq);
     }
 
     //
@@ -656,12 +670,16 @@ SiteCall MarukiHighModel::call(const SiteCounts& depths) const {
             double lnl_hom = c.lnls().at(nt0->second, nt0->second);
             double lnl_het = c.lnls().at(nt0->second, nt1->second);
             snp_type call;
-            if (lnl_hom > lnl_het)
+            long gq;
+            if (lnl_hom > lnl_het) {
                 call = lrtest(lnl_hom, lnl_het, gt_threshold_) ? snp_type_hom : snp_type_unk;
-            else
+                gq = vcf_lnl2gq(lnl_hom, lnl_het);
+            } else {
                 call = lrtest(lnl_het, lnl_hom, gt_threshold_) ? snp_type_het : snp_type_unk;
+                gq = vcf_lnl2gq(lnl_het, lnl_hom);
+            }
 
-            c.set_call(call, nt0->second, nt1->second);
+            c.set_call(call, nt0->second, nt1->second, gq);
         }
     }
 
@@ -953,7 +971,8 @@ SiteCall MarukiLowModel::call(const SiteCounts& depths) const {
 
             if (lrtest(lnls[0].first, lnls[1].first, gt_threshold_)) {
                 pair<Nt2,Nt2>& nts = lnls[0].second;
-                s_call.set_call(nts.first == nts.second ? snp_type_hom : snp_type_het, nts.first, nts.second);
+                long gq = vcf_lnl2gq(lnls[0].first, lnls[1].first);
+                s_call.set_call(nts.first == nts.second ? snp_type_hom : snp_type_het, nts.first, nts.second, gq);
             }
         }
     }
