@@ -1549,6 +1549,7 @@ void LocusProcessor::write_one_locus (
             rec.append_format("GT");
             if (!dbg_no_haplotypes)
                 rec.append_format("PS"); // Phase set.
+            rec.append_format("GQ");
             rec.append_format("DP");
             rec.append_format("AD");
             rec.append_format("GL");
@@ -1573,6 +1574,7 @@ void LocusProcessor::write_one_locus (
                     genotype << gt[0] << '/' << gt[0];
                     if (!dbg_no_haplotypes)
                         genotype << ":.";
+                    genotype << ':' << scall.gq();
                     break;
                 case snp_type_het:
                     if (!dbg_no_haplotypes) {
@@ -1599,11 +1601,13 @@ void LocusProcessor::write_one_locus (
                         std::sort(gt.begin(), gt.end()); // (Prevents '1/0'.)
                         genotype << gt[0] << '/' << gt[1];
                     }
+                    genotype << ':' << scall.gq();
                     break;
                 default:
                     genotype << '.';
                     if (!dbg_no_haplotypes)
                         genotype << ":.";
+                    genotype << ":.";
                     break;
                 }
                 // DP field.
