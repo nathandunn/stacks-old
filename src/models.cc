@@ -874,11 +874,11 @@ SiteCall MarukiLowModel::call(const SiteCounts& depths) const {
     flush_freq(freq_MM);
     flush_freq(freq_Mm);
     flush_freq(freq_mm);
+    double x = 1.0/n_samples;
     {
         double lnl_prev;
         do {
             lnl_prev = lnl_dimorph;
-            double x = 1.0/n_samples;
             array<array<double,3>,6> neighbors = {{
                 {freq_MM+x, freq_Mm-x, freq_mm},
                 {freq_MM-x, freq_Mm+x, freq_mm},
@@ -928,12 +928,22 @@ SiteCall MarukiLowModel::call(const SiteCounts& depths) const {
         flush_freq(a.second);
 
     //
-    // IV. Corrected likelihoods & genotypes.
+    // IV. Bayes-corrected likelihoods & genotypes.
+    //
+    // Note: @Nick Oct 2017: Optimal genotype frequencies may be 0.0 when the MAC
+    // or the number of samples is low. To avoid feeding null frequencies into
+    // the genotype equations, which may lead to distorted likelihood ratios
+    // (e.g. for a candidate het with more coverage for the minor allele, when
+    // the minor homozygote frequency is 0.0), we add 1/n_samples to all three
+    // frequencies.
     //
 
     vector<SampleCall> sample_calls (n_samples);
     {
         sample_calls.reserve(n_samples);
+        freq_MM = (freq_MM + x) / (1.0 + 3 * x);
+        freq_Mm = (freq_Mm + x) / (1.0 + 3 * x);
+        freq_mm = (freq_mm + x) / (1.0 + 3 * x);
         double log_f_MM = log(freq_MM);
         double log_f_Mm = log(freq_Mm);
         double log_f_mm = log(freq_mm);
