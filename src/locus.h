@@ -147,6 +147,7 @@ public:
         this->hcnt           = 0;
         this->gcnt           = 0;
         this->trans_gcnt     = 0;
+        this->pe_ctg         = false;
         this->overlap        = 0;
         this->confounded_cnt = 0;
     };
@@ -157,6 +158,7 @@ public:
     map<string, string> gmap;     // Observed haplotype to genotype map for this locus.
     uint16_t confounded_cnt;           // Number of samples containing confounded loci (more than one
                                   //   locus from an individual sample matches this catalog locus).
+    bool     pe_ctg;              // Was a paired-end contig constructed for this locus?
     uint16_t overlap;             // Size of overlap between single and paired-end contigs for this locus.
     uint16_t hcnt;                // Number of samples containing a haplotype for this locus.
     uint16_t cnt;                 // Number of samples containing data for this locus.
