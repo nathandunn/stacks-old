@@ -1,3 +1,7 @@
+Stacks 2.0 Beta 3 -
+--------------------------------
+    Bugfix: made further improvements to the single-end/paired-end locus overlapping algorithm.
+
 Stacks 2.0 Beta 2 - Oct 19, 2017
 --------------------------------
     Feature: gstacks: Made it possible to read from multiple BAM files at the same time; modified the
