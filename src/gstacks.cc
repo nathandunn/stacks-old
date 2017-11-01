@@ -961,7 +961,6 @@ LocusProcessor::find_locus_overlap(SuffixTree *stree, GappedAln *g_aln, const DN
     const char *q_stop = q + query.length();
     size_t      q_pos  = 0;
     size_t      id     = 1;
-    // const char *p;
 
     do {
         step_alns.clear();
@@ -980,18 +979,19 @@ LocusProcessor::find_locus_overlap(SuffixTree *stree, GappedAln *g_aln, const DN
         }
     } while (q < q_stop);
 
-    //
-    // Perfect alignmnet to the suffix tree that occupies the end of the
-    // query and the beginning of the subject. Return result.
-    //
+    
     if (alns.size() == 1) {
+        //
+        // If a single alignment has been found, check for a Perfect alignmnet to the suffix tree
+        // that occupies the end of the query and the beginning of the subject. Return result.
+        //
         size_t query_stop = alns.front().query_pos + alns.front().aln_len - 1;
 
         if (query_stop == (query.length() - 1) && alns.front().subj_pos == 0) {
             char buf[id_len];
             snprintf(buf, id_len, "%luM", alns.front().aln_len);
             overlap_cigar = buf;
-            return alns.front().subj_pos;
+            return alns.front().query_pos;
         }
     }
 
@@ -1028,6 +1028,9 @@ LocusProcessor::find_locus_overlap(SuffixTree *stree, GappedAln *g_aln, const DN
         }
     }
 
+    //
+    // Check that the gapped alignment is reasonable.
+    //
     if (aln_res.pct_id < overlap_min_pct_id)
         return 0;
 
@@ -1042,6 +1045,9 @@ LocusProcessor::find_locus_overlap(SuffixTree *stree, GappedAln *g_aln, const DN
         offset = aln_res.subj_pos;
     }
 
+    //
+    // Return overlap.
+    //
     return offset + cigar_length_ref(cigar);
 }
 
