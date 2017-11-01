@@ -118,6 +118,7 @@ class GappedAln {
     int init(int, int);
     int init(int, int, bool);
     int align(const string&, const string&);
+    int align_region(const string&, const string&, const size_t, const size_t, const size_t, const size_t);
     int align_constrained(const string&, const string&, const vector<STAln> &);
     const AlignRes& result();
 
@@ -274,6 +275,30 @@ GappedAln::align(const string& tag_1, const string& tag_2)
     this->score(false, tag_1, 1, this->_m - 1, tag_2, 1, this->_n - 1);
 
     if (this->trace_global_alignment(tag_1, tag_2))
+        return 1;
+
+    return 0;
+}
+
+int
+GappedAln::align_region(const string& query,  const string& subj,
+                        const size_t q_start, const size_t q_end,
+                        const size_t s_start, const size_t s_end)
+{
+    //         j---->      subject
+    //        [0][1][2][3]...[n-1]
+    //       +--------------------
+    // i [0] | [i][j]
+    // | [1] |
+    // | [2] |
+    // v [3] |
+    //   ... |
+    // [m-1] |
+    // query
+    this->bound_region(q_start, q_end + 1, s_start, s_end + 1);
+    this->score(true, query, q_start, q_end + 1, subj, s_start, s_end + 1);
+
+    if (this->trace_local_alignment(query, subj))
         return 1;
 
     return 0;
