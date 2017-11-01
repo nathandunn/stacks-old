@@ -2,7 +2,7 @@
 
 
 gdb_req="\
-This utility requires DBG, the GNU Debugger, to be installed on the system where
+This utility requires GDB, the GNU Debugger, to be installed on the system where
 Stacks is run. You can check whether this is the case by just typing:
 
   gdb --version
