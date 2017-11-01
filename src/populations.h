@@ -85,7 +85,8 @@ class SumStatsSummary {
     double *_n, *_n_all, *_var_sites;
     double *_sq_n, *_sq_n_all;
     double _locus_len_mean, _locus_len_acc_mean, _locus_len_var, _locus_len_mean_all, _locus_len_acc_mean_all, _locus_len_var_all;
-    double _overlap_mean,   _overlap_acc_mean,   _overlap_var;
+    double _locus_gt_sites_mean, _locus_gt_sites_acc_mean, _locus_gt_sites_var;
+    double _overlap_mean, _overlap_acc_mean, _overlap_var;
     double _locus_n, _locus_pe_ctg_n, _locus_overlap_n;
     
 public:
