@@ -82,7 +82,6 @@ bool      log_fst_comp      = false;
 bool      verbose           = false;
 bool      filter_lnl        = false;
 double    lnl_limit         = 0.0;
-int       min_stack_depth   = 0;
 double    merge_prune_lim   = 1.0;
 double    minor_allele_freq = 0.0;
 double    max_obs_het       = 1.0;
@@ -2488,14 +2487,18 @@ SumStatsSummary::SumStatsSummary(size_t pop_cnt)
         this->_sq_n_all[j] = 0.0;
     }
  
-    this->_locus_n            = 0.0;
-    this->_locus_overlap_n    = 0.0;
+    this->_locus_n         = 0.0;
+    this->_locus_overlap_n = 0.0;
+    this->_locus_pe_ctg_n  = 0.0;
     this->_locus_len_mean     = 0.0;
     this->_locus_len_acc_mean = 0.0;
     this->_locus_len_var      = 0.0;
-    this->_overlap_mean       = 0.0;
-    this->_overlap_acc_mean   = 0.0;
-    this->_overlap_var        = 0.0;
+    this->_overlap_mean     = 0.0;
+    this->_overlap_acc_mean = 0.0;
+    this->_overlap_var      = 0.0;
+    this->_locus_gt_sites_mean     = 0.0;
+    this->_locus_gt_sites_acc_mean = 0.0;
+    this->_locus_gt_sites_var      = 0.0;
 }
 
 int
@@ -2516,6 +2519,8 @@ SumStatsSummary::accumulate(const vector<LocBin *> &loci)
         cloc = loci[i]->cloc;
         t    = loci[i]->s->meta_pop();
 
+        size_t site_cnt = 0;
+
         for (uint pos = 0; pos < cloc->len; pos++) {
             //
             // Compile private alleles
@@ -2524,6 +2529,7 @@ SumStatsSummary::accumulate(const vector<LocBin *> &loci)
                 _private_cnt[t->nucs[pos].priv_allele]++;
 
             if (t->nucs[pos].allele_cnt == 2) {
+                site_cnt++;
 
                 for (uint pop = 0; pop < this->_pop_cnt; pop++) {
 
@@ -2580,6 +2586,7 @@ SumStatsSummary::accumulate(const vector<LocBin *> &loci)
                 }
 
             } else if (t->nucs[pos].allele_cnt == 1) {
+                site_cnt++;
 
                 for (uint pop = 0; pop < this->_pop_cnt; pop++) {
                     s = loci[i]->s->per_pop(pop);
@@ -2612,6 +2619,9 @@ SumStatsSummary::accumulate(const vector<LocBin *> &loci)
         // Accumulate the locus length and overlap.
         //
         _locus_n++;
+        _locus_gt_sites_mean += site_cnt;
+        _locus_gt_sites_var  += this->online_variance(site_cnt, _locus_gt_sites_acc_mean, _locus_n);
+ 
         if (cloc->pe_ctg) {
             _locus_pe_ctg_n++;
             _locus_len_mean_all += cloc->len - 10;
@@ -2667,9 +2677,10 @@ SumStatsSummary::final_calculation()
         _fis_mean_all[j]      = _fis_mean_all[j]      / _n_all[j];
     }
 
-    _locus_len_mean     = _locus_len_mean     / _locus_overlap_n;
-    _locus_len_mean_all = _locus_len_mean_all / _locus_pe_ctg_n;
-    _overlap_mean       = _overlap_mean       / _locus_overlap_n;
+    _locus_len_mean      = _locus_len_mean      / _locus_overlap_n;
+    _locus_len_mean_all  = _locus_len_mean_all  / _locus_pe_ctg_n;
+    _overlap_mean        = _overlap_mean        / _locus_overlap_n;
+    _locus_gt_sites_mean = _locus_gt_sites_mean / _locus_n;
 
     //
     // Finish the online variance calculation.
@@ -2698,6 +2709,8 @@ SumStatsSummary::final_calculation()
     _locus_len_var_all = _locus_len_var_all / (_locus_pe_ctg_n  - 1);
     _overlap_var       = _overlap_var       / (_locus_overlap_n - 1);
 
+    _locus_gt_sites_var = _locus_gt_sites_var / (_locus_n - 1);
+
     //
     // Calculate the first half of the standard deviation.
     //
@@ -2721,22 +2734,28 @@ SumStatsSummary::write_results()
     fh.precision(fieldw);
     fh.setf(std::ios::fixed);
 
+    cerr << setprecision(7)
+         << "\n"
+         << "Mean genotyped sites per locus: " << this->_locus_gt_sites_mean << "bp "
+         << "(stderr " << sqrt(this->_locus_gt_sites_var) / sqrt(this->_locus_n) << ");\n";
+
     //
-    // Write out locus length and overlap statistics.
+    // Write out locus length and overlap statistics for de novo data.
     //
-    cerr << "Number of loci with PE contig: " << this->_locus_pe_ctg_n << " ("
-         << setprecision(3)
-         << this->_locus_pe_ctg_n / this->_locus_n * 100 << "%);\n"
-         << setprecision(7)
-         << "  Mean length of loci: " << this->_locus_len_mean_all << "bp "
-         << "(stderr " << sqrt(this->_locus_len_var_all) / sqrt(this->_locus_n) << ");\n"
-         << "Number of loci with SE/PE overlap: " << this->_locus_overlap_n << " ("
-         << setprecision(3)
-         << this->_locus_overlap_n / this->_locus_n * 100 << "%);\n"
-         << setprecision(fieldw)
-         << "  Mean length of overlapping loci: " << this->_locus_len_mean << "bp "
-         << "(stderr " << sqrt(this->_locus_len_var) / sqrt(this->_locus_n) << "); "
-         << "mean overlap: " << this->_overlap_mean << "bp (stderr " << sqrt(this->_overlap_var) / sqrt(this->_locus_n) << ")\n";
+    if (loci_ordered == false)
+        cerr << "Number of loci with PE contig: " << this->_locus_pe_ctg_n << " ("
+             << setprecision(3)
+             << this->_locus_pe_ctg_n / this->_locus_n * 100 << "%);\n"
+             << setprecision(7)
+             << "  Mean length of loci: " << this->_locus_len_mean_all << "bp "
+             << "(stderr " << sqrt(this->_locus_len_var_all) / sqrt(this->_locus_n) << ");\n"
+             << "Number of loci with SE/PE overlap: " << this->_locus_overlap_n << " ("
+             << setprecision(3)
+             << this->_locus_overlap_n / this->_locus_n * 100 << "%);\n"
+             << setprecision(fieldw)
+             << "  Mean length of overlapping loci: " << this->_locus_len_mean << "bp "
+             << "(stderr " << sqrt(this->_locus_len_var) / sqrt(this->_locus_n) << "); "
+             << "mean overlap: " << this->_overlap_mean << "bp (stderr " << sqrt(this->_overlap_var) / sqrt(this->_locus_n) << ")\n";
 
     //
     // Write out summary statistics of the summary statistics.
@@ -3717,7 +3736,6 @@ parse_command_line(int argc, char* argv[])
             {"out_path",       required_argument, NULL, 'O'},
             {"in_vcf",         required_argument, NULL, 'V'},
             {"progeny",        required_argument, NULL, 'r'},
-            {"min_depth",      required_argument, NULL, 'm'},
             {"renz",           required_argument, NULL, 'e'},
             {"popmap",         required_argument, NULL, 'M'},
             {"whitelist",      required_argument, NULL, 'W'},
@@ -3751,7 +3769,7 @@ parse_command_line(int argc, char* argv[])
         };
 
         // getopt_long stores the option index here.
-        int c = getopt_long(argc, argv, "ACDEFGHJKLNSTUV:YZ123456dghjklnva:c:e:f:i:m:o:p:q:r:t:u:w:B:I:M:O:P:R:Q:W:", long_options, NULL);
+        int c = getopt_long(argc, argv, "ACDEFGHJKLNSTUV:YZ123456dghjklnva:c:e:f:i:o:p:q:r:t:u:w:B:I:M:O:P:R:Q:W:", long_options, NULL);
 
         // Detect the end of the options.
         if (c == -1)
@@ -3955,9 +3973,6 @@ parse_command_line(int argc, char* argv[])
             break;
         case 'B':
             bl_file = optarg;
-            break;
-        case 'm':
-            min_stack_depth = atoi(optarg);
             break;
         case 'a':
             minor_allele_freq = atof(optarg);
