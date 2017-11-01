@@ -118,7 +118,7 @@ dist_bin_SCRIPTS = scripts/denovo_map.pl scripts/ref_map.pl	scripts/export_sql.p
 	scripts/sort_read_pairs.pl scripts/exec_velvet.pl scripts/load_sequences.pl \
 	scripts/index_radtags.pl scripts/load_radtags.pl scripts/stacks_export_notify.pl \
 	scripts/integrate_alignments.py scripts/count_fixed_catalog_snps.py \
-	scripts/stacks-integrate-alignments
+	scripts/stacks-integrate-alignments scripts/stacks-gdb
 
 dist_noinst_SCRIPTS = autogen.sh scripts/extract_interpop_chars.pl scripts/convert_stacks.pl
 
@@ -182,6 +182,7 @@ install-data-hook:
 	$(install_sh) -d -m 755 $(DESTDIR)$(pkgdatadir)/php/export
 	sed -i -e 's,_VERSION_,$(VERSION),' $(DESTDIR)$(bindir)/stacks-integrate-alignments
 	chmod +x $(DESTDIR)$(bindir)/stacks-integrate-alignments
+	chmod +x $(DESTDIR)$(bindir)/stacks-gdb
 
 uninstall-hook:
 	rm -rf $(DESTDIR)$(pkglocalstatedir)
