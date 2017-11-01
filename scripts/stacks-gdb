@@ -25,7 +25,6 @@ e.g.
 This utility will run the \`PROGRAM ARGUMENTS\` command as specified, but in
 case of a crash it will print additional information, helping us in fixing the
 crash.
-
 "
 
 if [[ $# -eq 0 ]] ;then
@@ -46,6 +45,7 @@ fi
 exec &> >(tee stacks-gdb.log)
 
 gdb --quiet --args "$@" <<EOF
+    catch throw
     run
     backtrace
 EOF
