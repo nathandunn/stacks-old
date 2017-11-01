@@ -45,12 +45,13 @@ string o_prefix;
 
 BamCLocBuilder::Config refbased_cfg {false, 1000, 10, 0.20, 1, false};
 
-int    num_threads       = 1;
-bool   quiet             = false;
-bool   ignore_pe_reads   = false;
-double min_aln_cov       = 0.75;
-int    min_se_pe_overlap = 5;
-bool   detailed_output   = false;
+int    num_threads        = 1;
+bool   quiet              = false;
+bool   ignore_pe_reads    = false;
+double min_aln_cov        = 0.75;
+int    min_se_pe_overlap  = 5;
+double overlap_min_pct_id = 0.80;
+bool   detailed_output    = false;
 
 modelt model_type = marukilow;
 unique_ptr<const Model> model;
@@ -960,7 +961,7 @@ LocusProcessor::find_locus_overlap(SuffixTree *stree, GappedAln *g_aln, const DN
     const char *q_stop = q + query.length();
     size_t      q_pos  = 0;
     size_t      id     = 1;
-    const char *p;
+    // const char *p;
 
     do {
         step_alns.clear();
@@ -979,26 +980,6 @@ LocusProcessor::find_locus_overlap(SuffixTree *stree, GappedAln *g_aln, const DN
         }
     } while (q < q_stop);
 
-    if (alns.size() == 0) {
-        //
-        // If no alignments have been found, search the tails of the query and subject for any overlap
-        // that is too small to be picked up by the SuffixTree.
-        //
-        int min_olap = (int) stree->min_aln() > min_se_pe_overlap ? stree->min_aln() : min_se_pe_overlap;
-        string pe_ctg = stree->seq_str().substr(0, min_olap);
-        p = pe_ctg.c_str();
-        q = query.c_str() + (query.length() - min_olap);
-
-        while (min_olap >= min_se_pe_overlap && *q != '\0') {
-            if (strncmp(q, p, min_olap) == 0)
-                return min_olap;
-            min_olap--;
-            q++;
-        }
-
-        return 0;
-    }
-
     //
     // Perfect alignmnet to the suffix tree that occupies the end of the
     // query and the beginning of the subject. Return result.
@@ -1006,23 +987,49 @@ LocusProcessor::find_locus_overlap(SuffixTree *stree, GappedAln *g_aln, const DN
     if (alns.size() == 1) {
         size_t query_stop = alns.front().query_pos + alns.front().aln_len - 1;
 
-        if (query_stop == (query.length() - 1) && alns.front().subj_pos == 0)
-            return alns.front().aln_len;
+        if (query_stop == (query.length() - 1) && alns.front().subj_pos == 0) {
+            char buf[id_len];
+            snprintf(buf, id_len, "%luM", alns.front().aln_len);
+            overlap_cigar = buf;
+            return alns.front().subj_pos;
+        }
     }
 
-    //
-    // Otherwise, find a consistent set of suffix tree alignments, ordered in a directed, acyclic grapgh (DAG).
-    //
-    this->suffix_tree_hits_to_dag(query.length(), alns, final_alns);
+    if (alns.size() == 0) {
+        //
+        // If no alignments have been found, search the tails of the query and subject for any overlap
+        // that is too small to be picked up by the SuffixTree using the gapped aligner.
+        //
+        uint olap_bound = stree->min_aln() * 2;
 
-    //
-    // Create a gapped alignment to determine the exact overlap.
-    //
-    g_aln->init(query.length(), stree->seq_len(), true);
-    if (g_aln->align_constrained(query, stree->seq_str(), final_alns)) {
-        aln_res       = g_aln->result();
-        overlap_cigar = aln_res.cigar;
+        //
+        // Create a gapped alignment, looking only at the tail of the two sequences, to determine the exact overlap.
+        //
+        g_aln->init(query.length(), stree->seq_len(), true);
+        if (g_aln->align_region(query, stree->seq_str(),
+                                query.length() - olap_bound, query.length() - 1, 0, olap_bound - 1)) {
+            aln_res       = g_aln->result();
+            overlap_cigar = aln_res.cigar;
+        }
+
+    } else {
+        //
+        // Otherwise, find a consistent set of suffix tree alignments, ordered in a directed, acyclic grapgh (DAG).
+        //
+        this->suffix_tree_hits_to_dag(query.length(), alns, final_alns);
+   
+        //
+        // Create a gapped alignment, prefilling the suffix tree hits, to determine the exact overlap.
+        //
+        g_aln->init(query.length(), stree->seq_len(), true);
+        if (g_aln->align_constrained(query, stree->seq_str(), final_alns)) {
+            aln_res       = g_aln->result();
+            overlap_cigar = aln_res.cigar;
+        }
     }
+
+    if (aln_res.pct_id < overlap_min_pct_id)
+        return 0;
 
     Cigar cigar;
     parse_cigar(aln_res.cigar.c_str(), cigar, true);
