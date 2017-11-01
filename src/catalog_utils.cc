@@ -317,7 +317,9 @@ new_cslocus(const VcfRecord rec, int id)
     return loc;
 }
 
-CSLocus* new_cslocus(const Seq& consensus, const vector<VcfRecord>& records, int id) {
+CSLocus*
+new_cslocus(const Seq& consensus, const vector<VcfRecord>& records, int id)
+{
     CSLocus* loc = new CSLocus();
 
     // sample_id
@@ -355,6 +357,10 @@ CSLocus* new_cslocus(const Seq& consensus, const vector<VcfRecord>& records, int
         } else if (strncmp(p, "contig=overlapped:", 18) == 0) {
             p += 18;
             loc->overlap = is_integer(p);
+            loc->pe_ctg = true;
+
+        } else if (strncmp(p, "contig=separate", 15) == 0) {
+            loc->pe_ctg = true;
         }
 
         p = *q == '\0' ? q : q + 1;
