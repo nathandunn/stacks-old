@@ -68,6 +68,7 @@ bool   dbg_write_hapgraphs = false;
 bool   dbg_write_nt_depths = false;
 bool   dbg_true_reference  = false;
 bool   dbg_true_alns       = false;
+bool   dbg_log_stats_phasing = false;
 
 //
 // Additional globals.
@@ -390,19 +391,21 @@ try {
     }
 
     // Report statistics on genotyping and haplotyping.
-    size_t n_hap_attempts = gt_stats.n_halplotyping_attempts();
-    size_t n_hap_pairs = gt_stats.n_consistent_hap_pairs();
-    cout << "Genotyped " << gt_stats.n_genotyped_loci << " loci:\n"
-            << "  mean number of sites per locus: " << gt_stats.mean_n_sites_per_loc() << "\n"
-            << "  a consistent phasing was found for " << n_hap_pairs << " of out " << n_hap_attempts
-            << " (" << as_percentage((double) n_hap_pairs / n_hap_attempts)
-            << ") diploid loci with data\n"
-            << "\n";
-    logger->l << "BEGIN badly_phased\n"
-                << "n_tot_samples\tn_bad_samples\tn_loci\n";
-    for (auto& elem : gt_stats.n_badly_phased_samples)
-        logger->l << elem.first.second << '\t' << elem.first.first << '\t' << elem.second << '\n';
-    logger->l << "END badly_phased\n\n";
+    if (dbg_log_stats_phasing) {
+        size_t n_hap_attempts = gt_stats.n_halplotyping_attempts();
+        size_t n_hap_pairs = gt_stats.n_consistent_hap_pairs();
+        cout << "Genotyped " << gt_stats.n_genotyped_loci << " loci:\n"
+                << "  mean number of sites per locus: " << gt_stats.mean_n_sites_per_loc() << "\n"
+                << "  a consistent phasing was found for " << n_hap_pairs << " of out " << n_hap_attempts
+                << " (" << as_percentage((double) n_hap_pairs / n_hap_attempts)
+                << ") diploid loci with data\n"
+                << "\n";
+        logger->l << "BEGIN badly_phased\n"
+                    << "n_tot_samples\tn_bad_samples\tn_loci\n";
+        for (auto& elem : gt_stats.n_badly_phased_samples)
+            logger->l << elem.first.second << '\t' << elem.first.first << '\t' << elem.second << '\n';
+        logger->l << "END badly_phased\n\n";
+    }
 
     // Report clockings.
     {
@@ -1989,6 +1992,7 @@ const string help_string = string() +
         "  --dbg-true-alns: use true alignments (for simulated data; read IDs must\n"
         "               include 'cig1=...' and 'cig2=...' fields.\n"
         "  --dbg-true-reference: align paired-end reads to the true reference\n"
+        "  --dbg-log-stats-phasing: log detailed phasing statistics\n"
         "\n"
 #endif
         ;
@@ -2034,6 +2038,7 @@ try {
         {"dbg-true-alns", no_argument,      NULL,  2011}, {"true-alns", no_argument, NULL, 3011},
         {"dbg-no-overlaps", no_argument,    NULL,  2008},
         {"dbg-no-haps",  no_argument,       NULL,  2009},
+        {"dbg-log-stats-phasing", no_argument, NULL,  2013},
         {0, 0, 0, 0}
     };
 
@@ -2174,6 +2179,9 @@ try {
             break;
         case 2009://dbg-no-haps
             dbg_no_haplotypes = true;
+            break;
+        case 2013://dbg-no-haps
+            dbg_log_stats_phasing = true;
             break;
         case '?':
             bad_args();
