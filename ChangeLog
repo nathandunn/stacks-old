@@ -1,6 +1,8 @@
-Stacks 2.0 Beta 3 -
+Stacks 2.0 Beta 3 - Nov 01, 2017
 --------------------------------
-    Feature: Improved the outputs of gstacks and populations.
+    Feature: Added output to populations describing mean PE contig size and mean number of
+             genotyped sites per locus, which reflects the current filtering paramters.
+    Feature: Improved the output of gstacks and populations.
     Feature: Added script `stacks-integrate-alignments`.
     Bugfix: made further improvements to the single-end/paired-end locus overlapping algorithm.
     Bugfix: fixed all depths being null in populations' VCF output.
