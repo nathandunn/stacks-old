@@ -391,15 +391,15 @@ try {
     }
 
     // Report statistics on genotyping and haplotyping.
+    size_t n_hap_attempts = gt_stats.n_halplotyping_attempts();
+    size_t n_hap_pairs = gt_stats.n_consistent_hap_pairs();
+    cout << "Genotyped " << gt_stats.n_genotyped_loci << " loci:\n"
+            << "  mean number of sites per locus: " << gt_stats.mean_n_sites_per_loc() << "\n"
+            << "  a consistent phasing was found for " << n_hap_pairs << " of out " << n_hap_attempts
+            << " (" << as_percentage((double) n_hap_pairs / n_hap_attempts)
+            << ") diploid loci with data\n"
+            << "\n";
     if (dbg_log_stats_phasing) {
-        size_t n_hap_attempts = gt_stats.n_halplotyping_attempts();
-        size_t n_hap_pairs = gt_stats.n_consistent_hap_pairs();
-        cout << "Genotyped " << gt_stats.n_genotyped_loci << " loci:\n"
-                << "  mean number of sites per locus: " << gt_stats.mean_n_sites_per_loc() << "\n"
-                << "  a consistent phasing was found for " << n_hap_pairs << " of out " << n_hap_attempts
-                << " (" << as_percentage((double) n_hap_pairs / n_hap_attempts)
-                << ") diploid loci with data\n"
-                << "\n";
         logger->l << "BEGIN badly_phased\n"
                     << "n_tot_samples\tn_bad_samples\tn_loci\n";
         for (auto& elem : gt_stats.n_badly_phased_samples)
