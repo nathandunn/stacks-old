@@ -74,7 +74,7 @@ my $cnf = (-e $ENV{"HOME"} . "/.my.cnf") ? $ENV{"HOME"} . "/.my.cnf" : $mysql_co
 # Check for the existence of the necessary pipeline programs
 #
 foreach my $prog ("ustacks", "cstacks", "sstacks", "tsv2bam", "gstacks", "populations", "index_radtags.pl") {
-    die "Unable to find '" . $exe_path . $prog . "'.\n" if (!-e $exe_path . $prog || !-x $exe_path . $prog);
+    die "Unable to find '" . $exe_path . $prog . "'.\n" if (!-e $exe_path . $prog);
 }
 
 my ($log, $log_fh, $sample);
