@@ -646,6 +646,14 @@ LocusProcessor::process(CLocReadSet& loc)
                 overlap = 0;
             else
                 overlap = this->find_locus_overlap(stree, &aligner, aln_loc.ref(), overlap_cigar);
+            assert(overlap >= 0);
+            if (overlap == 0) {
+                assert(overlap_cigar.empty());
+            } else {
+                Cigar olap_cig;
+                parse_cigar(overlap_cigar.c_str(), olap_cig, true);
+                assert(overlap == 0 || cigar_length_ref(olap_cig) == size_t(overlap));
+            }
 
             if (overlap > 0) {
                 this->loc_.ctg_status = LocData::overlapped;
