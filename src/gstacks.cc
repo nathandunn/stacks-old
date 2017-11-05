@@ -646,14 +646,6 @@ LocusProcessor::process(CLocReadSet& loc)
                 overlap = 0;
             else
                 overlap = this->find_locus_overlap(stree, &aligner, aln_loc.ref(), overlap_cigar);
-            assert(overlap >= 0);
-            if (overlap == 0) {
-                assert(overlap_cigar.empty());
-            } else {
-                Cigar olap_cig;
-                parse_cigar(overlap_cigar.c_str(), olap_cig, true);
-                assert(overlap == 0 || cigar_length_ref(olap_cig) == size_t(overlap));
-            }
 
             if (overlap > 0) {
                 this->loc_.ctg_status = LocData::overlapped;
@@ -991,21 +983,6 @@ LocusProcessor::find_locus_overlap(SuffixTree *stree, GappedAln *g_aln, const DN
     } while (q < q_stop);
 
     
-    if (alns.size() == 1) {
-        //
-        // If a single alignment has been found, check for a Perfect alignmnet to the suffix tree
-        // that occupies the end of the query and the beginning of the subject. Return result.
-        //
-        size_t query_stop = alns.front().query_pos + alns.front().aln_len - 1;
-
-        if (query_stop == (query.length() - 1) && alns.front().subj_pos == 0) {
-            char buf[id_len];
-            snprintf(buf, id_len, "%luM", alns.front().aln_len);
-            overlap_cigar = buf;
-            return alns.front().query_pos;
-        }
-    }
-
     if (alns.size() == 0) {
         //
         // If no alignments have been found, search the tails of the query and subject for any overlap
@@ -1024,18 +1001,33 @@ LocusProcessor::find_locus_overlap(SuffixTree *stree, GappedAln *g_aln, const DN
         }
 
     } else {
-        //
-        // Otherwise, find a consistent set of suffix tree alignments, ordered in a directed, acyclic grapgh (DAG).
-        //
-        this->suffix_tree_hits_to_dag(query.length(), alns, final_alns);
+        size_t query_stop = alns.front().query_pos + alns.front().aln_len - 1;
+        
+        if ( alns.size() == 1 &&
+            (query_stop == (query.length() - 1) && alns.front().subj_pos == 0)) {
+            //
+            // If a single alignment has been found, check for a perfect alignmnet to the suffix tree
+            // that occupies the end of the query and the beginning of the subject.
+            //
+            char buf[id_len];
+            snprintf(buf, id_len, "%luM", alns.front().aln_len);
+            overlap_cigar  = buf;
+            aln_res.pct_id = 1;
+
+        } else {
+            //
+            // Otherwise, find a consistent set of suffix tree alignments, ordered in a directed, acyclic grapgh (DAG).
+            //
+            this->suffix_tree_hits_to_dag(query.length(), alns, final_alns);
    
-        //
-        // Create a gapped alignment, prefilling the suffix tree hits, to determine the exact overlap.
-        //
-        g_aln->init(query.length(), stree->seq_len(), true);
-        if (g_aln->align_constrained(query, stree->seq_str(), final_alns)) {
-            aln_res       = g_aln->result();
-            overlap_cigar = aln_res.cigar;
+            //
+            // Create a gapped alignment, prefilling the suffix tree hits, to determine the exact overlap.
+            //
+            g_aln->init(query.length(), stree->seq_len(), true);
+            if (g_aln->align_constrained(query, stree->seq_str(), final_alns)) {
+                aln_res       = g_aln->result();
+                overlap_cigar = aln_res.cigar;
+            }
         }
     }
 
@@ -1046,20 +1038,27 @@ LocusProcessor::find_locus_overlap(SuffixTree *stree, GappedAln *g_aln, const DN
         return 0;
 
     Cigar cigar;
-    parse_cigar(aln_res.cigar.c_str(), cigar, true);
+    parse_cigar(overlap_cigar.c_str(), cigar, true);
+
+    // cerr << "Cigar: " << aln_res.cigar.c_str() << "; cigar_length_ref aka overlap: " << cigar_length_ref(cigar) << "\n";
+
+    size_t overlap = cigar_length_ref(cigar);
 
     //
-    // If the first element in the CIGAR is a soft-masked region, ignore it.
+    // If the PE contig overlaps the entire SE contig, and there is sequence remaining on the PE contig, adjust the
+    // overlap to include it.
+    // e.g.:
+    // CIGAR:  68M1D6M
+    // PE CTG: TAGTTGCAGGCGCACCTGTAGGCCCCCGGACAGGAGGGGGTGGCTTCAAGCAGGGGCCAGCCCGAGGCCCCCCACCCACACCCAGCACACACTGGCC...
+    // SE CTG:     TGCAGGCGCACCTGTAGGCCCCCGGACAGGAGGGGGTGGCTTCAAGCAGGGGCCAGCCCGAGGCCCCC-ACCCAC
     //
-    size_t offset = 0;
-    if (cigar.front().first != 'S') {
-        offset = aln_res.subj_pos;
-    }
-
+    if (aln_res.subj_pos > 0)
+        overlap += aln_res.subj_pos;
+    
     //
     // Return overlap.
     //
-    return offset + cigar_length_ref(cigar);
+    return overlap;
 }
 
 string
