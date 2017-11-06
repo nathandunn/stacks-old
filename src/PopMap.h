@@ -177,9 +177,8 @@ void PopMap<LocusT>::populate_locus(Datum** locdata,
     pair<string,string> obshaps;
 
     for (size_t sample = 0; sample < mpopi.samples().size(); ++sample) {
-    try {
-
         size_t sample_vcf_i = header.sample_index(mpopi.samples()[sample].name);
+    try {
         bool   no_data      = true;
 
         //
@@ -265,7 +264,7 @@ void PopMap<LocusT>::populate_locus(Datum** locdata,
                 for (const VcfRecord* rec : snp_records) {
                 try {
                     d->snpdata.push_back(Datum::SNPData());
-                    const char* sample_gt = rec->find_sample(sample);
+                    const char* sample_gt = rec->find_sample(sample_vcf_i);
                     if (d->model[rec->pos()] == 'U')
                         continue;
 
@@ -331,7 +330,7 @@ void PopMap<LocusT>::populate_locus(Datum** locdata,
             }
         }
     } catch (exception&) {
-        cerr << "Error: At the " << (sample+1) << "th sample.\n"
+        cerr << "Error: At the " << (sample_vcf_i+1) << "th sample.\n"
              << "Error: (Locus " << cloc.id << ")\n"
              << "Error: Bad GStacksVCF file.\n";
         throw;
