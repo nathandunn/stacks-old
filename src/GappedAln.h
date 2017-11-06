@@ -445,7 +445,7 @@ GappedAln::bound_region(const int q_start, const int q_end,
     double score_down, score_right;
 
     // First, bound the top row.
-    if (i_bnd_low >= 0)
+    if (i_bnd_low >= 0 && s_start < (int) this->_n - 1)
         for (int j = s_start; j <= j_bnd; j++) {
             score_right  = this->matrix[i_bnd_low][j - 1];
             score_right += this->path[i_bnd_low][j - 1].left ? gapext_score : gapopen_score;
