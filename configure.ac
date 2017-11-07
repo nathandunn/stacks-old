@@ -42,6 +42,7 @@ AC_CHECK_LIB([z], [gzread],, [AC_MSG_ERROR([Zlib not found, reading gzipped file
 AC_HEADER_DIRENT
 AC_HEADER_STDC
 AC_CHECK_HEADERS([float.h limits.h stdlib.h string.h])
+AC_CHECK_HEADERS([unistd.h])
 
 # Check for OpenMP parallel execution support
 AC_OPENMP
@@ -56,6 +57,15 @@ AC_FUNC_CLOSEDIR_VOID
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
 AC_CHECK_FUNCS([floor memset pow sqrt])
+AC_CHECK_FUNCS([clock_gettime])
+
+# `clock_gettime()`, declared in unistd.h, may be in librt (e.g. for glibc).
+if test $ac_cv_func_clock_gettime = no; then
+	AC_CHECK_LIB(rt, clock_gettime,
+		[LIBS="-lrt $LIBS"
+		AC_DEFINE(HAVE_CLOCK_GETTIME, 1, [Define to 1 if you have the `clock_gettime' function.])
+		])
+fi
 
 #
 # Test if regular expressions are functional. Early regex implementations have nonfunctional stubs,

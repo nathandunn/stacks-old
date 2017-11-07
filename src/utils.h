@@ -201,15 +201,15 @@ public:
 
 private:
     double gettm() {
-    #if defined _POSIX_MONOTONIC_CLOCK && _POSIX_MONOTONIC_CLOCK >= 0
+        #if HAVE_CLOCK_GETTIME && defined _POSIX_MONOTONIC_CLOCK && _POSIX_MONOTONIC_CLOCK >= 0
         struct timespec ts;
         if(clock_gettime(CLOCK_MONOTONIC, &ts) == 0)
             return ts.tv_sec + ts.tv_nsec / 1.0e9;
         else
             return 0.0;
-    #else
+        #else
         return 0.0;
-    #endif
+        #endif
     }
 };
 
