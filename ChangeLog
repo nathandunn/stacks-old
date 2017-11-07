@@ -1,3 +1,8 @@
+Stacks 2.0 Beta 4 - Nov 07, 2017
+--------------------------------
+    Bugfix: Continued improving overlap algorithm to join SE and PE contigs.
+    Bugfix: Improved build system to handle new timing functions in gstacks.
+
 Stacks 2.0 Beta 3 - Nov 01, 2017
 --------------------------------
     Feature: Added output to populations describing mean PE contig size and mean number of
