@@ -97,7 +97,7 @@ public:
 
     double mean_n_sites_per_loc() const {return (double) n_sites_tot / n_genotyped_loci;}
 
-    map<pair<size_t,size_t>,size_t> n_badly_phased_samples; // { {n_bad_samples, n_tot_samples} : count }
+    map<pair<size_t,size_t>,size_t> n_badly_phased_samples; // { {n_inconsistent_hets, n_hets_2snps} : count }
     size_t n_halplotyping_attempts() const
         {size_t n=0; for (auto& e: n_badly_phased_samples) n+=e.second*e.first.second; return n;}
     size_t n_consistent_hap_pairs() const
@@ -226,7 +226,8 @@ private:
     vector<map<size_t,PhasedHet>> phase_hets (
             const vector<SiteCall>& calls,
             const CLocAlnSet& aln_loc,
-            set<size_t>& inconsistent_samples
+            size_t& n_hets_needing_phasing,
+            size_t& n_inconsistent_hets
             ) const;
 
     void count_pairwise_cooccurrences(
