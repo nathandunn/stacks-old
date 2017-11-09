@@ -397,11 +397,11 @@ try {
             << "  mean number of sites per locus: " << gt_stats.mean_n_sites_per_loc() << "\n"
             << "  a consistent phasing was found for " << n_hap_pairs << " of out " << n_hap_attempts
             << " (" << as_percentage((double) n_hap_pairs / n_hap_attempts)
-            << ") diploid loci with data\n"
+            << ") diploid loci needing phasing\n"
             << "\n";
     if (dbg_log_stats_phasing) {
         logger->l << "BEGIN badly_phased\n"
-                    << "n_tot_samples\tn_bad_samples\tn_loci\n";
+                    << "n_hets_2snps\tn_bad_hets\tn_loci\n";
         for (auto& elem : gt_stats.n_badly_phased_samples)
             logger->l << elem.first.second << '\t' << elem.first.first << '\t' << elem.second << '\n';
         logger->l << "END badly_phased\n\n";
@@ -775,9 +775,10 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
     // Call haplotypes.
     vector<map<size_t,PhasedHet>> phase_data;
     if (!dbg_no_haplotypes) {
-        set<size_t> inconsistent_samples;
-        phase_data = phase_hets(calls, aln_loc, inconsistent_samples);
-        ++gt_stats_.n_badly_phased_samples[ {inconsistent_samples.size(), aln_loc.n_samples()} ];
+        size_t n_hets_needing_phasing;
+        size_t n_inconsistent_hets;
+        phase_data = phase_hets(calls, aln_loc, n_hets_needing_phasing, n_inconsistent_hets);
+        ++gt_stats_.n_badly_phased_samples[ {n_inconsistent_hets, n_hets_needing_phasing} ];
     }
     timers_.geno_haplotyping.stop();
 
@@ -1128,9 +1129,11 @@ bool LocusProcessor::add_read_to_aln(
 vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
         const vector<SiteCall>& calls,
         const CLocAlnSet& aln_loc,
-        set<size_t>& inconsistent_samples
+        size_t& n_hets_needing_phasing,
+        size_t& n_inconsistent_hets
 ) const {
-    inconsistent_samples.clear();
+    n_hets_needing_phasing = 0;
+    n_inconsistent_hets = 0;
 
     vector<map<size_t,PhasedHet>> phased_samples (loc_.mpopi->samples().size());
     vector<size_t> snp_cols; // The SNPs of this locus.
@@ -1173,7 +1176,8 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
             phased_samples[sample].insert({col, {col, c.nt0(), c.nt1()}});
             continue;
         }
-
+        ++n_hets_needing_phasing;
+        
         vector<const SampleCall*> sample_het_calls;
         for (size_t het_i=0; het_i<het_snps.size(); ++het_i)
             sample_het_calls.push_back(&calls[snp_cols[het_snps[het_i]]].sample_calls()[sample]);
@@ -1191,7 +1195,7 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
         //
         vector<PhaseSet> phase_sets;
         if (!assemble_phase_sets(phase_sets, het_snps, sample_het_calls, cooccurrences)) {
-            inconsistent_samples.insert(sample);
+            ++n_inconsistent_hets;
             continue;
         }
 
