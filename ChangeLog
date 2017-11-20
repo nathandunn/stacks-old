@@ -1,5 +1,6 @@
-Stacks 1.48 - Sept 28, 2017
+Stacks 1.48 - Nov 20, 2017
 ---------------------------
+    Feature: Added HinP1I restriction enzyme.
     Feature: Added --null_inline mode to clone_filter (and process_radtags) for previously unseen type 
              of oligo combination.
 
