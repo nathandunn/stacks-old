@@ -44,6 +44,12 @@ Stacks 2.0 Beta 1 - Oct 09, 2017
     Feature: Added --null_inline mode to clone_filter (and process_radtags) for previously unseen type
              of oligo combination.
 
+Stacks 1.48 - Nov 20, 2017
+---------------------------
+    Feature: Added HinP1I restriction enzyme.
+    Feature: Added --null_inline mode to clone_filter (and process_radtags) for previously unseen type 
+             of oligo combination.
+
 Stacks 1.47 - Sept 06, 2017
 ---------------------------
     Feature: Improved populations's fasta output options (especially,
