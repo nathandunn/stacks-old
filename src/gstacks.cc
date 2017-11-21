@@ -1000,6 +1000,7 @@ LocusProcessor::find_locus_overlap(SuffixTree *stree, GappedAln *g_aln, const DN
             aln_res       = g_aln->result();
             overlap_cigar = aln_res.cigar;
         }
+        // g_aln->dump_alignment(query, stree->seq_str());
 
     } else {
         size_t query_stop = alns.front().query_pos + alns.front().aln_len - 1;
@@ -1032,30 +1033,56 @@ LocusProcessor::find_locus_overlap(SuffixTree *stree, GappedAln *g_aln, const DN
         }
     }
 
-    //
-    // Check that the gapped alignment is reasonable.
-    //
-    if (aln_res.pct_id < overlap_min_pct_id)
-        return 0;
-
     Cigar cigar;
     parse_cigar(overlap_cigar.c_str(), cigar, true);
 
+    if (cigar.size() == 0)
+        return 0;
+    
     // cerr << "Cigar: " << aln_res.cigar.c_str() << "; cigar_length_ref aka overlap: " << cigar_length_ref(cigar) << "\n";
 
-    size_t overlap = cigar_length_ref(cigar);
+    //
+    // Assess the gapped alignment and make sure it is reasonable.
+    //
+    size_t overlap     = 0;
+    size_t cigar_index = 0;
+    double total_len   = 0.0;
+    double align_len   = 0.0;
 
-    //
-    // If the PE contig overlaps the entire SE contig, and there is sequence remaining on the PE contig, adjust the
-    // overlap to include it.
-    // e.g.:
-    // CIGAR:  68M1D6M
-    // PE CTG: TAGTTGCAGGCGCACCTGTAGGCCCCCGGACAGGAGGGGGTGGCTTCAAGCAGGGGCCAGCCCGAGGCCCCCCACCCACACCCAGCACACACTGGCC...
-    // SE CTG:     TGCAGGCGCACCTGTAGGCCCCCGGACAGGAGGGGGTGGCTTCAAGCAGGGGCCAGCCCGAGGCCCCC-ACCCAC
-    //
-    if (aln_res.subj_pos > 0)
+    if (cigar[cigar_index].first == 'S') {
+        //
+        // Here is an example where we want to ignore the initial softmasking repored for the SE contig,
+        // but we must count the offset to the start of the PE contig as a set of mismatches.
+        // CIGAR:  138S4M2S
+        // SE CTG: TGCAGGAGATTTTCCTCTCTGCTGT...GGAGCTCGTTGGTGTTGGTGGCACTGCCCTGAGGTTTTCCTCATNNTCCCCAGGNCCCAGCGTCAGC
+        // PE CTG:                                                                               GGCACAGATGTGTCACAGCTGC...CTTCTT
+        //                                                                                                  ****
+        cigar_index++;
+        total_len += aln_res.subj_pos;
+
+    } else {
+        //
+        // If the PE contig overlaps the entire SE contig, and there is sequence remaining on the PE contig, adjust the
+        // overlap to include it, but it does not count as unaligned total length.
+        // e.g.:
+        // CIGAR:  68M1D6M
+        // SE CTG:     TGCAGGCGCACCTGTAGGCCCCCGGACAGGAGGGGGTGGCTTCAAGCAGGGGCCAGCCCGAGGCCCCC-ACCCAC
+        // PE CTG: TAGTTGCAGGCGCACCTGTAGGCCCCCGGACAGGAGGGGGTGGCTTCAAGCAGGGGCCAGCCCGAGGCCCCCCACCCACACCCAGCACACACTGGCC...
+        //
         overlap += aln_res.subj_pos;
+    }
     
+    for (; cigar_index < cigar.size(); cigar_index++) {
+        total_len += cigar[cigar_index].second;
+        if (cigar[cigar_index].first == 'M')
+            align_len += cigar[cigar_index].second;
+    }
+
+    if (align_len / total_len < overlap_min_pct_id)
+        return 0;
+
+    overlap += align_len;
+
     //
     // Return overlap.
     //
