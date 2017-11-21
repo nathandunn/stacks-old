@@ -7,7 +7,7 @@ const Nt4 Nt4::c (2);  // 0010 (2)
 const Nt4 Nt4::g (4);  // 0100 (4)
 const Nt4 Nt4::t (8);  // 1000 (8)
 const Nt4 Nt4::n (15); // 1111 (15)
-const array<Nt4,5> Nt4::all = {a, c, g, t, n};
+const array<Nt4,5> Nt4::all = {{a, c, g, t, n}};
 
 const Nt4 Nt4::from_ch[256] = {
     0,n,n,n, n,n,n,n, n,n,n,n, n,n,n,n, // 0x
@@ -49,7 +49,7 @@ const Nt2 Nt2::a (0);
 const Nt2 Nt2::c (1);
 const Nt2 Nt2::g (2);
 const Nt2 Nt2::t (3);
-const array<Nt2,4> Nt2::all = {a, c, g, t};
+const array<Nt2,4> Nt2::all = {{a, c, g, t}};
 
 const Nt2 Nt2::from_ch[256] = {
     0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, // 0x
