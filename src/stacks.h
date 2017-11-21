@@ -248,6 +248,7 @@ struct Read {
     DNASeq4 seq;
     string name;
 
+    Read() = default;
     Read(DNASeq4&& s, string&& n)
         : seq(move(s)), name(move(n))
         {}

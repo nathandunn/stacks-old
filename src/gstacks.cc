@@ -587,8 +587,11 @@ LocusProcessor::process(CLocReadSet& loc)
         // Transfer the already aligned foward-reads.
         //
         aln_loc.ref(DNASeq4(loc.reads().at(0).seq.length())); // Just N's.
-        for (SRead& r : loc.reads())
-            aln_loc.add(SAlnRead(Read(move(r.seq), move(r.name)), {{'M',r.seq.length()}}, r.sample));
+        for (SRead& r : loc.reads()) {
+            Cigar c = {{'M', r.seq.length()}};
+            aln_loc.add(SAlnRead(Read(move(r.seq), move(r.name)), move(c), r.sample));
+            r = SRead();
+        }
         timers_.cpt_consensus.restart();
         aln_loc.recompute_consensus();
         timers_.cpt_consensus.stop();

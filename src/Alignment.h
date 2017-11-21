@@ -55,6 +55,7 @@ public:
 
 struct AlnRead : Read {
     Cigar cigar;
+    AlnRead() : Read() {}
     AlnRead(Read&& r, Cigar&& c) : Read(move(r)), cigar(move(c)) {}
 
     Alignment aln() const {return Alignment(seq, cigar);}
