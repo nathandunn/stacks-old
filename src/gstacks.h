@@ -17,8 +17,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Stacks.  If not, see <http://www.gnu.org/licenses/>.
 //
-#ifndef RYSTACKS_H
-#define RYSTACKS_H
+#ifndef GSTACKS_H
+#define GSTACKS_H
 
 #include "constants.h"
 #include "nucleotides.h"
