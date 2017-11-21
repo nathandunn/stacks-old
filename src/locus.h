@@ -172,11 +172,13 @@ public:
 // SRead: a Read belonging to a Sample.
 struct SRead : Read {
     size_t sample; // index in MetaPopInfo::samples_
+    SRead() : Read(), sample(SIZE_MAX) {}
     SRead(Read&& r, size_t spl) : Read(move(r)), sample(spl) {}
 };
 
 struct SAlnRead : AlnRead {
     size_t sample; // index in MetaPopInfo::samples_
+    SAlnRead() : AlnRead(), sample(SIZE_MAX) {}
     SAlnRead(AlnRead&& r, size_t spl) : AlnRead(move(r)), sample(spl) {}
     SAlnRead(Read&& r, Cigar&& c, size_t spl) : AlnRead(move(r), move(c)), sample(spl) {}
 };
