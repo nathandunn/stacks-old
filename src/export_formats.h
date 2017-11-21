@@ -41,7 +41,7 @@ class Export {
 
  public:
     Export(ExportType t): _type(t) {};
-    virtual ~Export() {};
+    virtual ~Export() {}
     virtual int  open(const MetaPopInfo *) = 0;
     virtual int  write_header()    = 0;
     virtual int  write_batch(const vector<LocBin *> &) = 0;
@@ -91,8 +91,8 @@ class MarkersExport: public Export {
     const MetaPopInfo *_mpopi;
 
  public:
-    MarkersExport();
-    ~MarkersExport() {};
+    MarkersExport() : Export(ExportType::markers), _mpopi(NULL) {}
+    ~MarkersExport() {}
     int  open(const MetaPopInfo *mpopi);
     int  write_header();
     int  write_batch(const vector<LocBin *> &);
@@ -110,8 +110,8 @@ class GenotypesExport: public Export {
     const MetaPopInfo *_mpopi;
 
  public:
-    GenotypesExport();
-    ~GenotypesExport() {};
+    GenotypesExport() : Export(ExportType::genotypes), _mpopi(NULL) {}
+    ~GenotypesExport() {}
     int  open(const MetaPopInfo *mpopi);
     int  write_header();
     int  write_batch(const vector<LocBin *> &);
@@ -130,8 +130,8 @@ class SumstatsExport: public Export {
     uint  _pop_cnt;
 
  public:
-    SumstatsExport();
-    ~SumstatsExport() {};
+    SumstatsExport() : Export(ExportType::sumstats), _mpopi(NULL), _pop_cnt(UINT_MAX) {}
+    ~SumstatsExport() {}
     int  open(const MetaPopInfo *mpopi);
     int  write_header();
     int  write_batch(const vector<LocBin *> &);
@@ -150,8 +150,8 @@ class HapstatsExport: public Export {
     uint  _pop_cnt;
 
  public:
-    HapstatsExport();
-    ~HapstatsExport() {};
+    HapstatsExport() : Export(ExportType::hapstats), _mpopi(NULL), _pop_cnt(UINT_MAX) {}
+    ~HapstatsExport() {}
     int  open(const MetaPopInfo *mpopi);
     int  write_header();
     int  write_batch(const vector<LocBin *> &);
@@ -170,11 +170,11 @@ class SnpDivergenceExport: public Export {
     vector<ofstream *> _fhs;
 
  public:
-    SnpDivergenceExport();
+    SnpDivergenceExport() : Export(ExportType::snpdivergence), _mpopi(NULL) {}
     ~SnpDivergenceExport() {
         for (uint i = 0; i < this->_fhs.size(); i++)
             delete this->_fhs[i];
-    };
+    }
     int  open(const MetaPopInfo *mpopi);
     int  write_header();
     int  write_batch(const vector<LocBin *> &) { return 0; }
@@ -196,11 +196,11 @@ class HapDivergenceExport: public Export {
     ofstream *_metapop_fh;
 
  public:
-    HapDivergenceExport();
+    HapDivergenceExport() : Export(ExportType::hapdivergence), _mpopi(NULL), _metapop_fh(NULL) {}
     ~HapDivergenceExport() {
         for (uint i = 0; i < this->_fhs.size(); i++)
             delete this->_fhs[i];
-    };
+    }
     int  open(const MetaPopInfo *mpopi);
     int  write_header();
     int  write_batch(const vector<LocBin *> &) { return 0; }
@@ -223,8 +223,8 @@ class GenePopExport: public OrderableExport {
     ifstream _intmpfh;
 
  public:
-    GenePopExport();
-    ~GenePopExport() {};
+    GenePopExport() : OrderableExport(ExportType::genepop), _mpopi(NULL) {}
+    ~GenePopExport() {}
     int  open(const MetaPopInfo *mpopi);
     int  write_header();
     int  post_processing();
@@ -241,8 +241,8 @@ class FastaLociExport: public Export {
     const MetaPopInfo *_mpopi;
 
  public:
-    FastaLociExport();
-    ~FastaLociExport() {};
+    FastaLociExport() : Export(ExportType::fasta_loci), _mpopi(NULL) {}
+    ~FastaLociExport() {}
     int  open(const MetaPopInfo *mpopi);
     int  write_header();
     int  write_batch(const vector<LocBin *> &);
@@ -260,8 +260,8 @@ class FastaRawExport: public Export {
     const MetaPopInfo *_mpopi;
 
  public:
-    FastaRawExport();
-    ~FastaRawExport() {};
+    FastaRawExport() : Export(ExportType::fasta_raw), _mpopi(NULL) {}
+    ~FastaRawExport() {}
     int  open(const MetaPopInfo *mpopi);
     int  write_header();
     int  write_batch(const vector<LocBin *> &);
@@ -279,8 +279,8 @@ class FastaSamplesExport: public Export {
     const MetaPopInfo *_mpopi;
 
  public:
-    FastaSamplesExport();
-    ~FastaSamplesExport() {};
+    FastaSamplesExport() : Export(ExportType::fasta_samples), _mpopi(NULL) {}
+    ~FastaSamplesExport() {}
     int  open(const MetaPopInfo *mpopi);
     int  write_header();
     int  write_batch(const vector<LocBin *> &);

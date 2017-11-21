@@ -104,14 +104,10 @@ Export::transpose(ifstream &ifh, vector<string> &transposed)
     return 1;
 }
 
-SumstatsExport::SumstatsExport() : Export(ExportType::sumstats)
-{
-    this->_path = out_path + out_prefix + ".sumstats.tsv";
-}
-
 int
 SumstatsExport::open(const MetaPopInfo *mpopi)
 {
+    this->_path = out_path + out_prefix + ".sumstats.tsv";
     this->_mpopi   = mpopi;
     this->_pop_cnt = this->_mpopi->pops().size();
 
@@ -235,14 +231,10 @@ SumstatsExport::write_batch(const vector<LocBin *> &loci)
     return 0;
 }
 
-HapstatsExport::HapstatsExport() : Export(ExportType::hapstats)
-{
-    this->_path = out_path + out_prefix + ".hapstats.tsv";
-}
-
 int
 HapstatsExport::open(const MetaPopInfo *mpopi)
 {
+    this->_path = out_path + out_prefix + ".hapstats.tsv";
     this->_mpopi   = mpopi;
     this->_pop_cnt = this->_mpopi->pops().size();
 
@@ -327,11 +319,6 @@ HapstatsExport::write_batch(const vector<LocBin *> &loci)
     }
 
     return 0;
-}
-
-SnpDivergenceExport::SnpDivergenceExport() : Export(ExportType::snpdivergence)
-{
-    return;
 }
 
 int
@@ -504,11 +491,6 @@ SnpDivergenceExport::write_batch_pairwise(const vector<LocBin *> &loci, const ve
         }
     }
     return 0;
-}
-
-HapDivergenceExport::HapDivergenceExport() : Export(ExportType::hapdivergence)
-{
-    return;
 }
 
 int
@@ -783,14 +765,10 @@ HapDivergenceExport::write_batch_pairwise(const vector<LocBin *> &loci,
     return 0;
 }
 
-GenotypesExport::GenotypesExport() : Export(ExportType::genotypes)
-{
-    this->_path = out_path + out_prefix + (write_gtypes ? ".genotypes.tsv" : ".haplotypes.tsv");
-}
-
 int
 GenotypesExport::open(const MetaPopInfo *mpopi)
 {
+    this->_path = out_path + out_prefix + (write_gtypes ? ".genotypes.tsv" : ".haplotypes.tsv");
     this->_mpopi = mpopi;
 
     this->_fh.open(this->_path.c_str(), ofstream::out);
@@ -880,14 +858,10 @@ GenotypesExport::write_batch(const vector<LocBin *> &loci)
     return 0;
 }
 
-MarkersExport::MarkersExport() : Export(ExportType::markers)
-{
-    this->_path = out_path + out_prefix + ".markers.tsv";
-}
-
 int
 MarkersExport::open(const MetaPopInfo *mpopi)
 {
+    this->_path = out_path + out_prefix + ".markers.tsv";
     this->_mpopi = mpopi;
 
     this->_fh.open(this->_path.c_str(), ofstream::out);
@@ -955,14 +929,10 @@ MarkersExport::write_batch(const vector<LocBin *> &loci)
     return 0;
 }
 
-FastaLociExport::FastaLociExport() : Export(ExportType::fasta_loci)
-{
-    this->_path = out_path + out_prefix + ".loci.fa";
-}
-
 int
 FastaLociExport::open(const MetaPopInfo *mpopi)
 {
+    this->_path = out_path + out_prefix + ".loci.fa";
     this->_mpopi = mpopi;
 
     this->_fh.open(this->_path.c_str(), ofstream::out);
@@ -1017,14 +987,11 @@ FastaLociExport::write_batch(const vector<LocBin *> &loci)
     return 0;
 }
 
-FastaRawExport::FastaRawExport() : Export(ExportType::fasta_raw)
-{
-    this->_path = out_path + out_prefix + ".samples-raw.fa";
-}
-
 int
 FastaRawExport::write_header()
 {
+    this->_path = out_path + out_prefix + ".samples-raw.fa";
+
     //
     // Obtain the current date.
     //
@@ -1101,14 +1068,11 @@ FastaRawExport::write_batch(const vector<LocBin *> &loci)
     return 0;
 }
 
-FastaSamplesExport::FastaSamplesExport() : Export(ExportType::fasta_samples)
-{
-    this->_path = out_path + out_prefix + ".samples.fa";
-}
-
 int
 FastaSamplesExport::write_header()
 {
+    this->_path = out_path + out_prefix + ".samples.fa";
+
     //
     // Obtain the current date.
     //
@@ -1550,8 +1514,6 @@ write_vcf_haplotypes(map<int, CSLocus *> &catalog,
     return 0;
 }
 */
-
-GenePopExport::GenePopExport() : OrderableExport(ExportType::genepop) {}
 
 int
 GenePopExport::open(const MetaPopInfo *mpopi)
