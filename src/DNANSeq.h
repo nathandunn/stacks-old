@@ -77,7 +77,7 @@ public:
 
     bool operator==(const DNANSeq& other) const;
     bool operator<(const DNANSeq& other) const;
-    friend class std::hash<DNANSeq>;
+    friend struct std::hash<DNANSeq>;
 
 private:
     uint nbytes() const {return (bits+7)/8;}

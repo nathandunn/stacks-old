@@ -54,7 +54,7 @@ const map<string,modelt> model_strings = {
 
 // Quantiles of the Chi2 distribution for VCF's GQ.
 //$ Rscript -e "cat(paste(qchisq(1-10^(-(1:40)/10), 1), '\n', sep=''))"
-const std::array<double,40> chisq1ddf_gq = {
+const std::array<double,40> chisq1ddf_gq = {{
     0.0679615365255401, 0.230764766661193, 0.452421556097698, 0.714036104152315, 1.00448471501902,
     1.31668063342863, 1.64583886397469, 1.98858107774449, 2.34243609502603, 2.70554345409542,
     3.07646857913928, 3.45408274293754, 3.83748240184564, 4.22593339019369, 4.61883133337202,
@@ -63,7 +63,7 @@ const std::array<double,40> chisq1ddf_gq = {
     9.13191510451069, 9.55388906647803, 9.97721386826398, 10.4017999212068, 10.8275661706627,
     11.2544390521783, 11.6823516018745, 12.1112426945654, 12.5410563882771, 12.9717413578738,
     13.403250403671, 13.8355400234795, 14.2685700385079, 14.7023032652319, 15.1367052266236
-};
+}};
 
 double qchisq(double alpha, size_t df) {
     //
@@ -880,12 +880,12 @@ SiteCall MarukiLowModel::call(const SiteCounts& depths) const {
         do {
             lnl_prev = lnl_dimorph;
             array<array<double,3>,6> neighbors = {{
-                {freq_MM+x, freq_Mm-x, freq_mm},
-                {freq_MM-x, freq_Mm+x, freq_mm},
-                {freq_MM+x, freq_Mm,   freq_mm-x},
-                {freq_MM-x, freq_Mm,   freq_mm+x},
-                {freq_MM,   freq_Mm+x, freq_mm-x},
-                {freq_MM,   freq_Mm-x, freq_mm+x}
+                {{freq_MM+x, freq_Mm-x, freq_mm}},
+                {{freq_MM-x, freq_Mm+x, freq_mm}},
+                {{freq_MM+x, freq_Mm,   freq_mm-x}},
+                {{freq_MM-x, freq_Mm,   freq_mm+x}},
+                {{freq_MM,   freq_Mm+x, freq_mm-x}},
+                {{freq_MM,   freq_Mm-x, freq_mm+x}}
             }};
             for(auto& n : neighbors) {
                 double f_MM = n[0];

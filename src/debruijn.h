@@ -50,7 +50,7 @@ public:
     }
 
     bool operator==(const Kmer& other) const {return a_ == other.a_;}
-    friend class std::hash<Kmer>;
+    friend struct std::hash<Kmer>;
 };
 
 namespace std { template<>

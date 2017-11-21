@@ -84,7 +84,7 @@ class SampleCall {
     array<Nt2,2> nts_;
     long gq_;
 public:
-    SampleCall() : lnls_(), call_(snp_type_unk), nts_{Nt2(),Nt2()}, gq_(-1) {}
+    SampleCall() : lnls_(), call_(snp_type_unk), nts_{{Nt2(),Nt2()}}, gq_(-1) {}
 
     const GtLiks& lnls() const {return lnls_;}
           GtLiks& lnls()       {return lnls_;}
@@ -375,9 +375,9 @@ void SampleCall::set_call(snp_type c, Nt2 rank0_nt, Nt2 rank1_nt, long gq) {
         gq_ = gq;
     } else if (call_ == snp_type_het) {
         if (rank0_nt < rank1_nt)
-            nts_ = {rank0_nt, rank1_nt};
+            nts_ = {{rank0_nt, rank1_nt}};
         else
-            nts_ = {rank1_nt, rank0_nt};
+            nts_ = {{rank1_nt, rank0_nt}};
         gq_ = gq;
     }
 }

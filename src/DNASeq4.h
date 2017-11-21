@@ -22,7 +22,7 @@ public:
     Nt operator[] (size_t i) const {return Nt(size_t((a_ >> (i*Nt::nbits)) & lowbits));}
     bool operator== (const NtArray<Nt>& other) const {return a_ == other.a_;}
     bool operator<  (const NtArray<Nt>& other) const {return a_ < other.a_;}
-    friend class std::hash<NtArray>;
+    friend struct std::hash<NtArray>;
 
     // Methods for kmers
     void push_front(Nt nt) {a_ <<= Nt::nbits; a_ |= uint64_t(size_t(nt));}
@@ -102,7 +102,7 @@ public:
     Nt4 operator[] (size_t i) const {return i%2==0 ? v_[i/2].first() : v_[i/2].second();}
     bool  operator== (const DNASeq4& other) const {return l_ == other.l_ && v_ == other.v_;}
     bool  operator<  (const DNASeq4& other) const {return l_ < other.l_ ? true : v_ < other.v_;}
-    friend class std::hash<DNASeq4>;
+    friend struct std::hash<DNASeq4>;
     friend ostream& operator<< (ostream& os, const DNASeq4& seq) {for (Nt4 nt : seq) os << nt; return os;}
 
     // Iterator.
