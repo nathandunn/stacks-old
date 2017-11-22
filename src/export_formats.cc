@@ -90,7 +90,6 @@ Export::transpose(ifstream &ifh, vector<string> &transposed)
         parse_tsv(buf.c_str(), fields);
 
         if (transposed.size() == 0) {
-            transposed.push_back("");
             for (uint i = 0; i < fields.size(); i++)
                 transposed.push_back(fields[i]);
 
@@ -1174,229 +1173,8 @@ FastaSamplesExport::write_batch(const vector<LocBin *> &loci)
 
     return 0;
 }
+
 /*
-int
-write_vcf_ordered(map<int, CSLocus *> &catalog,
-                  PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum,
-                  map<int, pair<merget, int> > &merge_map, ofstream &log_fh)
-{
-    //
-    // Write a VCF file as defined here: http://www.1000genomes.org/node/101
-    // Order SNPs by genomic position (and handle overlapping loci).
-    //
-
-    string path = out_path + out_prefix + ".vcf";
-    cerr << "Writing ordered population data to VCF file '" << path << "'\n";
-    log_fh << "\n#\n# Generating SNP-based VCF export.\n#\n";
-
-    VcfHeader header;
-    header.add_std_meta();
-    for(auto& s : mpopi.samples())
-        header.add_sample(s.name);
-    VcfWriter writer (path, move(header));
-
-    // We need to order the SNPs taking into account overlapping loci.
-    OLocTally<NucTally> *ord = new OLocTally<NucTally>(log_fh);
-
-    for (auto it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
-        vector<NucTally *> sites;
-        // ord->order(sites, it->second);
-
-        for (uint pos = 0; pos < sites.size(); pos++) {
-            if (catalog.count(sites[pos]->loc_id) == 0) {
-                cerr << "Unable to find locus id " << sites[pos]->loc_id << "\n";
-                continue;
-            }
-            CSLocus* loc = catalog[sites[pos]->loc_id];
-            uint16_t col = sites[pos]->col;
-            int snp_index = loc->snp_index(col);
-            if (snp_index < 0) {
-                cerr << "Warning: unable to locate SNP call in column " << col << " for catalog locus " << loc->id << "\n";
-                continue;
-            }
-            Datum** d = pmap->locus(loc->id);
-
-
-            const char ref = sites[pos]->p_allele;
-            const char alt = sites[pos]->q_allele;
-            char freq_alt[32];
-            sprintf(freq_alt, "%0.3f", 1 - sites[pos]->p_freq);
-
-            VcfRecord rec;
-            rec.append_chrom(string(loc->loc.chr()));
-            rec.append_pos(loc->sort_bp(col) + 1);
-            rec.append_id(to_string(loc->id) + "_" + to_string(col));
-            rec.append_allele(Nt2(loc->loc.strand == strand_plus ? ref : reverse(ref)));
-            rec.append_allele(Nt2(loc->loc.strand == strand_plus ? alt : reverse(alt)));
-            rec.append_qual(".");
-            rec.append_filters("PASS");
-            rec.append_info(string("NS=") + to_string(sites[pos]->num_indv));
-            rec.append_info(string("AF=") + freq_alt);
-            rec.append_format("GT");
-            rec.append_format("DP");
-            rec.append_format("AD");
-
-            for (int j = 0; j < pmap->sample_cnt(); j++) {
-                stringstream sample;
-
-                if (d[j] == NULL || col >= d[j]->len) {
-                    // Data does not exist.
-                    sample << "./.:0:.,.";
-                } else if (d[j]->model[col] == 'U') {
-                    // Data exists, but the model call was uncertain.
-                    sample << "./.:" << d[j]->tot_depth << ":.,.";
-                } else {
-                    char allele1, allele2;
-                    tally_observed_haplotypes(d[j]->obshap, snp_index, allele1, allele2);
-
-                    if (allele1 == 0) {
-                        // More than two alleles in this sample
-                        sample << "./.:" << d[j]->tot_depth << ":.,.";
-                    } else {
-                        // Write the genotype.
-
-                        int dp1, dp2;
-                        find_datum_allele_depths(d[j], snp_index, allele1, allele2, dp1, dp2);
-
-                        if (allele2 == 0) {
-                            // homozygote
-                            if (allele1 == ref) {
-                                sample << "0/0:" << d[j]->tot_depth << ":" << dp1 << "," << dp2;
-                            } else {
-                                sample << "1/1:" << d[j]->tot_depth << ":" << dp2 << "," << dp1;
-                            }
-                        } else {
-                            // heterozygote
-                            sample << "0/1:" << d[j]->tot_depth
-                                   << ":" << (allele1 == ref ? dp1 : dp2) << "," << (allele1 == ref ? dp2 : dp1);
-                        }
-                    }
-                }
-                rec.append_sample(sample.str());
-            }
-            writer.write_record(rec);
-        }
-    }
-
-    return 0;
-}
-
-int
-write_vcf(map<int, CSLocus *> &catalog,
-          PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum,
-          map<int, pair<merget, int> > &merge_map)
-{
-    //
-    // Write a VCF file as defined here: http://www.1000genomes.org/node/101
-    //
-
-    string path = out_path + out_prefix + ".vcf";
-    cerr << "Writing population data to VCF file '" << path << "'\n";
-
-    VcfHeader header;
-    header.add_std_meta();
-    header.add_meta(VcfMeta::predefs::info_locori);
-    for(auto& s : mpopi.samples())
-        header.add_sample(s.name);
-    VcfWriter writer (path, move(header));
-
-    map<string, vector<CSLocus *> >::const_iterator it;
-    CSLocus *loc;
-    Datum   **d;
-    LocTally *t;
-
-    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
-
-        // We need to order the SNPs so negative and positive strand SNPs are properly ordered.
-        vector<GenPos> ordered_snps;
-        for (uint pos = 0; pos < it->second.size(); pos++) {
-            loc = it->second[pos];
-            t   = psum->locus_tally(loc->id);
-
-            for (uint i = 0; i < loc->snps.size(); i++) {
-                uint16_t col = loc->snps[i]->col;
-                if (t->nucs[col].allele_cnt == 2)
-                    ordered_snps.push_back(GenPos(loc->id, i, loc->sort_bp(col)));
-            }
-        }
-        sort(ordered_snps.begin(), ordered_snps.end());
-
-        for (uint pos = 0; pos < ordered_snps.size(); pos++) {
-            loc = catalog[ordered_snps[pos].id];
-            uint16_t col = loc->snps[ordered_snps[pos].snp_index]->col;
-            int snp_index = loc->snp_index(col);
-            if (snp_index < 0) {
-                cerr << "Warning: unable to locate SNP call in column " << col << " for locus #" << loc->id << "\n";
-                continue;
-            }
-            t   = psum->locus_tally(loc->id);
-            d = pmap->locus(loc->id);
-
-            const char ref = t->nucs[col].p_allele;
-            const char alt = t->nucs[col].q_allele;
-            char freq_alt[32];
-            sprintf(freq_alt, "%0.3f", 1 - t->nucs[col].p_freq);
-
-            VcfRecord rec;
-            rec.append_chrom(string(loc->loc.chr()));
-            rec.append_pos(loc->sort_bp(col) + 1);
-            rec.append_id(to_string(loc->id) + "_" + to_string(col));
-            rec.append_allele(Nt2(loc->loc.strand == strand_plus ? ref : reverse(ref)));
-            rec.append_allele(Nt2(loc->loc.strand == strand_plus ? alt : reverse(alt)));
-            rec.append_qual(".");
-            rec.append_filters("PASS");
-            rec.append_info(string("NS=") + to_string(t->nucs[col].num_indv));
-            rec.append_info(string("AF=") + freq_alt);
-            rec.append_info(string("locori=") + (loc->loc.strand == strand_plus ? "p" : "m"));
-            rec.append_format("GT");
-            rec.append_format("DP");
-            rec.append_format("AD");
-
-            for (int j = 0; j < pmap->sample_cnt(); j++) {
-                stringstream sample;
-
-                if (d[j] == NULL || col >= uint(d[j]->len)) {
-                    // Data does not exist.
-                    sample << "./.:0:.,.";
-                } else if (d[j]->model[col] == 'U') {
-                    // Data exists, but the model call was uncertain.
-                    sample << "./.:" << d[j]->tot_depth << ":.,.";
-                } else {
-                    char allele1, allele2;
-                    tally_observed_haplotypes(d[j]->obshap, ordered_snps[pos].snp_index, allele1, allele2);
-
-                    if (allele1 == 0) {
-                        // More than two alleles in this sample
-                        sample << "./.:" << d[j]->tot_depth << ":.,.";
-                    } else {
-                        // Write the genotype.
-
-                        int dp1, dp2;
-                        find_datum_allele_depths(d[j], snp_index, allele1, allele2, dp1, dp2);
-
-                        if (allele2 == 0) {
-                            // homozygote
-                            if (allele1 == ref) {
-                                sample << "0/0:" << d[j]->tot_depth << ":" << dp1 << "," << dp2;
-                            } else {
-                                sample << "1/1:" << d[j]->tot_depth << ":" << dp2 << "," << dp1;
-                            }
-                        } else {
-                            // heterozygote
-                            sample << "0/1:" << d[j]->tot_depth
-                                   << ":" << (allele1 == ref ? dp1 : dp2) << "," << (allele1 == ref ? dp2 : dp1);
-                        }
-                    }
-                }
-                rec.append_sample(sample.str());
-            }
-            writer.write_record(rec);
-        }
-    }
-
-    return 0;
-}
-
 int
 write_vcf_haplotypes(map<int, CSLocus *> &catalog,
                      PopMap<CSLocus> *pmap,
@@ -1593,9 +1371,7 @@ GenePopExport::write_header()
     for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
         const Pop& pop = this->_mpopi->pops()[p];
         for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
-            this->_tmpfh << mpopi.samples()[j].name;
-            if (j < this->_mpopi->samples().size() - 1)
-                this->_tmpfh << "\t";
+            this->_tmpfh << "\t" << mpopi.samples()[j].name;
         }
     }
     this->_tmpfh << "\n";
@@ -1908,7 +1684,7 @@ StructureExport::post_processing()
 
     assert(transposed_lines.size() == (this->_mpopi->samples().size() * 2) + 1);
 
-    for (size_t line_cnt = 0; line_cnt < this->_mpopi->pops().size(); line_cnt++)
+    for (size_t line_cnt = 0; line_cnt < transposed_lines.size(); line_cnt++)
         this->_fh << transposed_lines[line_cnt] << "\n";
 
     return 1;
@@ -1981,11 +1757,9 @@ PhylipExport::write_header()
 {
     for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
         const Pop& pop = this->_mpopi->pops()[p];
-        for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
-            this->_tmpfh << pop.name;
-            if (j < this->_mpopi->samples().size() - 1)
-                this->_tmpfh << "\t";
-        }
+        this->_tmpfh << pop.name;
+        if (p < this->_mpopi->pops().size() - 1)
+            this->_tmpfh << "\t";
     }
     this->_tmpfh << "\n";
 
@@ -2178,16 +1952,21 @@ PhylipExport::post_processing()
 
     this->transpose(this->_intmpfh, transposed_lines);
 
+    if (transposed_lines.size() == 0)
+        return 0;
+    
     assert(transposed_lines.size() == this->_mpopi->pops().size());
 
     this->_fh << this->_mpopi->pops().size() << "\t" << this->_site_index << "\n";
     
     for (size_t line_cnt = 0; line_cnt < transposed_lines.size(); line_cnt++) {
-        this->_fh << transposed_lines[line_cnt][0];
-
-        for (size_t i = 1; i < transposed_lines[line_cnt].length(); i++)
+        size_t pos = transposed_lines[line_cnt].find_first_of("\t");
+        this->_fh << transposed_lines[line_cnt].substr(0, pos + 1);
+        
+        for (size_t i = pos + 1; i < transposed_lines[line_cnt].length(); i++)
             if (transposed_lines[line_cnt][i] != '\t')
                 this->_fh << transposed_lines[line_cnt][i];
+        this->_fh << "\n";
     }
 
     this->_fh << "# Stacks v" << VERSION << "; " << " Phylip sequential; " << date << "\n";
