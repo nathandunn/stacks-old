@@ -70,8 +70,6 @@ bool      beagle_phased_out = false;
 bool      plink_out         = false;
 bool      hzar_out          = false;
 bool      treemix_out       = false;
-bool      phylip_out        = false;
-bool      phylip_var        = false;
 bool      phylip_var_all    = false;
 bool      ordered_export    = false;
 bool      smooth_fstats     = false;
@@ -3946,10 +3944,10 @@ parse_command_line(int argc, char* argv[])
             hzar_out = true;
             break;
         case 'Y':
-            phylip_out = true;
+            exports.push_back(new PhylipFixedExport());
             break;
         case 'L':
-            phylip_var = true;
+            exports.push_back(new PhylipVarExport());
             break;
         case 'T':
             phylip_var_all = true;
