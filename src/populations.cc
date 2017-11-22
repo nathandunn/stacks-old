@@ -63,7 +63,6 @@ bool      fasta_loci_out    = false;
 bool      fasta_samples_out = false;
 bool      fasta_samples_raw_out = false;
 bool      genomic_out       = false;
-bool      structure_out     = false;
 bool      phase_out         = false;
 bool      fastphase_out     = false;
 bool      beagle_out        = false;
@@ -3702,8 +3701,6 @@ output_parameters(ostream &fh)
 int
 parse_command_line(int argc, char* argv[])
 {
-    Export *exp;
-
     while (1) {
         static struct option long_options[] = {
             {"help",           no_argument,       NULL, 'h'},
@@ -3916,23 +3913,19 @@ parse_command_line(int argc, char* argv[])
             vcf_haplo_out = true;
             break;
         case 1006:
-            exp = new FastaLociExport();
-            exports.push_back(exp);
+            exports.push_back(new FastaLociExport());
             break;
         case 'F':
-            exp = new FastaRawExport();
-            exports.push_back(exp);
+            exports.push_back(new FastaRawExport());
             break;
         case 'J':
-            exp = new FastaSamplesExport();
-            exports.push_back(exp);
+            exports.push_back(new FastaSamplesExport());
             break;
         case 'G':
-            exp = new GenePopExport();
-            exports.push_back(exp);
+            exports.push_back(new GenePopExport());
             break;
         case 'S':
-            structure_out = true;
+            exports.push_back(new StructureExport());
             break;
         case 'A':
             fastphase_out = true;
