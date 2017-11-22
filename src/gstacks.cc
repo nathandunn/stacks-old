@@ -1081,7 +1081,12 @@ LocusProcessor::find_locus_overlap(SuffixTree *stree, GappedAln *g_aln, const DN
             align_len += cigar[cigar_index].second;
     }
 
-    if (align_len / total_len < overlap_min_pct_id)
+    //
+    // Test that 80% of the overlapping sequence is aligned (includes gaps) AND
+    // make sure that of those sequences aligned, 80% are identities.
+    //
+    if (align_len / total_len < overlap_min_pct_id ||
+        aln_res.pct_id        < overlap_min_pct_id)
         return 0;
 
     overlap += align_len;
