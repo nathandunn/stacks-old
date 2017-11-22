@@ -31,7 +31,7 @@
 #include "populations.h" // for "merget", "InputMode", "uncalled_haplotype()", "count_haplotypes_at_locus()"
 
 enum class ExportType {markers, genotypes, sumstats, hapstats, snpdivergence, hapdivergence,
-                       fasta_loci, fasta_raw, fasta_samples, structure, genepop, ordered_genepop, vcf, ordered_vcf};
+                       fasta_loci, fasta_raw, fasta_samples, structure, genepop, vcf, phylipvar, phylipfixed};
 
 class Export {
  protected:
@@ -230,6 +230,56 @@ class GenePopExport: public OrderableExport {
     int  post_processing();
     void close();
 
+ private:
+    int write_site(const CSLocus* cloc, const LocPopSum* psum, Datum const*const* datums, size_t col, size_t index);
+};
+
+class StructureExport: public OrderableExport {
+    const MetaPopInfo *_mpopi;
+    string   _tmp_path;
+    ofstream _tmpfh;
+    ifstream _intmpfh;
+
+ public:
+    StructureExport() : OrderableExport(ExportType::structure), _mpopi(NULL) {}
+    ~StructureExport() {}
+    int  open(const MetaPopInfo *mpopi);
+    int  write_header();
+    int  post_processing();
+    void close();
+
+ private:
+    int write_site(const CSLocus* cloc, const LocPopSum* psum, Datum const*const* datums, size_t col, size_t index);
+};
+
+class PhylipExport: public OrderableExport {
+protected:
+    const MetaPopInfo *_mpopi;
+    string   _log_path;
+    ofstream _logfh;
+    string   _tmp_path;
+    ofstream _tmpfh;
+    ifstream _intmpfh;
+    size_t   _site_index;
+
+ public:
+    PhylipExport(ExportType type) : OrderableExport(type), _mpopi(NULL), _site_index(0) {}
+    int open(const MetaPopInfo *mpopi);
+    int  write_header();
+    int  post_processing();
+    void close();
+};
+
+class PhylipVarExport: public PhylipExport {
+ public:
+    PhylipVarExport() : PhylipExport(ExportType::phylipvar) {}
+ private:
+    int write_site(const CSLocus* cloc, const LocPopSum* psum, Datum const*const* datums, size_t col, size_t index);
+};
+
+class PhylipFixedExport: public PhylipExport {
+ public:
+    PhylipFixedExport() : PhylipExport(ExportType::phylipfixed) {}
  private:
     int write_site(const CSLocus* cloc, const LocPopSum* psum, Datum const*const* datums, size_t col, size_t index);
 };

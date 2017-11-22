@@ -1516,43 +1516,6 @@ write_vcf_haplotypes(map<int, CSLocus *> &catalog,
 */
 
 int
-GenePopExport::open(const MetaPopInfo *mpopi)
-{
-    this->_mpopi = mpopi;
-
-    //
-    // Write a GenePop file as defined here: http://kimura.univ-montp2.fr/~rousset/Genepop.htm
-    //
-    this->_path = out_path + out_prefix + ".genepop";
-
-    //
-    // Open a temporary file.
-    //
-    this->_tmp_path = out_path + out_prefix + ".genepop.part";
-    this->_tmpfh.open(this->_tmp_path);
-
-    cerr << "Polymorphic sites in GenePop format will be written to '" << this->_path << "'\n";
-
-    return 0;
-}
-
-int
-GenePopExport::write_header()
-{
-    for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
-        const Pop& pop = this->_mpopi->pops()[p];
-        for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
-            this->_tmpfh << mpopi.samples()[j].name;
-            if (j < this->_mpopi->samples().size() - 1)
-                this->_tmpfh << "\t";
-        }
-    }
-    this->_tmpfh << "\n";
-
-    return 0;
-}
-
-int
 OrderableExport::write_batch(const vector<LocBin*> &loci)
 {
 
@@ -1599,6 +1562,43 @@ OrderableExport::write_batch(const vector<LocBin*> &loci)
             }
         }
     }
+
+    return 0;
+}
+
+int
+GenePopExport::open(const MetaPopInfo *mpopi)
+{
+    this->_mpopi = mpopi;
+
+    //
+    // Write a GenePop file as defined here: http://kimura.univ-montp2.fr/~rousset/Genepop.htm
+    //
+    this->_path = out_path + out_prefix + ".genepop";
+
+    //
+    // Open a temporary file.
+    //
+    this->_tmp_path = out_path + out_prefix + ".genepop.part";
+    this->_tmpfh.open(this->_tmp_path);
+
+    cerr << "Polymorphic sites in GenePop format will be written to '" << this->_path << "'\n";
+
+    return 0;
+}
+
+int
+GenePopExport::write_header()
+{
+    for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
+        const Pop& pop = this->_mpopi->pops()[p];
+        for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
+            this->_tmpfh << mpopi.samples()[j].name;
+            if (j < this->_mpopi->samples().size() - 1)
+                this->_tmpfh << "\t";
+        }
+    }
+    this->_tmpfh << "\n";
 
     return 0;
 }
@@ -1687,7 +1687,7 @@ GenePopExport::post_processing()
     //
     // Output the header line.
     //
-    this->_fh << "# Stacks version " << VERSION << "; Genepop version 4.1.3; " << date << "\n";
+    this->_fh << "# Stacks v" << VERSION << "; GenePop v4.1.3; " << date << "\n";
 
     this->_intmpfh.open(this->_tmp_path.c_str(), ofstream::in);
     if (this->_intmpfh.fail()) {
@@ -1744,6 +1744,473 @@ GenePopExport::close()
     this->_fh.close();
     return;
 }
+
+int
+StructureExport::open(const MetaPopInfo *mpopi)
+{
+    this->_mpopi = mpopi;
+
+    //
+    // Write a Structure file as defined here: http://pritch.bsd.uchicago.edu/structure.html
+    //
+    this->_path = out_path + out_prefix + ".structure";
+
+    //
+    // Open a temporary file.
+    //
+    this->_tmp_path = out_path + out_prefix + ".structure.part";
+    this->_tmpfh.open(this->_tmp_path);
+
+    cerr << "Polymorphic sites in Structure format will be written to '" << this->_path << "'\n";
+
+    return 0;
+}
+
+int
+StructureExport::write_header()
+{
+    this->_tmpfh << "\t";
+    for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
+        const Pop& pop = this->_mpopi->pops()[p];
+        for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
+            this->_tmpfh << mpopi.samples()[j].name << "\t" << mpopi.samples()[j].name;
+            if (j < this->_mpopi->samples().size() - 1)
+                this->_tmpfh << "\t";
+        }
+    }
+    this->_tmpfh << "\n";
+    
+    this->_tmpfh << "\t";
+    for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
+        const Pop& pop = this->_mpopi->pops()[p];
+        for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
+            this->_tmpfh << pop.name << "\t" << pop.name;
+            if (j < this->_mpopi->samples().size() - 1)
+                this->_tmpfh << "\t";
+        }
+    }
+    this->_tmpfh << "\n";
+
+    return 0;
+}
+
+int
+StructureExport::write_site(const CSLocus *loc, const LocPopSum *lps, Datum const*const* d, size_t col, size_t snp_index)
+{
+    map<char, string> nuc_map;
+    nuc_map['A'] = "1";
+    nuc_map['C'] = "2";
+    nuc_map['G'] = "3";
+    nuc_map['T'] = "4";
+
+    const LocSum *s;
+    char p_allele, q_allele;
+
+    this->_tmpfh << loc->id << "_" << col;
+
+    for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
+        const Pop& pop = this->_mpopi->pops()[p];
+        s = lps->per_pop(p);
+
+        for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
+
+            if (s->nucs[col].incompatible_site ||
+                s->nucs[col].filtered_site) {
+                //
+                // This site contains more than two alleles in this population or was filtered
+                // due to a minor allele frequency that is too low.
+                //
+                this->_tmpfh << "\t" << "0";
+            } else if (d[j] == NULL || col >= uint(d[j]->len)) {
+                //
+                // Data does not exist.
+                //
+                this->_tmpfh << "\t" << "0";
+            } else if (d[j]->model[col] == 'U') {
+                //
+                // Data exists, but the model call was uncertain.
+                //
+                this->_tmpfh << "\t" << "0";
+            } else {
+                //
+                // Tally up the nucleotide calls.
+                //
+                tally_observed_haplotypes(d[j]->obshap, snp_index, p_allele, q_allele);
+
+                if (p_allele == 0 && q_allele == 0)
+                    this->_tmpfh << "\t" << "0";
+                else if (p_allele == 0)
+                    this->_tmpfh << "\t" << nuc_map[q_allele];
+                else
+                    this->_tmpfh << "\t" << nuc_map[p_allele];
+            }
+
+            //
+            // Output the site for this sample again, now for the q allele
+            //
+            if (s->nucs[col].incompatible_site ||
+                s->nucs[col].filtered_site) {
+                this->_tmpfh << "\t" << "0";
+            } else if (d[j] == NULL || col >= uint(d[j]->len)) {
+                this->_tmpfh << "\t" << "0";
+            } else if (d[j]->model[col] == 'U') {
+                this->_tmpfh << "\t" << "0";
+            } else {
+                tally_observed_haplotypes(d[j]->obshap, snp_index, p_allele, q_allele);
+
+                if (p_allele == 0 && q_allele == 0)
+                    this->_tmpfh << "\t" << "0";
+                else if (q_allele == 0)
+                    this->_tmpfh << "\t" << nuc_map[p_allele];
+                else
+                    this->_tmpfh << "\t" << nuc_map[q_allele];
+            }
+        }
+    }
+    this->_tmpfh << "\n";
+
+    return 0;
+}
+
+int
+StructureExport::post_processing()
+{
+    //
+    // Obtain the current date.
+    //
+    time_t     rawtime;
+    struct tm *timeinfo;
+    char       date[32];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date, 32, "%B %d, %Y", timeinfo);
+
+    this->_fh.open(this->_path.c_str(), ofstream::out);
+    if (this->_fh.fail()) {
+        cerr << "Error opening Structure file '" << this->_path << "'\n";
+        return(0);
+    }
+
+    //
+    // Output the header line.
+    //
+    this->_fh << "# Stacks v" << VERSION << "; " << " Structure v2.3; " << date << "\n";
+
+    this->_intmpfh.open(this->_tmp_path.c_str(), ofstream::in);
+    if (this->_intmpfh.fail()) {
+        cerr << "Error opening Structure file '" << this->_tmp_path << "'\n";
+        return(0);
+    }
+
+    vector<string> transposed_lines;
+
+    this->transpose(this->_intmpfh, transposed_lines);
+
+    assert(transposed_lines.size() == (this->_mpopi->samples().size() * 2) + 1);
+
+    for (size_t line_cnt = 0; line_cnt < this->_mpopi->pops().size(); line_cnt++)
+        this->_fh << transposed_lines[line_cnt] << "\n";
+
+    return 1;
+}
+
+void
+StructureExport::close()
+{
+    //
+    // Close and delete the temporary files.
+    //
+    this->_intmpfh.close();
+
+    this->_tmpfh.close();
+    remove(this->_tmp_path.c_str());
+
+    this->_fh.close();
+    return;
+}
+
+int
+PhylipExport::open(const MetaPopInfo *mpopi)
+{
+    this->_mpopi = mpopi;
+
+    string suffix = (this->_type == ExportType::phylipvar) ? ".var" : ".fixed";
+                     
+    //
+    // We will write those loci to a Phylip file as defined here:
+    //     http://evolution.genetics.washington.edu/phylip/doc/main.html#inputfiles
+    //
+    this->_path = out_path + out_prefix + suffix + ".phylip";
+
+    //
+    // Open a temporary file.
+    //
+    this->_tmp_path = out_path + out_prefix + suffix + ".phylip.part";
+    this->_tmpfh.open(this->_tmp_path);
+
+    //
+    // Open a log file.
+    //
+    this->_log_path = this->_path + ".log";
+    this->_logfh.open(this->_log_path);
+
+    //
+    // Obtain the current date.
+    //
+    time_t     rawtime;
+    struct tm *timeinfo;
+    char       date[32];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date, 32, "%B %d, %Y", timeinfo);
+
+    this->_logfh << "# Stacks v" << VERSION << "; " << " Phylip sequential; " << date << "\n"
+                 << "# Seq Pos\tLocus ID\tColumn\tPopulation\n";
+
+    if (this->_type == ExportType::phylipvar)
+        cerr << "Polymorphic sites in Phylip format will be written to '" << this->_path << "'\n";
+    else
+        cerr << "Fixed difference sites in Phylip format will be written to '" << this->_path << "'\n";    
+    cerr << "   Individual sites written will be logged to '" << this->_log_path << "'\n";
+
+    return 0;
+}
+
+int
+PhylipExport::write_header()
+{
+    for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
+        const Pop& pop = this->_mpopi->pops()[p];
+        for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
+            this->_tmpfh << pop.name;
+            if (j < this->_mpopi->samples().size() - 1)
+                this->_tmpfh << "\t";
+        }
+    }
+    this->_tmpfh << "\n";
+
+    return 0;
+}
+
+int
+PhylipFixedExport::write_site(const CSLocus *loc, const LocPopSum *lps, Datum const*const* d, size_t col, size_t snp_index)
+{
+    const LocSum   *s;
+    const LocTally *t = lps->meta_pop();
+    size_t pop_cnt = this->_mpopi->pops().size();
+
+    //
+    // We are looking for loci that are fixed within each population, but are
+    // variable between one or more populations.
+    //
+    if (t->nucs[col].fixed == true || t->nucs[col].allele_cnt != 2 || t->nucs[col].pop_cnt < 2)
+        return 0;
+
+    bool fixed_within = true;
+    for (uint p = 0; p < pop_cnt; p++) {
+        s = lps->per_pop(p);
+
+        if (s->nucs[col].num_indv == 0)
+            continue;
+        if (s->nucs[col].fixed == false) {
+            fixed_within = false;
+            break;
+        }
+    }
+    if (fixed_within == false)
+        return 0;
+
+    this->_logfh << this->_site_index << "\t" << loc->id << "\t" << col << "\t";
+
+    for (uint p = 0; p < pop_cnt; p++) {
+        s = lps->per_pop(p);
+
+        if (s->nucs[col].num_indv > 0) {
+            this->_tmpfh << s->nucs[col].p_nuc;
+            this->_logfh << mpopi.pops()[p].name << ":" << s->nucs[col].p_nuc << ",";
+        } else {
+            this->_tmpfh << "N";
+            this->_logfh << mpopi.pops()[p].name << ":N" << ",";
+        }
+        if (p < pop_cnt - 1) this->_tmpfh << "\t";
+    }
+    this->_logfh << "\n";
+    this->_site_index++;
+
+    this->_tmpfh << "\n";
+
+    return 0;
+}
+
+int
+PhylipVarExport::write_site(const CSLocus *loc, const LocPopSum *lps, Datum const*const* d, size_t col, size_t snp_index)
+{
+    const LocSum   *s;
+    const LocTally *t = lps->meta_pop();
+    size_t pop_cnt = this->_mpopi->pops().size();
+
+    //
+    // Encode SNPs that are variable within a population as well, using IUPAC notation:
+    //     http://en.wikipedia.org/wiki/Nucleic_acid_notation#IUPAC_notation
+    //
+    if (t->nucs[col].allele_cnt != 2)
+        return 0;
+
+    this->_logfh << this->_site_index << "\t" << loc->id << "\t" << col << "\t";
+
+    char nuc = '?';
+
+    for (uint p = 0; p < pop_cnt; p++) {
+        s = lps->per_pop(p);
+
+        switch(s->nucs[col].p_nuc) {
+        case 0:
+            nuc = 'N';
+            break;
+        case 'A':
+            switch(s->nucs[col].q_nuc) {
+            case 'C':
+                nuc = 'M';
+                break;
+            case 'G':
+                nuc = 'R';
+                break;
+            case 'T':
+                nuc = 'W';
+                break;
+            case 0:
+                nuc = 'A';
+                break;
+            }
+            break;
+        case 'C':
+            switch(s->nucs[col].q_nuc) {
+            case 'A':
+                nuc = 'M';
+                break;
+            case 'G':
+                nuc = 'S';
+                break;
+            case 'T':
+                nuc = 'Y';
+                break;
+            case 0:
+                nuc = 'C';
+                break;
+            }
+            break;
+        case 'G':
+            switch(s->nucs[col].q_nuc) {
+            case 'A':
+                nuc = 'R';
+                break;
+            case 'C':
+                nuc = 'S';
+                break;
+            case 'T':
+                nuc = 'K';
+                break;
+            case 0:
+                nuc = 'G';
+                break;
+            }
+            break;
+        case 'T':
+            switch(s->nucs[col].q_nuc) {
+            case 'A':
+                nuc = 'W';
+                break;
+            case 'C':
+                nuc = 'Y';
+                break;
+            case 'G':
+                nuc = 'K';
+                break;
+            case 0:
+                nuc = 'T';
+                break;
+            }
+            break;
+        }
+        
+        this->_tmpfh << nuc;
+                         
+        if (p < pop_cnt - 1)
+            this->_tmpfh << "\t";
+
+        this->_logfh << mpopi.pops()[p].name << ":" << nuc << ",";
+
+    }
+    this->_logfh << "\n";
+    this->_site_index++;
+    
+    this->_tmpfh << "\n";
+
+    return 0;
+}
+
+int
+PhylipExport::post_processing()
+{
+    //
+    // Obtain the current date.
+    //
+    time_t     rawtime;
+    struct tm *timeinfo;
+    char       date[32];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date, 32, "%B %d, %Y", timeinfo);
+
+    this->_fh.open(this->_path.c_str(), ofstream::out);
+    if (this->_fh.fail()) {
+        cerr << "Error opening Phylip file '" << this->_path << "'\n";
+        return(0);
+    }
+
+    this->_intmpfh.open(this->_tmp_path.c_str(), ofstream::in);
+    if (this->_intmpfh.fail()) {
+        cerr << "Error opening temporary Phylip file '" << this->_tmp_path << "'\n";
+        return(0);
+    }
+
+    vector<string> transposed_lines;
+
+    this->transpose(this->_intmpfh, transposed_lines);
+
+    assert(transposed_lines.size() == this->_mpopi->pops().size());
+
+    this->_fh << this->_mpopi->pops().size() << "\t" << this->_site_index << "\n";
+    
+    for (size_t line_cnt = 0; line_cnt < transposed_lines.size(); line_cnt++) {
+        this->_fh << transposed_lines[line_cnt][0];
+
+        for (size_t i = 1; i < transposed_lines[line_cnt].length(); i++)
+            if (transposed_lines[line_cnt][i] != '\t')
+                this->_fh << transposed_lines[line_cnt][i];
+    }
+
+    this->_fh << "# Stacks v" << VERSION << "; " << " Phylip sequential; " << date << "\n";
+
+    return 1;
+}
+
+void
+PhylipExport::close()
+{
+    //
+    // Close and delete the temporary files.
+    //
+    this->_intmpfh.close();
+    this->_logfh.close();
+
+    this->_tmpfh.close();
+    remove(this->_tmp_path.c_str());
+
+    this->_fh.close();
+    return;
+}
+
 int
 VcfExport::open(const MetaPopInfo *mpopi)
 {
@@ -1763,13 +2230,13 @@ VcfExport::open(const MetaPopInfo *mpopi)
     return 0;
 }
 
-int VcfExport::write_site(
-        const CSLocus* cloc,
-        const LocPopSum* psum,
-        Datum const*const* d,
-        size_t col,
-        size_t index
-) {
+int
+VcfExport::write_site(const CSLocus* cloc,
+                      const LocPopSum* psum,
+                      Datum const*const* d,
+                      size_t col,
+                      size_t index)
+{
     const LocTally* t = psum->meta_pop();
 
     const char ref = t->nucs[col].p_allele;
