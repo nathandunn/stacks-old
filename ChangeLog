@@ -1,3 +1,11 @@
+Stacks 2.0 Beta 5 - Nov 27, 2017
+--------------------------------
+    Feature: Reimplemented structure, phylip, and phylip_var exports.
+    Bugfix: Tightened up the overlap algorithm to require 80% of overlapping sequence to be 
+            aligned and of the aligned sequence, 80% must be identities.
+    Bugfix: Fixed segfault in gstacks when compiled with CLANG on OS X.
+    Bugfix: gstacks: Fixed how misphasings are reported.
+
 Stacks 2.0 Beta 4 - Nov 07, 2017
 --------------------------------
     Bugfix: Continued improving overlap algorithm to join SE and PE contigs.
