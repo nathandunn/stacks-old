@@ -85,6 +85,10 @@ void VcfRecord::assign(const char* rec, size_t len, const VcfHeader& header) {
     next_field();
     allele0_ = q - buffer_.data();
     next_field();
+    while((q = strchr(q, ','))) {
+        *q = '\0'; // ALT alleles become null-separated.
+        ++q;
+    }
 
     // qual
     next_field();
