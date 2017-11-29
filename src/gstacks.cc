@@ -2039,6 +2039,7 @@ const string help_string = string() +
         "               include 'cig1=...' and 'cig2=...' fields.\n"
         "  --dbg-true-reference: align paired-end reads to the true reference\n"
         "  --dbg-log-stats-phasing: log detailed phasing statistics\n"
+        "  --dbg-min-spl-reads: discard samples with less than this many reads (ref-based)\n"
         "\n"
 #endif
         ;
@@ -2073,7 +2074,6 @@ try {
         {"details",      no_argument,       NULL,  1013},
         {"min-mapq",     required_argument, NULL,  1014},
         {"max-clipped",  required_argument, NULL,  1015},
-        {"min-spl-reads", required_argument, NULL, 'm'},
         {"max-insert-len", required_argument, NULL,  1016},
         //debug options
         {"dbg-gfa",      no_argument,       NULL,  2003},
@@ -2085,6 +2085,7 @@ try {
         {"dbg-no-overlaps", no_argument,    NULL,  2008},
         {"dbg-no-haps",  no_argument,       NULL,  2009},
         {"dbg-log-stats-phasing", no_argument, NULL,  2013},
+        {"dbg-min-spl-reads", required_argument, NULL, 2014},
         {0, 0, 0, 0}
     };
 
@@ -2190,9 +2191,6 @@ try {
                 bad_args();
             }
             break;
-        case 'm'://min-spl-reads
-            refbased_cfg.min_reads_per_sample = stoi(optarg);
-            break;
         case 1016://max-insert
             refbased_cfg.max_insert_refsize = stoi(optarg);
             break;
@@ -2229,8 +2227,14 @@ try {
         case 2013://dbg-no-haps
             dbg_log_stats_phasing = true;
             break;
+        case 2014://dbg-min-spl-reads
+            refbased_cfg.min_reads_per_sample = stoi(optarg);
+            break;
         case '?':
             bad_args();
+            break;
+        default:
+            DOES_NOT_HAPPEN;
             break;
         }
     }
