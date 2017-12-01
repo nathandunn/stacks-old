@@ -1993,7 +1993,7 @@ PhylipExport::close()
 int
 VcfExport::open(const MetaPopInfo *mpopi)
 {
-    this->_path = out_path + out_prefix + ".vcf";
+    this->_path = out_path + out_prefix + ".snps.vcf";
     cerr << "SNPs and calls will be written in VCF format to '" << this->_path << "'\n";
 
     this->_mpopi = mpopi;
@@ -2067,6 +2067,66 @@ VcfExport::write_site(const CSLocus* cloc,
         rec.append_sample(sample.str());
     }
     this->_writer->write_record(rec);
+
+    return 0;
+}
+
+int
+VcfHapsExport::open(const MetaPopInfo *mpopi)
+{
+    this->_path = out_path + out_prefix + ".haps.vcf";
+    cerr << "Haplotypes will be written in VCF format to '" << this->_path << "'\n";
+
+    this->_mpopi = mpopi;
+
+    VcfHeader header;
+    header.add_std_meta();
+    header.add_meta(VcfMeta::predefs::info_locori);
+    for(auto& s : this->_mpopi->samples())
+        header.add_sample(s.name);
+
+    this->_writer = new VcfWriter(this->_path, move(header));
+
+    return 0;
+}
+
+int VcfHapsExport::write_batch(const vector<LocBin*>& loci){
+
+    VcfRecord rec;
+    for (const LocBin* locbin : loci) {
+        //TODO implement VcfHapsExport::write_batch
+
+        const CSLocus* cloc = locbin->cloc;
+        //Datum const*const* d = locbin->d;
+        //const LocTally* t = locbin->s->meta_pop();
+
+        // Compute allele list & genotypes.
+        //
+        // ...
+        //
+
+        rec.clear();
+        rec.append_chrom(string(cloc->loc.chr()));
+        rec.append_pos(cloc->loc.bp + 1);
+        rec.append_id(to_string(cloc->id));
+
+        // rec.append_allele(...);
+
+        rec.append_qual(".");
+        rec.append_filters("PASS");
+        rec.append_info(string("locori=") + (cloc->loc.strand == strand_plus ? "p" : "m"));
+        rec.append_format("GT");
+
+        for (size_t s=0; s<this->_mpopi->samples().size(); s++) {
+            stringstream sample;
+            //
+            // sample << ...
+            //
+            rec.append_sample(sample.str());
+        }
+        this->_writer->write_record(rec);
+
+    }
 
     return 0;
 }

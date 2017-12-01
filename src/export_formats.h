@@ -31,7 +31,8 @@
 #include "populations.h" // for "merget", "InputMode", "uncalled_haplotype()", "count_haplotypes_at_locus()"
 
 enum class ExportType {markers, genotypes, sumstats, hapstats, snpdivergence, hapdivergence,
-                       fasta_loci, fasta_raw, fasta_samples, structure, genepop, vcf, phylipvar, phylipfixed};
+                       fasta_loci, fasta_raw, fasta_samples, structure, genepop, vcf, vcf_haps,
+                       phylipvar, phylipfixed};
 
 class Export {
  protected:
@@ -356,6 +357,21 @@ class VcfExport: public OrderableExport {
 
  private:
     int write_site(const CSLocus* cloc, const LocPopSum* psum, Datum const*const* datums, size_t col, size_t index);
+};
+
+class VcfHapsExport: public Export {
+    const MetaPopInfo*_mpopi;
+    VcfWriter* _writer;
+
+ public:
+    VcfHapsExport() : Export(ExportType::vcf_haps), _mpopi(NULL), _writer(NULL) {}
+    ~VcfHapsExport() { delete this->_writer; }
+    int open(const MetaPopInfo *mpopi);
+    int write_batch(const vector<LocBin*>& loci);
+
+    int  write_header() { return 0; }
+    int  post_processing() { return 0; }
+    void close() {}
 };
 
 /*
