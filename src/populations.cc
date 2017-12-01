@@ -58,7 +58,6 @@ bool      write_random_snp  = false;
 bool      merge_sites       = false;
 bool      expand_id         = false;
 bool      write_gtypes      = false;
-bool      vcf_haplo_out     = false;
 bool      fasta_loci_out    = false;
 bool      fasta_samples_out = false;
 bool      fasta_samples_raw_out = false;
@@ -3704,8 +3703,8 @@ parse_command_line(int argc, char* argv[])
             {"help",           no_argument,       NULL, 'h'},
             {"version",        no_argument,       NULL, 'v'},
             {"verbose",        no_argument,       NULL, 'd'},
-            {"vcf",            no_argument,       NULL, 1004},
-            {"vcf_haplotypes", no_argument,       NULL, 'n'},
+            {"vcf_snps",       no_argument,       NULL, 1004}, {"vcf", no_argument, NULL, 3004},
+            {"vcf_haps",       no_argument,       NULL, 1009}, {"vcf_haplotypes", no_argument, NULL, 3009},
             {"fasta_loci",     no_argument,       NULL, 1006},
             {"fasta_samples",  no_argument,       NULL, 'J'}, {"fasta_strict", no_argument, NULL, 'J'},
             {"fasta_samples_raw", no_argument,    NULL, 'F'}, {"fasta", no_argument, NULL, 'F'},
@@ -3905,10 +3904,12 @@ parse_command_line(int argc, char* argv[])
             ordered_export = true;
             break;
         case 1004:
+        case 3004:
             exports.push_back(new VcfExport());
             break;
-        case 'n':
-            vcf_haplo_out = true;
+        case 1009:
+        case 3009:
+            exports.push_back(new VcfHapsExport());
             break;
         case 1006:
             exports.push_back(new FastaLociExport());
@@ -4163,7 +4164,8 @@ void help() {
          << "  --fasta_samples: output the sequences of the two haplotypes of each (diploid) sample, for each locus, in FASTA format.\n"
          << "  --fasta_samples_raw: output all haplotypes observed in each sample, for each locus, in FASTA format.\n"
          << "  --fasta_loci: output consensus sequences of all loci, in FASTA format.\n"
-         << "  --vcf: output SNPs in Variant Call Format (VCF).\n"
+         << "  --vcf_snps: output SNPs in Variant Call Format (VCF).\n"
+         //TODO << "  --vcf_haps: output haplotypes in Variant Call Format (VCF).\n"
          << "  --vcf_haplotypes: output haplotypes in Variant Call Format (VCF).\n"
          << "  --genepop: output results in GenePop format.\n"
          << "  --structure: output results in Structure format.\n"
