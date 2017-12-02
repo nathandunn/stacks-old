@@ -53,7 +53,7 @@ public:
         static const VcfMeta format_HQ;
 
         // Custom.
-        static const VcfMeta info_locori;
+        static const VcfMeta info_loc_strand;
     };
 };
 
