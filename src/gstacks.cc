@@ -66,6 +66,7 @@ bool   dbg_write_gfa       = false;
 bool   dbg_write_alns      = false;
 bool   dbg_write_hapgraphs = false;
 bool   dbg_write_nt_depths = false;
+bool   dbg_write_phased_only = false;
 bool   dbg_true_reference  = false;
 bool   dbg_true_alns       = false;
 bool   dbg_log_stats_phasing = false;
@@ -1651,13 +1652,18 @@ void LocusProcessor::write_one_locus (
                                      << ':' << (p.phase_set + 1);
                         } else {
                             // No phase data.
-                            gt[0] = vcf_allele_indexes.at(scall.nt0());
-                            gt[1] = vcf_allele_indexes.at(scall.nt1());
-                            std::sort(gt.begin(), gt.end()); // (Prevents '1/0'.)
-                            genotype << gt[0] << '/' << gt[1];
-                            genotype << ":.";
+                            if (!dbg_write_phased_only) {
+                                gt[0] = vcf_allele_indexes.at(scall.nt0());
+                                gt[1] = vcf_allele_indexes.at(scall.nt1());
+                                std::sort(gt.begin(), gt.end()); // (Prevents '1/0'.)
+                                genotype << gt[0] << '/' << gt[1];
+                                genotype << ":.";
+                            } else {
+                                genotype << ".:.";
+                            }
                         }
                     } else {
+                        //dbg_no_haplotypes
                         gt[0] = vcf_allele_indexes.at(scall.nt0());
                         gt[1] = vcf_allele_indexes.at(scall.nt1());
                         std::sort(gt.begin(), gt.end()); // (Prevents '1/0'.)
@@ -2035,6 +2041,7 @@ const string help_string = string() +
         "  --dbg-alns: output a file showing the contigs & alignments\n"
         "  --hap-graphs: output a dot graph file showing phasing information\n"
         "  --dbg-depths: write detailed depth data in the output VCF\n"
+        "  --dbg-no-unphased-snps: don't write unphased SNPs in the output VCF\n"
         "  --dbg-true-alns: use true alignments (for simulated data; read IDs must\n"
         "               include 'cig1=...' and 'cig2=...' fields.\n"
         "  --dbg-true-reference: align paired-end reads to the true reference\n"
@@ -2079,6 +2086,7 @@ try {
         {"dbg-gfa",      no_argument,       NULL,  2003},
         {"dbg-alns",     no_argument,       NULL,  2004}, {"alns", no_argument, NULL, 3004},
         {"dbg-depths",   no_argument,       NULL,  2007},
+        {"dbg-no-unphased-snps", no_argument, NULL,  2015},
         {"dbg-hap-graphs", no_argument,     NULL,  2010},
         {"dbg-true-reference", no_argument, NULL,  2012},
         {"dbg-true-alns", no_argument,      NULL,  2011}, {"true-alns", no_argument, NULL, 3011},
@@ -2217,6 +2225,9 @@ try {
             break;
         case 2007://dbg-depths
             dbg_write_nt_depths = true;
+            break;
+        case 2015://dbg-no-unphased-snps
+            dbg_write_phased_only = true;
             break;
         case 2008://dbg-no-haps
             dbg_no_overlaps = true;
