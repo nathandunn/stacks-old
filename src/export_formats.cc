@@ -66,10 +66,6 @@ Export::transpose(ifstream &ifh, vector<string> &transposed)
         //
         ifh.getline(line, max_len);
 
-        if (!ifh.good()) {
-            return 0;
-        }
-
         //
         // Check if we read a full line.
         //
@@ -83,6 +79,9 @@ Export::transpose(ifstream &ifh, vector<string> &transposed)
         if (len > 0 && line[len - 1] == '\r') line[len - 1] = '\0';
 
         buf += line;
+
+        if (!ifh.good() || buf.length() == 0)
+            return 0;
 
         //
         // Break the line up by tabs.
@@ -98,6 +97,7 @@ Export::transpose(ifstream &ifh, vector<string> &transposed)
             for (uint i = 0; i < fields.size(); i++)
                 transposed.at(i) += "\t" + fields[i];
         }
+
     } while (!ifh.eof());
 
     return 1;
@@ -1445,6 +1445,11 @@ int
 GenePopExport::post_processing()
 {
     //
+    // Close the temporary output file.
+    //
+    this->_tmpfh.close();
+
+    //
     // Obtain the current date.
     //
     time_t     rawtime;
@@ -1514,7 +1519,6 @@ GenePopExport::close()
     //
     this->_intmpfh.close();
 
-    this->_tmpfh.close();
     remove(this->_tmp_path.c_str());
 
     this->_fh.close();
@@ -1652,6 +1656,11 @@ int
 StructureExport::post_processing()
 {
     //
+    // Close the temporary output file.
+    //
+    this->_tmpfh.close();
+
+    //
     // Obtain the current date.
     //
     time_t     rawtime;
@@ -1698,7 +1707,6 @@ StructureExport::close()
     //
     this->_intmpfh.close();
 
-    this->_tmpfh.close();
     remove(this->_tmp_path.c_str());
 
     this->_fh.close();
@@ -1927,6 +1935,11 @@ int
 PhylipExport::post_processing()
 {
     //
+    // Close the temporary output file.
+    //
+    this->_tmpfh.close();
+
+    //
     // Obtain the current date.
     //
     time_t     rawtime;
@@ -1983,7 +1996,6 @@ PhylipExport::close()
     this->_intmpfh.close();
     this->_logfh.close();
 
-    this->_tmpfh.close();
     remove(this->_tmp_path.c_str());
 
     this->_fh.close();
