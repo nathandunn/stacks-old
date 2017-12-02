@@ -11,7 +11,7 @@ int stacks_handle_exceptions(const exception& e) {
     if (typeid(e) != typeid(std::exception))
         std::cerr << " (" << e.what() << ")";
     std::cerr << "\n";
-    return 13;
+    return 1;
 }
 
 const
