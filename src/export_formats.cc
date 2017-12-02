@@ -2000,7 +2000,7 @@ VcfExport::open(const MetaPopInfo *mpopi)
 
     VcfHeader header;
     header.add_std_meta();
-    header.add_meta(VcfMeta::predefs::info_locori);
+    header.add_meta(VcfMeta::predefs::info_loc_strand);
     for(auto& s : this->_mpopi->samples())
         header.add_sample(s.name);
 
@@ -2033,7 +2033,7 @@ VcfExport::write_site(const CSLocus* cloc,
     rec.append_filters("PASS");
     rec.append_info(string("NS=") + to_string(t->nucs[col].num_indv));
     rec.append_info(string("AF=") + freq_alt);
-    rec.append_info(string("locori=") + (cloc->loc.strand == strand_plus ? "p" : "m"));
+    rec.append_info(string("loc_strand=") + (cloc->loc.strand == strand_plus ? "p" : "m"));
     rec.append_format("GT");
     rec.append_format("DP");
     rec.append_format("AD");
@@ -2081,7 +2081,7 @@ VcfHapsExport::open(const MetaPopInfo *mpopi)
 
     VcfHeader header;
     header.add_std_meta();
-    header.add_meta(VcfMeta::predefs::info_locori);
+    header.add_meta(VcfMeta::predefs::info_loc_strand);
     for(auto& s : this->_mpopi->samples())
         header.add_sample(s.name);
 
@@ -2151,7 +2151,7 @@ int VcfHapsExport::write_batch(const vector<LocBin*>& loci){
         for (const SNP* snp : cloc->snps)
             cols.push_back(snp->col + 1);
         join(cols, ',', info);
-        info << ";locori=" << (cloc->loc.strand == strand_plus ? "p" : "m");
+        info << ";loc_strand=" << (cloc->loc.strand == strand_plus ? "p" : "m");
         rec.append_info(info.str());
         rec.append_format("GT");
 
