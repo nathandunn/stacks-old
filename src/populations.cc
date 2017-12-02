@@ -292,6 +292,10 @@ int main (int argc, char* argv[]) {
          << "Removed " << filter.filtered() << " loci that did not pass sample/population constraints from " << filter.seen() << " loci.\n"
          << "Kept " << filter.total() << " loci, composed of " << filter.total_sites() << " sites; "
          << filter.filtered_sites() << " of those sites were filtered, " << filter.variant_sites() << " variant sites remained.\n";
+    if (filter.total_sites() == 0) {
+        cerr << "Error: All data has been filtered out.\n";
+        throw exception();
+    }
 
     //
     // Do the final sumstats calculations and write the sumstats summary files.
