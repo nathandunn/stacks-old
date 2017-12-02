@@ -4165,7 +4165,7 @@ void help() {
          << "  --fasta_samples_raw: output all haplotypes observed in each sample, for each locus, in FASTA format.\n"
          << "  --fasta_loci: output consensus sequences of all loci, in FASTA format.\n"
          << "  --vcf_snps: output SNPs in Variant Call Format (VCF).\n"
-         //TODO << "  --vcf_haps: output haplotypes in Variant Call Format (VCF).\n"
+         << "  --vcf_haps: output haplotypes in Variant Call Format (VCF).\n"
          << "  --vcf_haplotypes: output haplotypes in Variant Call Format (VCF).\n"
          << "  --genepop: output results in GenePop format.\n"
          << "  --structure: output results in Structure format.\n"

@@ -2094,38 +2094,84 @@ int VcfHapsExport::write_batch(const vector<LocBin*>& loci){
 
     VcfRecord rec;
     for (const LocBin* locbin : loci) {
-        //TODO implement VcfHapsExport::write_batch
-
         const CSLocus* cloc = locbin->cloc;
-        //Datum const*const* d = locbin->d;
-        //const LocTally* t = locbin->s->meta_pop();
+        Datum const*const* d = locbin->d;
 
-        // Compute allele list & genotypes.
-        //
-        // ...
-        //
+        if (cloc->snps.empty())
+            // Monomorphic locus.
+            continue;
 
+        // Find all haplotypes, and their frequencies.
+        map<const char*,size_t,LessCStrs> haps;
+        for (size_t sample=0; sample<this->_mpopi->samples().size(); ++sample) {
+            if (d[sample] == NULL)
+                continue;
+            const vector<char*>& s_haps = d[sample]->obshap;
+            assert(s_haps.size() == 2);
+            if (strchr(s_haps[0], 'N') != NULL)
+                // Partially unresolved.
+                continue;
+            ++haps[s_haps[0]];
+            ++haps[s_haps[1]];
+        }
+        if (haps.empty() || haps.size() == 1)
+            // Too few complete haps.
+            continue;
+
+        // Sort haplotypes by frequencies.
+        vector<pair<const char*,size_t>> sorted_haps (haps.begin(), haps.end());
+        std::sort(sorted_haps.begin(), sorted_haps.end(),
+                [&cloc] (const pair<const char*,size_t>& lhs, const pair<const char*,size_t>& rhs) {
+                    return lhs.second == rhs.second ?
+                        (strcmp(lhs.first, rhs.first) < 0) == (cloc->loc.strand == strand_plus) // (rem. The hap strings are always different.)
+                        : lhs.second > rhs.second;
+                });
+
+        // Create the record.
         rec.clear();
         rec.append_chrom(string(cloc->loc.chr()));
         rec.append_pos(cloc->loc.bp + 1);
         rec.append_id(to_string(cloc->id));
 
-        // rec.append_allele(...);
+        for (size_t i=0; i<sorted_haps.size(); i++) {
+            if (cloc->loc.strand == strand_plus) {
+                rec.append_allele(string(sorted_haps[i].first));
+            } else {
+                rec.append_allele(DNASeq4(sorted_haps[i].first).rev_compl().str());
+            }
+            //n.b. We reuse the frequency map to keep track of indexes.
+            haps[sorted_haps[i].first] = i;
+        }
 
         rec.append_qual(".");
         rec.append_filters("PASS");
-        rec.append_info(string("locori=") + (cloc->loc.strand == strand_plus ? "p" : "m"));
+        stringstream info;
+        info << "snp_columns=";
+        vector<size_t> cols;
+        for (const SNP* snp : cloc->snps)
+            cols.push_back(snp->col + 1);
+        join(cols, ',', info);
+        info << ";locori=" << (cloc->loc.strand == strand_plus ? "p" : "m");
+        rec.append_info(info.str());
         rec.append_format("GT");
 
-        for (size_t s=0; s<this->_mpopi->samples().size(); s++) {
-            stringstream sample;
-            //
-            // sample << ...
-            //
-            rec.append_sample(sample.str());
+        for (size_t sample=0; sample<this->_mpopi->samples().size(); sample++) {
+            if (d[sample] == NULL) {
+                rec.append_sample("./.");
+                continue;
+            }
+            stringstream sample_vcf;
+            if (strchr(d[sample]->obshap[0], 'N') != NULL) {
+                sample_vcf << "./.";
+            } else {
+                size_t i0 = haps[d[sample]->obshap[0]];
+                size_t i1 = haps[d[sample]->obshap[1]];
+                sample_vcf << min(i0, i1) << '/' << max(i0, i1);
+            }
+            sample_vcf << ':' << d[sample]->obshap[0] << '+' << d[sample]->obshap[1];
+            rec.append_sample(sample_vcf.str());
         }
         this->_writer->write_record(rec);
-
     }
 
     return 0;
