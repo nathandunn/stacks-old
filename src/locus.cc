@@ -401,7 +401,7 @@ CLocAlnSet::merge_paired_reads()
         if (n2.length() == l && l >= 2 &&
             n1[l-2] == '/' && n1[l-1] == '1' &&
             n2[l-2] == '/' && n2[l-1] == '2' &&
-            n1.compare(0, l-2, n2) == 0) {
+            n1.compare(0, l-2, n2, 0, l-2) == 0) {
 
             // r1 and r2 are paired, merge them.
             //assert(r1->sample == r2->sample); // xxx Fix process_radtags.
