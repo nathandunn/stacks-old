@@ -479,7 +479,7 @@ try {
 
     gzclose(o_gzfasta_f);
     model.reset();
-    if (dbg_write_hapgraphs)
+    if (dbg_write_hapgraphs || dbg_write_misphased_hapgraphs)
         o_hapgraphs_f << "}\n";
     cout << "gstacks is done.\n";
     return 0;
@@ -1183,7 +1183,7 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
 
     stringstream o_hapgraph_ss;
     bool has_subgraphs = false;
-    if (dbg_write_hapgraphs) {
+    if (dbg_write_hapgraphs || dbg_write_misphased_hapgraphs) {
         o_hapgraph_ss << "\n"
                       << "subgraph cluster_loc" << loc_.id << " {\n"
                       << "\tlabel=\"locus " << loc_.id << "\";\n"
