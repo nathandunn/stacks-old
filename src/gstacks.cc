@@ -168,7 +168,7 @@ try {
         o_aln_f << o_aln_header;
     }
 
-    if (dbg_write_hapgraphs) {
+    if (dbg_write_hapgraphs || dbg_write_misphased_hapgraphs) {
         string o_hapgraphs_path = o_prefix + ".hapgraphs.dot";
         o_hapgraphs_f.open(o_hapgraphs_path);
         check_open(o_hapgraphs_f, o_hapgraphs_path);
@@ -2097,7 +2097,7 @@ try {
         {"dbg-depths",   no_argument,       NULL,  2007},
         {"dbg-no-unphased-snps", no_argument, NULL,  2015},
         {"dbg-hapgraphs", no_argument,      NULL,  2010},
-        {"dbg-misphased-hapgraphs", no_argument, NULL, 2016},
+        {"dbg-hapgraphs-misphased", no_argument, NULL, 2016},
         {"dbg-true-reference", no_argument, NULL,  2012},
         {"dbg-true-alns", no_argument,      NULL,  2011}, {"true-alns", no_argument, NULL, 3011},
         {"dbg-no-overlaps", no_argument,    NULL,  2008},
@@ -2233,7 +2233,7 @@ try {
         case 2010://dbg-hapgraphs
             dbg_write_hapgraphs = true;
             break;
-        case 2016://dbg-misphased-hapgraphs
+        case 2016://dbg-hapgraphs-misphased
             dbg_write_misphased_hapgraphs = true;
             break;
         case 2007://dbg-depths
