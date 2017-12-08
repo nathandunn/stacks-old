@@ -65,6 +65,7 @@ bool   dbg_no_haplotypes   = false;
 bool   dbg_write_gfa       = false;
 bool   dbg_write_alns      = false;
 bool   dbg_write_hapgraphs = false;
+bool   dbg_write_misphased_hapgraphs = false;
 bool   dbg_write_nt_depths = false;
 bool   dbg_write_phased_only = false;
 bool   dbg_true_reference  = false;
@@ -1181,6 +1182,7 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
         return phased_samples;
 
     stringstream o_hapgraph_ss;
+    bool has_subgraphs = false;
     if (dbg_write_hapgraphs) {
         o_hapgraph_ss << "\n"
                       << "subgraph cluster_loc" << loc_.id << " {\n"
@@ -1223,8 +1225,10 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
         //
         count_pairwise_cooccurrences(cooccurrences, aln_loc, sample, snp_cols, het_snps, sample_het_calls);
 
-        if (dbg_write_hapgraphs)
+        if (dbg_write_hapgraphs) {
+            has_subgraphs = true;
             write_sample_hapgraph(o_hapgraph_ss, sample, het_snps, snp_cols, sample_het_calls, cooccurrences);
+        }
 
         //
         // Assemble phase sets.
@@ -1232,6 +1236,10 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
         vector<PhaseSet> phase_sets;
         if (!assemble_phase_sets(phase_sets, het_snps, sample_het_calls, cooccurrences)) {
             ++n_inconsistent_hets;
+            if (dbg_write_misphased_hapgraphs && !dbg_write_hapgraphs) {
+                has_subgraphs = true;
+                write_sample_hapgraph(o_hapgraph_ss, sample, het_snps, snp_cols, sample_het_calls, cooccurrences);
+            }
             continue;
         }
 
@@ -1283,10 +1291,10 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
         }
     }
 
-    if (dbg_write_hapgraphs) {
+    if ((dbg_write_hapgraphs || dbg_write_misphased_hapgraphs) && has_subgraphs) {
         o_hapgraph_ss << "}\n";
         #pragma omp critical
-        o_hapgraphs_f << o_hapgraph_ss.str();
+        o_hapgraphs_f << o_hapgraph_ss.rdbuf();
     }
 
     return phased_samples;
@@ -2039,7 +2047,8 @@ const string help_string = string() +
         "  --dbg-no-haps: disable phasing\n"
         "  --dbg-gfa: output a GFA file for each locus\n"
         "  --dbg-alns: output a file showing the contigs & alignments\n"
-        "  --hap-graphs: output a dot graph file showing phasing information\n"
+        "  --dbg-hapgraphs: output a dot graph file showing phasing information\n"
+        "  --dbg-misphased-hapgraphs: same, but only for misphased diploid loci\n"
         "  --dbg-depths: write detailed depth data in the output VCF\n"
         "  --dbg-no-unphased-snps: don't write unphased SNPs in the output VCF\n"
         "  --dbg-true-alns: use true alignments (for simulated data; read IDs must\n"
@@ -2087,7 +2096,8 @@ try {
         {"dbg-alns",     no_argument,       NULL,  2004}, {"alns", no_argument, NULL, 3004},
         {"dbg-depths",   no_argument,       NULL,  2007},
         {"dbg-no-unphased-snps", no_argument, NULL,  2015},
-        {"dbg-hap-graphs", no_argument,     NULL,  2010},
+        {"dbg-hapgraphs", no_argument,      NULL,  2010},
+        {"dbg-misphased-hapgraphs", no_argument, NULL, 2016},
         {"dbg-true-reference", no_argument, NULL,  2012},
         {"dbg-true-alns", no_argument,      NULL,  2011}, {"true-alns", no_argument, NULL, 3011},
         {"dbg-no-overlaps", no_argument,    NULL,  2008},
@@ -2220,8 +2230,11 @@ try {
         case 2004://dbg-alns
             dbg_write_alns = true;
             break;
-        case 2010://dbg-hap-graphs
+        case 2010://dbg-hapgraphs
             dbg_write_hapgraphs = true;
+            break;
+        case 2016://dbg-misphased-hapgraphs
+            dbg_write_misphased_hapgraphs = true;
             break;
         case 2007://dbg-depths
             dbg_write_nt_depths = true;
