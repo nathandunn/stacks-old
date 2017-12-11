@@ -244,6 +244,8 @@ public:
     void recompute_consensus();
     void hard_clip_right_Ns();
     void merge_paired_reads();
+    void remove_unmerged_reads();
+    void remove_pcr_duplicates();
     size_t n_samples() const {size_t n=0; for(auto& reads : reads_per_sample_) if (!reads.empty()) ++n; return n;}
 
     friend ostream& operator<< (ostream& os, const CLocAlnSet& loc);

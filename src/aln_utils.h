@@ -48,6 +48,7 @@ void cigar_extend_left(Cigar&, size_t);
 void cigar_trim_left(Cigar&, size_t);
 
 void cigar_simplify_to_MDI(Cigar&); // Makes all operations to be one of 'M', 'D' or 'I'.
+void cigar_canonicalize_MDI_order(Cigar&); // Makes the cigar match [I][D][M[D][I]]+.
 inline bool cigar_is_MDI(const Cigar& cig) {for(auto& op : cig) if(op.first!='M' && op.first!='D' && op.first!='I') return false; return true;}
 
 //deprecated.

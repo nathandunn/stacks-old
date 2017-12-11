@@ -95,6 +95,11 @@ public:
     size_t n_genotyped_loci;
     size_t n_sites_tot;
 
+    // Statistics for --rm-unpaired-reads, --rm-pcr-duplicates.
+    size_t n_unpaired_reads_rm;
+    size_t n_read_pairs_pcr_dupl;
+    size_t n_read_pairs_used;
+
     double mean_n_sites_per_loc() const {return (double) n_sites_tot / n_genotyped_loci;}
 
     map<pair<size_t,size_t>,size_t> n_badly_phased_samples; // { {n_inconsistent_hets, n_hets_2snps} : count }
