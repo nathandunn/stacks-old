@@ -2055,7 +2055,7 @@ VcfExport::write_site(const CSLocus* cloc,
 
         if (d[s] == NULL || col >= uint(d[s]->len) || d[s]->model[col] == 'U') {
             // Data does not exist.
-            sample << ".";
+            sample << "./.";
         } else {
             if (d[s]->model[col] == 'O') {
                 assert(d[s]->obshap.size() == 1
@@ -2180,7 +2180,6 @@ int VcfHapsExport::write_batch(const vector<LocBin*>& loci){
                 size_t i1 = haps[d[sample]->obshap[1]];
                 sample_vcf << min(i0, i1) << '/' << max(i0, i1);
             }
-            sample_vcf << ':' << d[sample]->obshap[0] << '+' << d[sample]->obshap[1];
             rec.append_sample(sample_vcf.str());
         }
         this->_writer->write_record(rec);
