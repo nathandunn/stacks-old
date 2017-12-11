@@ -52,6 +52,8 @@ double min_aln_cov        = 0.75;
 int    min_se_pe_overlap  = 5;
 double overlap_min_pct_id = 0.80;
 bool   detailed_output    = false;
+bool   rm_unpaired_reads  = false;
+bool   rm_pcr_duplicates  = false;
 
 modelt model_type = marukilow;
 unique_ptr<const Model> model;
@@ -329,9 +331,9 @@ try {
     //
 
     if (input_type == GStacksInputT::denovo_popmap || input_type == GStacksInputT::denovo_merger) {
-        assert(gt_stats.n_genotyped_loci == denovo_ctg_stats.n_nonempty_loci);
-
-        if (denovo_ctg_stats.n_loci_w_pe_reads > 0) {
+        if (denovo_ctg_stats.n_loci_w_pe_reads == 0) {
+            cout << "Input appears to be single-end (no paired-end reads were seen).\n\n";
+        } else {
             // Report assembly statistics.
             assert(!ignore_pe_reads);
             const ContigStats& cs = denovo_ctg_stats;
@@ -359,8 +361,6 @@ try {
                << "  Mean insert length was " << cs.insert_length_olap_mv.mean() << ", stdev: "
                << cs.insert_length_olap_mv.sd_p() << " (based on aligned reads in overlapped loci).\n"
                << "\n";
-        } else {
-            cout << "Input appears to be single-end (no paired-end reads were seen).\n\n";
         }
 
     } else if (input_type == GStacksInputT::refbased_popmap || input_type == GStacksInputT::refbased_list) {
@@ -392,6 +392,26 @@ try {
         }
     }
 
+    if (rm_unpaired_reads) {
+        // Report statistics on pairs.
+        size_t n_unpaired = gt_stats.n_unpaired_reads_rm;
+        size_t n_pcr_dupl = gt_stats.n_read_pairs_pcr_dupl;
+        size_t n_used = gt_stats.n_read_pairs_used;
+        cout << "Removed " << n_unpaired << " unpaired reads; kept "
+             << n_used + n_pcr_dupl << " read pairs.\n";
+        if (rm_pcr_duplicates) {
+            cout << "Removed " << n_pcr_dupl
+                 << " same-sample read pairs that had the same insert length as putative PCR duplicates ("
+                 << as_percentage((double) n_pcr_dupl / (n_pcr_dupl + n_used))
+                 << "); kept " << n_used << " read pairs.\n";
+        } else {
+            assert(n_pcr_dupl == 0);
+        }
+        cout << '\n';
+    } else {
+        assert(gt_stats.n_unpaired_reads_rm == 0 && gt_stats.n_read_pairs_pcr_dupl == 0);
+    }
+
     // Report statistics on genotyping and haplotyping.
     size_t n_hap_attempts = gt_stats.n_halplotyping_attempts();
     size_t n_hap_pairs = gt_stats.n_consistent_hap_pairs();
@@ -401,6 +421,10 @@ try {
             << " (" << as_percentage((double) n_hap_pairs / n_hap_attempts)
             << ") diploid loci needing phasing\n"
             << "\n";
+    if (gt_stats.n_genotyped_loci == 0) {
+        cerr << "Error: There wasn't any locus to genotype (c.f. above; check input/arguments).\n";
+        throw exception();
+    }
     if (dbg_log_stats_phasing) {
         logger->l << "BEGIN badly_phased\n"
                     << "n_hets_2snps\tn_bad_hets\tn_loci\n";
@@ -515,6 +539,9 @@ void SnpAlleleCooccurrenceCounter::clear() {
 GenotypeStats& GenotypeStats::operator+= (const GenotypeStats& other) {
     this->n_genotyped_loci += other.n_genotyped_loci;
     this->n_sites_tot      += other.n_sites_tot;
+    this->n_unpaired_reads_rm += other.n_unpaired_reads_rm;
+    this->n_read_pairs_pcr_dupl += other.n_read_pairs_pcr_dupl;
+    this->n_read_pairs_used += other.n_read_pairs_used;
 
     for (auto count : other.n_badly_phased_samples)
         this->n_badly_phased_samples[count.first] += count.second;
@@ -721,8 +748,26 @@ LocusProcessor::process(CLocReadSet& loc)
 void
 LocusProcessor::process(CLocAlnSet& aln_loc)
 {
+    if (rm_unpaired_reads) {
+        size_t n_before = aln_loc.reads().size();
+        aln_loc.remove_unmerged_reads();
+        gt_stats_.n_unpaired_reads_rm += n_before - aln_loc.reads().size();
+        if(aln_loc.reads().empty()) {
+            loc_.o_fa.clear();
+            loc_.o_vcf.clear();
+            loc_.o_details.clear();
+            return;
+        }
+    }
+    if (rm_pcr_duplicates) {
+        assert(rm_unpaired_reads);
+        size_t n_before = aln_loc.reads().size();
+        aln_loc.remove_pcr_duplicates();
+        gt_stats_.n_read_pairs_pcr_dupl += n_before - aln_loc.reads().size();
+    }
     assert(!aln_loc.reads().empty());
     ++gt_stats_.n_genotyped_loci;
+    gt_stats_.n_read_pairs_used += aln_loc.reads().size();
     if (input_type == GStacksInputT::denovo_popmap || input_type == GStacksInputT::denovo_merger) {
         // Called from process(CLocReadSet&).
         assert(this->loc_.id == aln_loc.id());
@@ -2033,6 +2078,8 @@ const string help_string = string() +
         "  (De novo mode)\n"
         "  --kmer-length: kmer length for the de Bruijn graph (default: 31, max. 31)\n"
         "  --min-kmer-cov: minimum coverage to consider a kmer (default: 2)\n"
+        "  --rm-unpaired-reads: discard unpaired reads (in reference-based mode, implies --paired)\n"
+        "  --rm-pcr-duplicates: remove read pairs of the same insert length (implies --rm-unpaired-reads)\n"
         "\n"
         "  (Reference-based mode)\n"
         "  --min-mapq: minimum PHRED-scaled mapping quality to consider a read (default: 10)\n"
@@ -2064,7 +2111,7 @@ void parse_command_line(int argc, char* argv[]) {
 
     auto bad_args = [](){
         cerr << help_string;
-        exit(13);
+        exit(1);
     };
 
 try {
@@ -2091,6 +2138,8 @@ try {
         {"min-mapq",     required_argument, NULL,  1014},
         {"max-clipped",  required_argument, NULL,  1015},
         {"max-insert-len", required_argument, NULL,  1016},
+        {"rm-unpaired-reads", no_argument,  NULL,  1017},
+        {"rm-pcr-duplicates", no_argument,  NULL,  1018},
         //debug options
         {"dbg-gfa",      no_argument,       NULL,  2003},
         {"dbg-alns",     no_argument,       NULL,  2004}, {"alns", no_argument, NULL, 3004},
@@ -2212,6 +2261,13 @@ try {
         case 1016://max-insert
             refbased_cfg.max_insert_refsize = stoi(optarg);
             break;
+        case 1017://rm-unpaired-reads
+            rm_unpaired_reads = true;
+            break;
+        case 1018://rm-pcr-duplicates
+            rm_pcr_duplicates = true;
+            rm_unpaired_reads = true;
+            break;
 
         //
         // Debug options
@@ -2303,18 +2359,20 @@ try {
         bad_args();
     }
 
-    if ((input_type == In::refbased_popmap || input_type == In::refbased_list)
-        && out_dir.empty()
-    ) {
-        cerr << "Error: Please specify an output directory (-O).\n";
-        bad_args();
-    }
-
-    if (refbased_cfg.paired
-        && (input_type == In::denovo_popmap || input_type == In::denovo_merger)
-    ) {
-        cerr << "Error: --paired is for the reference-based mode.\n";
-        bad_args();
+    if (input_type == In::denovo_popmap || input_type == In::denovo_merger) {
+        if (refbased_cfg.paired) {
+            cerr << "Error: --paired is for the reference-based mode.\n";
+            bad_args();
+        }
+    } else if (input_type == In::refbased_popmap || input_type == In::refbased_list) {
+        if (rm_unpaired_reads)
+            refbased_cfg.paired = true;
+        if (out_dir.empty()) {
+            cerr << "Error: Please specify an output directory (-O).\n";
+            bad_args();
+        }
+    } else {
+        DOES_NOT_HAPPEN;
     }
 
     //

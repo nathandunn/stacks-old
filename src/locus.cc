@@ -438,6 +438,91 @@ ostream& operator<< (ostream& os, const CLocAlnSet& loc) {
     return os;
 }
 
+void
+CLocAlnSet::remove_unmerged_reads()
+{
+    for (SAlnRead& r : reads_)
+        if (r.name.back() != 'm')
+            r.seq.clear();
+
+    // Remove emptied reads.
+    reads_.erase(std::remove_if(
+            reads_.begin(), reads_.end(),
+            [] (const Read& r) { return r.seq.empty(); }
+            ), reads_.end());
+
+    // Refresh `reads_per_sample_`.
+    reads_per_sample_ = vector<vector<size_t>>(mpopi().samples().size());
+    for (size_t i=0; i<reads_.size(); ++i)
+        reads_per_sample_[reads_[i].sample].push_back(i);
+}
+
+void
+CLocAlnSet::remove_pcr_duplicates()
+{
+    //
+    // Sort reads by (I) sample; (II) insert size; (III, for stability) name.
+    //
+    for (SAlnRead& r : this->reads_) {
+        assert(!r.cigar.empty());
+        assert(cigar_is_MDI(r.cigar));
+        assert(r.cigar.front().first == 'M'); // This is the cutsite.
+        cigar_canonicalize_MDI_order(r.cigar);
+    }
+    auto compute_insert_length = [] (const Cigar& c) -> size_t {
+        // rem. We assume the asserts above.
+        size_t len = cigar_length_ref(c);
+        auto last = c.rbegin();
+        if (last->first == 'I') {
+            len += last->second;
+            ++last;
+        }
+        if (last != c.rend() && last->first == 'D')
+            len -= last->second;
+        return len;
+    };
+    sort(this->reads_.begin(), this->reads_.end(),
+        [&compute_insert_length](const SAlnRead& r1, const SAlnRead& r2) {
+            if (r1.sample != r2.sample)
+                return r1.sample < r2.sample;
+            size_t i1 = compute_insert_length(r1.cigar);
+            size_t i2 = compute_insert_length(r2.cigar);
+            if (i1 != i2)
+                return i1 < i2;
+            return r1.name.compare(r2.name) < 0;
+        });
+
+    // Remove reads that have the same insert length.
+    for (auto r1 = this->reads_.begin(); r1 != this->reads_.end(); ++r1) {
+        assert(r1->name.back() == 'm'); // Read pairs should have been merged & unpaired reads removed.
+        auto  r2 = r1;
+        ++r2;
+        if (r2 == this->reads_.end())
+            break;
+
+        if (r2->sample != r1->sample)
+            continue;
+        if (r1->cigar.back().first == 'D') {
+            if (r2->cigar.back().first == 'D' && r1->cigar.back().second == r2->cigar.back().second)
+                r1->seq.clear();
+        } else if (r2->cigar.back().first != 'D') {
+            // Neither r1 nor r2 have padding.
+            r1->seq.clear();
+        }
+    }
+
+    // Remove emptied reads.
+    reads_.erase(std::remove_if(
+        reads_.begin(), reads_.end(),
+        [](const Read& r) { return r.seq.empty(); }
+        ), reads_.end());
+
+    // Refresh `reads_per_sample_`.
+    reads_per_sample_ = vector<vector<size_t>>(mpopi().samples().size());
+    for (size_t i=0; i<reads_.size(); ++i)
+        reads_per_sample_[reads_[i].sample].push_back(i);
+}
+
 CLocAlnSet
 CLocAlnSet::juxtapose(CLocAlnSet&& left, CLocAlnSet&& right, long offset)
 {

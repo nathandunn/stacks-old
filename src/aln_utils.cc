@@ -443,15 +443,28 @@ void cigar_simplify_to_MDI(Cigar& cig) {
     while(op != cig.rend()) {
         if (op->first == prev->first) {
             op->second += prev->second;
-            prev->first = '\0';
+            prev->first = '\0'; // Marked for deletion.
         }
         ++prev;
         ++op;
     }
-
-    // Remove '\0' operations.
     cig.erase(std::remove_if(
             cig.begin(), cig.end(),
             [](const pair<char,uint>& op){return op.first == '\0';}
             ), cig.end());
+}
+
+void cigar_canonicalize_MDI_order(Cigar& cig) {
+    assert(!cig.empty());
+    assert(cig.front().first == 'M' || cig.front().first == 'D' || cig.front().first == 'I');
+    for (auto op0=cig.begin(), op1=++cig.begin(); op1!=cig.end(); ++op0, ++op1) {
+        assert(op1->first == 'M' || op1->first == 'D' || op1->first == 'I');
+        assert(op0->first != op1->first); // Identical successive operations should have been collapsed.
+        if (op0->first == 'I' && op1->first == 'D')
+            // The M's never move, and it's always 'D' before 'I'...
+            std::swap(*op0, *op1);
+    }
+    if (cig.size() >= 2 && cig.front().first == 'D' && cig[1].first == 'I')
+        // ...except at the beginning (because I ~ S, and S when present must be first/last).
+        std::swap(cig.back(), *++cig.rbegin());
 }
