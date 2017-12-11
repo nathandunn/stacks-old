@@ -1676,7 +1676,7 @@ void LocusProcessor::write_one_locus (
                 const SampleCall& scall = sitecall.sample_calls()[sample];
                 if (sdepths.sum() == 0) {
                     // No data for this sample.
-                    rec.append_sample(".");
+                    rec.append_sample("./.");
                     continue;
                 }
                 ++sample_sites_w_data[sample];
@@ -1712,7 +1712,7 @@ void LocusProcessor::write_one_locus (
                                 genotype << gt[0] << '/' << gt[1];
                                 genotype << ":.";
                             } else {
-                                genotype << ".:.";
+                                genotype << "./.:.";
                             }
                         }
                     } else {
@@ -1725,7 +1725,7 @@ void LocusProcessor::write_one_locus (
                     genotype << ':' << scall.gq();
                     break;
                 default:
-                    genotype << '.';
+                    genotype << "./.";
                     if (!dbg_no_haplotypes)
                         genotype << ":.";
                     genotype << ":.";
