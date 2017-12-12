@@ -33,21 +33,17 @@ for arg in "$@" ;do
 done
 
 # Parse arguments.
-short_opts='P:B:O:h'
-long_opts='stacks-dir:,bam:,out-dir:,help,version'
-newargs="$(getopt -o $short_opts --long $long_opts -- "$@")" || exit
-eval set -- "$newargs"
-while true ; do
-    case $1 in
-    -P|--stacks-dir)  stacks_d="${2/%\//}"; shift 2 ;;
-    -B|--bam)         bam_f="${2/%\//}"; shift 2 ;;
-    -O|--out-dir)     out_d="${2/%\//}"; shift 2 ;;
-    --)               shift; break ;;
-    -h|--help)        echo -n "$usage" >&2; exit 1 ;;
-    --version)        echo "$version" >&2; exit 1 ;;
+while getopts 'P:B:O:hv' opt ;do
+    case "$opt" in
+    P) stacks_d="${OPTARG/%\//}" ;;
+    B) bam_f="${OPTARG/%\//}" ;;
+    O) out_d="${OPTARG/%\//}" ;;
+    h) echo -n "$usage" >&2; exit 1 ;;
+    v) echo "$version" >&2; exit 1 ;;
     *) echo "Error: Bad arguments (-h for help)." >&2; exit 1 ;;
     esac
 done
+shift $((OPTIND-1))
 if [[ $# -ne 0 ]] ;then
     echo "Error: '$1' is seen as a positional argument (expected no positional arguments)." >&2
     exit 1
