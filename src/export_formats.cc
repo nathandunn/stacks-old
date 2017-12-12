@@ -989,8 +989,6 @@ FastaLociExport::write_batch(const vector<LocBin *> &loci)
 int
 FastaRawExport::write_header()
 {
-    this->_path = out_path + out_prefix + ".samples-raw.fa";
-
     //
     // Obtain the current date.
     //
@@ -1010,6 +1008,7 @@ FastaRawExport::open(const MetaPopInfo *mpopi)
 {
     this->_mpopi = mpopi;
 
+    this->_path = out_path + out_prefix + ".samples-raw.fa";
     this->_fh.open(this->_path.c_str(), ofstream::out);
     if (this->_fh.fail()) {
         cerr << "Error opening FASTA raw samples file '" << this->_path << "'\n";
@@ -1070,8 +1069,6 @@ FastaRawExport::write_batch(const vector<LocBin *> &loci)
 int
 FastaSamplesExport::write_header()
 {
-    this->_path = out_path + out_prefix + ".samples.fa";
-
     //
     // Obtain the current date.
     //
@@ -1091,6 +1088,7 @@ FastaSamplesExport::open(const MetaPopInfo *mpopi)
 {
     this->_mpopi = mpopi;
 
+    this->_path = out_path + out_prefix + ".samples.fa";
     this->_fh.open(this->_path.c_str(), ofstream::out);
     if (this->_fh.fail()) {
         cerr << "Error opening FASTA samples file '" << this->_path << "'\n";
