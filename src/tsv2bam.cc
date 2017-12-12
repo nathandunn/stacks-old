@@ -455,8 +455,8 @@ void cigar_apply_to_locus(Locus* l, const Cigar& c) {
 
     if (l->len != cloc_len) {
         assert(cloc_len > l->len); // As matches files don't contain I operations.
-        delete l->con;
-        delete l->model;
+        delete[] l->con;
+        delete[] l->model;
         l->con = new char[cloc_len+1];
         l->model = new char[cloc_len+1];
     }
