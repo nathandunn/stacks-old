@@ -73,6 +73,7 @@ public:
         size_t n_secondary;
         size_t n_supplementary;
         size_t n_unmapped;
+        size_t n_ignored_read2_recs;
 
         size_t n_loci_built;
 
@@ -531,11 +532,12 @@ bool BamCLocBuilder::next_record(size_t bam_f_i)
     while (true) {
         if(!bam_f->next_record_ordered(r))
             return false;
-
-        if (cfg_.ign_pe_reads && r.is_read2())
-            continue;
-
         ++bam_stats_.n_records;
+
+        if (cfg_.ign_pe_reads && r.is_read2()) {
+            ++bam_stats_.n_ignored_read2_recs;
+            continue;
+        }
 
         // Check if the record is primary.
         if (r.is_unmapped()) {

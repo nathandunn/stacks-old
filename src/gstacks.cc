@@ -377,7 +377,9 @@ try {
                 << "  skipped " << bam_stats.n_unmapped << " unmapped reads ("
                 << as_percentage((double) bam_stats.n_unmapped / tot) << ")\n";
         if (bam_stats.n_secondary > 0 || bam_stats.n_supplementary > 0)
-            cout << "  skipped suboptimal alignment (secondary/supplementary) records\n";
+            cout << "  skipped some suboptimal (secondary/supplementary) alignment records\n";
+        if (refbased_cfg.ign_pe_reads)
+            cout << "  ignored " << bam_stats.n_ignored_read2_recs << " READ2 records\n";
         cout << "\n";
 
         if (refbased_cfg.paired) {
