@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <vector>
 
+#include "utils.h"
 #include "ordered.h"
 #include "sql_utilities.h"
 #include "MetaPopInfo.h"
@@ -111,10 +112,7 @@ SumstatsExport::open(const MetaPopInfo *mpopi)
     this->_pop_cnt = this->_mpopi->pops().size();
 
     this->_fh.open(this->_path.c_str(), ofstream::out);
-    if (this->_fh.fail()) {
-        cerr << "Error opening sumstats file '" << this->_path << "'\n";
-        exit(1);
-    }
+    check_open(this->_fh, this->_path);
     this->_fh.precision(fieldw);
     this->_fh.setf(std::ios::fixed);
 
@@ -238,10 +236,7 @@ HapstatsExport::open(const MetaPopInfo *mpopi)
     this->_pop_cnt = this->_mpopi->pops().size();
 
     this->_fh.open(this->_path.c_str(), ofstream::out);
-    if (this->_fh.fail()) {
-        cerr << "Error opening sumstats file '" << this->_path << "'\n";
-        exit(1);
-    }
+    check_open(this->_fh, this->_path);
     this->_fh.precision(fieldw);
     this->_fh.setf(std::ios::fixed);
 
@@ -339,10 +334,7 @@ SnpDivergenceExport::open(const MetaPopInfo *mpopi)
 
             path = out_path + out_prefix + ".fst_" + pop_1p.name + "-" + pop_2p.name + ".tsv";
             fh = new ofstream(path.c_str(), ofstream::out);
-            if (fh->fail()) {
-                cerr << "Error opening Fst output file '" << path << "'\n";
-                exit(1);
-            }
+            check_open(*fh, path);
             fh->precision(fieldw);
             fh->setf(std::ios::fixed);
 
@@ -511,10 +503,7 @@ HapDivergenceExport::open(const MetaPopInfo *mpopi)
 
             path = out_path + out_prefix + ".phistats_" + pop_1p.name + "-" + pop_2p.name + ".tsv";
             fh = new ofstream(path.c_str(), ofstream::out);
-            if (fh->fail()) {
-                cerr << "Error opening Fst output file '" << path << "'\n";
-                exit(1);
-            }
+            check_open(*fh, path);
             fh->precision(fieldw);
             fh->setf(std::ios::fixed);
 
@@ -527,10 +516,7 @@ HapDivergenceExport::open(const MetaPopInfo *mpopi)
     //
     path = out_path + out_prefix + ".phistats.tsv";
     fh = new ofstream(path.c_str(), ofstream::out);
-    if (fh->fail()) {
-        cerr << "Error opening Fst output file '" << path << "'\n";
-        exit(1);
-    }
+    check_open(*fh, path);
     fh->precision(fieldw);
     fh->setf(std::ios::fixed);
 
@@ -771,10 +757,7 @@ GenotypesExport::open(const MetaPopInfo *mpopi)
     this->_mpopi = mpopi;
 
     this->_fh.open(this->_path.c_str(), ofstream::out);
-    if (this->_fh.fail()) {
-        cerr << "Error opening markers file '" << this->_path << "'\n";
-        exit(1);
-    }
+    check_open(this->_fh, this->_path);
 
     cerr << "Raw Genotypes/Haplotypes will be written to '" << this->_path << "'\n";
 
@@ -864,10 +847,7 @@ MarkersExport::open(const MetaPopInfo *mpopi)
     this->_mpopi = mpopi;
 
     this->_fh.open(this->_path.c_str(), ofstream::out);
-    if (this->_fh.fail()) {
-        cerr << "Error opening markers file '" << this->_path << "'\n";
-        exit(1);
-    }
+    check_open(this->_fh, this->_path);
     this->_fh.precision(fieldw);
     this->_fh.setf(std::ios::fixed);
 
@@ -935,10 +915,7 @@ FastaLociExport::open(const MetaPopInfo *mpopi)
     this->_mpopi = mpopi;
 
     this->_fh.open(this->_path.c_str(), ofstream::out);
-    if (this->_fh.fail()) {
-        cerr << "Error opening FASTA Loci file '" << this->_path << "'\n";
-        exit(1);
-    }
+    check_open(this->_fh, this->_path);
 
     cerr << "FASTA consensus sequences for each locus in the metapopulation  will be written to '" << this->_path << "'\n";
 
@@ -1010,10 +987,7 @@ FastaRawExport::open(const MetaPopInfo *mpopi)
 
     this->_path = out_path + out_prefix + ".samples-raw.fa";
     this->_fh.open(this->_path.c_str(), ofstream::out);
-    if (this->_fh.fail()) {
-        cerr << "Error opening FASTA raw samples file '" << this->_path << "'\n";
-        exit(1);
-    }
+    check_open(this->_fh, this->_path);
 
     cerr << "Raw FASTA consensus sequences for each sample will be written to '" << this->_path << "'\n";
 
@@ -1090,10 +1064,7 @@ FastaSamplesExport::open(const MetaPopInfo *mpopi)
 
     this->_path = out_path + out_prefix + ".samples.fa";
     this->_fh.open(this->_path.c_str(), ofstream::out);
-    if (this->_fh.fail()) {
-        cerr << "Error opening FASTA samples file '" << this->_path << "'\n";
-        exit(1);
-    }
+    check_open(this->_fh, this->_path);
 
     cerr << "FASTA consensus sequences for each sample will be written to '" << this->_path << "'\n";
 
@@ -1458,10 +1429,7 @@ GenePopExport::post_processing()
     strftime(date, 32, "%B %d, %Y", timeinfo);
 
     this->_fh.open(this->_path.c_str(), ofstream::out);
-    if (this->_fh.fail()) {
-        cerr << "Error opening GenePop file '" << this->_path << "'\n";
-        return(0);
-    }
+    check_open(this->_fh, this->_path);
 
     //
     // Output the header line.
@@ -1469,10 +1437,7 @@ GenePopExport::post_processing()
     this->_fh << "# Stacks v" << VERSION << "; GenePop v4.1.3; " << date << "\n";
 
     this->_intmpfh.open(this->_tmp_path.c_str(), ofstream::in);
-    if (this->_intmpfh.fail()) {
-        cerr << "Error opening GenePop file '" << this->_tmp_path << "'\n";
-        return(0);
-    }
+    check_open(this->_intmpfh, this->_tmp_path);
 
     vector<string> transposed_lines;
 
@@ -1669,10 +1634,7 @@ StructureExport::post_processing()
     strftime(date, 32, "%B %d, %Y", timeinfo);
 
     this->_fh.open(this->_path.c_str(), ofstream::out);
-    if (this->_fh.fail()) {
-        cerr << "Error opening Structure file '" << this->_path << "'\n";
-        return(0);
-    }
+    check_open(this->_fh, this->_path);
 
     //
     // Output the header line.
@@ -1680,10 +1642,7 @@ StructureExport::post_processing()
     this->_fh << "# Stacks v" << VERSION << "; " << " Structure v2.3; " << date << "\n";
 
     this->_intmpfh.open(this->_tmp_path.c_str(), ofstream::in);
-    if (this->_intmpfh.fail()) {
-        cerr << "Error opening Structure file '" << this->_tmp_path << "'\n";
-        return(0);
-    }
+    check_open(this->_intmpfh, this->_tmp_path);
 
     vector<string> transposed_lines;
 
@@ -1948,16 +1907,10 @@ PhylipExport::post_processing()
     strftime(date, 32, "%B %d, %Y", timeinfo);
 
     this->_fh.open(this->_path.c_str(), ofstream::out);
-    if (this->_fh.fail()) {
-        cerr << "Error opening Phylip file '" << this->_path << "'\n";
-        return(0);
-    }
+    check_open(this->_fh, this->_path);
 
     this->_intmpfh.open(this->_tmp_path.c_str(), ofstream::in);
-    if (this->_intmpfh.fail()) {
-        cerr << "Error opening temporary Phylip file '" << this->_tmp_path << "'\n";
-        return(0);
-    }
+    check_open(this->_intmpfh, this->_tmp_path);
 
     vector<string> transposed_lines;
 
