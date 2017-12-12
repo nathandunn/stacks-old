@@ -468,7 +468,7 @@ void cigar_apply_to_locus(Locus* l, const Cigar& c) {
         string new_r = apply_cigar_to_seq(r, c);
         assert(new_r.length() == cloc_len);
         if (l->len != cloc_len) {
-            delete r;
+            delete[] r;
             r = new char[cloc_len+1];
         }
         strncpy(r, new_r.c_str(), cloc_len+1);
