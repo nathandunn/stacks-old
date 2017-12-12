@@ -87,9 +87,10 @@ ofstream o_aln_f;
 ofstream o_hapgraphs_f;
 const char o_aln_header[] =
     "# This prints observed read haplotypes:\n"
-    "# show_loc() { loc=$1; cat ${RY_DIR:-.}/gstacks.alns | sed -n \"/^END $loc\\b/ q; /^BEGIN $loc\\b/,$ p\" | tail -n+2; }\n"
-    "# snp_cols() { loc=$1; zcat ${RY_DIR:-.}/gstacks.vcf.gz | awk \"\\$1==$loc; \\$1>$loc {exit}\" | awk '$5!=\".\"' | cut -f2 | paste -sd ','; }\n"
-    "# show_haps() { loc=$1; cols=$2; spl=$3; show_loc $loc | grep \"\\b$spl\\b\" | cut -f3 | cut -c \"$cols\" | sort; }\n"
+    "# show_loc() { loc=$1; cat ./gstacks.alns | sed -n \"/^END $loc\\b/ q; /^BEGIN $loc\\b/,$ p\" | tail -n+2; }\n"
+    "# snp_cols() { loc=$1; zcat ./gstacks.vcf.gz | awk \"\\$1==$loc; \\$1>$loc {exit}\" | awk '$5!=\".\"' | cut -f2 | paste -sd ','; }\n"
+    "# show_haps() { loc=$1; cols=$2; spl=$3; show_loc $loc | grep \"\\b$spl\\b\" | cut -f3 | cut -c \"${cols//./,}\" | sort; }\n"
+    "# format_haps() { loc=$1; cols=$2; spl=$3; show_haps $loc $cols $spl | transpose-ch | paste <(echo $cols | tr ,. '\\n' | xargs printf '% 4s\\n') - | sed 's/\\t/  /' | seq.color | { echo; echo $loc/$spl; echo; cat; echo; }; }\n"
     "# true_loci() { loc=$1; spl=$2; show_loc $loc | grep \"\\b$spl\\b\" | grep -v ref | cut -d: -f1 | sort -u; }\n"
     ;
 const char o_hapgraphs_header[] =
