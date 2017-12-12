@@ -2095,7 +2095,7 @@ const string help_string = string() +
         "  --dbg-gfa: output a GFA file for each locus\n"
         "  --dbg-alns: output a file showing the contigs & alignments\n"
         "  --dbg-hapgraphs: output a dot graph file showing phasing information\n"
-        "  --dbg-misphased-hapgraphs: same, but only for misphased diploid loci\n"
+        "  --dbg-hapgraphs-misphased: same, but only for misphased diploid loci\n"
         "  --dbg-depths: write detailed depth data in the output VCF\n"
         "  --dbg-no-unphased-snps: don't write unphased SNPs in the output VCF\n"
         "  --dbg-true-alns: use true alignments (for simulated data; read IDs must\n"
