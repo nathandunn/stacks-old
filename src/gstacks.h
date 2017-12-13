@@ -87,28 +87,43 @@ public:
 //
 // GenotypeStats
 // ----------
-// Statistics produced by `LocusProcessor::process()` regarding genotyping
-// and haplotyping.
+// Statistics produced by LocusProcessor regarding genotyping.
 //
 class GenotypeStats {
 public:
     size_t n_genotyped_loci;
     size_t n_sites_tot;
+    double mean_n_sites_per_loc() const {return (double) n_sites_tot / n_genotyped_loci;}
 
     // Statistics for --rm-unpaired-reads, --rm-pcr-duplicates.
     size_t n_unpaired_reads_rm;
     size_t n_read_pairs_pcr_dupl;
     size_t n_read_pairs_used;
 
-    double mean_n_sites_per_loc() const {return (double) n_sites_tot / n_genotyped_loci;}
-
-    map<pair<size_t,size_t>,size_t> n_badly_phased_samples; // { {n_inconsistent_hets, n_hets_2snps} : count }
-    size_t n_halplotyping_attempts() const
-        {size_t n=0; for (auto& e: n_badly_phased_samples) n+=e.second*e.first.second; return n;}
-    size_t n_consistent_hap_pairs() const
-        {size_t n=0; for (auto& e: n_badly_phased_samples) n+=e.second*(e.first.second-e.first.first); return n;}
-
     GenotypeStats& operator+= (const GenotypeStats& other);
+};
+
+//
+// HaplotypeStats
+// ----------
+// Statistics produced by LocusProcessor regarding haplotyping.
+//
+class HaplotypeStats {
+public:
+    map<pair<size_t,size_t>,size_t> n_badly_phased_samples; // { {n_consistent_hets, n_hets_2snps} : count }
+
+    struct PerSampleStats {
+        size_t n_diploid_loci;
+        size_t n_hets_2snps;
+        size_t n_phased;
+    };
+    vector<PerSampleStats> per_sample_stats;
+
+    HaplotypeStats(size_t n_samples) : per_sample_stats(n_samples, PerSampleStats()) {}
+    HaplotypeStats& operator+= (const HaplotypeStats& other);
+
+    size_t n_halplotyping_attempts() const;
+    size_t n_consistent_hap_pairs() const;
 };
 
 //
@@ -193,7 +208,7 @@ struct Timers {
 //
 class LocusProcessor {
 public:
-    LocusProcessor() : gt_stats_(), ctg_stats_(), loc_() {}
+    LocusProcessor(size_t n_samples) : gt_stats_(), hap_stats_(n_samples), ctg_stats_(), loc_() {}
 
     // Process a locus.
     void process(CLocReadSet& loc);
@@ -201,6 +216,7 @@ public:
 
     // Access the output. Statistics & movable fasta/vcf per-locus text outputs.
     const GenotypeStats& gt_stats() const {return gt_stats_;}
+    const HaplotypeStats& hap_stats() const {return hap_stats_;}
     const ContigStats& ctg_stats() const {return ctg_stats_;}
     Timers& timers() {return timers_;}
 
@@ -210,6 +226,7 @@ public:
 
 private:
     GenotypeStats gt_stats_;
+    HaplotypeStats hap_stats_;
     ContigStats ctg_stats_;
     Timers timers_;
     mutable LocData loc_;
@@ -231,8 +248,7 @@ private:
     vector<map<size_t,PhasedHet>> phase_hets (
             const vector<SiteCall>& calls,
             const CLocAlnSet& aln_loc,
-            size_t& n_hets_needing_phasing,
-            size_t& n_inconsistent_hets
+            HaplotypeStats& hap_stats
             ) const;
 
     void count_pairwise_cooccurrences(
@@ -290,7 +306,6 @@ private:
     // `from_true_alignments()`.
     //
     void using_true_reference(CLocAlnSet& aln_loc, CLocReadSet&& loc);
-
 };
 
 //
