@@ -58,18 +58,6 @@ bool      write_random_snp  = false;
 bool      merge_sites       = false;
 bool      expand_id         = false;
 bool      write_gtypes      = false;
-bool      fasta_loci_out    = false;
-bool      fasta_samples_out = false;
-bool      fasta_samples_raw_out = false;
-bool      genomic_out       = false;
-bool      phase_out         = false;
-bool      fastphase_out     = false;
-bool      beagle_out        = false;
-bool      beagle_phased_out = false;
-bool      plink_out         = false;
-bool      hzar_out          = false;
-bool      treemix_out       = false;
-bool      phylip_var_all    = false;
 bool      ordered_export    = false;
 bool      smooth_fstats     = false;
 bool      smooth_popstats   = false;
@@ -3931,22 +3919,22 @@ parse_command_line(int argc, char* argv[])
             exports.push_back(new StructureExport());
             break;
         case 'A':
-            fastphase_out = true;
+            cerr << "BETA: Ignoring --fastphase_out output request, which is not currently implemented.\n";
             break;
         case 'C':
-            phase_out = true;
+            cerr << "BETA: Ignoring --phase output request, which is not currently implemented.\n";
             break;
         case 'E':
-            beagle_out = true;
+            cerr << "BETA: Ignoring --beagle output request, which is not currently implemented.\n";
             break;
         case 'H':
-            beagle_phased_out = true;
+            cerr << "BETA: Ignoring --beagle_phased output request, which is not currently implemented.\n";
             break;
         case 'K':
-            plink_out = true;
+            cerr << "BETA: Ignoring --plink output request, which is not currently implemented.\n";
             break;
         case 'Z':
-            hzar_out = true;
+            cerr << "BETA: Ignoring --hzar output request, which is not currently implemented.\n";
             break;
         case 'Y':
             exports.push_back(new PhylipFixedExport());
@@ -3955,13 +3943,13 @@ parse_command_line(int argc, char* argv[])
             exports.push_back(new PhylipVarExport());
             break;
         case 'T':
-            phylip_var_all = true;
+            cerr << "BETA: Ignoring --phylip_var_all output request, which is not currently implemented.\n";
             break;
         case 'U':
-            treemix_out = true;
+            cerr << "BETA: Ignoring --treemix output request, which is not currently implemented.\n";
             break;
         case 'g':
-            genomic_out = true;
+            cerr << "BETA: Ignoring --genomic output request, which is not currently implemented.\n";
             break;
         case 'W':
             wl_file = optarg;
@@ -4164,25 +4152,25 @@ void help() {
          << "\n"
          << "File output options:\n"
          << "  --ordered_export: if data is reference aligned, exports will be ordered; only a single representative of each overlapping site.\n"
-         << "  --genomic: output each nucleotide position (fixed or polymorphic) in all population members to a file (requires --renz).\n"
+         << "  --genomic*: output each nucleotide position (fixed or polymorphic) in all population members to a file (requires --renz).\n"
+         << "  --fasta_loci: output locus consensus sequences in FASTA format.\n"
          << "  --fasta_samples: output the sequences of the two haplotypes of each (diploid) sample, for each locus, in FASTA format.\n"
          << "  --fasta_samples_raw: output all haplotypes observed in each sample, for each locus, in FASTA format.\n"
-         << "  --fasta_loci: output consensus sequences of all loci, in FASTA format.\n"
          << "  --vcf_snps: output SNPs in Variant Call Format (VCF).\n"
          << "  --vcf_haps: output haplotypes in Variant Call Format (VCF).\n"
-         << "  --vcf_haplotypes: output haplotypes in Variant Call Format (VCF).\n"
          << "  --genepop: output results in GenePop format.\n"
          << "  --structure: output results in Structure format.\n"
-         << "  --phase: output genotypes in PHASE format.\n"
-         << "  --fastphase: output genotypes in fastPHASE format.\n"
-         << "  --beagle: output genotypes in Beagle format.\n"
-         << "  --beagle_phased: output haplotypes in Beagle format.\n"
-         << "  --plink: output genotypes in PLINK format.\n"
-         << "  --hzar: output genotypes in Hybrid Zone Analysis using R (HZAR) format.\n"
+         << "  --phase*: output genotypes in PHASE format.\n"
+         << "  --fastphase*: output genotypes in fastPHASE format.\n"
+         << "  --beagle*: output genotypes in Beagle format.\n"
+         << "  --beagle_phased*: output haplotypes in Beagle format.\n"
+         << "  --plink*: output genotypes in PLINK format.\n"
+         << "  --hzar*: output genotypes in Hybrid Zone Analysis using R (HZAR) format.\n"
          << "  --phylip: output nucleotides that are fixed-within, and variant among populations in Phylip format for phylogenetic tree construction.\n"
          << "  --phylip_var: include variable sites in the phylip output encoded using IUPAC notation.\n"
-         << "  --phylip_var_all: include all sequence as well as variable sites in the phylip output encoded using IUPAC notation.\n"
-         << "  --treemix: output SNPs in a format useable for the TreeMix program (Pickrell and Pritchard).\n"
+         << "  --phylip_var_all*: include all sequence as well as variable sites in the phylip output encoded using IUPAC notation.\n"
+         << "  --treemix*: output SNPs in a format useable for the TreeMix program (Pickrell and Pritchard).\n"
+         << "  (*not implemented as of v2.0Beta7)\n"
          << "\n"
          << "Additional options:\n"
          << "  -h,--help: display this help messsage.\n"
