@@ -182,6 +182,7 @@ try {
     // Process every locus
     //
     GenotypeStats gt_stats {};
+    HaplotypeStats hap_stats (bam_mpopi->samples().size());
     ContigStats denovo_ctg_stats {};
 
     // For clocking.
@@ -210,7 +211,7 @@ try {
     bool eof = false;
     #pragma omp parallel num_threads(num_threads)
     try {
-        LocusProcessor loc_proc;
+        LocusProcessor loc_proc (bam_mpopi->samples().size());
         Timers& t = loc_proc.timers();
 
         CLocReadSet loc (*bam_mpopi); // For denovo.
@@ -315,6 +316,7 @@ try {
         if (omp_return == 0) {
             denovo_ctg_stats += loc_proc.ctg_stats();
             gt_stats  += loc_proc.gt_stats();
+            hap_stats  += loc_proc.hap_stats();
             t_threads_totals += loc_proc.timers();
         }
     } catch (exception& e) {
@@ -416,8 +418,8 @@ try {
     }
 
     // Report statistics on genotyping and haplotyping.
-    size_t n_hap_attempts = gt_stats.n_halplotyping_attempts();
-    size_t n_hap_pairs = gt_stats.n_consistent_hap_pairs();
+    size_t n_hap_attempts = hap_stats.n_halplotyping_attempts();
+    size_t n_hap_pairs = hap_stats.n_consistent_hap_pairs();
     cout << "Genotyped " << gt_stats.n_genotyped_loci << " loci:\n"
             << "  mean number of sites per locus: " << gt_stats.mean_n_sites_per_loc() << "\n"
             << "  a consistent phasing was found for " << n_hap_pairs << " of out " << n_hap_attempts
@@ -430,10 +432,29 @@ try {
     }
     if (dbg_log_stats_phasing) {
         logger->l << "BEGIN badly_phased\n"
-                    << "n_hets_2snps\tn_bad_hets\tn_loci\n";
-        for (auto& elem : gt_stats.n_badly_phased_samples)
-            logger->l << elem.first.second << '\t' << elem.first.first << '\t' << elem.second << '\n';
+                  << "n_hets_2snps\tn_bad_hets\tn_loci\n";
+        for (auto& elem : hap_stats.n_badly_phased_samples)
+            logger->l << elem.first.second
+                      << '\t' << elem.first.second - elem.first.first
+                      << '\t' << elem.second
+                      << '\n';
         logger->l << "END badly_phased\n\n";
+        logger->l << "BEGIN sample_phasing_rates\n"
+                  << "sample\tn_gts\tn_multisnp_hets\tn_phased\tmisphasing_rate\n";
+        ostream os (logger->l.rdbuf());
+        os << std::fixed << std::setprecision(3);
+        assert(hap_stats.per_sample_stats.size() == bam_mpopi->samples().size());
+        for (size_t sample=0; sample<bam_mpopi->samples().size(); ++sample) {
+            const HaplotypeStats::PerSampleStats& stats = hap_stats.per_sample_stats[sample];
+
+            os << bam_mpopi->samples()[sample].name
+               << '\t' << stats.n_diploid_loci
+               << '\t' << stats.n_hets_2snps
+               << '\t' << stats.n_phased
+               << '\t' << 1.0 - (double) stats.n_phased / stats.n_hets_2snps
+               << '\n';
+        }
+        logger->l << "END sample_phasing_rates\n";
     }
 
     // Report clockings.
@@ -535,7 +556,7 @@ void SnpAlleleCooccurrenceCounter::clear() {
 }
 
 //
-// GenotypeStats & ContigStats
+// GenotypeStats, HaplotypeStats & ContigStats
 // ===============
 //
 
@@ -545,11 +566,41 @@ GenotypeStats& GenotypeStats::operator+= (const GenotypeStats& other) {
     this->n_unpaired_reads_rm += other.n_unpaired_reads_rm;
     this->n_read_pairs_pcr_dupl += other.n_read_pairs_pcr_dupl;
     this->n_read_pairs_used += other.n_read_pairs_used;
-
-    for (auto count : other.n_badly_phased_samples)
-        this->n_badly_phased_samples[count.first] += count.second;
-
     return *this;
+}
+
+HaplotypeStats& HaplotypeStats::operator+= (const HaplotypeStats& other) {
+    for (auto elem : other.n_badly_phased_samples)
+        this->n_badly_phased_samples[elem.first] += elem.second;
+    assert(per_sample_stats.size() == other.per_sample_stats.size());
+    for (size_t sample=0; sample<per_sample_stats.size(); ++sample) {
+        per_sample_stats[sample].n_diploid_loci += other.per_sample_stats[sample].n_diploid_loci;
+        per_sample_stats[sample].n_hets_2snps += other.per_sample_stats[sample].n_hets_2snps;
+        per_sample_stats[sample].n_phased += other.per_sample_stats[sample].n_phased;
+    }
+    return *this;
+}
+
+size_t HaplotypeStats::n_halplotyping_attempts() const {
+    size_t n1 = 0;
+    for (auto& s: per_sample_stats)
+        n1 += s.n_hets_2snps;
+    size_t n2 = 0;
+    for (auto& e: n_badly_phased_samples)
+        n2+= e.second * e.first.second;
+    assert(n1==n2);
+    return n1;
+}
+
+size_t HaplotypeStats::n_consistent_hap_pairs() const {
+    size_t n1 = 0;
+    for (auto& s: per_sample_stats)
+        n1 += s.n_phased;
+    size_t n2 = 0;
+    for (auto& e: n_badly_phased_samples)
+        n2 += e.second * e.first.first;
+    assert(n1==n2);
+    return n1;
 }
 
 ContigStats& ContigStats::operator+= (const ContigStats& other) {
@@ -827,12 +878,8 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
 
     // Call haplotypes.
     vector<map<size_t,PhasedHet>> phase_data;
-    if (!dbg_no_haplotypes) {
-        size_t n_hets_needing_phasing;
-        size_t n_inconsistent_hets;
-        phase_data = phase_hets(calls, aln_loc, n_hets_needing_phasing, n_inconsistent_hets);
-        ++gt_stats_.n_badly_phased_samples[ {n_inconsistent_hets, n_hets_needing_phasing} ];
-    }
+    if (!dbg_no_haplotypes)
+        phase_data = phase_hets(calls, aln_loc, hap_stats_);
     timers_.geno_haplotyping.stop();
 
     write_one_locus(aln_loc, depths, calls, phase_data);
@@ -1214,11 +1261,10 @@ bool LocusProcessor::add_read_to_aln(
 vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
         const vector<SiteCall>& calls,
         const CLocAlnSet& aln_loc,
-        size_t& n_hets_needing_phasing,
-        size_t& n_inconsistent_hets
+        HaplotypeStats& hap_stats
 ) const {
-    n_hets_needing_phasing = 0;
-    n_inconsistent_hets = 0;
+    size_t n_hets_needing_phasing = 0;
+    size_t n_consistent_hets = 0;
 
     vector<map<size_t,PhasedHet>> phased_samples (loc_.mpopi->samples().size());
     vector<size_t> snp_cols; // The SNPs of this locus.
@@ -1241,9 +1287,11 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
     }
 
     SnpAlleleCooccurrenceCounter cooccurrences (snp_cols.size());
+    assert(hap_stats.per_sample_stats.size() == loc_.mpopi->samples().size());
     for (size_t sample=0; sample<loc_.mpopi->samples().size(); ++sample) {
         if (aln_loc.sample_reads(sample).empty())
             continue;
+        ++hap_stats.per_sample_stats[sample].n_diploid_loci;
 
         //
         // Find heterozygous positions & check that we have >= 2 hets.
@@ -1262,8 +1310,9 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
             phased_samples[sample].insert({col, {col, c.nt0(), c.nt1()}});
             continue;
         }
+        ++hap_stats.per_sample_stats[sample].n_hets_2snps;
         ++n_hets_needing_phasing;
-        
+
         vector<const SampleCall*> sample_het_calls;
         for (size_t het_i=0; het_i<het_snps.size(); ++het_i)
             sample_het_calls.push_back(&calls[snp_cols[het_snps[het_i]]].sample_calls()[sample]);
@@ -1283,13 +1332,14 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
         //
         vector<PhaseSet> phase_sets;
         if (!assemble_phase_sets(phase_sets, het_snps, sample_het_calls, cooccurrences)) {
-            ++n_inconsistent_hets;
             if (dbg_write_misphased_hapgraphs && !dbg_write_hapgraphs) {
                 has_subgraphs = true;
                 write_sample_hapgraph(o_hapgraph_ss, sample, het_snps, snp_cols, sample_het_calls, cooccurrences);
             }
             continue;
         }
+        ++hap_stats.per_sample_stats[sample].n_phased;
+        ++n_consistent_hets;
 
         //
         // Record phase sets.
@@ -1345,6 +1395,7 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
         o_hapgraphs_f << o_hapgraph_ss.rdbuf();
     }
 
+    ++hap_stats.n_badly_phased_samples[ {n_consistent_hets, n_hets_needing_phasing} ];
     return phased_samples;
 }
 
