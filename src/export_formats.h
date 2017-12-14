@@ -31,8 +31,16 @@
 #include "populations.h" // for "merget", "InputMode", "uncalled_haplotype()", "count_haplotypes_at_locus()"
 
 enum class ExportType {markers, genotypes, sumstats, hapstats, snpdivergence, hapdivergence,
-                       fasta_loci, fasta_raw, fasta_samples, structure, genepop, vcf, vcf_haps,
-                       phylipvar, phylipfixed};
+                       fasta_loci, fasta_raw, fasta_samples, structure, genepop, genepop_haps,
+                       vcf, vcf_haps, phylipvar, phylipfixed};
+
+void tally_complete_haplotypes(
+        Datum const*const* data,
+        size_t n_samples,
+        strand_type loc_strand,
+        vector<pair<const char*, size_t>>& haps_sorted_decr_freq,
+        map<const char*, size_t, LessCStrs>& hap_indexes_map
+        );
 
 class Export {
  protected:
@@ -215,9 +223,6 @@ class HapDivergenceExport: public Export {
 };
 
 class GenePopExport: public OrderableExport {
-    //
-    // Output a list of heterozygous loci and the associated haplotype frequencies.
-    //
     const MetaPopInfo *_mpopi;
     string   _tmp_path;
     ofstream _tmpfh;
@@ -230,6 +235,24 @@ class GenePopExport: public OrderableExport {
     int  write_header();
     int  post_processing();
     void close();
+
+ private:
+    int write_site(const CSLocus* cloc, const LocPopSum* psum, Datum const*const* datums, size_t col, size_t index);
+};
+
+class GenePopHapsExport: public Export {
+    const MetaPopInfo *_mpopi;
+    ofstream _tmpfh;
+    string tmppath() const {return this->_path + ".part";}
+
+ public:
+    GenePopHapsExport() : Export(ExportType::genepop_haps), _mpopi(NULL) {}
+    ~GenePopHapsExport() {}
+    int  open(const MetaPopInfo *mpopi);
+    int  write_header();
+    int  write_batch(const vector<LocBin*>& loci);
+    int  post_processing();
+    void close() {remove(this->tmppath().c_str());}
 
  private:
     int write_site(const CSLocus* cloc, const LocPopSum* psum, Datum const*const* datums, size_t col, size_t index);
