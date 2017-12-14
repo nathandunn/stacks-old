@@ -1083,7 +1083,7 @@ LocusProcessor::find_locus_overlap(SuffixTree *stree, GappedAln *g_aln, const DN
         }
     } while (q < q_stop);
 
-    
+
     if (alns.size() == 0) {
         //
         // If no alignments have been found, search the tails of the query and subject for any overlap
@@ -1104,7 +1104,7 @@ LocusProcessor::find_locus_overlap(SuffixTree *stree, GappedAln *g_aln, const DN
 
     } else {
         size_t query_stop = alns.front().query_pos + alns.front().aln_len - 1;
-        
+
         if ( alns.size() == 1 &&
             (query_stop == (query.length() - 1) && alns.front().subj_pos == 0)) {
             //
@@ -1121,7 +1121,7 @@ LocusProcessor::find_locus_overlap(SuffixTree *stree, GappedAln *g_aln, const DN
             // Otherwise, find a consistent set of suffix tree alignments, ordered in a directed, acyclic grapgh (DAG).
             //
             this->suffix_tree_hits_to_dag(query.length(), alns, final_alns);
-   
+
             //
             // Create a gapped alignment, prefilling the suffix tree hits, to determine the exact overlap.
             //
@@ -1138,7 +1138,7 @@ LocusProcessor::find_locus_overlap(SuffixTree *stree, GappedAln *g_aln, const DN
 
     if (cigar.size() == 0)
         return 0;
-    
+
     // cerr << "Cigar: " << aln_res.cigar.c_str() << "; cigar_length_ref aka overlap: " << cigar_length_ref(cigar) << "\n";
 
     //
@@ -1171,7 +1171,7 @@ LocusProcessor::find_locus_overlap(SuffixTree *stree, GappedAln *g_aln, const DN
         //
         overlap += aln_res.subj_pos;
     }
-    
+
     for (; cigar_index < cigar.size(); cigar_index++) {
         total_len += cigar[cigar_index].second;
         if (cigar[cigar_index].first == 'M')

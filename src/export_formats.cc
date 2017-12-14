@@ -1701,7 +1701,7 @@ StructureExport::write_header()
         }
     }
     this->_tmpfh << "\n";
-    
+
     this->_tmpfh << "\t";
     for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
         const Pop& pop = this->_mpopi->pops()[p];
@@ -1855,7 +1855,7 @@ PhylipExport::open(const MetaPopInfo *mpopi)
     this->_mpopi = mpopi;
 
     string suffix = (this->_type == ExportType::phylipvar) ? ".var" : ".fixed";
-                     
+
     //
     // We will write those loci to a Phylip file as defined here:
     //     http://evolution.genetics.washington.edu/phylip/doc/main.html#inputfiles
@@ -1890,7 +1890,7 @@ PhylipExport::open(const MetaPopInfo *mpopi)
     if (this->_type == ExportType::phylipvar)
         cerr << "Polymorphic sites in Phylip format will be written to '" << this->_path << "'\n";
     else
-        cerr << "Fixed difference sites in Phylip format will be written to '" << this->_path << "'\n";    
+        cerr << "Fixed difference sites in Phylip format will be written to '" << this->_path << "'\n";
     cerr << "   Individual sites written will be logged to '" << this->_log_path << "'\n";
 
     return 0;
@@ -2050,9 +2050,9 @@ PhylipVarExport::write_site(const CSLocus *loc, const LocPopSum *lps, Datum cons
             }
             break;
         }
-        
+
         this->_tmpfh << nuc;
-                         
+
         if (p < pop_cnt - 1)
             this->_tmpfh << "\t";
 
@@ -2061,7 +2061,7 @@ PhylipVarExport::write_site(const CSLocus *loc, const LocPopSum *lps, Datum cons
     }
     this->_logfh << "\n";
     this->_site_index++;
-    
+
     this->_tmpfh << "\n";
 
     return 0;
@@ -2097,15 +2097,15 @@ PhylipExport::post_processing()
 
     if (transposed_lines.size() == 0)
         return 0;
-    
+
     assert(transposed_lines.size() == this->_mpopi->pops().size());
 
     this->_fh << this->_mpopi->pops().size() << "\t" << this->_site_index << "\n";
-    
+
     for (size_t line_cnt = 0; line_cnt < transposed_lines.size(); line_cnt++) {
         size_t pos = transposed_lines[line_cnt].find_first_of("\t");
         this->_fh << transposed_lines[line_cnt].substr(0, pos + 1);
-        
+
         for (size_t i = pos + 1; i < transposed_lines[line_cnt].length(); i++)
             if (transposed_lines[line_cnt][i] != '\t')
                 this->_fh << transposed_lines[line_cnt][i];

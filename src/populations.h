@@ -88,7 +88,7 @@ class SumStatsSummary {
     double _locus_gt_sites_mean, _locus_gt_sites_acc_mean, _locus_gt_sites_var;
     double _overlap_mean, _overlap_acc_mean, _overlap_var;
     double _locus_n, _locus_pe_ctg_n, _locus_overlap_n;
-    
+
 public:
     SumStatsSummary(size_t pop_cnt);
     ~SumStatsSummary();

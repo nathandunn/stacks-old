@@ -2474,7 +2474,7 @@ SumStatsSummary::SumStatsSummary(size_t pop_cnt)
         this->_sq_n[j]     = 0.0;
         this->_sq_n_all[j] = 0.0;
     }
- 
+
     this->_locus_n         = 0.0;
     this->_locus_overlap_n = 0.0;
     this->_locus_pe_ctg_n  = 0.0;
@@ -2609,7 +2609,7 @@ SumStatsSummary::accumulate(const vector<LocBin *> &loci)
         _locus_n++;
         _locus_gt_sites_mean += site_cnt;
         _locus_gt_sites_var  += this->online_variance(site_cnt, _locus_gt_sites_acc_mean, _locus_n);
- 
+
         if (cloc->pe_ctg) {
             _locus_pe_ctg_n++;
             _locus_len_mean_all += cloc->len - 10;
