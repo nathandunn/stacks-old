@@ -180,7 +180,7 @@ install-data-hook:
 	mv $(DESTDIR)$(pkgdatadir)/php/constants.php.dist.subst $(DESTDIR)$(pkgdatadir)/php/constants.php.dist
 	echo $(VERSION) > $(DESTDIR)$(pkgdatadir)/php/version.php
 	$(install_sh) -d -m 755 $(DESTDIR)$(pkgdatadir)/php/export
-	sed -i .bkp -e 's,_VERSION_,$(VERSION),' $(DESTDIR)$(bindir)/stacks-integrate-alignments
+	sed -i.bkp -e 's,_VERSION_,$(VERSION),' $(DESTDIR)$(bindir)/stacks-integrate-alignments
 	rm -f $(DESTDIR)$(bindir)/stacks-integrate-alignments.bkp
 	chmod +x $(DESTDIR)$(bindir)/stacks-integrate-alignments
 	chmod +x $(DESTDIR)$(bindir)/stacks-gdb
