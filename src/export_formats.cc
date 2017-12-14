@@ -1367,12 +1367,12 @@ GenePopExport::open(const MetaPopInfo *mpopi)
     //
     // Write a GenePop file as defined here: http://kimura.univ-montp2.fr/~rousset/Genepop.htm
     //
-    this->_path = out_path + out_prefix + ".genepop";
+    this->_path = out_path + out_prefix + ".snps.genepop";
 
     //
     // Open a temporary file.
     //
-    this->_tmp_path = out_path + out_prefix + ".genepop.part";
+    this->_tmp_path = out_path + out_prefix + ".snps.genepop.part";
     this->_tmpfh.open(this->_tmp_path);
 
     cerr << "Polymorphic sites in GenePop format will be written to '" << this->_path << "'\n";
