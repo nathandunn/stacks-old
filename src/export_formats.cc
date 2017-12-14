@@ -1487,7 +1487,7 @@ GenePopExport::post_processing()
 
     vector<string> transposed_lines;
 
-    this->transpose(this->_intmpfh, transposed_lines);
+    Export::transpose(this->_intmpfh, transposed_lines);
 
     assert(transposed_lines.size() == this->_mpopi->samples().size() + 1);
 
@@ -1628,7 +1628,7 @@ GenePopHapsExport::post_processing()
     ifstream intmpfh (this->tmppath());
     check_open(intmpfh, this->tmppath());
     vector<string> transposed_lines;
-    this->transpose(intmpfh, transposed_lines);
+    Export::transpose(intmpfh, transposed_lines);
     if (transposed_lines.empty()) {
         cerr << "Error: Temporary file '" << this->tmppath()
              << "' is corrupt (no data).\n";
@@ -1825,7 +1825,7 @@ StructureExport::post_processing()
 
     vector<string> transposed_lines;
 
-    this->transpose(this->_intmpfh, transposed_lines);
+    Export::transpose(this->_intmpfh, transposed_lines);
 
     assert(transposed_lines.size() == (this->_mpopi->samples().size() * 2) + 1);
 
@@ -2093,7 +2093,7 @@ PhylipExport::post_processing()
 
     vector<string> transposed_lines;
 
-    this->transpose(this->_intmpfh, transposed_lines);
+    Export::transpose(this->_intmpfh, transposed_lines);
 
     if (transposed_lines.size() == 0)
         return 0;
