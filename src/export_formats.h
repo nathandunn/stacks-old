@@ -58,7 +58,7 @@ class Export {
     virtual void close()           = 0;
 
     ExportType type() { return this->_type; }
-    int transpose(ifstream &ifh, vector<string> &transposed);
+    static int transpose(ifstream &ifh, vector<string> &transposed);
 };
 
 class OrderableExport : public Export {
