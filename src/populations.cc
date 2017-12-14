@@ -3707,7 +3707,8 @@ parse_command_line(int argc, char* argv[])
             {"beagle_phased",  no_argument,       NULL, 'H'},
             {"plink",          no_argument,       NULL, 'K'},
             {"genomic",        no_argument,       NULL, 'g'},
-            {"genepop",        no_argument,       NULL, 'G'},
+            {"genepop_snps",   no_argument,       NULL, 1010}, {"genepop", no_argument, NULL, 3010},
+            {"genepop_haps",   no_argument,       NULL, 1011},
             {"phylip",         no_argument,       NULL, 'Y'},
             {"phylip_var",     no_argument,       NULL, 'L'},
             {"phylip_var_all", no_argument,       NULL, 'T'},
@@ -3754,7 +3755,7 @@ parse_command_line(int argc, char* argv[])
         };
 
         // getopt_long stores the option index here.
-        int c = getopt_long(argc, argv, "ACDEFGHJKLNSTUV:YZ123456dghjklnva:c:e:f:i:o:p:q:r:t:u:w:B:I:M:O:P:R:Q:W:", long_options, NULL);
+        int c = getopt_long(argc, argv, "ACDEFHJKLNSTUV:YZ123456dghjklnva:c:e:f:i:o:p:q:r:t:u:w:B:I:M:O:P:R:Q:W:", long_options, NULL);
 
         // Detect the end of the options.
         if (c == -1)
@@ -3895,15 +3896,15 @@ parse_command_line(int argc, char* argv[])
         case 1002:
             ordered_export = true;
             break;
-        case 1004:
+        case 1004: //--vcf-snps
         case 3004:
             exports.push_back(new VcfExport());
             break;
-        case 1009:
+        case 1009: // vcf-haps
         case 3009:
             exports.push_back(new VcfHapsExport());
             break;
-        case 1006:
+        case 1006: // --fasta-loci
             exports.push_back(new FastaLociExport());
             break;
         case 'F':
@@ -3912,8 +3913,12 @@ parse_command_line(int argc, char* argv[])
         case 'J':
             exports.push_back(new FastaSamplesExport());
             break;
-        case 'G':
+        case 1010: // --genepop-snps
+        case 3010:
             exports.push_back(new GenePopExport());
+            break;
+        case 1011: // --genepop-haps
+            exports.push_back(new GenePopHapsExport());
             break;
         case 'S':
             exports.push_back(new StructureExport());
@@ -4158,7 +4163,8 @@ void help() {
          << "  --fasta_samples_raw: output all haplotypes observed in each sample, for each locus, in FASTA format.\n"
          << "  --vcf_snps: output SNPs in Variant Call Format (VCF).\n"
          << "  --vcf_haps: output haplotypes in Variant Call Format (VCF).\n"
-         << "  --genepop: output results in GenePop format.\n"
+         << "  --genepop_snps: output snps in GenePop format.\n"
+         << "  --genepop_haps: output haplotypes in GenePop format.\n"
          << "  --structure: output results in Structure format.\n"
          << "  --phase*: output genotypes in PHASE format.\n"
          << "  --fastphase*: output genotypes in fastPHASE format.\n"

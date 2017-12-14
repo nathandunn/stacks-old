@@ -20,6 +20,7 @@
 //
 #include <algorithm>
 #include <vector>
+#include <iomanip>
 
 #include "utils.h"
 #include "ordered.h"
@@ -48,6 +49,51 @@ extern set<string> debug_flags;
 
 extern MetaPopInfo      mpopi;
 extern map<string, int> renz_olap;
+
+void tally_complete_haplotypes(
+        Datum const*const* data,
+        size_t n_samples,
+        strand_type loc_strand, // (Alphabetic order is used for frequency ties.)
+        vector<pair<const char*, size_t>>& haps_sorted_decr_freq,
+        map<const char*, size_t, LessCStrs>& hap_indexes_map
+) {
+    haps_sorted_decr_freq.clear();
+    hap_indexes_map.clear();
+
+    // Tally the haplotype frequencies.
+    // N.B. We first use the map to store freqs/counts; later we replace
+    // those values with the indexes.
+    for (size_t sample=0; sample<n_samples; ++sample) {
+        if (data[sample] == NULL)
+            continue;
+        const vector<char*>& s_haps = data[sample]->obshap;
+        assert(s_haps.size() == 2);
+        if (strchr(s_haps[0], 'N') != NULL) {
+            // Partially unresolved.
+            assert(strchr(s_haps[1], 'N') != NULL);
+            continue;
+        }
+        assert(strchr(s_haps[1], 'N') == NULL);
+        ++hap_indexes_map[s_haps[0]];
+        ++hap_indexes_map[s_haps[1]];
+    }
+
+    // Sort the haplotypes.
+    haps_sorted_decr_freq.assign(hap_indexes_map.begin(), hap_indexes_map.end());
+    std::sort(haps_sorted_decr_freq.begin(), haps_sorted_decr_freq.end(),
+            [loc_strand] (const pair<const char*,size_t>& a1, const pair<const char*,size_t>& a2) {
+                if (a1.second != a2.second)
+                    // Decreasing freq.
+                    return a1.second > a2.second;
+                // Alphabetic (with strand correction).
+                // (rem. The hap strings are always different.)
+                return (strcmp(a1.first, a2.first) < 0) == (loc_strand == strand_plus);
+            });
+
+    // Record the indexes.
+    for (size_t i=0; i<haps_sorted_decr_freq.size(); i++)
+        hap_indexes_map[haps_sorted_decr_freq[i].first] = i;
+}
 
 int
 Export::transpose(ifstream &ifh, vector<string> &transposed)
@@ -1489,6 +1535,139 @@ GenePopExport::close()
 }
 
 int
+GenePopHapsExport::open(const MetaPopInfo *mpopi)
+{
+    this->_mpopi = mpopi;
+    this->_path = out_path + out_prefix + ".haps.genepop";
+    this->_fh.open(this->_path);
+    check_open(this->_fh, this->_path);
+    this->_tmpfh.open(this->tmppath());
+    check_open(this->_tmpfh, this->tmppath());
+    cerr << "Polymorphic sites in GenePop format will be written to '" << this->_path << "'\n";
+    return 0;
+}
+
+int
+GenePopHapsExport::write_header()
+{
+    for (const Pop& pop : this->_mpopi->pops())
+        for (size_t s = pop.first_sample; s <= pop.last_sample; s++)
+            this->_tmpfh << "\t" << mpopi.samples()[s].name << ',';
+    this->_tmpfh << "\n";
+    this->_tmpfh << std::setfill('0');
+    return 0;
+}
+
+int
+GenePopHapsExport::write_batch(const vector<LocBin*>& loci)
+{
+    for (const LocBin* locbin : loci) {
+        const CSLocus* cloc = locbin->cloc;
+        Datum const*const* d = locbin->d;
+
+        if (cloc->snps.empty())
+            // Monomorphic locus.
+            continue;
+
+        // Tally and sort haplotypes.
+        vector<pair<const char*, size_t>> sorted_haps;
+        map<const char*, size_t, LessCStrs> hap_indexes;
+        tally_complete_haplotypes(d, this->_mpopi->samples().size(), cloc->loc.strand,
+                                  sorted_haps, hap_indexes);
+        if (sorted_haps.size() < 2)
+            continue;
+
+        this->_tmpfh << cloc->id;
+        for (const Pop& pop : this->_mpopi->pops()) {
+            for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
+                this->_tmpfh << "\t";
+                if (d[j] == NULL || strchr(d[j]->obshap[0], 'N') != NULL) {
+                    this->_tmpfh << "000000";
+                } else {
+                    size_t i0 = hap_indexes.at(d[j]->obshap[0]);
+                    size_t i1 = hap_indexes.at(d[j]->obshap[1]);
+                    if (max(i0, i1) + 1 <= 999)
+                        this->_tmpfh << std::setw(3) << min(i0, i1) + 1
+                                     << std::setw(3) << max(i0, i1) + 1;
+                    else
+                        this->_tmpfh << "000000";
+                }
+            }
+        }
+        this->_tmpfh << "\n";
+    }
+    return 0;
+}
+
+int
+GenePopHapsExport::post_processing()
+{
+    //
+    // Close the temporary output file.
+    //
+    this->_tmpfh.close();
+
+    //
+    // Obtain the current date.
+    //
+    time_t     rawtime;
+    struct tm *timeinfo;
+    char       date[32];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date, 32, "%B %d, %Y", timeinfo);
+
+    //
+    // Output the header line.
+    //
+    this->_fh << "Stacks v" << VERSION << "; GenePop v4.1.3; " << date << "\n";
+
+    //
+    // Read and transpose the temporary file.
+    //
+    ifstream intmpfh (this->tmppath());
+    check_open(intmpfh, this->tmppath());
+    vector<string> transposed_lines;
+    this->transpose(intmpfh, transposed_lines);
+    if (transposed_lines.empty()) {
+        cerr << "Error: Temporary file '" << this->tmppath()
+             << "' is corrupt (no data).\n";
+        throw exception();
+    } else if (transposed_lines.size() != this->_mpopi->samples().size() + 1) {
+        cerr << "Error: Temporary file '" << this->tmppath()
+             << "' is corrupt (wrong number of columns).\n";
+        throw exception();
+    }
+
+    //
+    // The first line has a list of locus IDs, convert these to comma-separated.
+    //
+    vector<string>::iterator line = transposed_lines.begin();
+    for (auto ch = ++line->begin(); ch != line->end(); ++ch) {
+        if (*ch == '\t')
+            this->_fh << ',';
+        else
+            this->_fh << *ch;
+    }
+    this->_fh << '\n';
+    line++;
+
+    //
+    // Output every sample.
+    //
+    for (const Pop& pop : this->_mpopi->pops()) {
+        this->_fh << "pop\n";
+        for (size_t i = pop.first_sample; i <= pop.last_sample; i++, line++) {
+            assert(line != transposed_lines.end());
+            this->_fh << *line << '\n';
+        }
+    }
+    assert(line == transposed_lines.end());
+
+    return 0;
+}
+
+int
 StructureExport::open(const MetaPopInfo *mpopi)
 {
     this->_mpopi = mpopi;
@@ -2064,31 +2243,13 @@ int VcfHapsExport::write_batch(const vector<LocBin*>& loci){
             // Monomorphic locus.
             continue;
 
-        // Find all haplotypes, and their frequencies.
-        map<const char*,size_t,LessCStrs> haps;
-        for (size_t sample=0; sample<this->_mpopi->samples().size(); ++sample) {
-            if (d[sample] == NULL)
-                continue;
-            const vector<char*>& s_haps = d[sample]->obshap;
-            assert(s_haps.size() == 2);
-            if (strchr(s_haps[0], 'N') != NULL)
-                // Partially unresolved.
-                continue;
-            ++haps[s_haps[0]];
-            ++haps[s_haps[1]];
-        }
-        if (haps.empty() || haps.size() == 1)
-            // Too few complete haps.
+        // Tally and sort haplotypes.
+        vector<pair<const char*, size_t>> sorted_haps;
+        map<const char*, size_t, LessCStrs> hap_indexes;
+        tally_complete_haplotypes(d, this->_mpopi->samples().size(), cloc->loc.strand,
+                                  sorted_haps, hap_indexes);
+        if (sorted_haps.size() < 2)
             continue;
-
-        // Sort haplotypes by frequencies.
-        vector<pair<const char*,size_t>> sorted_haps (haps.begin(), haps.end());
-        std::sort(sorted_haps.begin(), sorted_haps.end(),
-                [&cloc] (const pair<const char*,size_t>& lhs, const pair<const char*,size_t>& rhs) {
-                    return lhs.second == rhs.second ?
-                        (strcmp(lhs.first, rhs.first) < 0) == (cloc->loc.strand == strand_plus) // (rem. The hap strings are always different.)
-                        : lhs.second > rhs.second;
-                });
 
         // Create the record.
         rec.clear();
@@ -2102,8 +2263,6 @@ int VcfHapsExport::write_batch(const vector<LocBin*>& loci){
             } else {
                 rec.append_allele(DNASeq4(sorted_haps[i].first).rev_compl().str());
             }
-            //n.b. We reuse the frequency map to keep track of indexes.
-            haps[sorted_haps[i].first] = i;
         }
 
         rec.append_qual(".");
@@ -2127,8 +2286,8 @@ int VcfHapsExport::write_batch(const vector<LocBin*>& loci){
             if (strchr(d[sample]->obshap[0], 'N') != NULL) {
                 sample_vcf << "./.";
             } else {
-                size_t i0 = haps[d[sample]->obshap[0]];
-                size_t i1 = haps[d[sample]->obshap[1]];
+                size_t i0 = hap_indexes.at(d[sample]->obshap[0]);
+                size_t i1 = hap_indexes.at(d[sample]->obshap[1]);
                 sample_vcf << min(i0, i1) << '/' << max(i0, i1);
             }
             rec.append_sample(sample_vcf.str());
