@@ -2098,23 +2098,22 @@ const string help_string = string() +
         "      de novo Stacks pipeline, ustacks-cstacks-sstacks-tsv2bam\n"
         "\n"
         "Reference-based mode:\n"
-        "  gstacks -I in_dir -M popmap [-s spacer] -O out_dir [--paired]\n"
+        "  gstacks -I bam_dir -M popmap [-S suffix] -O out_dir [--paired]\n"
         "  gstacks -B bam_file [-B ...] -O out_dir [--paired]\n"
         "\n"
         "  -I: input directory containing BAM files\n"
-        "  -s: with -I/-M, spacer for file names: by default this is empty\n"
-        "      and the program looks for files named 'SAMPLE_NAME.bam'; if this\n"
-        "      option is given the program looks for 'SAMPLE_NAME.SPACER.bam'\n"
+        "  -S: with -I/-M, suffix to use to build BAM file names: by default this\n"
+        "      is just '.bam', i.e. the program expects 'SAMPLE_NAME.bam'\n"
         "  -B: input BAM file(s)\n"
         "  --paired: reads are paired (RAD loci will be defined by READ1 alignments)\n"
         "\n"
-        "  The input BAM file(s) must be sorted by coordinate. With -B, records\n"
-        "  must be assigned to samples using BAM \"reads groups\" (gstacks uses\n"
-        "  the ID \"identifier\" and SM \"sample name\" fields). Read groups,\n"
-        "  if repeated in several files, must be consistent. With -I, read groups\n"
-        "  are ignored.\n"
+        "  The input BAM file(s) must be sorted by coordinate.\n"
+        "  With -B, records must be assigned to samples using BAM \"reads groups\"\n"
+        "  (gstacks uses the ID/identifier and SM/sample name fields). Read groups\n"
+        "  must be consistent if repeated different files. With -I, read groups are\n"
+        "  unneeded and ignored.\n"
         "\n"
-        "Shared options:\n"
+        "For both modes:\n"
         "  -M: path to a population map giving the list of samples\n"
         "  -O: output directory (default: none with -B; with -P same as the input\n"
         "      directory)\n"
@@ -2177,7 +2176,7 @@ try {
         {"stacks-dir",   required_argument, NULL,  'P'},
         {"in-dir",       required_argument, NULL,  'I'},
         {"in-bam",       required_argument, NULL,  'B'},
-        {"spacer",       required_argument, NULL,  's'},
+        {"suffix",       required_argument, NULL,  'S'}, {"spacer", required_argument, NULL, 's'},
         {"popmap",       required_argument, NULL,  'M'},
         {"out-dir",      required_argument, NULL,  'O'},
         {"paired",       no_argument,       NULL,  1007},
@@ -2213,7 +2212,7 @@ try {
     string stacks_dir;
     string in_dir;
     string out_dir;
-    string bam_spacer;
+    string suffix = ".bam";
 
     double gt_alpha = 0.05;
     double var_alpha = 0.05;
@@ -2222,7 +2221,7 @@ try {
     int long_options_i;
     while (true) {
 
-        c = getopt_long(argc, argv, "hqP:I:B:s:M:O:W:t:m:", long_options, &long_options_i);
+        c = getopt_long(argc, argv, "hqP:I:B:S:s:M:O:W:t:m:", long_options, &long_options_i);
 
         if (c == -1)
             break;
@@ -2248,13 +2247,18 @@ try {
         case 'B':
             in_bams.push_back(optarg);
             break;
-        case 's':
-            bam_spacer = optarg;
-            while(!bam_spacer.empty() && bam_spacer.back() == '.')
-                bam_spacer.pop_back();
-            while(!bam_spacer.empty() && bam_spacer.front() == '.')
-                bam_spacer.erase(bam_spacer.begin());
-            bam_spacer.insert(bam_spacer.begin(), '.');
+        case 'S':
+            suffix = optarg;
+            break;
+        case 's': // xxx Remove this after the beta
+            cerr << "WARNING: --spacer is deprecated; please use -S/--suffix instead.\n";
+            suffix = optarg;
+            while(!suffix.empty() && suffix.back() == '.')
+                suffix.pop_back();
+            while(!suffix.empty() && suffix.front() == '.')
+                suffix.erase(suffix.begin());
+            suffix.insert(suffix.begin(), '.');
+            suffix += ".bam";
             break;
         case 'M':
             popmap_path = optarg;
@@ -2418,6 +2422,10 @@ try {
             cerr << "Error: --paired is for the reference-based mode.\n";
             bad_args();
         }
+        if (suffix != ".bam") {
+            cerr << "Error: --suffix is for the reference-based mode.\n";
+            bad_args();
+        }
     } else if (input_type == In::refbased_popmap || input_type == In::refbased_list) {
         if (rm_unpaired_reads)
             refbased_cfg.paired = true;
@@ -2465,7 +2473,7 @@ try {
             out_dir = stacks_dir;
     } else if (input_type == In::refbased_popmap) {
         for (const string& sample : sample_names)
-            in_bams.push_back(in_dir + sample + bam_spacer + ".bam");
+            in_bams.push_back(in_dir + sample + suffix);
     } else {
         assert(input_type == In::refbased_list);
     }
