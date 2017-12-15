@@ -1372,8 +1372,8 @@ GenePopExport::open(const MetaPopInfo *mpopi)
     //
     // Open a temporary file.
     //
-    this->_tmp_path = out_path + out_prefix + ".snps.genepop.part";
-    this->_tmpfh.open(this->_tmp_path);
+    this->_tmpfh.open(this->tmp_path());
+    check_open(this->_tmpfh, this->tmp_path());
 
     cerr << "Polymorphic sites in GenePop format will be written to '" << this->_path << "'\n";
 
@@ -1474,7 +1474,7 @@ GenePopExport::post_processing()
     timeinfo = localtime(&rawtime);
     strftime(date, 32, "%B %d, %Y", timeinfo);
 
-    this->_fh.open(this->_path.c_str(), ofstream::out);
+    this->_fh.open(this->_path.c_str());
     check_open(this->_fh, this->_path);
 
     //
@@ -1482,12 +1482,12 @@ GenePopExport::post_processing()
     //
     this->_fh << "# Stacks v" << VERSION << "; GenePop v4.1.3; " << date << "\n";
 
-    this->_intmpfh.open(this->_tmp_path.c_str(), ofstream::in);
-    check_open(this->_intmpfh, this->_tmp_path);
+    ifstream intmpfh (this->tmp_path());
+    check_open(intmpfh, this->tmp_path());
 
     vector<string> transposed_lines;
 
-    Export::transpose(this->_intmpfh, transposed_lines);
+    Export::transpose(intmpfh, transposed_lines);
 
     assert(transposed_lines.size() == this->_mpopi->samples().size() + 1);
 
@@ -1520,20 +1520,6 @@ GenePopExport::post_processing()
     return 1;
 }
 
-void
-GenePopExport::close()
-{
-    //
-    // Close and delete the temporary files.
-    //
-    this->_intmpfh.close();
-
-    remove(this->_tmp_path.c_str());
-
-    this->_fh.close();
-    return;
-}
-
 int
 GenePopHapsExport::open(const MetaPopInfo *mpopi)
 {
@@ -1541,8 +1527,8 @@ GenePopHapsExport::open(const MetaPopInfo *mpopi)
     this->_path = out_path + out_prefix + ".haps.genepop";
     this->_fh.open(this->_path);
     check_open(this->_fh, this->_path);
-    this->_tmpfh.open(this->tmppath());
-    check_open(this->_tmpfh, this->tmppath());
+    this->_tmpfh.open(this->tmp_path());
+    check_open(this->_tmpfh, this->tmp_path());
     cerr << "Polymorphic sites in GenePop format will be written to '" << this->_path << "'\n";
     return 0;
 }
@@ -1625,16 +1611,16 @@ GenePopHapsExport::post_processing()
     //
     // Read and transpose the temporary file.
     //
-    ifstream intmpfh (this->tmppath());
-    check_open(intmpfh, this->tmppath());
+    ifstream intmpfh (this->tmp_path());
+    check_open(intmpfh, this->tmp_path());
     vector<string> transposed_lines;
     Export::transpose(intmpfh, transposed_lines);
     if (transposed_lines.empty()) {
-        cerr << "Error: Temporary file '" << this->tmppath()
+        cerr << "Error: Temporary file '" << this->tmp_path()
              << "' is corrupt (no data).\n";
         throw exception();
     } else if (transposed_lines.size() != this->_mpopi->samples().size() + 1) {
-        cerr << "Error: Temporary file '" << this->tmppath()
+        cerr << "Error: Temporary file '" << this->tmp_path()
              << "' is corrupt (wrong number of columns).\n";
         throw exception();
     }
