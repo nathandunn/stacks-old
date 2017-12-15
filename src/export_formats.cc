@@ -95,6 +95,15 @@ void tally_complete_haplotypes(
         hap_indexes_map[haps_sorted_decr_freq[i].first] = i;
 }
 
+bool Export::is_hap_export()
+{
+    static const set<std::type_index> hap_exports = {
+        typeid(GenePopHapsExport),
+        typeid(VcfHapsExport)
+    };
+    return hap_exports.count(typeid(*this));
+}
+
 int
 Export::transpose(ifstream &ifh, vector<string> &transposed)
 {

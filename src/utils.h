@@ -139,6 +139,15 @@ struct int_decreasing {
 };
 
 //
+// Remove elements from a vector.
+//
+template<typename T, typename Predicate>
+void stacks_erase_if(vector<T>& v, Predicate p)
+{
+    v.erase(std::remove_if(v.begin(), v.end(), p), v.end());
+}
+
+//
 // Join a range of elements into a stream.
 //
 template<typename IterableT, typename SepT>

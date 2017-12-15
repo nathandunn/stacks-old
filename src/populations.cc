@@ -23,6 +23,7 @@
 // haplotypes in a population context.
 //
 #include <cctype>
+#include <typeinfo>
 
 #include "export_formats.h"
 #include "populations.h"
@@ -75,7 +76,6 @@ set<string> debug_flags;
 
 string           out_prefix;
 MetaPopInfo      mpopi;
-vector<Export *> exports;
 set<int>         bootstraplist;
 
 //
@@ -85,6 +85,20 @@ map<string, const char **> renz;
 map<string, int>           renz_cnt;
 map<string, int>           renz_len;
 map<string, int>           renz_olap;
+
+vector<Export *> exports;
+
+template<typename E>
+void add_export()
+{
+    // Check that the export isn't already present and add it.
+    if (std::find_if(
+                exports.begin(), exports.end(),
+                [](Export* e){return typeid(*e) == typeid(E);}
+            ) == exports.end()) {
+        exports.push_back(new E());
+    }
+}
 
 int main (int argc, char* argv[]) {
     IF_NDEBUG_TRY
@@ -3703,7 +3717,7 @@ output_parameters(ostream &fh)
 int
 parse_command_line(int argc, char* argv[])
 {
-    bool no_haps = false;
+    bool no_hap_exports = false;
     while (1) {
         static struct option long_options[] = {
             {"help",           no_argument,       NULL, 'h'},
@@ -3741,7 +3755,7 @@ parse_command_line(int argc, char* argv[])
             {"batch_size",     required_argument, NULL, 1999},
             {"write_single_snp",  no_argument,       NULL, 'I'},
             {"write_random_snp",  no_argument,       NULL, 'j'},
-            {"no_haps",           no_argument,       NULL, 1012},
+            {"no_hap_exports",    no_argument,       NULL, 1012},
             {"ordered_export",    no_argument,       NULL, 1002},
             {"smooth",            no_argument,       NULL, 'k'},
             {"smooth_fstats",     no_argument,       NULL, 1007},
@@ -3902,37 +3916,37 @@ parse_command_line(int argc, char* argv[])
             break;
         case 'I':
             write_single_snp = true;
-            no_haps = true;
+            no_hap_exports = true;
             break;
         case 'j':
             write_random_snp = true;
-            no_haps = true;
+            no_hap_exports = true;
             break;
         case 1012: // --no-haps
-            no_haps = true;
+            no_hap_exports = true;
             break;
         case 1002:
             ordered_export = true;
             break;
         case 1004: // --vcf
-            exports.push_back(new VcfExport());
-            exports.push_back(new VcfHapsExport());
+            add_export<VcfExport>();
+            add_export<VcfHapsExport>();
             break;
         case 1006: // --fasta-loci
-            exports.push_back(new FastaLociExport());
+            add_export<FastaLociExport>();
             break;
         case 'F':
-            exports.push_back(new FastaRawExport());
+            add_export<FastaRawExport>();
             break;
         case 'J':
-            exports.push_back(new FastaSamplesExport());
+            add_export<FastaSamplesExport>();
             break;
         case 1010: // --genepop
-            exports.push_back(new GenePopExport());
-            exports.push_back(new GenePopHapsExport());
+            add_export<GenePopExport>();
+            add_export<GenePopHapsExport>();
             break;
         case 'S':
-            exports.push_back(new StructureExport());
+            add_export<StructureExport>();
             break;
         case 'A':
             cerr << "BETA: Ignoring --fastphase_out output request, which is not currently implemented.\n";
@@ -3953,10 +3967,10 @@ parse_command_line(int argc, char* argv[])
             cerr << "BETA: Ignoring --hzar output request, which is not currently implemented.\n";
             break;
         case 'Y':
-            exports.push_back(new PhylipFixedExport());
+            add_export<PhylipFixedExport>();
             break;
         case 'L':
-            exports.push_back(new PhylipVarExport());
+            add_export<PhylipVarExport>();
             break;
         case 'T':
             cerr << "BETA: Ignoring --phylip_var_all output request, which is not currently implemented.\n";
@@ -4110,18 +4124,14 @@ parse_command_line(int argc, char* argv[])
         help();
     }
 
-    if (no_haps) {
-        // Remove haplotype exports.
+    if (no_hap_exports) {
         for (Export*& e : exports) {
-            if (dynamic_cast<HaplotypeExport*>(e) != NULL) {
+            if (e->is_hap_export()) {
                 delete e;
                 e = NULL;
             }
         }
-        exports.erase(std::remove_if(
-                exports.begin(), exports.end(),
-                [] (const Export* e) {return e == NULL;}
-                ), exports.end());
+        stacks_erase_if(exports, [](const Export* e){return e == NULL;});
     }
 
     return 0;
@@ -4198,7 +4208,7 @@ void help() {
          << "  --phylip_var: include variable sites in the phylip output encoded using IUPAC notation.\n"
          << "  --phylip_var_all*: include all sequence as well as variable sites in the phylip output encoded using IUPAC notation.\n"
          << "  --treemix*: output SNPs in a format useable for the TreeMix program (Pickrell and Pritchard).\n"
-         << "  --no-haps: omit haplotype outputs.\n"
+         << "  --no_hap_exports: omit haplotype outputs.\n"
          << "  --fasta_samples_raw: output all haplotypes observed in each sample, for each locus, in FASTA format.\n"
          << "  (*not implemented as of v2.0Beta7)\n"
          << "\n"
