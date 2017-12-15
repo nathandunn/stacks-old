@@ -53,6 +53,7 @@ class Export {
     virtual int  post_processing() = 0;
     virtual void close()           = 0;
 
+    string tmp_path() const {return this->_path + ".part";}
     static int transpose(ifstream &ifh, vector<string> &transposed);
 };
 
@@ -226,9 +227,7 @@ class HapDivergenceExport: public Export {
 
 class GenePopExport: public OrderableExport {
     const MetaPopInfo *_mpopi;
-    string   _tmp_path;
     ofstream _tmpfh;
-    ifstream _intmpfh;
 
  public:
     GenePopExport() : _mpopi(NULL) {}
@@ -236,7 +235,7 @@ class GenePopExport: public OrderableExport {
     int  open(const MetaPopInfo *mpopi);
     int  write_header();
     int  post_processing();
-    void close();
+    void close() {this->_fh.close(); remove(this->tmp_path().c_str());}
 
  private:
     int write_site(const CSLocus* cloc, const LocPopSum* psum, Datum const*const* datums, size_t col, size_t index);
@@ -245,7 +244,6 @@ class GenePopExport: public OrderableExport {
 class GenePopHapsExport: public HaplotypeExport {
     const MetaPopInfo *_mpopi;
     ofstream _tmpfh;
-    string tmppath() const {return this->_path + ".part";}
 
  public:
     GenePopHapsExport() : _mpopi(NULL) {}
@@ -254,7 +252,7 @@ class GenePopHapsExport: public HaplotypeExport {
     int  write_header();
     int  write_batch(const vector<LocBin*>& loci);
     int  post_processing();
-    void close() {remove(this->tmppath().c_str());}
+    void close() {this->_fh.close(); remove(this->tmp_path().c_str());}
 
  private:
     int write_site(const CSLocus* cloc, const LocPopSum* psum, Datum const*const* datums, size_t col, size_t index);
