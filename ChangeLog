@@ -1,3 +1,16 @@
+Stacks 2.0 Beta 7 - Dec 15, 2017
+--------------------------------
+    Feature: gstacks: Added --rm-unpaired-reads, --rm-pcr-duplicates.
+    Feature: populations: Added a haplotype Genepop export.
+    Feature: populations: improved the help; changed the output names for SNP
+             files to 'populations.snps.EXT'; added option --no_haps.
+    Feature: gstacks: Improved the log slightly; tweaked the help/interface,
+             especially, replaced --spacer with --suffix (for BAM directory input).
+    Bugfix: gstacks: Fixed a typo preventing the paired reads from being merged.
+    Bugfix: populations: Repaired --fasta_samples and --fasta_samples_raw.
+    Bugfix: Made VCF outputs more standard compliant.
+    Bugfix: Fixed installation of stacks-integrate-alignments on MacOS.
+
 Stacks 2.0 Beta 6 - Dec 02, 2017
 --------------------------------
     Feature: Implmented the VCF haplotypes output.
