@@ -3696,8 +3696,7 @@ parse_command_line(int argc, char* argv[])
             {"help",           no_argument,       NULL, 'h'},
             {"version",        no_argument,       NULL, 'v'},
             {"verbose",        no_argument,       NULL, 'd'},
-            {"vcf_snps",       no_argument,       NULL, 1004}, {"vcf", no_argument, NULL, 3004},
-            {"vcf_haps",       no_argument,       NULL, 1009}, {"vcf_haplotypes", no_argument, NULL, 3009},
+            {"vcf",            no_argument,       NULL, 1004}, {"vcf_haps", no_argument, NULL, 1004}, {"vcf_haplotypes", no_argument, NULL, 1004},
             {"fasta_loci",     no_argument,       NULL, 1006},
             {"fasta_samples",  no_argument,       NULL, 'J'}, {"fasta_strict", no_argument, NULL, 'J'},
             {"fasta_samples_raw", no_argument,    NULL, 'F'}, {"fasta", no_argument, NULL, 'F'},
@@ -3708,8 +3707,7 @@ parse_command_line(int argc, char* argv[])
             {"beagle_phased",  no_argument,       NULL, 'H'},
             {"plink",          no_argument,       NULL, 'K'},
             {"genomic",        no_argument,       NULL, 'g'},
-            {"genepop_snps",   no_argument,       NULL, 1010}, {"genepop", no_argument, NULL, 3010},
-            {"genepop_haps",   no_argument,       NULL, 1011},
+            {"genepop",        no_argument,       NULL, 1010},
             {"phylip",         no_argument,       NULL, 'Y'},
             {"phylip_var",     no_argument,       NULL, 'L'},
             {"phylip_var_all", no_argument,       NULL, 'T'},
@@ -3897,18 +3895,14 @@ parse_command_line(int argc, char* argv[])
             write_random_snp = true;
             no_haps = true;
             break;
-        case 1012: //--no-haps
+        case 1012: // --no-haps
             no_haps = true;
             break;
         case 1002:
             ordered_export = true;
             break;
-        case 1004: //--vcf-snps
-        case 3004:
+        case 1004: // --vcf
             exports.push_back(new VcfExport());
-            break;
-        case 1009: // vcf-haps
-        case 3009:
             exports.push_back(new VcfHapsExport());
             break;
         case 1006: // --fasta-loci
@@ -3920,11 +3914,8 @@ parse_command_line(int argc, char* argv[])
         case 'J':
             exports.push_back(new FastaSamplesExport());
             break;
-        case 1010: // --genepop-snps
-        case 3010:
+        case 1010: // --genepop
             exports.push_back(new GenePopExport());
-            break;
-        case 1011: // --genepop-haps
             exports.push_back(new GenePopHapsExport());
             break;
         case 'S':
@@ -4181,11 +4172,8 @@ void help() {
          << "  --genomic*: output each nucleotide position (fixed or polymorphic) in all population members to a file (requires --renz).\n"
          << "  --fasta_loci: output locus consensus sequences in FASTA format.\n"
          << "  --fasta_samples: output the sequences of the two haplotypes of each (diploid) sample, for each locus, in FASTA format.\n"
-         << "  --fasta_samples_raw: output all haplotypes observed in each sample, for each locus, in FASTA format.\n"
-         << "  --vcf_snps: output SNPs in Variant Call Format (VCF).\n"
-         << "  --vcf_haps: output haplotypes in Variant Call Format (VCF).\n"
-         << "  --genepop_snps: output snps in GenePop format.\n"
-         << "  --genepop_haps: output haplotypes in GenePop format.\n"
+         << "  --vcf: output SNPs and haplotypes in Variant Call Format (VCF).\n"
+         << "  --genepop: output SNPs and haplotypes in GenePop format.\n"
          << "  --structure: output results in Structure format.\n"
          << "  --phase*: output genotypes in PHASE format.\n"
          << "  --fastphase*: output genotypes in fastPHASE format.\n"
@@ -4198,6 +4186,7 @@ void help() {
          << "  --phylip_var_all*: include all sequence as well as variable sites in the phylip output encoded using IUPAC notation.\n"
          << "  --treemix*: output SNPs in a format useable for the TreeMix program (Pickrell and Pritchard).\n"
          << "  --no-haps: omit haplotype outputs.\n"
+         << "  --fasta_samples_raw: output all haplotypes observed in each sample, for each locus, in FASTA format.\n"
          << "  (*not implemented as of v2.0Beta7)\n"
          << "\n"
          << "Additional options:\n"
