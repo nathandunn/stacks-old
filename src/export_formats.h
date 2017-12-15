@@ -24,6 +24,7 @@
 #include <utility>
 #include <map>
 #include <typeinfo>
+#include <typeindex>
 
 #include "locus.h"
 #include "PopMap.h"
@@ -53,6 +54,7 @@ class Export {
     virtual int  post_processing() = 0;
     virtual void close()           = 0;
 
+    bool is_hap_export();
     string tmp_path() const {return this->_path + ".part";}
     static int transpose(ifstream &ifh, vector<string> &transposed);
 };
@@ -65,12 +67,6 @@ class OrderableExport : public Export {
 
  protected:
     virtual int write_site(const CSLocus* cloc, const LocPopSum* psum, Datum const*const* datums, size_t col, size_t index) = 0;
-};
-
-class HaplotypeExport : public Export {
-public:
-    HaplotypeExport() {}
-    virtual ~HaplotypeExport() {}
 };
 
 class GenPos {
@@ -241,7 +237,7 @@ class GenePopExport: public OrderableExport {
     int write_site(const CSLocus* cloc, const LocPopSum* psum, Datum const*const* datums, size_t col, size_t index);
 };
 
-class GenePopHapsExport: public HaplotypeExport {
+class GenePopHapsExport: public Export {
     const MetaPopInfo *_mpopi;
     ofstream _tmpfh;
 
@@ -382,7 +378,7 @@ class VcfExport: public OrderableExport {
     int write_site(const CSLocus* cloc, const LocPopSum* psum, Datum const*const* datums, size_t col, size_t index);
 };
 
-class VcfHapsExport: public HaplotypeExport {
+class VcfHapsExport: public Export {
     const MetaPopInfo*_mpopi;
     VcfWriter* _writer;
 

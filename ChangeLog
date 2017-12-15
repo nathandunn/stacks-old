@@ -3,7 +3,7 @@ Stacks 2.0 Beta 7 - Dec 15, 2017
     Feature: gstacks: Added --rm-unpaired-reads, --rm-pcr-duplicates.
     Feature: populations: Added a haplotype Genepop export.
     Feature: populations: improved the help; changed the output names for SNP
-             files to 'populations.snps.EXT'; added option --no_haps.
+             files to 'populations.snps.EXT'; added option --no_hap_exports.
     Feature: gstacks: Improved the log slightly; tweaked the help/interface,
              especially, replaced --spacer with --suffix (for BAM directory input).
     Bugfix: gstacks: Fixed a typo preventing the paired reads from being merged.
