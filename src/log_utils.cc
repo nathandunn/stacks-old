@@ -108,7 +108,9 @@ ProgressMeter::ProgressMeter(
    n_max_(pct_ ? n_operations : SIZE_MAX),
    n_done_(0),
    next_(pct_ ? n_max_*0.01 : n_operations)
-{}
+{
+    timer_.restart();
+}
 
 ProgressMeter& ProgressMeter::operator++()
 {
@@ -116,6 +118,11 @@ ProgressMeter& ProgressMeter::operator++()
     ++n_done_;
 
     if (n_done_ >= next_) {
+        #ifdef DEBUG
+        timer_.stop();
+        os_ << std::setw(5) << (size_t) timer_.elapsed() << ' ';
+        timer_.restart();
+        #endif
         if (pct_) {
             if (n_done_ >= size_t(n_max_ * 0.5)) {
                 os_ << "50%...\n";
@@ -160,6 +167,10 @@ ProgressMeter& ProgressMeter::operator++()
 
 void ProgressMeter::done()
 {
+    #ifdef DEBUG
+    timer_.stop();
+    os_ << std::setw(5) << (size_t) timer_.elapsed() << ' ';
+    #endif
     if (pct_) {
         assert(n_done_ == n_max_);
         os_ << "100%\n";

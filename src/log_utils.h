@@ -26,6 +26,7 @@
 #include <fstream>
 
 #include "constants.h"
+#include "utils.h"
 
 int init_log(ostream &fh, int argc, char **argv);
 
