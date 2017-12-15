@@ -3690,6 +3690,7 @@ output_parameters(ostream &fh)
 int
 parse_command_line(int argc, char* argv[])
 {
+    bool no_haps = false;
     while (1) {
         static struct option long_options[] = {
             {"help",           no_argument,       NULL, 'h'},
@@ -3729,6 +3730,7 @@ parse_command_line(int argc, char* argv[])
             {"batch_size",     required_argument, NULL, 1999},
             {"write_single_snp",  no_argument,       NULL, 'I'},
             {"write_random_snp",  no_argument,       NULL, 'j'},
+            {"no_haps",           no_argument,       NULL, 1012},
             {"ordered_export",    no_argument,       NULL, 1002},
             {"smooth",            no_argument,       NULL, 'k'},
             {"smooth_fstats",     no_argument,       NULL, 1007},
@@ -3889,9 +3891,14 @@ parse_command_line(int argc, char* argv[])
             break;
         case 'I':
             write_single_snp = true;
+            no_haps = true;
             break;
         case 'j':
             write_random_snp = true;
+            no_haps = true;
+            break;
+        case 1012: //--no-haps
+            no_haps = true;
             break;
         case 1002:
             ordered_export = true;
@@ -4099,6 +4106,20 @@ parse_command_line(int argc, char* argv[])
         help();
     }
 
+    if (no_haps) {
+        // Remove haplotype exports.
+        for (Export*& e : exports) {
+            if (dynamic_cast<HaplotypeExport*>(e) != NULL) {
+                delete e;
+                e = NULL;
+            }
+        }
+        exports.erase(std::remove_if(
+                exports.begin(), exports.end(),
+                [] (const Export* e) {return e == NULL;}
+                ), exports.end());
+    }
+
     return 0;
 }
 
@@ -4127,8 +4148,8 @@ void help() {
          << "  --max_obs_het [float]: specify a maximum observed heterozygosity required to process a nucleotide site at a locus.\n"
          << "  -m [int]: specify a minimum stack depth required for individuals at a locus.\n"
          << "  --lnl_lim [float]: filter loci with log likelihood values below this threshold.\n"
-         << "  --write_single_snp: restrict data analysis to only the first SNP per locus.\n"
-         << "  --write_random_snp: restrict data analysis to one random SNP per locus.\n"
+         << "  --write_single_snp: restrict data analysis to only the first SNP per locus (implies --no-haps).\n"
+         << "  --write_random_snp: restrict data analysis to one random SNP per locus (implies --no-haps).\n"
          << "  -B: path to a file containing Blacklisted markers to be excluded from the export.\n"
          << "  -W: path to a file containing Whitelisted markers to include in the export.\n"
          << "\n"
@@ -4176,6 +4197,7 @@ void help() {
          << "  --phylip_var: include variable sites in the phylip output encoded using IUPAC notation.\n"
          << "  --phylip_var_all*: include all sequence as well as variable sites in the phylip output encoded using IUPAC notation.\n"
          << "  --treemix*: output SNPs in a format useable for the TreeMix program (Pickrell and Pritchard).\n"
+         << "  --no-haps: omit haplotype outputs.\n"
          << "  (*not implemented as of v2.0Beta7)\n"
          << "\n"
          << "Additional options:\n"

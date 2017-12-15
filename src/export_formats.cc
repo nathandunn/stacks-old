@@ -1854,7 +1854,7 @@ PhylipExport::open(const MetaPopInfo *mpopi)
 {
     this->_mpopi = mpopi;
 
-    string suffix = (this->_type == ExportType::phylipvar) ? ".var" : ".fixed";
+    string suffix = typeid(*this) == typeid(PhylipVarExport) ? ".var" : ".fixed";
 
     //
     // We will write those loci to a Phylip file as defined here:
@@ -1887,11 +1887,12 @@ PhylipExport::open(const MetaPopInfo *mpopi)
     this->_logfh << "# Stacks v" << VERSION << "; " << " Phylip sequential; " << date << "\n"
                  << "# Seq Pos\tLocus ID\tColumn\tPopulation\n";
 
-    if (this->_type == ExportType::phylipvar)
-        cerr << "Polymorphic sites in Phylip format will be written to '" << this->_path << "'\n";
+    if (typeid(*this) == typeid(PhylipVarExport))
+        cerr << "Polymorphic";
     else
-        cerr << "Fixed difference sites in Phylip format will be written to '" << this->_path << "'\n";
-    cerr << "   Individual sites written will be logged to '" << this->_log_path << "'\n";
+        cerr << "Fixed difference";
+    cerr << " sites in Phylip format will be written to '" << this->_path << "'\n"
+         << "   Individual sites written will be logged to '" << this->_log_path << "'\n";
 
     return 0;
 }

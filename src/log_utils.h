@@ -46,6 +46,7 @@ class ProgressMeter {
     size_t n_max_;
     size_t n_done_;
     size_t next_;
+    Timer timer_;
 
 public:
     ProgressMeter(ostream& os, bool pct, size_t n_operations);

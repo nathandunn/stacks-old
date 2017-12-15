@@ -23,16 +23,13 @@
 #include <iostream>
 #include <utility>
 #include <map>
+#include <typeinfo>
 
 #include "locus.h"
 #include "PopMap.h"
 #include "PopSum.h"
 #include "ordered.h" // for "snp"
 #include "populations.h" // for "merget", "InputMode", "uncalled_haplotype()", "count_haplotypes_at_locus()"
-
-enum class ExportType {markers, genotypes, sumstats, hapstats, snpdivergence, hapdivergence,
-                       fasta_loci, fasta_raw, fasta_samples, structure, genepop, genepop_haps,
-                       vcf, vcf_haps, phylipvar, phylipfixed};
 
 void tally_complete_haplotypes(
         Datum const*const* data,
@@ -44,12 +41,11 @@ void tally_complete_haplotypes(
 
 class Export {
  protected:
-    ExportType _type;
     string     _path;
     ofstream   _fh;
 
  public:
-    Export(ExportType t): _type(t) {};
+    Export() {}
     virtual ~Export() {}
     virtual int  open(const MetaPopInfo *) = 0;
     virtual int  write_header()    = 0;
@@ -57,17 +53,23 @@ class Export {
     virtual int  post_processing() = 0;
     virtual void close()           = 0;
 
-    ExportType type() { return this->_type; }
     static int transpose(ifstream &ifh, vector<string> &transposed);
 };
 
 class OrderableExport : public Export {
  public:
-    OrderableExport(ExportType t) : Export(t) {}
+    OrderableExport() {}
+    virtual ~OrderableExport() {}
     int write_batch(const vector<LocBin*>& loci);
 
  protected:
     virtual int write_site(const CSLocus* cloc, const LocPopSum* psum, Datum const*const* datums, size_t col, size_t index) = 0;
+};
+
+class HaplotypeExport : public Export {
+public:
+    HaplotypeExport() {}
+    virtual ~HaplotypeExport() {}
 };
 
 class GenPos {
@@ -100,7 +102,7 @@ class MarkersExport: public Export {
     const MetaPopInfo *_mpopi;
 
  public:
-    MarkersExport() : Export(ExportType::markers), _mpopi(NULL) {}
+    MarkersExport() : _mpopi(NULL) {}
     ~MarkersExport() {}
     int  open(const MetaPopInfo *mpopi);
     int  write_header();
@@ -119,7 +121,7 @@ class GenotypesExport: public Export {
     const MetaPopInfo *_mpopi;
 
  public:
-    GenotypesExport() : Export(ExportType::genotypes), _mpopi(NULL) {}
+    GenotypesExport() : _mpopi(NULL) {}
     ~GenotypesExport() {}
     int  open(const MetaPopInfo *mpopi);
     int  write_header();
@@ -139,7 +141,7 @@ class SumstatsExport: public Export {
     uint  _pop_cnt;
 
  public:
-    SumstatsExport() : Export(ExportType::sumstats), _mpopi(NULL), _pop_cnt(UINT_MAX) {}
+    SumstatsExport() : _mpopi(NULL), _pop_cnt(UINT_MAX) {}
     ~SumstatsExport() {}
     int  open(const MetaPopInfo *mpopi);
     int  write_header();
@@ -159,7 +161,7 @@ class HapstatsExport: public Export {
     uint  _pop_cnt;
 
  public:
-    HapstatsExport() : Export(ExportType::hapstats), _mpopi(NULL), _pop_cnt(UINT_MAX) {}
+    HapstatsExport() : _mpopi(NULL), _pop_cnt(UINT_MAX) {}
     ~HapstatsExport() {}
     int  open(const MetaPopInfo *mpopi);
     int  write_header();
@@ -179,7 +181,7 @@ class SnpDivergenceExport: public Export {
     vector<ofstream *> _fhs;
 
  public:
-    SnpDivergenceExport() : Export(ExportType::snpdivergence), _mpopi(NULL) {}
+    SnpDivergenceExport() : _mpopi(NULL) {}
     ~SnpDivergenceExport() {
         for (uint i = 0; i < this->_fhs.size(); i++)
             delete this->_fhs[i];
@@ -205,7 +207,7 @@ class HapDivergenceExport: public Export {
     ofstream *_metapop_fh;
 
  public:
-    HapDivergenceExport() : Export(ExportType::hapdivergence), _mpopi(NULL), _metapop_fh(NULL) {}
+    HapDivergenceExport() : _mpopi(NULL), _metapop_fh(NULL) {}
     ~HapDivergenceExport() {
         for (uint i = 0; i < this->_fhs.size(); i++)
             delete this->_fhs[i];
@@ -229,7 +231,7 @@ class GenePopExport: public OrderableExport {
     ifstream _intmpfh;
 
  public:
-    GenePopExport() : OrderableExport(ExportType::genepop), _mpopi(NULL) {}
+    GenePopExport() : _mpopi(NULL) {}
     ~GenePopExport() {}
     int  open(const MetaPopInfo *mpopi);
     int  write_header();
@@ -240,13 +242,13 @@ class GenePopExport: public OrderableExport {
     int write_site(const CSLocus* cloc, const LocPopSum* psum, Datum const*const* datums, size_t col, size_t index);
 };
 
-class GenePopHapsExport: public Export {
+class GenePopHapsExport: public HaplotypeExport {
     const MetaPopInfo *_mpopi;
     ofstream _tmpfh;
     string tmppath() const {return this->_path + ".part";}
 
  public:
-    GenePopHapsExport() : Export(ExportType::genepop_haps), _mpopi(NULL) {}
+    GenePopHapsExport() : _mpopi(NULL) {}
     ~GenePopHapsExport() {}
     int  open(const MetaPopInfo *mpopi);
     int  write_header();
@@ -265,7 +267,7 @@ class StructureExport: public OrderableExport {
     ifstream _intmpfh;
 
  public:
-    StructureExport() : OrderableExport(ExportType::structure), _mpopi(NULL) {}
+    StructureExport() : _mpopi(NULL) {}
     ~StructureExport() {}
     int  open(const MetaPopInfo *mpopi);
     int  write_header();
@@ -287,7 +289,7 @@ protected:
     size_t   _site_index;
 
  public:
-    PhylipExport(ExportType type) : OrderableExport(type), _mpopi(NULL), _site_index(0) {}
+    PhylipExport() : _mpopi(NULL), _site_index(0) {}
     int open(const MetaPopInfo *mpopi);
     int  write_header();
     int  post_processing();
@@ -296,14 +298,14 @@ protected:
 
 class PhylipVarExport: public PhylipExport {
  public:
-    PhylipVarExport() : PhylipExport(ExportType::phylipvar) {}
+    PhylipVarExport() {}
  private:
     int write_site(const CSLocus* cloc, const LocPopSum* psum, Datum const*const* datums, size_t col, size_t index);
 };
 
 class PhylipFixedExport: public PhylipExport {
  public:
-    PhylipFixedExport() : PhylipExport(ExportType::phylipfixed) {}
+    PhylipFixedExport() {}
  private:
     int write_site(const CSLocus* cloc, const LocPopSum* psum, Datum const*const* datums, size_t col, size_t index);
 };
@@ -315,7 +317,7 @@ class FastaLociExport: public Export {
     const MetaPopInfo *_mpopi;
 
  public:
-    FastaLociExport() : Export(ExportType::fasta_loci), _mpopi(NULL) {}
+    FastaLociExport() : _mpopi(NULL) {}
     ~FastaLociExport() {}
     int  open(const MetaPopInfo *mpopi);
     int  write_header();
@@ -334,7 +336,7 @@ class FastaRawExport: public Export {
     const MetaPopInfo *_mpopi;
 
  public:
-    FastaRawExport() : Export(ExportType::fasta_raw), _mpopi(NULL) {}
+    FastaRawExport() : _mpopi(NULL) {}
     ~FastaRawExport() {}
     int  open(const MetaPopInfo *mpopi);
     int  write_header();
@@ -353,7 +355,7 @@ class FastaSamplesExport: public Export {
     const MetaPopInfo *_mpopi;
 
  public:
-    FastaSamplesExport() : Export(ExportType::fasta_samples), _mpopi(NULL) {}
+    FastaSamplesExport() : _mpopi(NULL) {}
     ~FastaSamplesExport() {}
     int  open(const MetaPopInfo *mpopi);
     int  write_header();
@@ -370,7 +372,7 @@ class VcfExport: public OrderableExport {
     VcfWriter* _writer;
 
  public:
-    VcfExport() : OrderableExport(ExportType::vcf), _mpopi(NULL), _writer(NULL) {}
+    VcfExport() : _mpopi(NULL), _writer(NULL) {}
     ~VcfExport() { delete this->_writer; }
     int open(const MetaPopInfo *mpopi);
 
@@ -382,12 +384,12 @@ class VcfExport: public OrderableExport {
     int write_site(const CSLocus* cloc, const LocPopSum* psum, Datum const*const* datums, size_t col, size_t index);
 };
 
-class VcfHapsExport: public Export {
+class VcfHapsExport: public HaplotypeExport {
     const MetaPopInfo*_mpopi;
     VcfWriter* _writer;
 
  public:
-    VcfHapsExport() : Export(ExportType::vcf_haps), _mpopi(NULL), _writer(NULL) {}
+    VcfHapsExport() : _mpopi(NULL), _writer(NULL) {}
     ~VcfHapsExport() { delete this->_writer; }
     int open(const MetaPopInfo *mpopi);
     int write_batch(const vector<LocBin*>& loci);
