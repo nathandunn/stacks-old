@@ -197,6 +197,8 @@ int main (int argc, char* argv[]) {
     cerr << "\nProcessing data in batches;\n";
     int loc_cnt = 0;
 
+    Timer timer;
+    timer.restart();
     do {
         //
         // Read the next set of loci to process.
@@ -205,7 +207,13 @@ int main (int argc, char* argv[]) {
         // - Filter the loci according to command line parameters (-r, -p, --maf, --write_single_snp, etc.)
         // - Sort the loci by basepair if they are ordered.
         //
-        cerr << "  Begin batch " << bloc.next_batch_number() << "...";
+        cerr << "  ";
+        #ifdef DEBUG
+        timer.stop();
+        cerr << "(" << (size_t) timer.elapsed() << "s) ";
+        timer.restart();
+        #endif
+        cerr << "Begin batch " << bloc.next_batch_number() << "...";
         loc_cnt  = bloc.next_batch(logger->l);
 
         cerr << "analyzed " << filter.batch_total() << " loci";
@@ -270,6 +278,11 @@ int main (int argc, char* argv[]) {
         }
 
     } while (loc_cnt > 0 || filter.batch_seen() > 0);
+    #ifdef DEBUG
+    timer.stop();
+    cerr << "(" << (size_t) timer.elapsed() << "s)\n";
+    timer.restart();
+    #endif
 
     //
     // Report what we read from the input files.
