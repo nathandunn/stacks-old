@@ -93,7 +93,8 @@ Stacks 1.46 - Apr 17, 2017
     Feature: Added HaeIII enzyme.
     Bugfix: Corrected memory leaks in rxstacks.
     Bugfix: Corrected non-functioning --min_mapq parameter for pstacks.
-    Bugfix: Corrected segfault when combining a VCF input file to populations, with genomic output and masking a restriction enzyme.
+    Bugfix: Corrected segfault when combining a VCF input file to populations,
+            with genomic output and masking a restriction enzyme.
 
 Stacks 1.45 - Feb 24, 2017
 --------------------------

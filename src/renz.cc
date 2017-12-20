@@ -24,6 +24,8 @@ const char *bamHI[]   = {"GATCC",             // G/GATCC, BamHI
                          "GGATC"};
 const char *bfaI[]    = {"TAG",               // C/TAG, BfaI
                          "CTA"};
+const char *bfuCI[]   = {"GATC",              // /GATC, BfuCI
+                         "GATC"};
 const char *bgIII[]   = {"GATCT",             // A/GATCT, BgIII
                          "AGATC"};
 const char *bsaHI[]   = {"CGCC", "CGTC",      // GR/CGYC, BsaHI
@@ -143,6 +145,7 @@ initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, ma
     renz["rsaI"]    = rsaI;    // GT/AC, RsaI
     renz["aciI"]    = aciI;    // C/CGC, AciI
     renz["bfaI"]    = bfaI;    // C/TAG, BfaI
+    renz["bfuCI"]   = bfuCI;   // /GATC, BfuCI
     renz["aseI"]    = aseI;    // AT/TAAT, AseI
     renz["bspDI"]   = bspDI;   // AT/CGAT, BspDI
     renz["csp6I"]   = csp6I;   // G/TAC, Csp6I
@@ -191,6 +194,7 @@ initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, ma
     renz_cnt["rsaI"]    = 1;
     renz_cnt["aciI"]    = 2;
     renz_cnt["bfaI"]    = 1;
+    renz_cnt["bfuCI"]   = 0;
     renz_cnt["aseI"]    = 1;
     renz_cnt["bspDI"]   = 1;
     renz_cnt["csp6I"]   = 1;
@@ -239,6 +243,7 @@ initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, ma
     renz_len["rsaI"]    = 2;
     renz_len["aciI"]    = 3;
     renz_len["bfaI"]    = 3;
+    renz_len["bfuCI"]   = 4;
     renz_len["aseI"]    = 4;
     renz_len["bspDI"]   = 4;
     renz_len["csp6I"]   = 3;

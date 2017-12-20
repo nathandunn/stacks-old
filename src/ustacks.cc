@@ -45,6 +45,7 @@ int     dump_graph        = 0;
 int     retain_rem_reads  = false;
 int     deleverage_stacks = 0;
 bool    remove_rep_stacks = true;
+double  removal_threshold = 2.0;
 int     max_utag_dist     = 2;
 int     max_rem_dist      = -1;
 bool    gapped_alignments = false;
@@ -164,8 +165,8 @@ int main (int argc, char* argv[]) {
     //
     size_t n_high_cov = 0;
     if (remove_rep_stacks) {
-        calc_triggers(cov_mean, cov_stdev, 1);
-        cerr << "Removing repetitive stacks (cov > " << removal_trigger << ")...\n";
+        removal_trigger = (int) floor(cov_mean + cov_stdev * removal_threshold + 1);
+        cerr << "Removing repetitive stacks: cov > " << removal_trigger << " (mean+" << removal_threshold << "*stdev)...\n";
         calc_kmer_distance(merged, 1);
         assert(merged.size() == unique.size());
         n_high_cov = remove_repetitive_stacks(merged);
@@ -2362,42 +2363,6 @@ load_seq_ids(vector<char *> &seq_ids)
     return 0;
 }
 
-void
-calc_triggers(double cov_mean, double cov_stdev, double cov_scale) {
-
-    removal_trigger    = (int) round(cov_mean + (cov_stdev * 2) * cov_scale);
-
-//    deleverage_trigger = (int) round(cov_mean + cov_stdev * cov_scale);
-//     //
-//     // Calculate the deleverage trigger. Assume RAD-Tags are selected from
-//     // the sample for sequencing randomly, forming a poisson distribution
-//     // representing the depths of coverage of RAD-Tags in the sample. Calculate
-//     // the trigger value that is larger than the depth of coverage of 99.9999% of stacks.
-//     //
-//     long double lambda = cov_mean;
-//     int k         = 0;
-//     long double d = 0.0;
-//     long double e = 0.0;
-//     long double f = 0.0;
-//     long double g = 0.0;
-//     long double h = 0.0;
-//     long double i = 0.0;
-
-//     do {
-//      e  = exp(-1 * lambda);
-//      g  = pow(lambda, k);
-//      f  = factorial(k);
-//      h  = (e * g);
-//      i  = h / f;
-//      d += i;
-
-//      //cerr << "iteration " << k << "; e: " << e << " h: " << h << " g: " << g << " F: " << f << " i: " << i << " D: " << d << "\n";
-//      k++;
-//     } while (d < 0.999999);
-
-//     return k - 1;
-}
-
 long double factorial(int i) {
     long double f = 1;
 
@@ -2423,7 +2388,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"infile_type",      required_argument, NULL, 't'},
             {"file",             required_argument, NULL, 'f'},
             {"outpath",          required_argument, NULL, 'o'},
-            {"name",             required_argument, NULL, 1001},
+            {"name",             required_argument, NULL, 1002},
             {"id",               required_argument, NULL, 'i'},
             {"min_cov",          required_argument, NULL, 'm'},
             {"max_dist",         required_argument, NULL, 'M'},
@@ -2433,6 +2398,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"num_threads",      required_argument, NULL, 'p'},
             {"deleverage",       no_argument,       NULL, 'd'},
             {"keep_high_cov",    no_argument,       NULL, 1000},
+            {"high_cov_thres",   required_argument, NULL, 1001},
             {"retain_rem",       no_argument,       NULL, 'R'},
             {"graph",            no_argument,       NULL, 'g'},
             {"sec_hapl",         no_argument,       NULL, 'H'},
@@ -2481,7 +2447,7 @@ int parse_command_line(int argc, char* argv[]) {
         case 'o':
             out_path = optarg;
             break;
-        case 1001:
+        case 1002:
             sample_name = optarg;
             break;
         case 'i':
@@ -2501,6 +2467,13 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 1000: // keep_high_cov
             remove_rep_stacks = false;
+            break;
+        case 1001: // high_cov_thres
+            removal_threshold = is_double(optarg);
+            if (removal_threshold <= 0.0) {
+                cerr << "Error: Bad threshold: '" << optarg << "'\n";
+                help();
+            }
             break;
         case 'K':
             max_subgraph = is_integer(optarg);
@@ -2669,6 +2642,7 @@ void help() {
               << "  Stack assembly options:\n"
               << "    d,--deleverage: enable the Deleveraging algorithm, used for resolving over merged tags.\n"
               << "    --keep_high_cov: disable the algorithm that removes highly-repetitive stacks and nearby errors.\n"
+              << "    --high_cov_thres: highly-repetitive stacks threshold, in standard deviation units (default: 2.0).\n"
               << "    --max_locus_stacks <num>: maximum number of stacks at a single de novo locus (default 3).\n"
               << "     --k_len <len>: specify k-mer size for matching between alleles and loci (automatically calculated by default).\n\n"
               << "  Gapped assembly options:\n"
