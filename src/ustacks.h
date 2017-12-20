@@ -120,7 +120,6 @@ void calc_coverage_distribution(map<int, MergedStack *> &, double &, double &, d
 //
 // Dealing with lumberjack (huge) stacks
 //
-void calc_triggers(double, double, double);
 size_t remove_repetitive_stacks(map<int, MergedStack *> &);
 int  deleverage(map<int, MergedStack *> &, set<int> &, int, vector<MergedStack *> &);
 

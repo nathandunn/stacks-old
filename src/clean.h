@@ -220,6 +220,7 @@ public:
             }
         } else if (this->read == 2) {
             switch(barcode_type) {
+            case null_inline:
             case inline_inline:
             case index_inline:
                 this->pe_bc = this->inline_bc;
