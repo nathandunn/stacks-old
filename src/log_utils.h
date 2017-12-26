@@ -98,11 +98,14 @@ public:
     ostream o;  // Just stdout
     ostream e;  // Just stderr
 
+    ofstream x; // The '.xlog' file (must be opened with `open_xlog()`).
+
     // Construct the log alterator.
     // cout and cerr will also write to the log file (if quiet
         // is true, output to stdout and stderr is suppressed i.e. they only
     // write to the log file).
     LogAlterator(const string& log_path, bool quiet, int argc, char ** argv);
+    void open_xlog();
 
     // Upon destruction, restore cout and cerr.
     ~LogAlterator() {
@@ -111,6 +114,7 @@ public:
     }
 
 private:
+    string log_path_;
     TeeBuf lo_buf;
     TeeBuf le_buf;
 };

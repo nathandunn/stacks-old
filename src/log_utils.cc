@@ -184,12 +184,13 @@ void ProgressMeter::done()
 }
 
 LogAlterator::LogAlterator(const string& log_path, bool quiet, int argc, char** argv)
-        : l(log_path)
-        , o(cout.rdbuf())
-        , e(cerr.rdbuf())
-        , lo_buf(cout.rdbuf(), l.rdbuf())
-        , le_buf(cerr.rdbuf(), l.rdbuf())
-        {
+    : l(log_path)
+    , o(cout.rdbuf())
+    , e(cerr.rdbuf())
+    , log_path_(log_path)
+    , lo_buf(cout.rdbuf(), l.rdbuf())
+    , le_buf(cerr.rdbuf(), l.rdbuf())
+{
     check_open(l, log_path);
     init_log(l, argc, argv);
 
@@ -202,4 +203,18 @@ LogAlterator::LogAlterator(const string& log_path, bool quiet, int argc, char** 
         cout.rdbuf(&lo_buf);
         cerr.rdbuf(&le_buf);
     }
+
+    x.exceptions(x.exceptions() | std::ios::failbit); // Throw if we forgot to open the file.
+}
+
+void LogAlterator::open_xlog()
+{
+    string xlog_path = log_path_;
+    if (xlog_path.length() > 4 && xlog_path.compare(xlog_path.length() - 4, 4, ".log") == 0)
+        xlog_path.resize(xlog_path.length() - 4);
+    xlog_path += ".xlog";
+
+    x.exceptions(x.exceptions() & ~std::ios::failbit); // Disable throw-on-fail.
+    x.open(xlog_path);
+    check_open(x, xlog_path);
 }
