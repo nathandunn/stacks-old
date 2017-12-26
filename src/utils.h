@@ -40,6 +40,7 @@
 
 char   reverse(char);
 char  *rev_comp(const char *);
+void   rev_comp_inplace(char*);
 string rev_comp(const string&);
 void   reverse_string(char *);
 int    is_integer(const char *);

@@ -139,6 +139,38 @@ rev_comp(const char *seq)
     return com;
 }
 
+void rev_comp_inplace(char* seq) {
+    assert(seq);
+    char* p = seq;
+    while(*p) {
+        switch (*p) {
+        case 'A':
+        case 'a':
+            *p = 'T';
+            break;
+        case 'C':
+        case 'c':
+            *p = 'G';
+            break;
+        case 'G':
+        case 'g':
+            *p = 'C';
+            break;
+        case 'T':
+        case 't':
+            *p = 'A';
+            break;
+        case 'N':
+        case 'n':
+        case '.':
+            *p = 'N';
+            break;
+        }
+        ++p;
+    }
+    std::reverse(seq, p);
+}
+
 void
 reverse_string(char *seq)
 {

@@ -38,39 +38,44 @@ PhyLoc::PhyLoc(const string& s) : PhyLoc() {
     }
 }
 
-Seq::Seq() {
-    this->id       = NULL;
-    this->comment  = NULL;
-    this->seq      = NULL;
-    this->qual     = NULL;
-    this->loc_str  = NULL;
-    this->aln_type = AlnT::null;
-    this->pct_clipped  = 0.0;
-    this->map_qual = 255;
-}
+Seq::Seq()
+    : id (NULL)
+    , capacity (-1)
+    , seq (NULL)
+    , qual (NULL)
+    , aln_type (AlnT::null)
+    , pct_clipped (0.0)
+    , map_qual (255)
+    , loc_str  (NULL)
+{}
 
 Seq::Seq(const Seq& other)
-    : loc(other.loc) {
+    : capacity(other.capacity)
+    , comment(other.comment)
+    , loc(other.loc)
+{
     if (other.id != NULL) {
         id = new char[strlen(other.id)+1];
         strcpy(id, other.id);
     } else {
         id = NULL;
     }
-    if (other.comment != NULL) {
-        comment = new char[strlen(other.comment)+1];
-        strcpy(comment, other.comment);
-    } else {
-        comment = NULL;
+    if (capacity < 0) {
+        capacity = std::max(
+            (other.seq  != NULL ? strlen(other.seq)  : -1),
+            (other.qual != NULL ? strlen(other.qual) : -1)
+            );
     }
     if (other.seq != NULL) {
-        seq = new char[strlen(other.seq)+1];
+        seq = new char[capacity + 1];
+        assert(long(strlen(other.seq)) <= capacity);
         strcpy(seq, other.seq);
     } else {
         seq = NULL;
     }
     if (other.qual != NULL) {
-        qual = new char[strlen(other.qual)+1];
+        qual = new char[capacity + 1];
+        assert(long(strlen(other.qual)) <= capacity);
         strcpy(qual, other.qual);
     } else {
         qual = NULL;
@@ -87,121 +92,66 @@ Seq::Seq(const Seq& other)
     map_qual = other.map_qual;
 }
 
-Seq::Seq(const char *id, const char *seq) {
-    this->id       = new char[strlen(id)   + 1];
-    this->seq      = new char[strlen(seq)  + 1];
-    this->qual     = NULL;
-    this->comment  = NULL;
-    this->loc_str  = NULL;
+Seq::Seq(const char *id, const char *seq)
+    : Seq()
+{
+    this->id = new char[strlen(id) + 1];
+    strcpy(this->id, id);
 
-    strcpy(this->id,   id);
-    strcpy(this->seq,  seq);
-
-    this->aln_type = AlnT::null;
-    this->pct_clipped  = 0.0;
-    this->map_qual = 255;
+    capacity = strlen(seq);
+    this->seq = new char[capacity + 1];
+    strcpy(this->seq, seq);
 }
 
-Seq::Seq(const char *id, const char *seq, const char *qual)  {
-    this->id       = new char[strlen(id)   + 1];
-    this->seq      = new char[strlen(seq)  + 1];
-    this->qual     = new char[strlen(qual) + 1];
-    this->comment  = NULL;
-    this->loc_str  = NULL;
-
-    strcpy(this->id,   id);
-    strcpy(this->seq,  seq);
-    strcpy(this->qual, qual);
-
-    this->aln_type = AlnT::null;
-    this->pct_clipped  = 0.0;
-    this->map_qual = 255;
+Seq::Seq(const char *id, const char *seq, const char *qual)
+    : Seq(id, seq)
+{
+    this->qual = new char[capacity + 1];
+    // if (strlen(qual) > capacity)
+    //     throw std::invalid_argument("Seq::Seq(id, seq, qual)");
+    strncpy(this->qual, qual, capacity); // (trucates)
+    this->qual[capacity] = '\0';
 }
 
-Seq::Seq(const char *id, const char *seq, const char *qual, const char *chr, uint bp, strand_type strand)  {
-    this->id      = new char[strlen(id)   + 1];
-    this->qual    = new char[strlen(qual) + 1];
-    this->comment  = NULL;
-    this->loc_str = new char[strlen(chr)  + 15];
-
-    strcpy(this->id,   id);
-    strcpy(this->qual, qual);
+Seq::Seq(const char *id, const char *seq, const char *qual,
+         const char *chr, uint bp, strand_type strand
+)
+    : Seq(id, seq, qual)
+{
     this->loc.set(chr, bp, strand);
-
-    sprintf(this->loc_str, "%s|%d|%c", chr, bp, strand == strand_plus ? '+' : '-');
-
-    //
-    // Reverse complement sequences from the negative strand
-    //
-    if (strand == strand_plus) {
-        this->seq = new char[strlen(seq)  + 1];
-        strcpy(this->seq, seq);
-    } else {
-        this->seq = rev_comp(seq);
-    }
-
     this->aln_type = AlnT::primary;
-    this->pct_clipped  = 0.0;
-    this->map_qual = 255;
-}
 
-Seq::Seq(const char *id, const char *seq, const char *qual, const char *chr, uint bp, strand_type strand, AlnT aln_type, double pct_clipped, int map_qual)  {
-    this->id      = new char[strlen(id)   + 1];
-    this->qual    = new char[strlen(qual) + 1];
-    this->loc_str = new char[strlen(chr)  + 15];
-    this->comment = NULL;
-
-    strcpy(this->id,   id);
-    strcpy(this->qual, qual);
-    this->loc.set(chr, bp, strand);
-
-    sprintf(this->loc_str, "%s|%d|%c", chr, bp, strand == strand_plus ? '+' : '-');
-
-    //
     // Reverse complement sequences from the negative strand
-    //
-    if (strand == strand_plus) {
-        this->seq = new char[strlen(seq)  + 1];
-        strcpy(this->seq, seq);
-    } else {
-        this->seq = rev_comp(seq);
+    if (strand == strand_minus) {
+        rev_comp_inplace(this->seq);
+        //xxx qual should be reversed as well
     }
 
+    // Set `loc_str`.
+    this->loc_str = new char[strlen(chr)  + 15];
+    sprintf(this->loc_str, "%s|%d|%c", chr, bp, strand == strand_plus ? '+' : '-');
+}
+
+Seq::Seq(const char *id, const char *seq, const char *qual,
+         const char *chr, uint bp, strand_type strand,
+         AlnT aln_type, double pct_clipped, int map_qual
+)
+    : Seq(id, seq, qual, chr, bp, strand)
+{
     this->aln_type = aln_type;
     this->pct_clipped  = pct_clipped;
     this->map_qual = map_qual;
 }
 
 void swap(Seq& s1, Seq& s2) {
-    char  *ptr;
-    AlnT   a;
-    double p;
-
-    ptr = s1.id;
-    s1.id = s2.id;
-    s2.id = ptr;
-
-    ptr = s1.seq;
-    s1.seq = s2.seq;
-    s2.seq = ptr;
-
-    ptr = s1.qual;
-    s1.qual = s2.qual;
-    s2.qual = ptr;
-
-    ptr = s1.loc_str;
-    s1.loc_str = s2.loc_str;
-    s2.loc_str = ptr;
-
-    a = s1.aln_type;
-    s1.aln_type = s2.aln_type;
-    s2.aln_type = a;
-
-    p = s1.pct_clipped;
-    s1.pct_clipped = s2.pct_clipped;
-    s2.pct_clipped = p;
-
-    swap(s1.loc, s2.loc);
-
+    std::swap(s1.id, s2.id);
+    std::swap(s1.capacity, s2.capacity);
+    std::swap(s1.seq, s2.seq);
+    std::swap(s1.qual, s2.qual);
+    s1.comment.swap(s2.comment);
+    std::swap(s1.loc_str, s2.loc_str);
+    std::swap(s1.aln_type, s2.aln_type);
+    std::swap(s1.pct_clipped, s2.pct_clipped);
+    swap(s1.loc, s2.loc); // (ADL)
     std::swap(s1.map_qual, s2.map_qual);
 }
