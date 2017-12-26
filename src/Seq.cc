@@ -124,7 +124,8 @@ Seq::Seq(const char *id, const char *seq, const char *qual,
     // Reverse complement sequences from the negative strand
     if (strand == strand_minus) {
         rev_comp_inplace(this->seq);
-        //xxx qual should be reversed as well
+        if (this->qual != NULL)
+            std::reverse(this->qual, this->qual + strlen(this->qual));
     }
 
     // Set `loc_str`.
