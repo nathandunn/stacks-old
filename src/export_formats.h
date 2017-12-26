@@ -240,15 +240,18 @@ class GenePopExport: public OrderableExport {
 class GenePopHapsExport: public Export {
     const MetaPopInfo *_mpopi;
     ofstream _tmpfh;
+    size_t _n_digits;
 
  public:
-    GenePopHapsExport() : _mpopi(NULL) {}
+    GenePopHapsExport() : _mpopi(NULL), _n_digits(2) {}
     ~GenePopHapsExport() {}
     int  open(const MetaPopInfo *mpopi);
     int  write_header();
     int  write_batch(const vector<LocBin*>& loci);
     int  post_processing();
     void close() {this->_fh.close(); remove(this->tmp_path().c_str());}
+
+    void set_digits(size_t n) { assert(n==2 || n==3); _n_digits=n; }
 
  private:
     int write_site(const CSLocus* cloc, const LocPopSum* psum, Datum const*const* datums, size_t col, size_t index);
