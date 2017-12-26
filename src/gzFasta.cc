@@ -127,7 +127,7 @@ GzFasta::next_seq(Seq &s)
         this->line[0] = '\0';
     }
 
-    s.reserve(buf.length());
+    s.reserve(buf.length(), false);
     strcpy(s.seq, this->buf.c_str());
 
     return true;

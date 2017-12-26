@@ -115,7 +115,9 @@ public:
         if (loc_str != NULL)
             delete[] loc_str;
     }
-    void reserve(size_t n);
+
+    void reserve(size_t n, bool with_qual);
+
     friend void swap(Seq&, Seq&);
     Seq& operator=(Seq&& other) {swap(*this, other); return *this;}
     Seq& operator=(const Seq& other) = delete;
@@ -139,18 +141,20 @@ public:
 //
 
 inline
-void Seq::reserve(size_t n) {
+void Seq::reserve(size_t n, bool with_qual) {
     if (capacity < long(n)) {
         capacity = n;
-        if (seq) {
-            delete seq;
-            seq = new char[capacity + 1];
-            *seq = '\0';
-        }
-        if (qual) {
+        delete seq;
+        seq = new char[capacity + 1];
+        *seq = '\0';
+        if (with_qual) {
             delete qual;
             qual = new char[capacity + 1];
             *qual = '\0';
+        } else if (qual != NULL) {
+            // Delete it to keep the capacity predictable.
+            delete qual;
+            qual = NULL;
         }
     }
 }
