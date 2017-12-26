@@ -1577,15 +1577,16 @@ GenePopHapsExport::write_batch(const vector<LocBin*>& loci)
             for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
                 this->_tmpfh << "\t";
                 if (d[j] == NULL || strchr(d[j]->obshap[0], 'N') != NULL) {
-                    this->_tmpfh << "000000";
+                    this->_tmpfh << (_n_digits == 2 ? "0000" : "000000");
                 } else {
                     size_t i0 = hap_indexes.at(d[j]->obshap[0]);
                     size_t i1 = hap_indexes.at(d[j]->obshap[1]);
-                    if (max(i0, i1) + 1 <= 999)
-                        this->_tmpfh << std::setw(3) << min(i0, i1) + 1
-                                     << std::setw(3) << max(i0, i1) + 1;
-                    else
-                        this->_tmpfh << "000000";
+                    if (max(i0, i1) + 1 > (_n_digits == 2 ? 99 : 999)) {
+                        this->_tmpfh << (_n_digits == 2 ? "0000" : "000000");
+                        continue;
+                    }
+                    this->_tmpfh << std::setw(_n_digits) << min(i0, i1) + 1
+                                 << std::setw(_n_digits) << max(i0, i1) + 1;
                 }
             }
         }

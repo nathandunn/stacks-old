@@ -87,17 +87,20 @@ map<string, int>           renz_len;
 map<string, int>           renz_olap;
 
 vector<Export *> exports;
-
+template<typename E>
+vector<Export*>::iterator find_export()
+{
+    return std::find_if(
+            exports.begin(), exports.end(),
+            [](Export* e){ return typeid(*e) == typeid(E); }
+        );
+}
 template<typename E>
 void add_export()
 {
     // Check that the export isn't already present and add it.
-    if (std::find_if(
-                exports.begin(), exports.end(),
-                [](Export* e){return typeid(*e) == typeid(E);}
-            ) == exports.end()) {
+    if (find_export<E>() == exports.end())
         exports.push_back(new E());
-    }
 }
 
 int main (int argc, char* argv[]) {
@@ -3718,6 +3721,7 @@ int
 parse_command_line(int argc, char* argv[])
 {
     bool no_hap_exports = false;
+
     while (1) {
         static struct option long_options[] = {
             {"help",           no_argument,       NULL, 'h'},
@@ -3735,6 +3739,7 @@ parse_command_line(int argc, char* argv[])
             {"plink",          no_argument,       NULL, 'K'},
             {"genomic",        no_argument,       NULL, 'g'},
             {"genepop",        no_argument,       NULL, 1010},
+            {"genepop-haps-3digits", no_argument, NULL, 1011},
             {"phylip",         no_argument,       NULL, 'Y'},
             {"phylip_var",     no_argument,       NULL, 'L'},
             {"phylip_var_all", no_argument,       NULL, 'T'},
@@ -3944,6 +3949,10 @@ parse_command_line(int argc, char* argv[])
         case 1010: // --genepop
             add_export<GenePopExport>();
             add_export<GenePopHapsExport>();
+            break;
+        case 1011: //genepop-haps-3digits
+            add_export<GenePopHapsExport>();
+            dynamic_cast<GenePopHapsExport&>(**find_export<GenePopHapsExport>()).set_digits(3);
             break;
         case 'S':
             add_export<StructureExport>();
@@ -4211,6 +4220,10 @@ void help() {
          << "  --no_hap_exports: omit haplotype outputs.\n"
          << "  --fasta_samples_raw: output all haplotypes observed in each sample, for each locus, in FASTA format.\n"
          << "  (*not implemented as of v2.0Beta7)\n"
+         #ifdef DEBUG
+         << "\n"
+         << "  genepop-haps-3digits: Use 3-digit alleles in the genepop haps output (default is 2-digit).\n"
+         #endif
          << "\n"
          << "Additional options:\n"
          << "  -h,--help: display this help messsage.\n"
