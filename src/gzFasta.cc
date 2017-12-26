@@ -22,7 +22,7 @@
 
 #ifdef HAVE_LIBZ
 
-GzFasta::GzFasta(const char *path) : Input()
+GzFasta::GzFasta(const char *path) : Input(), gz_fh(NULL)
 {
     this->open(path);
 }
@@ -49,96 +49,23 @@ GzFasta::open(const char *path)
 Seq *
 GzFasta::next_seq()
 {
-    //
-    // Check the contents of the line buffer. When we finish reading a FASTA record
-    // the buffer will either contain whitespace or the header of the next FAST
-    // record.
-    //
-    while (this->line[0] != '>' && !gzeof(this->gz_fh)) {
-        gzgets(this->gz_fh, this->line, max_len);
-    }
-
-    if (gzeof(this->gz_fh)) {
+    #ifdef DEBUG
+    DOES_NOT_HAPPEN; // As this function isn't efficient.
+    #endif
+    Seq* s = new Seq();
+    s->id = new char[id_len];
+    if(!next_seq(*s)) {
+        delete s;
         return NULL;
     }
-
-    //
-    // Check if there is a carraige return in the buffer
-    //
-    uint len = strlen(this->line);
-    if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
-    if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
-
-    //
-    // Initialize the Seq structure and store the FASTA ID
-    //
-    Seq *s = new Seq;
-
-    //
-    // Check if the ID line of the FASTA file has a comment after the ID.
-    //
-    const char *p, *q;
-    p = this->line + 1;
-    for (q = this->line; *q != '\0' && *q != ' ' && *q != '\t'; q++);
-
-    if (*q == '\0') {
-        // Comment not present.
-        s->id = new char[len + 1];
-        strcpy(s->id, p);
-
-    } else {
-        // Comment present.
-        int l = q - p;
-        assert(l > 0);
-        s->id = new char[l + 1];
-        strncpy(s->id, p, l);
-        s->id[l] = '\0';
-
-        q++;
-        p = q;
-        for (; *q != '\0'; q++);
-        l = q - p;
-        assert(l > 0);
-        s->comment = new char[l + 1];
-        strncpy(s->comment, p, l);
-        s->comment[l] = '\0';
-    }
-
-    //
-    // Read the sequence from the file -- keep reading lines until we reach the next
-    // record or the end of file.
-    //
-    gzgets(this->gz_fh, this->line, max_len);
-
-    while (this->line[0] != '>' && !gzeof(this->gz_fh)) {
-        len = strlen(this->line);
-        if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
-        if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
-
-        this->buf    += this->line;
-        this->line[0] = '\0';
-        gzgets(this->gz_fh, this->line, max_len);
-    }
-
-    if (gzeof(this->gz_fh)) {
-        len = strlen(this->line);
-        if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
-        if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
-
-        this->buf += this->line;
-        this->line[0] = '\0';
-    }
-
-    s->seq = new char[this->buf.length() + 1];
-    strcpy(s->seq, this->buf.c_str());
-    this->buf.clear();
-
     return s;
 }
 
 int
 GzFasta::next_seq(Seq &s)
 {
+    this->buf.clear();
+
     //
     // Check the contents of the line buffer. When we finish reading a FASTA record
     // the buffer will either contain whitespace or the header of the next FAST
@@ -149,7 +76,7 @@ GzFasta::next_seq(Seq &s)
     }
 
     if (gzeof(this->gz_fh)) {
-        return 0;
+        return false;
     }
 
     //
@@ -162,30 +89,18 @@ GzFasta::next_seq(Seq &s)
     //
     // Check if the ID line of the FASTA file has a comment after the ID.
     //
-    const char *p, *q;
-    p = this->line + 1;
-    for (q = this->line; *q != '\0' && *q != ' ' && *q != '\t'; q++);
-
-    if (*q == '\0') {
-        // Comment not present.
-        strncpy(s.id, p, id_len);
-        s.id[id_len - 1] = '\0';
-
-    } else {
+    char* q = this->line + 1;
+    ++q;
+    while (*q != '\0' && *q != ' ' && *q != '\t')
+        ++q;
+    if (*q != '\0') {
         // Comment present.
-        int l = q - p;
-        assert(l > 0);
-        strncpy(s.id, p, l);
-        s.id[l] = '\0';
-
-        q++;
-        p = q;
-        for (; *q != '\0'; q++);
-        l = q - p;
-        assert(l > 0);
-        strncpy(s.comment, p, l);
-        s.comment[l] = '\0';
+        *q = '\0';
+        ++q;
+        s.comment.assign(q);
     }
+    assert(s.id != NULL);
+    strcpy(s.id, this->line + 1);
 
     //
     // Read the sequence from the file -- keep reading lines until we reach the next
@@ -212,10 +127,10 @@ GzFasta::next_seq(Seq &s)
         this->line[0] = '\0';
     }
 
+    s.reserve(buf.length());
     strcpy(s.seq, this->buf.c_str());
-    this->buf.clear();
 
-    return 1;
+    return true;
 }
 
 #endif // HAVE_LIBZ

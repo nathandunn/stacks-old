@@ -85,9 +85,10 @@ public:
 class Seq {
 public:
     char *id;
+    long capacity;
     char *seq;
     char *qual;
-    char *comment;
+    string comment;
 
     //
     // Information for an aligned sequence.
@@ -107,8 +108,6 @@ public:
     ~Seq( void ) {
         if (id != NULL)
             delete[] id;
-        if (comment != NULL)
-            delete[] comment;
         if (seq != NULL)
             delete[] seq;
         if (qual != NULL)
@@ -116,6 +115,7 @@ public:
         if (loc_str != NULL)
             delete[] loc_str;
     }
+    void reserve(size_t n);
     friend void swap(Seq&, Seq&);
     Seq& operator=(Seq&& other) {swap(*this, other); return *this;}
     Seq& operator=(const Seq& other) = delete;
@@ -137,6 +137,23 @@ public:
 // Inline definitions
 // ===========
 //
+
+inline
+void Seq::reserve(size_t n) {
+    if (capacity < long(n)) {
+        capacity = n;
+        if (seq) {
+            delete seq;
+            seq = new char[capacity + 1];
+            *seq = '\0';
+        }
+        if (qual) {
+            delete qual;
+            qual = new char[capacity + 1];
+            *qual = '\0';
+        }
+    }
+}
 
 inline
 void swap(PhyLoc& p, PhyLoc& q) {

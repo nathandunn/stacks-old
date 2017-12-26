@@ -343,7 +343,7 @@ new_cslocus(const Seq& consensus, const vector<VcfRecord>& records, int id)
     assert(loc->loc.empty());
 
     const char *p, *q;
-    p = consensus.comment;
+    p = consensus.comment.c_str();
 
     do {
         q = p;

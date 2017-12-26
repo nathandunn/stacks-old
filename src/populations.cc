@@ -456,9 +456,7 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
 {
     vector<VcfRecord> records;
     Seq seq;
-    seq.id      = new char[id_len];
-    seq.comment = new char[id_len];
-    seq.seq     = new char[max_len];
+    seq.id = new char[id_len];
 
     LocBin *loc;
     int     cloc_id, rv;
