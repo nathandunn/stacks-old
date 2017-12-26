@@ -33,6 +33,7 @@ using namespace std;
 // Global variables to hold command-line options.
 InputMode input_mode  = InputMode::stacks2;
 int       num_threads =  1;
+bool      quiet       = false;
 string    in_path;
 string    in_vcf_path;
 string    out_path;
@@ -125,7 +126,8 @@ int main (int argc, char* argv[]) {
     //
     // Open and initialize the log file.
     //
-    LogAlterator *logger = new LogAlterator(out_path + out_prefix + ".log", false, argc, argv);
+    LogAlterator *logger = new LogAlterator(out_path + out_prefix + ".log", quiet, argc, argv);
+    logger->open_xlog();
 
     output_parameters(cerr);
 
@@ -139,11 +141,14 @@ int main (int argc, char* argv[]) {
     //
     // Read the population map file, if any.
     //
-    if (not pmap_path.empty()) {
+    if (!pmap_path.empty()) {
         cerr << "Parsing population map...\n";
         mpopi.init_popmap(pmap_path);
         cerr << "The population map contained " << mpopi.samples().size() << " samples, "
              << mpopi.pops().size() << " population(s), " << mpopi.groups().size() << " group(s).\n";
+    } else {
+        cerr << "A population map was not specified, all samples will be read from '"
+             << in_path << "' as a single popultaion.\n";
     }
 
     //
@@ -187,7 +192,7 @@ int main (int argc, char* argv[]) {
     //
     LocusSmoothing *smooth = NULL;
     if (smooth_fstats || smooth_popstats)
-        smooth = new LocusSmoothing(&mpopi, logger->l);
+        smooth = new LocusSmoothing(&mpopi, logger->x);
 
     //
     // Setup the divergence statistics calculator, if requested.
@@ -231,7 +236,7 @@ int main (int argc, char* argv[]) {
         timer.restart();
         #endif
         cerr << "Begin batch " << bloc.next_batch_number() << "...";
-        loc_cnt  = bloc.next_batch(logger->l);
+        loc_cnt  = bloc.next_batch(logger->x);
 
         cerr << "analyzed " << filter.batch_total() << " loci";
         if (loci_ordered && bloc.loci().size() > 0)
@@ -245,7 +250,7 @@ int main (int argc, char* argv[]) {
         //
         // Calculate haplotype and gene diversity per locus per population.
         //
-        bloc.hapstats(logger->l);
+        bloc.hapstats(logger->x);
 
         //
         // Export this subset of the loci.
@@ -257,7 +262,7 @@ int main (int argc, char* argv[]) {
         // Calculate and report the extent of overlap between different RAD loci.
         //
         if (loci_ordered)
-            cerr << "    " << bloc.report_locus_overlap( (verbose ? &logger->l : NULL) ) << "\n";
+            cerr << "    " << bloc.report_locus_overlap( (verbose ? &logger->x : NULL) ) << "\n";
 
         //
         // Calculate divergence statistics (Fst), if requested.
@@ -278,12 +283,12 @@ int main (int argc, char* argv[]) {
         } else if (smooth_fstats || smooth_popstats) {
             cerr << "    Generating kernel-smoothed population statistics...";
             if (smooth_popstats) {
-                smooth->snpstats(bloc.loci(), logger->l);
-                smooth->hapstats(bloc.loci(), logger->l);
+                smooth->snpstats(bloc.loci(), logger->x);
+                smooth->hapstats(bloc.loci(), logger->x);
             }
             if (smooth_fstats) {
-                smooth->snp_divergence(bloc.loci(), ldiv->snp_values(), logger->l);
-                smooth->hap_divergence(bloc.loci(), ldiv->haplotype_values(), ldiv->metapop_haplotype_values(), logger->l);
+                smooth->snp_divergence(bloc.loci(), ldiv->snp_values(), logger->x);
+                smooth->hap_divergence(bloc.loci(), ldiv->haplotype_values(), ldiv->metapop_haplotype_values(), logger->x);
             }
             cerr << "done.\n";
         }
@@ -327,7 +332,7 @@ int main (int argc, char* argv[]) {
     //
     // Write out the distributions of catalog loci.
     //
-    bloc.write_distributions(logger->l);
+    bloc.write_distributions(logger->x);
     bloc.cleanup();
 
     if (smooth_fstats || smooth_popstats)
@@ -3725,7 +3730,8 @@ parse_command_line(int argc, char* argv[])
     while (1) {
         static struct option long_options[] = {
             {"help",           no_argument,       NULL, 'h'},
-            {"version",        no_argument,       NULL, 'v'},
+            {"version",        no_argument,       NULL, 999},
+            {"quiet",          no_argument,       NULL, 'q'},
             {"verbose",        no_argument,       NULL, 'd'},
             {"vcf",            no_argument,       NULL, 1004}, {"vcf_haps", no_argument, NULL, 1004}, {"vcf_haplotypes", no_argument, NULL, 1004},
             {"fasta_loci",     no_argument,       NULL, 1006},
@@ -3777,7 +3783,7 @@ parse_command_line(int argc, char* argv[])
             {"bootstrap_pifis",   no_argument,       NULL, '5'},
             {"min_populations",   required_argument, NULL, 'p'},
             {"min_maf",           required_argument, NULL, 'a'},
-            {"max_obs_het",       required_argument, NULL, 'q'},
+            {"max_obs_het",       required_argument, NULL, 1013},
             {"lnl_lim",           required_argument, NULL, 'c'},
             {"merge_prune_lim",   required_argument, NULL, 'i'},
             {"fst_correction",    required_argument, NULL, 'f'},
@@ -3787,15 +3793,22 @@ parse_command_line(int argc, char* argv[])
         };
 
         // getopt_long stores the option index here.
-        int c = getopt_long(argc, argv, "ACDEFHJKLNSTUV:YZ123456dghjklnva:c:e:f:i:o:p:q:r:t:u:w:B:I:M:O:P:R:Q:W:", long_options, NULL);
+        int c = getopt_long(argc, argv, "ACDEFHJKLNSTUV:YZ123456dghjklnqa:c:e:f:i:o:p:r:t:u:w:B:I:M:O:P:R:Q:W:", long_options, NULL);
 
         // Detect the end of the options.
         if (c == -1)
             break;
 
         switch (c) {
+        case 999:
+            version();
+            exit(1);
+            break;
         case 'h':
             help();
+            break;
+        case 'q':
+            quiet = true;
             break;
         case 'd':
             verbose = true;
@@ -3838,7 +3851,7 @@ parse_command_line(int argc, char* argv[])
                 help();
             }
             break;
-        case 'q':
+        case 1013:
             max_obs_het = is_double(optarg);
             if (max_obs_het > 1)
                 max_obs_het = max_obs_het / 100;
@@ -3958,7 +3971,7 @@ parse_command_line(int argc, char* argv[])
             add_export<StructureExport>();
             break;
         case 'A':
-            cerr << "BETA: Ignoring --fastphase_out output request, which is not currently implemented.\n";
+            cerr << "BETA: Ignoring --fastphase output request, which is not currently implemented.\n";
             break;
         case 'C':
             cerr << "BETA: Ignoring --phase output request, which is not currently implemented.\n";
@@ -4032,10 +4045,6 @@ parse_command_line(int argc, char* argv[])
         case 1005: //sigma
             sigma = atof(optarg);
             break;
-        case 'v':
-            version();
-            exit(1);
-            break;
         case '?':
             // getopt_long already printed an error message.
             help();
@@ -4093,10 +4102,6 @@ parse_command_line(int argc, char* argv[])
     }
 
     if (input_mode == InputMode::stacks || input_mode == InputMode::stacks2) {
-
-        if (pmap_path.empty())
-            cerr << "A population map was not specified, all samples will be read from '" << in_path << "' as a single popultaion.\n";
-
         if (out_path.empty())
             out_path = in_path;
 
