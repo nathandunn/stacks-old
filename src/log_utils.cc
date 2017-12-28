@@ -57,6 +57,18 @@ init_log(ostream &fh, int argc, char **argv)
     return 0;
 }
 
+class Pct {
+    double d_;
+public:
+
+    friend ostream& operator<< (ostream& os, const Pct& p) {
+        ostream os2 (os.rdbuf());
+        os2 << std::fixed << setprecision(1);
+        os2 << p.d_ * 100 << "%";
+        return os;
+    }
+};
+
 string as_percentage(double d) {
     stringstream ss;
     ss << std::fixed << setprecision(1);
@@ -120,7 +132,7 @@ ProgressMeter& ProgressMeter::operator++()
     if (n_done_ >= next_) {
         #ifdef DEBUG
         timer_.stop();
-        os_ << std::setw(5) << (size_t) timer_.elapsed() << ' ';
+        os_ << '(' << (size_t) timer_.elapsed() << "s) ";
         timer_.restart();
         #endif
         if (pct_) {
@@ -169,17 +181,13 @@ void ProgressMeter::done()
 {
     #ifdef DEBUG
     timer_.stop();
-    os_ << std::setw(5) << (size_t) timer_.elapsed() << ' ';
+    os_ << "(" << (size_t) timer_.elapsed() << "s) ";
     #endif
     if (pct_) {
         assert(n_done_ == n_max_);
         os_ << "100%\n";
     } else {
-        if (n_done_ >= 1000)
-            os_ << n_done_/1000 << 'K';
-        else
-            os_ << n_done_;
-        os_ << ", done.\n";
+        os_ << "done.\n";
     }
 }
 

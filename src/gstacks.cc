@@ -110,7 +110,6 @@ int
 main(int argc, char** argv)
 {
 try {
-
     //
     // Parse arguments.
     //
@@ -123,6 +122,17 @@ try {
     for (const string& in_bam : in_bams)
         bam_f_ptrs.push_back(new Bam(in_bam.c_str()));
 
+    //
+    // Open the log.
+    //
+    logger.reset(new LogAlterator(o_prefix + ".log", quiet, argc, argv));
+    report_options(cout);
+    cout << "\n" << flush;
+
+    //
+    // Initialize the locus readers.
+    //
+    cout << "Reading BAM headers...\n" << flush;
     unique_ptr<BamCLocReader> bam_cloc_reader;
     unique_ptr<BamCLocBuilder> bam_cloc_builder;
     const MetaPopInfo* bam_mpopi;
@@ -138,13 +148,6 @@ try {
     } else {
         DOES_NOT_HAPPEN;
     }
-
-    //
-    // Open the log.
-    //
-    logger.reset(new LogAlterator(o_prefix + ".log", quiet, argc, argv));
-    report_options(cout);
-    cout << "\n" << flush;
 
     //
     // Open the output files.
@@ -327,7 +330,6 @@ try {
         return omp_return;
     t_parallel.stop();
     progress.done();
-    cout << '\n';
 
     //
     // Report statistics.
@@ -346,8 +348,9 @@ try {
             auto pct = [&cs](size_t n) { return as_percentage((double) n / cs.n_nonempty_loci); };
 
             ostream os (cout.rdbuf());
-            os << std::fixed << std::setprecision(1);
-            os << "Attempted to assemble and align paired-end reads for " << cs.n_nonempty_loci << " loci:\n"
+            os << std::fixed << std::setprecision(1)
+               << "\n"
+               << "Attempted to assemble and align paired-end reads for " << cs.n_nonempty_loci << " loci:\n"
                << "  " << no_pe << " loci had no or almost no paired-end reads (" << pct(no_pe) << ");\n"
                << "  " << pe_ndag << " loci had paired-end reads that couldn't be assembled into a contig ("
                << pct(pe_ndag) << ");\n"
@@ -370,30 +373,35 @@ try {
         // Report statistics on the input BAM.
         const BamCLocBuilder::BamStats& bam_stats = bam_cloc_builder->bam_stats();
         size_t tot = bam_stats.n_primary + bam_stats.n_unmapped;
-        cout << "Read " << bam_stats.n_records << " BAM records:\n"
-                << "  kept " << bam_stats.n_primary_kept() << " primary alignments ("
-                << as_percentage((double) bam_stats.n_primary_kept() / tot) << ")\n"
-                << "  skipped " << bam_stats.n_primary_mapq << " primary alignments with insufficient mapping qualities ("
-                << as_percentage((double) bam_stats.n_primary_mapq / tot) << ")\n"
-                << "  skipped " << bam_stats.n_primary_softclipped << " excessively soft-clipped primary alignments ("
-                << as_percentage((double) bam_stats.n_primary_softclipped / tot) << ")\n"
-                << "  skipped " << bam_stats.n_unmapped << " unmapped reads ("
-                << as_percentage((double) bam_stats.n_unmapped / tot) << ")\n";
+        cout << "\n"
+             << "Read " << bam_stats.n_records << " BAM records:\n"
+             << "  kept " << bam_stats.n_primary_kept() << " primary alignments ("
+             << as_percentage((double) bam_stats.n_primary_kept() / tot) << ")\n"
+             << "  skipped " << bam_stats.n_primary_mapq << " primary alignments with insufficient mapping qualities ("
+             << as_percentage((double) bam_stats.n_primary_mapq / tot) << ")\n"
+             << "  skipped " << bam_stats.n_primary_softclipped << " excessively soft-clipped primary alignments ("
+             << as_percentage((double) bam_stats.n_primary_softclipped / tot) << ")\n"
+             << "  skipped " << bam_stats.n_unmapped << " unmapped reads ("
+             << as_percentage((double) bam_stats.n_unmapped / tot) << ")\n";
         if (bam_stats.n_secondary > 0 || bam_stats.n_supplementary > 0)
             cout << "  skipped some suboptimal (secondary/supplementary) alignment records\n";
         if (refbased_cfg.ign_pe_reads)
             cout << "  ignored " << bam_stats.n_ignored_read2_recs << " READ2 records\n";
-        cout << "\n";
 
+        // Report statistics on the loci that were built.
+        const BamCLocBuilder::LocStats& loc_stats = bam_cloc_builder->loc_stats();
+        cout << "\n"
+             << "Built " << loc_stats.n_loci_built << " loci comprising "
+             << loc_stats.n_fw_reads;
         if (refbased_cfg.paired) {
-            // Report statistics on paired-ends reads.
-            const BamCLocBuilder::LocStats& loc_stats = bam_cloc_builder->loc_stats();
             ostream os (cout.rdbuf());
-            os << std::fixed << std::setprecision(1);
-            size_t n_pairs = loc_stats.n_read_pairs();
-            os << "Found " << n_pairs << " paired-end reads;"
+            os << std::fixed << std::setprecision(1)
+               << " forward reads and "
+               << loc_stats.n_read_pairs() << " matching paired-end reads;"
                << " mean insert length was " << loc_stats.insert_lengths_mv.mean()
-               << " (sd: " << loc_stats.insert_lengths_mv.sd_p() << ").\n\n";
+               << " (sd: " << loc_stats.insert_lengths_mv.sd_p() << ").\n";
+        } else {
+            cout << " reads.\n";
         }
     }
 
@@ -402,17 +410,19 @@ try {
         size_t n_unpaired = gt_stats.n_unpaired_reads_rm;
         size_t n_pcr_dupl = gt_stats.n_read_pairs_pcr_dupl;
         size_t n_used = gt_stats.n_read_pairs_used;
-        cout << "Removed " << n_unpaired << " unpaired reads; kept "
-             << n_used + n_pcr_dupl << " read pairs.\n";
+        size_t n_remaining_loci = gt_stats.n_genotyped_loci;
+        cout << "Removed " << n_unpaired << " unpaired reads ("
+             << as_percentage((double) n_unpaired / (n_used + n_pcr_dupl)) << "); kept "
+             << n_used + n_pcr_dupl << " read pairs in "
+             << n_remaining_loci << " loci.\n";
         if (rm_pcr_duplicates) {
             cout << "Removed " << n_pcr_dupl
-                 << " same-sample read pairs that had the same insert length as putative PCR duplicates ("
+                 << " read pairs whose insert length had already been seen in the same sample as putative PCR duplicates ("
                  << as_percentage((double) n_pcr_dupl / (n_pcr_dupl + n_used))
                  << "); kept " << n_used << " read pairs.\n";
         } else {
             assert(n_pcr_dupl == 0);
         }
-        cout << '\n';
     } else {
         assert(gt_stats.n_unpaired_reads_rm == 0 && gt_stats.n_read_pairs_pcr_dupl == 0);
     }
@@ -420,26 +430,28 @@ try {
     // Report statistics on genotyping and haplotyping.
     size_t n_hap_attempts = hap_stats.n_halplotyping_attempts();
     size_t n_hap_pairs = hap_stats.n_consistent_hap_pairs();
-    cout << "Genotyped " << gt_stats.n_genotyped_loci << " loci:\n"
-            << "  mean number of sites per locus: " << gt_stats.mean_n_sites_per_loc() << "\n"
-            << "  a consistent phasing was found for " << n_hap_pairs << " of out " << n_hap_attempts
-            << " (" << as_percentage((double) n_hap_pairs / n_hap_attempts)
-            << ") diploid loci needing phasing\n"
-            << "\n";
+    cout << "\n"
+         << "Genotyped " << gt_stats.n_genotyped_loci << " loci:\n"
+         << "  mean number of sites per locus: " << gt_stats.mean_n_sites_per_loc() << "\n"
+         << "  a consistent phasing was found for " << n_hap_pairs << " of out " << n_hap_attempts
+         << " (" << as_percentage((double) n_hap_pairs / n_hap_attempts)
+         << ") diploid loci needing phasing\n";
     if (gt_stats.n_genotyped_loci == 0) {
         cerr << "Error: There wasn't any locus to genotype (c.f. above; check input/arguments).\n";
         throw exception();
     }
     if (dbg_log_stats_phasing) {
-        logger->l << "BEGIN badly_phased\n"
+        logger->l << "\n"
+                  << "BEGIN badly_phased\n"
                   << "n_hets_2snps\tn_bad_hets\tn_loci\n";
         for (auto& elem : hap_stats.n_badly_phased_samples)
             logger->l << elem.first.second
                       << '\t' << elem.first.second - elem.first.first
                       << '\t' << elem.second
                       << '\n';
-        logger->l << "END badly_phased\n\n";
-        logger->l << "BEGIN sample_phasing_rates\n"
+        logger->l << "END badly_phased\n";
+        logger->l << "\n"
+                  << "BEGIN sample_phasing_rates\n"
                   << "sample\tn_gts\tn_multisnp_hets\tn_phased\tmisphasing_rate\n";
         ostream os (logger->l.rdbuf());
         os << std::fixed << std::setprecision(3);
@@ -489,8 +501,9 @@ try {
                  ;
 
         ostream os (logger->l.rdbuf());
-        os << std::fixed << std::setprecision(2);
-        os << "BEGIN clockings\n"
+        os << std::fixed << std::setprecision(2)
+           << "\n"
+           << "BEGIN clockings\n"
            << "Num. threads: " << num_threads << "\n"
            << "Parallel time: " << ll << "\n"
            << "Average thread time spent:\n"
@@ -511,14 +524,13 @@ try {
            << "Total time spent writing vcf: " << v << " (" << as_percentage(v / ll) << ")\n"
            << "VCFwrite block size: mean=" << (double) gt_stats.n_genotyped_loci / n_writes
                << "(n=" << n_writes << "); max=" << max_size_before_write << "\n"
-           << "END clockings\n\n"
-           ;
+           << "END clockings\n";
     }
 
     #ifdef DEBUG
-    if (typeid(*model) == typeid(MarukiLowModel&))
+    if (typeid(*model) == typeid(MarukiLowModel))
         // Report how many times the "underflow" likelihood equations were used (we'd need to know the total number of calls...)
-        cerr << "DEBUG: marukilow: handled " << ((const MarukiLowModel&)*model).n_underflows() << " underflows.\n\n";
+        cerr << "\nDEBUG: marukilow: handled " << ((const MarukiLowModel&)*model).n_underflows() << " underflows.\n";
     #endif
 
     //
@@ -529,7 +541,7 @@ try {
     model.reset();
     if (dbg_write_hapgraphs || dbg_write_misphased_hapgraphs)
         o_hapgraphs_f << "}\n";
-    cout << "gstacks is done.\n";
+    cout << "\ngstacks is done.\n";
     return 0;
 
 } catch (exception& e) {
@@ -813,6 +825,7 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
             return;
         }
     }
+    ++gt_stats_.n_genotyped_loci;
     if (rm_pcr_duplicates) {
         assert(rm_unpaired_reads);
         size_t n_before = aln_loc.reads().size();
@@ -820,7 +833,6 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
         gt_stats_.n_read_pairs_pcr_dupl += n_before - aln_loc.reads().size();
     }
     assert(!aln_loc.reads().empty());
-    ++gt_stats_.n_genotyped_loci;
     gt_stats_.n_read_pairs_used += aln_loc.reads().size();
     if (input_type == GStacksInputT::denovo_popmap || input_type == GStacksInputT::denovo_merger) {
         // Called from process(CLocReadSet&).
@@ -2490,7 +2502,8 @@ try {
 }
 
 void report_options(ostream& os) {
-    os << "Configuration for this run:\n";
+    os << "\n"
+       << "Configuration for this run:\n";
 
     switch (input_type) {
     case GStacksInputT::denovo_popmap:

@@ -82,6 +82,7 @@ public:
 
     struct LocStats {
         size_t n_loci_built;
+        size_t n_fw_reads;
         OnlineMeanVar insert_lengths_mv;
 
         size_t n_read_pairs() const {return insert_lengths_mv.n();}
@@ -500,6 +501,7 @@ BamCLocBuilder::BamCLocBuilder(
 ) :
     cfg_(cfg),
     bam_stats_(),
+    loc_stats_(),
     bam_fs_(move(bam_fs)),
     bpopi_(samples.empty() ? BamPopInfo(bam_fs_) : BamPopInfo(bam_fs_, samples)),
     next_records_(bam_fs_.size()),
@@ -844,6 +846,7 @@ bool BamCLocBuilder::build_one_locus(CLocAlnSet& aln_loc)
 
         fw_reads.push_back(SAlnRead(AlnRead(Read(move(seq), move(name)), move(cigar)), sample));
     }
+    loc_stats_.n_fw_reads += fw_reads.size();
 
     // Paired-end reads.
     vector<SAlnRead> pe_reads;
