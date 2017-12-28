@@ -54,13 +54,13 @@ fi
 [[ "$bam_f" ]]    || { echo -n "Error: -B is required." >&2; exit 1; }
 [[ "$out_d" ]]    || { echo -n "Error: -O is required." >&2; exit 1; }
 
-[[ -e "$stacks_d" ]] || { ls "$stacks_d"; exit 1; }
-[[ -e "$bam_f" ]]    || { ls "$bam_f"; exit 1; }
+[[ -e "$stacks_d" ]] || { ls -- "$stacks_d"; exit 1; }
+[[ -e "$bam_f" ]]    || { ls -- "$bam_f"; exit 1; }
 
 fa="$stacks_d/gstacks.fa.gz"
 vcf="$stacks_d/gstacks.vcf.gz"
-[[ -e "$fa" ]]  || { ls "$fa"; exit 1; }
-[[ -e "$vcf" ]] || { ls "$vcf"; exit 1; }
+[[ -e "$fa" ]]  || { ls -- "$fa"; exit 1; }
+[[ -e "$vcf" ]] || { ls -- "$vcf"; exit 1; }
 
 o_coords="$out_d/locus_coordinates.tsv"
 o_fa="$out_d/gstacks.fa.gz"
