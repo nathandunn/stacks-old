@@ -216,7 +216,7 @@ int main (int argc, char* argv[]) {
     SumStatsSummary sumstats(mpopi.pops().size());
 
     const LocusFilter &filter = bloc.filter();
-    cout << "\nProcessing data in batches;\n";
+    cout << "\nProcessing data in batches... (See in 'populations.xlog' for progress.)\n";
     int loc_cnt = 0;
 
     Timer timer;
@@ -229,19 +229,19 @@ int main (int argc, char* argv[]) {
         // - Filter the loci according to command line parameters (-r, -p, --maf, --write_single_snp, etc.)
         // - Sort the loci by basepair if they are ordered.
         //
-        cout << "  ";
+        logger->x << "  ";
         #ifdef DEBUG
         timer.stop();
-        cout << "(" << (size_t) timer.elapsed() << "s) ";
+        logger->x << "(" << (size_t) timer.elapsed() << "s) ";
         timer.restart();
         #endif
-        cout << "Begin batch " << bloc.next_batch_number() << "...";
+        logger->x << "Begin batch " << bloc.next_batch_number() << "..." << flush;
         loc_cnt  = bloc.next_batch(logger->x);
 
-        cout << "analyzed " << filter.batch_total() << " loci";
+        logger->x << "analyzed " << filter.batch_total() << " loci";
         if (loci_ordered && bloc.loci().size() > 0)
-            cout <<  " from " << bloc.loci().front()->cloc->loc.chr();
-        cout << "; filtered " << filter.batch_filtered() << " loci; " << filter.batch_seen() << " loci seen.\n";
+            logger->x <<  " from " << bloc.loci().front()->cloc->loc.chr();
+        logger->x << "; filtered " << filter.batch_filtered() << " loci; " << filter.batch_seen() << " loci seen.\n";
 
         if (loc_cnt == 0 && filter.batch_seen() == 0) break;
 
@@ -262,26 +262,26 @@ int main (int argc, char* argv[]) {
         // Calculate and report the extent of overlap between different RAD loci.
         //
         if (loci_ordered)
-            cout << "    " << bloc.report_locus_overlap( (verbose ? &logger->x : NULL) ) << "\n";
+            logger->x << "    " << bloc.report_locus_overlap( (verbose ? &logger->x : NULL) ) << "\n";
 
         //
         // Calculate divergence statistics (Fst), if requested.
         //
         if (calc_fstats) {
-            cout << "    Calculating F statistics...";
+            logger->x << "    Calculating F statistics...";
             ldiv->snp_divergence(bloc.loci());
             ldiv->haplotype_divergence_pairwise(bloc.loci());
             ldiv->haplotype_divergence(bloc.loci());
-            cout << "done.\n";
+            logger->x << "done.\n";
         }
 
         //
         // Smooth population statistics across individual populations, and between populations.
         //
         if ( (smooth_fstats || smooth_popstats) && loci_ordered == false) {
-            cout << "    Notice: Smoothing was requested (-k), but will not be performed as the loci are not ordered.\n";
+            logger->x << "    Notice: Smoothing was requested (-k), but will not be performed as the loci are not ordered.\n";
         } else if (smooth_fstats || smooth_popstats) {
-            cout << "    Generating kernel-smoothed population statistics...";
+            logger->x << "    Generating kernel-smoothed population statistics...";
             if (smooth_popstats) {
                 smooth->snpstats(bloc.loci(), logger->x);
                 smooth->hapstats(bloc.loci(), logger->x);
@@ -290,7 +290,7 @@ int main (int argc, char* argv[]) {
                 smooth->snp_divergence(bloc.loci(), ldiv->snp_values(), logger->x);
                 smooth->hap_divergence(bloc.loci(), ldiv->haplotype_values(), ldiv->metapop_haplotype_values(), logger->x);
             }
-            cout << "done.\n";
+            logger->x << "done.\n";
         }
 
         if (calc_fstats) {
@@ -302,7 +302,7 @@ int main (int argc, char* argv[]) {
     } while (loc_cnt > 0 || filter.batch_seen() > 0);
     #ifdef DEBUG
     timer.stop();
-    cout << "(" << (size_t) timer.elapsed() << "s)\n";
+    logger->x << "(" << (size_t) timer.elapsed() << "s)\n";
     timer.restart();
     #endif
 
