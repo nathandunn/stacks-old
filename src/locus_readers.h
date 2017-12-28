@@ -35,7 +35,6 @@ class BamCLocReader {
 
     BamPopInfo bpopi_;
     vector<size_t> loci_n_components_; // ("nc" field in BAM header @RG lines.)
-    vector<const char*> loci_aln_positions_;
 
     int32_t loc_i_; // Index of the next locus (chromosome). Incremented by read_one_locus().
 
@@ -419,48 +418,6 @@ BamCLocReader::BamCLocReader(vector<Bam*>&& bam_fs, const vector<string>& sample
     }
     if(loci_n_components_.size() != bam_fs_[0]->h().n_ref_chroms())
         DOES_NOT_HAPPEN;
-
-    //
-    // Load genomic alignment information from the header.
-    // If the first locus has alignment information: this is a ref-based analysis,
-    // record all the alignment positions. Otherwise, assume it's a de novo analysis.
-    //
-    p = bam_fs_[0]->h().text();
-    line = 1;
-    while (true) {
-        if (strncmp(p, "@SQ\t", 4) == 0) {
-            loci_aln_positions_.push_back(NULL);
-            while (*p && *p != '\n') {
-                if (strncmp(p, "pos:", 4) == 0) {
-                    loci_aln_positions_.back() = p+4;
-                    break; // Skip the rest of the line.
-                }
-                while (*p && *p != '\n' && *p != '\t')
-                    ++p;
-                if (*p == '\t')
-                    ++p;
-            }
-            if (loci_aln_positions_.back() == NULL) {
-                if (loci_aln_positions_.size() == 1) {
-                    // de novo.
-                    loci_aln_positions_ = vector<const char*>();
-                    break;
-                } else {
-                    cerr << "Error: In BAM header, at line " << line
-                         << ": alignment information is missing.\n";
-                    throw exception();
-                }
-            }
-        }
-
-        p = strchr(p, '\n');
-        if (p == NULL)
-            break;
-        ++p;
-        ++line;
-    }
-    if(!loci_aln_positions_.empty() && loci_aln_positions_.size() != bam_fs_[0]->h().n_ref_chroms())
-        DOES_NOT_HAPPEN;
 }
 
 inline
@@ -493,13 +450,6 @@ bool BamCLocReader::read_one_locus(CLocReadSet& readset) {
     readset.clear();
     readset.bam_i(loc_i_);
     readset.id(atoi(bam_fs_[0]->h().chrom_str(loc_i_)));
-    if (!loci_aln_positions_.empty()) {
-        const char* p = loci_aln_positions_.at(loc_i_);
-        const char* q = p;
-        while (*q && *q != '\n' && *q != '\t')
-            ++q;
-        readset.pos(PhyLoc(string(p, q)));
-    }
 
     for (size_t bam_f_i=0; bam_f_i<bam_fs_.size(); ++bam_f_i) {
         Bam* bam_f = bam_fs_[bam_f_i];
