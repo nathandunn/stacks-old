@@ -211,8 +211,6 @@ LogAlterator::LogAlterator(const string& log_path, bool quiet, int argc, char** 
         cout.rdbuf(&lo_buf);
         cerr.rdbuf(&le_buf);
     }
-
-    x.exceptions(x.exceptions() | std::ios::failbit); // Throw if we forgot to open the file.
 }
 
 void LogAlterator::open_xlog()
@@ -222,7 +220,6 @@ void LogAlterator::open_xlog()
         xlog_path.resize(xlog_path.length() - 4);
     xlog_path += ".xlog";
 
-    x.exceptions(x.exceptions() & ~std::ios::failbit); // Disable throw-on-fail.
     x.open(xlog_path);
     check_open(x, xlog_path);
 }

@@ -126,6 +126,7 @@ try {
     // Open the log.
     //
     logger.reset(new LogAlterator(o_prefix + ".log", quiet, argc, argv));
+    logger->open_xlog();
     report_options(cout);
     cout << "\n" << flush;
 
@@ -440,34 +441,34 @@ try {
         cerr << "Error: There wasn't any locus to genotype (c.f. above; check input/arguments).\n";
         throw exception();
     }
-    if (dbg_log_stats_phasing) {
-        logger->l << "\n"
-                  << "BEGIN badly_phased\n"
-                  << "n_hets_2snps\tn_bad_hets\tn_loci\n";
-        for (auto& elem : hap_stats.n_badly_phased_samples)
-            logger->l << elem.first.second
-                      << '\t' << elem.first.second - elem.first.first
-                      << '\t' << elem.second
-                      << '\n';
-        logger->l << "END badly_phased\n";
-        logger->l << "\n"
-                  << "BEGIN sample_phasing_rates\n"
-                  << "sample\tn_gts\tn_multisnp_hets\tn_phased\tmisphasing_rate\n";
-        ostream os (logger->l.rdbuf());
-        os << std::fixed << std::setprecision(3);
-        assert(hap_stats.per_sample_stats.size() == bam_mpopi->samples().size());
-        for (size_t sample=0; sample<bam_mpopi->samples().size(); ++sample) {
-            const HaplotypeStats::PerSampleStats& stats = hap_stats.per_sample_stats[sample];
+    // phasing_rates_loci
+    logger->x << "\n"
+              << "BEGIN phasing_rates_loci\n"
+              << "n_hets_2snps\tn_bad_hets\tn_loci\n";
+    for (auto& elem : hap_stats.n_badly_phased_samples)
+        logger->x << elem.first.second
+                  << '\t' << elem.first.second - elem.first.first
+                  << '\t' << elem.second
+                  << '\n';
+    logger->x << "END phasing_rates_loci\n";
+    // phasing_rate_samples
+    logger->x << "\n"
+              << "BEGIN phasing_rate_samples\n"
+              << "sample\tn_gts\tn_multisnp_hets\tn_phased\tmisphasing_rate\n";
+    ostream os (logger->x.rdbuf());
+    os << std::fixed << std::setprecision(3);
+    assert(hap_stats.per_sample_stats.size() == bam_mpopi->samples().size());
+    for (size_t sample=0; sample<bam_mpopi->samples().size(); ++sample) {
+        const HaplotypeStats::PerSampleStats& stats = hap_stats.per_sample_stats[sample];
 
-            os << bam_mpopi->samples()[sample].name
-               << '\t' << stats.n_diploid_loci
-               << '\t' << stats.n_hets_2snps
-               << '\t' << stats.n_phased
-               << '\t' << 1.0 - (double) stats.n_phased / stats.n_hets_2snps
-               << '\n';
-        }
-        logger->l << "END sample_phasing_rates\n";
+        os << bam_mpopi->samples()[sample].name
+           << '\t' << stats.n_diploid_loci
+           << '\t' << stats.n_hets_2snps
+           << '\t' << stats.n_phased
+           << '\t' << 1.0 - (double) stats.n_phased / stats.n_hets_2snps
+           << '\n';
     }
+    logger->x << "END phasing_rate_samples\n";
 
     // Report clockings.
     {
@@ -500,7 +501,7 @@ try {
                  + t_writing_vcf.consumed()
                  ;
 
-        ostream os (logger->l.rdbuf());
+        ostream os (logger->x.rdbuf());
         os << std::fixed << std::setprecision(2)
            << "\n"
            << "BEGIN clockings\n"
@@ -2209,14 +2210,13 @@ try {
         {"dbg-gfa",      no_argument,       NULL,  2003},
         {"dbg-alns",     no_argument,       NULL,  2004}, {"alns", no_argument, NULL, 3004},
         {"dbg-depths",   no_argument,       NULL,  2007},
-        {"dbg-no-unphased-snps", no_argument, NULL,  2015},
+        {"dbg-no-unphased-snps", no_argument, NULL, 2015},
         {"dbg-hapgraphs", no_argument,      NULL,  2010},
         {"dbg-hapgraphs-misphased", no_argument, NULL, 2016},
         {"dbg-true-reference", no_argument, NULL,  2012},
         {"dbg-true-alns", no_argument,      NULL,  2011}, {"true-alns", no_argument, NULL, 3011},
         {"dbg-no-overlaps", no_argument,    NULL,  2008},
         {"dbg-no-haps",  no_argument,       NULL,  2009},
-        {"dbg-log-stats-phasing", no_argument, NULL,  2013},
         {"dbg-min-spl-reads", required_argument, NULL, 2014},
         {0, 0, 0, 0}
     };
@@ -2373,9 +2373,6 @@ try {
             break;
         case 2009://dbg-no-haps
             dbg_no_haplotypes = true;
-            break;
-        case 2013://dbg-no-haps
-            dbg_log_stats_phasing = true;
             break;
         case 2014://dbg-min-spl-reads
             refbased_cfg.min_reads_per_sample = stoi(optarg);
