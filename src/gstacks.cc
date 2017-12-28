@@ -341,7 +341,7 @@ try {
 
     if (input_type == GStacksInputT::denovo_popmap || input_type == GStacksInputT::denovo_merger) {
         if (denovo_ctg_stats.n_loci_w_pe_reads == 0) {
-            cout << "Input appears to be single-end (no paired-end reads were seen).\n\n";
+            cout << "Input appears to be single-end (no paired-end reads were seen).\n";
         } else {
             // Report assembly statistics.
             assert(!ignore_pe_reads);
