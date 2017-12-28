@@ -46,6 +46,7 @@
 #include <sstream>
 #include <iomanip>
 #include <utility>
+#include <numeric>
 #include <algorithm>
 #include <functional>
 #include <memory>

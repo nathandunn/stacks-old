@@ -124,10 +124,10 @@ ProgressMeter::ProgressMeter(
     timer_.restart();
 }
 
-ProgressMeter& ProgressMeter::operator++()
+ProgressMeter& ProgressMeter::operator+=(size_t n)
 {
-    assert(n_done_ != n_max_);
-    ++n_done_;
+    assert(n_done_ < n_max_);
+    n_done_ += n;
 
     if (n_done_ >= next_) {
         #ifdef DEBUG
