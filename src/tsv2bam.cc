@@ -99,29 +99,24 @@ int run() {
     //
     // Create the BAM target list.
     //
-    stringstream header_sq_lines;
+    stringstream header_sq_lines_ss;
     vector<int> cloc_ids;
     unordered_map<int,size_t> cloc_lengths;
     cloc_ids.reserve(catalog.size());
     for (auto& cloc : catalog) {
         // Add the @SQ line.
-        header_sq_lines << "@SQ\tSN:" << cloc.first
-                        << "\tLN:" << cloc.second->len
-                        << "\tnc:" << cloc.second->comp.size();
-
-        if (!cloc.second->loc.empty()) {
-            const PhyLoc& pos = cloc.second->loc;
-            header_sq_lines << "\tpos:" << pos.chr()
-                        << ':' << (pos.bp+1)
-                        << ':' << (pos.strand == strand_plus ? '+' : '-');
-        }
-        header_sq_lines << "\n";
+        header_sq_lines_ss
+                << "@SQ\tSN:" << cloc.first
+                << "\tLN:" << cloc.second->len
+                << "\tnc:" << cloc.second->comp.size()
+                << "\n";
         cloc_ids.push_back(cloc.first);
         cloc_lengths[cloc.first] = cloc.second->len;
         delete cloc.second;
         cloc.second = NULL;
     }
     catalog.clear();
+    const string header_sq_lines = header_sq_lines_ss.str();
 
     //
     // Process the samples.
@@ -139,7 +134,7 @@ int run() {
                 cout << "Processing sample '" << samples[i] << "'...\n" << flush;
 
                 stringstream ss;
-                run(cloc_ids, header_sq_lines.str(), cloc_lengths, i, ss);
+                run(cloc_ids, header_sq_lines, cloc_lengths, i, ss);
                 outputs[i] = ss.str();
 
             } catch (exception& e) {
