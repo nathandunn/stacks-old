@@ -208,7 +208,7 @@ try {
     cout << "Processing all loci...\n" << flush;
     ProgressMeter progress =
             (input_type == GStacksInputT::denovo_popmap || input_type == GStacksInputT::denovo_merger) ?
-            ProgressMeter(cout, true, bam_cloc_reader->n_loci())
+            ProgressMeter(cout, true, bam_cloc_reader->tally_n_components())
             : ProgressMeter(cout, false, 1000);
 
     t_parallel.restart();
@@ -288,8 +288,11 @@ try {
                     do {
                         o_vcf_f->file() << vcf_outputs.front().second;
                         vcf_outputs.pop_front();
+                        if (input_type == GStacksInputT::denovo_popmap || input_type == GStacksInputT::denovo_merger)
+                            progress += bam_cloc_reader->n_catalog_components_of(next_vcf_to_write);
+                        else
+                            ++progress;
                         ++next_vcf_to_write;
-                        ++progress;
                     } while (!vcf_outputs.empty() && vcf_outputs.front().first);
                     t_writing_vcf.stop();
                 }

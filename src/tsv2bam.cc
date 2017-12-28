@@ -105,7 +105,10 @@ int run() {
     cloc_ids.reserve(catalog.size());
     for (auto& cloc : catalog) {
         // Add the @SQ line.
-        header_sq_lines << "@SQ\tSN:" << cloc.first << "\tLN:" << cloc.second->len;
+        header_sq_lines << "@SQ\tSN:" << cloc.first
+                        << "\tLN:" << cloc.second->len
+                        << "\tnc:" << cloc.second->comp.size();
+
         if (!cloc.second->loc.empty()) {
             const PhyLoc& pos = cloc.second->loc;
             header_sq_lines << "\tpos:" << pos.chr()

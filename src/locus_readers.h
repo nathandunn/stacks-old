@@ -34,6 +34,7 @@ class BamCLocReader {
     vector<Bam*> bam_fs_;
 
     BamPopInfo bpopi_;
+    vector<size_t> loci_n_components_; // ("nc" field in BAM header @RG lines.)
     vector<const char*> loci_aln_positions_;
 
     int32_t loc_i_; // Index of the next locus (chromosome). Incremented by read_one_locus().
@@ -47,6 +48,8 @@ public:
     const vector<Bam*>& bam_fs() const {return bam_fs_;}
     size_t n_loci() const {return bam_fs_[0]->h().n_ref_chroms();}
     int target2id(size_t target_i) const {return atoi(bam_fs_[0]->h().chrom_str(target_i));}
+    size_t n_catalog_components_of(size_t target_i) const {return loci_n_components_.at(target_i);}
+    size_t tally_n_components() const {return std::accumulate(loci_n_components_.begin(), loci_n_components_.end(), size_t(0));}
     const MetaPopInfo& mpopi() const {return bpopi_.mpopi();}
 
     // Reads one locus. Returns false on EOF.
@@ -382,12 +385,48 @@ BamCLocReader::BamCLocReader(vector<Bam*>&& bam_fs, const vector<string>& sample
             cerr << "WARNING: Sample '" << s.name << "' is missing its (integer) ID; was tsv2bam run correctly?!\n";
 
     //
+    // Retrieve the number of components that make up each catalog locus.
+    loci_n_components_.reserve(bam_fs_[0]->h().n_ref_chroms());
+    const char* p = bam_fs_[0]->h().text();
+    size_t line = 1;
+    while (true) {
+        if (strncmp(p, "@SQ\t", 4) == 0) {
+            loci_n_components_.push_back(0);
+            p += 3;
+            while (*p && *p != '\n') {
+                assert(*p == '\t');
+                ++p;
+                if (strncmp(p, "nc:", 3) == 0) {
+                    loci_n_components_.back() = atoi(p+3);
+                    break; // Skip the rest of the line.
+                }
+                while (*p && *p != '\n' && *p != '\t')
+                    ++p;
+            }
+            if (loci_n_components_.back() == 0) {
+                cerr << "Error: At BAM header line " << line
+                     << ": field \"nc:\", number components of the catalog locus,"
+                     << " is missing or invalid.\n"
+                     << "Error: In file '" << bam_fs_[0]->path << "'\n";
+                throw exception();
+            }
+        }
+        p = strchr(p, '\n');
+        if (p == NULL)
+            break;
+        ++p;
+        ++line;
+    }
+    if(loci_n_components_.size() != bam_fs_[0]->h().n_ref_chroms())
+        DOES_NOT_HAPPEN;
+
+    //
     // Load genomic alignment information from the header.
     // If the first locus has alignment information: this is a ref-based analysis,
     // record all the alignment positions. Otherwise, assume it's a de novo analysis.
     //
-    const char* p = bam_fs_[0]->h().text();
-    size_t line = 1;
+    p = bam_fs_[0]->h().text();
+    line = 1;
     while (true) {
         if (strncmp(p, "@SQ\t", 4) == 0) {
             loci_aln_positions_.push_back(NULL);

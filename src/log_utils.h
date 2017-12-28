@@ -51,7 +51,8 @@ class ProgressMeter {
 
 public:
     ProgressMeter(ostream& os, bool pct, size_t n_operations);
-    ProgressMeter& operator++();
+    ProgressMeter& operator+=(size_t n);
+    ProgressMeter& operator++() {return operator+=(1);}
     void done();
 };
 
