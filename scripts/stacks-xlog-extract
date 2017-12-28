@@ -1,0 +1,25 @@
+#!/bin/bash
+
+usage="\
+Usage:
+  $(basename "$0") XLOG_FILE
+  $(basename "$0") XLOG_FILE SECTION_NAME
+
+(1) Prints available sections for XLOG_FILE.
+(2) Extracts section SECTION_NAME from XLOG_FILE.
+"
+
+if { [[ $# -ne 1 ]] && [[ $# -ne 2 ]]; } || [[ "$1" =~ ^(-h|--help|--version)$ ]] ;then
+    echo -n "$usage" >&2
+    exit 1
+fi
+
+xlog="$1"
+[[ -e "$xlog" ]] || { ls -- "$xlog"; exit 1; }
+
+if [[ "$2" ]] ;then
+    section="$(echo "$2" | grep -oE '\w+' | tr -d '\n')"
+    sed -n "/^END $section\\b/ q; /^BEGIN $section\\b/,$ p" "$xlog" | sed 1d
+else
+    grep ^BEGIN "$xlog" | cut -c7-
+fi
