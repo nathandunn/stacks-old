@@ -108,7 +108,7 @@ int main (int argc, char* argv[]) {
     IF_NDEBUG_TRY
 
 #ifndef HAVE_LIBZ
-    cerr << "Stacks was compiled without zlib, and will refuse to parse compressed files.\n";
+    cout << "Stacks was compiled without zlib, and will refuse to parse compressed files.\n";
 #endif
 
     //
@@ -129,7 +129,7 @@ int main (int argc, char* argv[]) {
     LogAlterator *logger = new LogAlterator(out_path + out_prefix + ".log", quiet, argc, argv);
     logger->open_xlog();
 
-    output_parameters(cerr);
+    output_parameters(cout);
 
     //
     // Set the number of OpenMP parallel threads to execute.
@@ -142,12 +142,12 @@ int main (int argc, char* argv[]) {
     // Read the population map file, if any.
     //
     if (!pmap_path.empty()) {
-        cerr << "Parsing population map...\n";
+        cout << "Parsing population map...\n";
         mpopi.init_popmap(pmap_path);
-        cerr << "The population map contained " << mpopi.samples().size() << " samples, "
+        cout << "The population map contained " << mpopi.samples().size() << " samples, "
              << mpopi.pops().size() << " population(s), " << mpopi.groups().size() << " group(s).\n";
     } else {
-        cerr << "A population map was not specified, all samples will be read from '"
+        cout << "A population map was not specified, all samples will be read from '"
              << in_path << "' as a single popultaion.\n";
     }
 
@@ -164,7 +164,7 @@ int main (int argc, char* argv[]) {
     mpopi.status();
 
     if (size_t(population_limit) > mpopi.pops().size()) {
-        cerr << "Notice: Population limit (" << population_limit << ")"
+        cout << "Notice: Population limit (" << population_limit << ")"
              << " larger than number of popualtions present, adjusting parameter to "
              << mpopi.pops().size() << "\n";
         population_limit = mpopi.pops().size();
@@ -216,7 +216,7 @@ int main (int argc, char* argv[]) {
     SumStatsSummary sumstats(mpopi.pops().size());
 
     const LocusFilter &filter = bloc.filter();
-    cerr << "\nProcessing data in batches;\n";
+    cout << "\nProcessing data in batches;\n";
     int loc_cnt = 0;
 
     Timer timer;
@@ -229,19 +229,19 @@ int main (int argc, char* argv[]) {
         // - Filter the loci according to command line parameters (-r, -p, --maf, --write_single_snp, etc.)
         // - Sort the loci by basepair if they are ordered.
         //
-        cerr << "  ";
+        cout << "  ";
         #ifdef DEBUG
         timer.stop();
-        cerr << "(" << (size_t) timer.elapsed() << "s) ";
+        cout << "(" << (size_t) timer.elapsed() << "s) ";
         timer.restart();
         #endif
-        cerr << "Begin batch " << bloc.next_batch_number() << "...";
+        cout << "Begin batch " << bloc.next_batch_number() << "...";
         loc_cnt  = bloc.next_batch(logger->x);
 
-        cerr << "analyzed " << filter.batch_total() << " loci";
+        cout << "analyzed " << filter.batch_total() << " loci";
         if (loci_ordered && bloc.loci().size() > 0)
-            cerr <<  " from " << bloc.loci().front()->cloc->loc.chr();
-        cerr << "; filtered " << filter.batch_filtered() << " loci; " << filter.batch_seen() << " loci seen.\n";
+            cout <<  " from " << bloc.loci().front()->cloc->loc.chr();
+        cout << "; filtered " << filter.batch_filtered() << " loci; " << filter.batch_seen() << " loci seen.\n";
 
         if (loc_cnt == 0 && filter.batch_seen() == 0) break;
 
@@ -262,26 +262,26 @@ int main (int argc, char* argv[]) {
         // Calculate and report the extent of overlap between different RAD loci.
         //
         if (loci_ordered)
-            cerr << "    " << bloc.report_locus_overlap( (verbose ? &logger->x : NULL) ) << "\n";
+            cout << "    " << bloc.report_locus_overlap( (verbose ? &logger->x : NULL) ) << "\n";
 
         //
         // Calculate divergence statistics (Fst), if requested.
         //
         if (calc_fstats) {
-            cerr << "    Calculating F statistics...";
+            cout << "    Calculating F statistics...";
             ldiv->snp_divergence(bloc.loci());
             ldiv->haplotype_divergence_pairwise(bloc.loci());
             ldiv->haplotype_divergence(bloc.loci());
-            cerr << "done.\n";
+            cout << "done.\n";
         }
 
         //
         // Smooth population statistics across individual populations, and between populations.
         //
         if ( (smooth_fstats || smooth_popstats) && loci_ordered == false) {
-            cerr << "    Notice: Smoothing was requested (-k), but will not be performed as the loci are not ordered.\n";
+            cout << "    Notice: Smoothing was requested (-k), but will not be performed as the loci are not ordered.\n";
         } else if (smooth_fstats || smooth_popstats) {
-            cerr << "    Generating kernel-smoothed population statistics...";
+            cout << "    Generating kernel-smoothed population statistics...";
             if (smooth_popstats) {
                 smooth->snpstats(bloc.loci(), logger->x);
                 smooth->hapstats(bloc.loci(), logger->x);
@@ -290,7 +290,7 @@ int main (int argc, char* argv[]) {
                 smooth->snp_divergence(bloc.loci(), ldiv->snp_values(), logger->x);
                 smooth->hap_divergence(bloc.loci(), ldiv->haplotype_values(), ldiv->metapop_haplotype_values(), logger->x);
             }
-            cerr << "done.\n";
+            cout << "done.\n";
         }
 
         if (calc_fstats) {
@@ -302,16 +302,16 @@ int main (int argc, char* argv[]) {
     } while (loc_cnt > 0 || filter.batch_seen() > 0);
     #ifdef DEBUG
     timer.stop();
-    cerr << "(" << (size_t) timer.elapsed() << "s)\n";
+    cout << "(" << (size_t) timer.elapsed() << "s)\n";
     timer.restart();
     #endif
 
     //
     // Report what we read from the input files.
     //
-    bloc.summarize(cerr);
+    bloc.summarize(cout);
 
-    cerr << "\n"
+    cout << "\n"
          << "Removed " << filter.filtered() << " loci that did not pass sample/population constraints from " << filter.seen() << " loci.\n"
          << "Kept " << filter.total() << " loci, composed of " << filter.total_sites() << " sites; "
          << filter.filtered_sites() << " of those sites were filtered, " << filter.variant_sites() << " variant sites remained.\n";
@@ -349,7 +349,7 @@ int main (int argc, char* argv[]) {
         delete exports[i];
     }
 
-    cerr << "Populations is done.\n";
+    cout << "Populations is done.\n";
 
     delete logger;
 
@@ -367,11 +367,11 @@ BatchLocusProcessor::init(string in_path, string pmap_path)
     int cnt;
     if (bl_file.length() > 0) {
         cnt = this->_loc_filter.load_blacklist(bl_file);
-        cerr << "Loaded " << cnt << " blacklisted markers.\n";
+        cout << "Loaded " << cnt << " blacklisted markers.\n";
     }
     if (wl_file.length() > 0) {
         cnt = this->_loc_filter.load_whitelist(wl_file);
-        cerr << "Loaded " << cnt << " whitelisted markers.\n";
+        cout << "Loaded " << cnt << " whitelisted markers.\n";
         this->_user_supplied_whitelist = true;
     }
 
@@ -419,7 +419,7 @@ BatchLocusProcessor::init_stacks_loci(string in_path, string pmap_path)
 
     // Create the population map or check that all samples have data.
     if (pmap_path.empty()) {
-        cerr << "No population map specified, using all samples...\n";
+        cout << "No population map specified, using all samples...\n";
         this->_mpopi->init_names(this->cloc_reader().header().samples());
     } else {
         size_t n_samples_before = this->_mpopi->samples().size();
@@ -559,7 +559,7 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
         // Create the PopSum object and compute the summary statistics for this locus.
         //
         loc->s = new LocPopSum(strlen(loc->cloc->con), *this->_mpopi);
-        loc->s->sum_pops(loc->cloc, (const Datum **) loc->d, *this->_mpopi, verbose, cerr);
+        loc->s->sum_pops(loc->cloc, (const Datum **) loc->d, *this->_mpopi, verbose, cout);
         loc->s->tally_metapop(loc->cloc);
 
         //
@@ -597,7 +597,7 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
         //
         // Regenerate summary statistics after pruning SNPs.
         //
-        loc->s->sum_pops(loc->cloc, (const Datum **) loc->d, (const MetaPopInfo &) *this->_mpopi, verbose, cerr);
+        loc->s->sum_pops(loc->cloc, (const Datum **) loc->d, (const MetaPopInfo &) *this->_mpopi, verbose, cout);
         loc->s->tally_metapop(loc->cloc);
 
         //
@@ -642,7 +642,7 @@ BatchLocusProcessor::init_external_loci(string in_path, string pmap_path)
     //
     // Open the VCF file
     //
-    cerr << "Opening the VCF file...\n";
+    cout << "Opening the VCF file...\n";
     this->_vcf_parser.open(in_path);
 
     if (this->_vcf_parser.header().samples().empty()) {
@@ -652,7 +652,7 @@ BatchLocusProcessor::init_external_loci(string in_path, string pmap_path)
 
     // Reconsider the MetaPopInfo in light of the VCF header.
     if (pmap_path.empty()) {
-        cerr << "No population map specified, creating one from the VCF header...\n";
+        cout << "No population map specified, creating one from the VCF header...\n";
         this->_mpopi->init_names(this->_vcf_parser.header().samples());
 
     } else {
@@ -763,7 +763,7 @@ BatchLocusProcessor::next_batch_external_loci(ostream &log_fh)
         // Create the PopSum object and compute the summary statistics for this locus.
         //
         loc->s = new LocPopSum(strlen(loc->cloc->con), (const MetaPopInfo &) *this->_mpopi);
-        loc->s->sum_pops(loc->cloc, (const Datum **) loc->d, (const MetaPopInfo &) *this->_mpopi, verbose, cerr);
+        loc->s->sum_pops(loc->cloc, (const Datum **) loc->d, (const MetaPopInfo &) *this->_mpopi, verbose, cout);
         loc->s->tally_metapop(loc->cloc);
 
         //
@@ -791,7 +791,7 @@ BatchLocusProcessor::next_batch_external_loci(ostream &log_fh)
         //
         // Regenerate summary statistics after pruning SNPs.
         //
-        loc->s->sum_pops(loc->cloc, (const Datum **) loc->d, (const MetaPopInfo &) *this->_mpopi, verbose, cerr);
+        loc->s->sum_pops(loc->cloc, (const Datum **) loc->d, (const MetaPopInfo &) *this->_mpopi, verbose, cout);
         loc->s->tally_metapop(loc->cloc);
 
         //
@@ -1674,7 +1674,7 @@ merge_shared_cutsite_loci(map<int, CSLocus *> &catalog,
     set<int> loci_to_destroy;
     map<int, int> missing_samps_dist;
 
-    cerr << "To merge adjacent loci at least " << merge_prune_lim * 100 << "% of samples must have both adjacent loci;"
+    cout << "To merge adjacent loci at least " << merge_prune_lim * 100 << "% of samples must have both adjacent loci;"
          << " the remaining " << 100 - (merge_prune_lim * 100) << "% of individuals will be pruned.\n"
          << "Attempting to merge adjacent loci that share a cutsite...";
 
@@ -1803,7 +1803,7 @@ merge_shared_cutsite_loci(map<int, CSLocus *> &catalog,
     pmap->prune(loci_to_destroy);
     reduce_catalog(catalog, emptyset, loci_to_destroy);
 
-    cerr << "done.\n"
+    cout << "done.\n"
          << "Of " << tot_loci << " loci, "
          << overlap << " pairs share a cutsite; "
          << success << " pairs were merged; "
@@ -1899,7 +1899,7 @@ merge_and_phase_loci(PopMap<CSLocus> *pmap, CSLocus *cur, CSLocus *next,
                         break;
                     }
                     phased_haplotypes.insert(merged_hap);
-                    // cerr << "Phasing: '" << d_1[i]->obshap[j] << "' + '" << d_2[i]->obshap[k] << "' => '" << merged_hap << "'\n";
+                    // cout << "Phasing: '" << d_1[i]->obshap[j] << "' + '" << d_2[i]->obshap[k] << "' => '" << merged_hap << "'\n";
                 }
             }
             phased_sample_cnt++;
@@ -1919,7 +1919,7 @@ merge_and_phase_loci(PopMap<CSLocus> *pmap, CSLocus *cur, CSLocus *next,
         if (d_1[i] == NULL || d_2[i] == NULL)
             continue;
         else if (d_1[i]->obshap.size() > 1 && d_2[i]->obshap.size() > 1) {
-            // cerr << "Attempting to phase individual " << i << ": " << d_1[i]->id << " / " << d_2[i]->id << "\n";
+            // cout << "Attempting to phase individual " << i << ": " << d_1[i]->id << " / " << d_2[i]->id << "\n";
 
             sample_cnt++;
             //
@@ -1931,15 +1931,15 @@ merge_and_phase_loci(PopMap<CSLocus> *pmap, CSLocus *cur, CSLocus *next,
             uint phased_cnt = 0;
             for (uint j = 0; j < d_1[i]->obshap.size(); j++) {
                 for (uint k = 0; k < d_2[i]->obshap.size(); k++) {
-                    // cerr << "  " << d_1[i]->obshap[j] << " + " << d_2[i]->obshap[k];
+                    // cout << "  " << d_1[i]->obshap[j] << " + " << d_2[i]->obshap[k];
                     //
                     // Record each pair of haplotypes that has been seen phased previously.
                     //
                     if (phased_haplotypes.count(string(d_1[i]->obshap[j]) + string(d_2[i]->obshap[k]))) {
                         seen_phased.push_back(make_pair(d_1[i]->obshap[j], d_2[i]->obshap[k]));
-                        // cerr << " => " << d_1[i]->obshap[j] << d_2[i]->obshap[k];
+                        // cout << " => " << d_1[i]->obshap[j] << d_2[i]->obshap[k];
                     }
-                    // cerr << "\n";
+                    // cout << "\n";
                 }
             }
             //
@@ -1973,7 +1973,7 @@ merge_and_phase_loci(PopMap<CSLocus> *pmap, CSLocus *cur, CSLocus *next,
                     d_2[i]->obshap[0] : d_2[i]->obshap[1];
                 phased_haplotypes.insert(string(h_1) + string(h_2));
                 phased_cnt++;
-                // cerr << "  Phasing: '" << hap_1 << "' + '" << hap_2 << "' => '" << string(hap_1) + string(hap_2) << "'\n";
+                // cout << "  Phasing: '" << hap_1 << "' + '" << hap_2 << "' => '" << string(hap_1) + string(hap_2) << "'\n";
             }
 
             if (phased_cnt == 0) {
@@ -1998,7 +1998,7 @@ merge_and_phase_loci(PopMap<CSLocus> *pmap, CSLocus *cur, CSLocus *next,
         else if (phased_results.count(multimapping_fail) > 0)
             return multimapping_fail;
         else {
-            cerr << "WE SHOULD NOT GET HERE\n";
+            cout << "WE SHOULD NOT GET HERE\n";
             return merge_failure;
         }
     }
@@ -2098,17 +2098,17 @@ merge_csloci(CSLocus *sink, CSLocus *src, set<string> &phased_haplotypes)
     for (it = phased_haplotypes.begin(); it != phased_haplotypes.end(); it++)
         sink->alleles[*it] = 0;
 
-    // cerr << "CSLocus " << sink->id << ":\n"
+    // cout << "CSLocus " << sink->id << ":\n"
     //   << "Length: " << sink->len << "; Chr: " << sink->loc.chr << "; BP: " << sink->sort_bp() << "; strand: " << (sink->loc.strand == strand_plus ? "+" : "-") << "\n"
     //   << "  SNPs:\n";
     // for (uint j = 0; j < sink->snps.size(); j++)
-    //  cerr << "    Col: " << sink->snps[j]->col
+    //  cout << "    Col: " << sink->snps[j]->col
     //       << "    Rank 1: " << sink->snps[j]->rank_1
     //       << "    Rank 2: " << sink->snps[j]->rank_2 << "\n";
-    // cerr << "  Alleles:\n";
+    // cout << "  Alleles:\n";
     // map<string, int>::iterator ait;
     // for (ait = sink->alleles.begin(); ait != sink->alleles.end(); ait++)
-    //  cerr << "    " << ait->first << "\n";
+    //  cout << "    " << ait->first << "\n";
 
     return 1;
 }*/
@@ -2135,7 +2135,7 @@ merge_datums(int sample_cnt,
         if (sink[i] == NULL && src[i] == NULL)
             continue;
         else if (sink[i] == NULL || src[i] == NULL)
-            cerr << "Unexpected condition in merging datums: one datum is NULL while the other is not.\n";
+            cout << "Unexpected condition in merging datums: one datum is NULL while the other is not.\n";
 
         //
         // 1. Reverse complement the observed haplotypes in the sink locus.
@@ -2300,7 +2300,7 @@ create_genotype_map(CSLocus *locus, Datum **d, int sample_cnt)
     // and 'GT' == 'b'. If an individual is homozygous for 'AC', they will be
     // assigned an 'aa' genotype.
     //
-    //cerr << "Creating genotype map for catalog ID " << locus->id  << ", marker: " << locus->marker << ".\n";
+    //cout << "Creating genotype map for catalog ID " << locus->id  << ", marker: " << locus->marker << ".\n";
 
     char gtypes[26] ={'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j',
                       'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
@@ -2331,7 +2331,7 @@ create_genotype_map(CSLocus *locus, Datum **d, int sample_cnt)
 
     for (uint n = 0, index = 0; n < sorted_haplotypes.size() && index <= 26; n++, index++) {
         locus->gmap[sorted_haplotypes[n].first] = gtypes[index];
-        //cerr << "GMAP: " << sorted_haplotypes[n].first << " == " << gtypes[index] << "\n";
+        //cout << "GMAP: " << sorted_haplotypes[n].first << " == " << gtypes[index] << "\n";
     }
 
     return 0;
@@ -2350,7 +2350,7 @@ call_population_genotypes(CSLocus *locus, Datum **d, int sample_cnt)
         vector<string> gtypes;
         string gtype;
 
-        //cerr << "Sample Id: " << pmap->rev_sample_index(i) << "\n";
+        //cout << "Sample Id: " << pmap->rev_sample_index(i) << "\n";
 
         for (uint j = 0; j < d[i]->obshap.size(); j++) {
             //
@@ -2363,14 +2363,14 @@ call_population_genotypes(CSLocus *locus, Datum **d, int sample_cnt)
             }
 
             gtypes.push_back(locus->gmap[d[i]->obshap[j]]);
-            //cerr << "  Observed Haplotype: " << d[i]->obshap[j] << ", Genotype: " << locus->gmap[d[i]->obshap[j]] << "\n";
+            //cout << "  Observed Haplotype: " << d[i]->obshap[j] << ", Genotype: " << locus->gmap[d[i]->obshap[j]] << "\n";
         }
 
     impossible:
         sort(gtypes.begin(), gtypes.end());
         for (uint j = 0; j < gtypes.size(); j++) {
             gtype += gtypes[j];
-            //cerr << "  Adding genotype to string: " << gtypes[j] << "; " << gtype << "\n";
+            //cout << "  Adding genotype to string: " << gtypes[j] << "; " << gtype << "\n";
         }
 
         string m = gtype.length() == 1 ?
@@ -2382,7 +2382,7 @@ call_population_genotypes(CSLocus *locus, Datum **d, int sample_cnt)
         if (m != "-")
             locus->gcnt++;
 
-        //cerr << "Assigning datum, marker: " << locus->marker << ", string: " << m << ", haplotype: " << d[i]->obshap[0] << ", gtype: " << gtype << "\n";
+        //cout << "Assigning datum, marker: " << locus->marker << ", string: " << m << ", haplotype: " << d[i]->obshap[0] << ", gtype: " << gtype << "\n";
      }
 
     return 0;
@@ -2759,7 +2759,7 @@ SumStatsSummary::write_results()
     // Write out locus length and overlap statistics for de novo data.
     //
     if (loci_ordered == false)
-        cerr << "\n"
+        cout << "\n"
              << "Number of loci with PE contig: " << this->_locus_pe_ctg_n << " ("
              << setprecision(3)
              << this->_locus_pe_ctg_n / this->_locus_n * 100 << "%);\n"
@@ -2773,7 +2773,7 @@ SumStatsSummary::write_results()
              << "  Mean length of overlapping loci: " << this->_locus_len_mean << "bp "
              << "(stderr " << sqrt(this->_locus_len_var) / sqrt(this->_locus_n) << "); "
              << "mean overlap: " << this->_overlap_mean << "bp (stderr " << sqrt(this->_overlap_var) / sqrt(this->_locus_n) << ");\n";
-    cerr << setprecision(7)
+    cout << setprecision(7)
          << "Mean genotyped sites per locus: " << this->_locus_gt_sites_mean << "bp "
          << "(stderr " << sqrt(this->_locus_gt_sites_var) / sqrt(this->_locus_n) << ").\n";
 
@@ -2836,10 +2836,10 @@ SumStatsSummary::write_results()
            << _fis_var[j]             << "\t"
            << sqrt(_num_indv_var[j])  / _sq_n[j] << "\n";
 
-    cerr << "\nPopulation summary statistics (more detail in populations.sumstats_summary.tsv):\n";
+    cout << "\nPopulation summary statistics (more detail in populations.sumstats_summary.tsv):\n";
 
     for (uint j = 0; j < this->_pop_cnt; j++)
-        cerr << "  " << mpopi.pops()[j].name << ": "
+        cout << "  " << mpopi.pops()[j].name << ": "
              << setprecision(fieldw) << _num_indv_mean[j] << " samples per locus; "
              << "pi: " << _pi_mean[j] << "; "
              << setprecision(10) << "all/variant/polymorphic sites: " << _n_all[j] << "/" << _n[j] << "/" << _var_sites[j] << "; "
@@ -3114,7 +3114,7 @@ bootstrap_popstats_approximate_dist(vector<double> &fis_samples,
     for (int i = 0; i < max_snp_dist; i++) {
         if (snp_dist[i] == 0.0) continue;
 
-        // cerr << "SNP Dist: " << i << " snps occurred " << snp_dist[i] << "\n";
+        // cout << "SNP Dist: " << i << " snps occurred " << snp_dist[i] << "\n";
         approx_fis_dist[i] = vector<double> ();
         approx_fis_dist[i].reserve(bootstrap_reps);
 
@@ -3132,7 +3132,7 @@ bootstrap_popstats_approximate_dist(vector<double> &fis_samples,
     for (int i = 0; i < max_snp_dist; i++) {
         if (snp_dist[i] == 0.0) continue;
 
-        cerr << "  Generating NULL distribution for " << i << " SNPs...\n";
+        cout << "  Generating NULL distribution for " << i << " SNPs...\n";
 
         // #pragma omp parallel private(poss, pos, index_1, index_2, index_3, dist, sum_fis, sum_pi, weighted_fis, weighted_pi, final_weight_fis, final_weight_pi)
         #pragma omp parallel private(poss, pos, index_3, dist, sum_fis, sum_pi, weighted_fis, weighted_pi, final_weight_fis, final_weight_pi)
@@ -3152,7 +3152,7 @@ bootstrap_popstats_approximate_dist(vector<double> &fis_samples,
             //
             #pragma omp for schedule(dynamic, 1)
             for (int j = 0; j < bootstrap_reps; j++) {
-                // cerr << "    Bootsrap rep " << j << "\n";
+                // cout << "    Bootsrap rep " << j << "\n";
 
                 //
                 // First SNP is always placed at the center of the window.
@@ -3175,7 +3175,7 @@ bootstrap_popstats_approximate_dist(vector<double> &fis_samples,
                 // bs[pos].f       = fis_samples[index_1];
                 // bs[pos].pi      = pi_samples[index_2];
                 bs[pos].alleles = allele_samples[index_3];
-                // cerr << "      Placing SNP at position: " << pos << "; with data from " << index_1 << " filling area from " << start << " to " << end << "\n";
+                // cout << "      Placing SNP at position: " << pos << "; with data from " << index_1 << " filling area from " << start << " to " << end << "\n";
 
                 //
                 // Randomly select the positions and values for each SNP to populate the window
@@ -3201,7 +3201,7 @@ bootstrap_popstats_approximate_dist(vector<double> &fis_samples,
                     // bs[pos].f       = fis_samples[index_1];
                     // bs[pos].pi      = pi_samples[index_2];
                     bs[pos].alleles = allele_samples[index_3];
-                    // cerr << "      Placing SNP at position: " << pos << "; with data from " << index_1 << " filling area from " << start << " to " << end << "\n";
+                    // cout << "      Placing SNP at position: " << pos << "; with data from " << index_1 << " filling area from " << start << " to " << end << "\n";
                 }
 
                 weighted_fis = 0.0;
@@ -3228,7 +3228,7 @@ bootstrap_popstats_approximate_dist(vector<double> &fis_samples,
 
                 fiss.push_back(weighted_fis / sum_fis);
                 pis.push_back(weighted_pi  / sum_pi);
-                // cerr << "      New weighted fis value: " << weighted_fis / sum_fis << "; size: " << fiss.size() << "\n";
+                // cout << "      New weighted fis value: " << weighted_fis / sum_fis << "; size: " << fiss.size() << "\n";
 
                 for (uint n = 0; n < poss.size(); n++) {
                     // bs[poss[n]].f  = 0.0;
@@ -3275,7 +3275,7 @@ bootstrap_fst_approximate_dist(vector<double> &fst_samples,
     for (int i = 0; i < max_snp_dist; i++) {
         if (snp_dist[i] == 0.0) continue;
 
-        // cerr << "SNP Dist: " << i << " snps occurred " << snp_dist[i] << "\n";
+        // cout << "SNP Dist: " << i << " snps occurred " << snp_dist[i] << "\n";
         approx_fst_dist[i] = vector<double> ();
         approx_fst_dist[i].reserve(bootstrap_reps);
     }
@@ -3289,7 +3289,7 @@ bootstrap_fst_approximate_dist(vector<double> &fst_samples,
     for (int i = 0; i < max_snp_dist; i++) {
         if (snp_dist[i] == 0.0) continue;
 
-        cerr << "  Generating NULL distribution for " << i << " SNPs...\n";
+        cout << "  Generating NULL distribution for " << i << " SNPs...\n";
 
         // #pragma omp parallel private(poss, pos, index_1, index_2, dist, sum, weighted_fst, final_weight)
         #pragma omp parallel private(poss, pos, index_2, dist, sum, weighted_fst, final_weight)
@@ -3309,7 +3309,7 @@ bootstrap_fst_approximate_dist(vector<double> &fst_samples,
             //
             #pragma omp for schedule(dynamic, 1)
             for (int j = 0; j < bootstrap_reps; j++) {
-                // cerr << "Bootsrap rep " << j << "\n";
+                // cout << "Bootsrap rep " << j << "\n";
 
                 //
                 // First SNP is always placed at the center of the window.
@@ -3329,7 +3329,7 @@ bootstrap_fst_approximate_dist(vector<double> &fst_samples,
                     index_2 = (int) (allele_samples.size() * (random() / (RAND_MAX + 1.0)));
                     // bs[pos].f       = fst_samples[index_1];
                     // bs[pos].alleles = allele_samples[index_2];
-                    // cerr << "  " << j << ": Placing SNP at position: " << pos << " with data from index " << index_1 << "\n";
+                    // cout << "  " << j << ": Placing SNP at position: " << pos << " with data from index " << index_1 << "\n";
 
                     poss.push_back(pos);
                 }
@@ -3351,7 +3351,7 @@ bootstrap_fst_approximate_dist(vector<double> &fst_samples,
                 }
 
                 fsts.push_back(weighted_fst / sum);
-                // cerr << "    New weighted Fst value: " << weighted_fst / sum << "; size: " << fsts.size() << "\n";
+                // cout << "    New weighted Fst value: " << weighted_fst / sum << "; size: " << fsts.size() << "\n";
 
                 // for (uint n = 0; n < poss.size(); n++)
                 // bs[poss[n]].f = 0.0;
@@ -3395,11 +3395,11 @@ bootstrap_approximate_pval(int snp_cnt, double stat, map<int, vector<double> > &
 
     double res = 1.0 - (pos / (double) dist.size());
 
-    // cerr << "Generated Approx Smoothed Fst Distribution:\n";
+    // cout << "Generated Approx Smoothed Fst Distribution:\n";
     // for (uint n = 0; n < dist.size(); n++)
-    //  cerr << "  n: " << n << "; Fst: " << dist[n] << "\n";
+    //  cout << "  n: " << n << "; Fst: " << dist[n] << "\n";
 
-    // cerr << "Comparing Fst value: " << stat
+    // cout << "Comparing Fst value: " << stat
     //   << " at position " << (up - dist.begin()) << " out of "
     //   << dist.size() << " positions (converted position: " << pos << "); pvalue: " << res << ".\n";
 
@@ -3455,7 +3455,7 @@ LocusFilter::load_blacklist(string path)
     fh.close();
 
     if (this->_blacklist.size() == 0) {
-        cerr << "Unable to load any markers from '" << path << "'\n";
+        cerr << "Error: Unable to load any markers from '" << path << "'\n";
         exit(1);
     }
 
@@ -3509,7 +3509,7 @@ int load_marker_list(string path, set<int> &list) {
     fh.close();
 
     if (list.size() == 0) {
-        cerr << "Unable to load any markers from '" << path << "'\n";
+        cerr << "Error: Unable to load any markers from '" << path << "'\n";
         exit(1);
     }
 
@@ -3559,18 +3559,18 @@ LocusFilter::load_whitelist(string path)
         parse_tsv(line, parts);
 
         if (parts.size() > 2) {
-            cerr << "Too many columns in whitelist " << path << "' at line " << line_num << "\n";
+            cerr << "Error: Too many columns in whitelist " << path << "' at line " << line_num << "\n";
             exit(1);
 
         } else if (parts.size() == 2) {
             int marker = (int) strtol(parts[0].c_str(), &e, 10);
             if (*e != '\0') {
-                cerr << "Unable to parse whitelist, '" << path << "' at line " << line_num << "\n";
+                cerr << "Error: Unable to parse whitelist, '" << path << "' at line " << line_num << "\n";
                 exit(1);
             }
             col = (int) strtol(parts[1].c_str(), &e, 10);
             if (*e != '\0') {
-                cerr << "Unable to parse whitelist, '" << path << "' at line " << line_num << "\n";
+                cerr << "Error: Unable to parse whitelist, '" << path << "' at line " << line_num << "\n";
                 exit(1);
             }
             this->_whitelist[marker].insert(col);
@@ -3578,7 +3578,7 @@ LocusFilter::load_whitelist(string path)
         } else {
             int marker = (int) strtol(parts[0].c_str(), &e, 10);
             if (*e != '\0') {
-                cerr << "Unable to parse whitelist, '" << path << "' at line " << line_num << "\n";
+                cerr << "Error: Unable to parse whitelist, '" << path << "' at line " << line_num << "\n";
                 exit(1);
             }
             this->_whitelist.insert(make_pair(marker, set<int>()));
@@ -3590,7 +3590,7 @@ LocusFilter::load_whitelist(string path)
     fh.close();
 
     if (this->_whitelist.size() == 0) {
-        cerr << "Unable to load any markers from '" << path << "'\n";
+        cerr << "Error: Unable to load any markers from '" << path << "'\n";
         help();
     }
 
@@ -3638,18 +3638,18 @@ int load_marker_column_list(string path, map<int, set<int> > &list) {
         parse_tsv(line, parts);
 
         if (parts.size() > 2) {
-            cerr << "Too many columns in whitelist " << path << "' at line " << line_num << "\n";
+            cerr << "Error: Too many columns in whitelist " << path << "' at line " << line_num << "\n";
             exit(1);
 
         } else if (parts.size() == 2) {
             int marker = (int) strtol(parts[0].c_str(), &e, 10);
             if (*e != '\0') {
-                cerr << "Unable to parse whitelist, '" << path << "' at line " << line_num << "\n";
+                cerr << "Error: Unable to parse whitelist, '" << path << "' at line " << line_num << "\n";
                 exit(1);
             }
             col = (int) strtol(parts[1].c_str(), &e, 10);
             if (*e != '\0') {
-                cerr << "Unable to parse whitelist, '" << path << "' at line " << line_num << "\n";
+                cerr << "Error: Unable to parse whitelist, '" << path << "' at line " << line_num << "\n";
                 exit(1);
             }
             list[marker].insert(col);
@@ -3657,7 +3657,7 @@ int load_marker_column_list(string path, map<int, set<int> > &list) {
         } else {
             int marker = (int) strtol(parts[0].c_str(), &e, 10);
             if (*e != '\0') {
-                cerr << "Unable to parse whitelist, '" << path << "' at line " << line_num << "\n";
+                cerr << "Error: Unable to parse whitelist, '" << path << "' at line " << line_num << "\n";
                 exit(1);
             }
             list.insert(make_pair(marker, set<int>()));
@@ -3669,7 +3669,7 @@ int load_marker_column_list(string path, map<int, set<int> > &list) {
     fh.close();
 
     if (list.size() == 0) {
-        cerr << "Unable to load any markers from '" << path << "'\n";
+        cerr << "Error: Unable to load any markers from '" << path << "'\n";
         help();
     }
 
@@ -3845,7 +3845,7 @@ parse_command_line(int argc, char* argv[])
                 merge_prune_lim = merge_prune_lim / 100;
 
             if (merge_prune_lim < 0 || merge_prune_lim > 1.0) {
-                cerr << "Unable to parse the merge sites pruning limit.\n";
+                cerr << "Error: Unable to parse the merge sites pruning limit.\n";
                 help();
             }
             break;
@@ -3855,7 +3855,7 @@ parse_command_line(int argc, char* argv[])
                 max_obs_het = max_obs_het / 100;
 
             if (max_obs_het < 0 || max_obs_het > 1.0) {
-                cerr << "Unable to parse the maximum observed heterozygosity.\n";
+                cerr << "Error: Unable to parse the maximum observed heterozygosity.\n";
                 help();
             }
             break;
@@ -3865,7 +3865,7 @@ parse_command_line(int argc, char* argv[])
                 sample_limit = sample_limit / 100;
 
             if (sample_limit > 1.0) {
-                cerr << "Unable to parse the sample limit frequency\n";
+                cerr << "Error: Unable to parse the sample limit frequency\n";
                 help();
             }
             break;
@@ -3915,7 +3915,7 @@ parse_command_line(int argc, char* argv[])
             else if (strcasecmp(optarg, "approx") == 0)
                 bootstrap_type = bs_approx;
             else {
-                cerr << "Unknown bootstrap type specified '" << optarg << "'\n";
+                cerr << "Error: Unknown bootstrap type specified '" << optarg << "'\n";
                 help();
             }
             break;
@@ -4013,7 +4013,7 @@ parse_command_line(int argc, char* argv[])
                 minor_allele_freq = minor_allele_freq / 100;
 
             if (minor_allele_freq < 0 || minor_allele_freq > 0.5) {
-                cerr << "Unable to parse the minor allele frequency.\n";
+                cerr << "Error: Unable to parse the minor allele frequency.\n";
                 help();
             }
             break;
@@ -4025,7 +4025,7 @@ parse_command_line(int argc, char* argv[])
             else if (strcasecmp(optarg, "bonferroni_gen") == 0)
                 fst_correction = bonferroni_gen;
             else {
-                cerr << "Unknown Fst correction specified '" << optarg << "'\n";
+                cerr << "Error: Unknown Fst correction specified '" << optarg << "'\n";
                 help();
             }
             break;
@@ -4036,7 +4036,7 @@ parse_command_line(int argc, char* argv[])
             enz = optarg;
             enz.at(0) = tolower(enz.at(0));
             if (renz.count(enz) == 0) {
-                cerr << "Unrecognized restriction enzyme specified: '" << enz.c_str() << "'.\n";
+                cerr << "Error: Unrecognized restriction enzyme specified: '" << enz.c_str() << "'.\n";
                 help();
             }
             break;
@@ -4056,21 +4056,21 @@ parse_command_line(int argc, char* argv[])
                 if (known_debug_flags.count(s)) {
                     debug_flags.insert(s);
                 } else {
-                    cerr << "DEBUG> Error: Unknown error flag '" << s << "'.\n";
+                    cerr << "DEBUG: Error: Unknown error flag '" << s << "'.\n";
                     return -1;
                 }
             }
-            cerr << "DEBUG> Debug flag(s) : '" << optarg << "'.\n";
+            cout << "DEBUG: Debug flag(s) : '" << optarg << "'.\n";
 
             if (debug_flags.count("VCFCOMP") && not write_random_snp) {
                 write_single_snp = true;
-                cerr << "DEBUG> Added --write_single_snp.\n";
+                cout << "DEBUG: Added --write_single_snp.\n";
             }
 
             break;
         }
         default:
-            cerr << "Unknown command line option: '" << (char) c << "'\n";
+            cerr << "Error: Unknown command line option: '" << (char) c << "'\n";
             help();
             abort();
         }
@@ -4127,12 +4127,12 @@ parse_command_line(int argc, char* argv[])
 
     // Other
     if (write_single_snp && write_random_snp) {
-        cerr << "Please specify either '--write_single_snp' or '--write_random_snp', not both.\n";
+        cerr << "Error: Please specify either '--write_single_snp' or '--write_random_snp', not both.\n";
         help();
     }
 
     if (merge_sites == true && enz.length() == 0) {
-        cerr << "You must specify the restriction enzyme associated with this data set to merge overlaping cutsites.\n";
+        cerr << "Error: You must specify the restriction enzyme associated with this data set to merge overlaping cutsites.\n";
         help();
     }
 
@@ -4150,11 +4150,11 @@ parse_command_line(int argc, char* argv[])
 }
 
 void version() {
-    cerr << "populations " << VERSION << "\n\n";
+    cout << "populations " << VERSION << "\n\n";
 }
 
 void help() {
-    cerr << "populations " << VERSION << "\n"
+    cout << "populations " << VERSION << "\n"
          << "Usage:\n"
          << "populations -P dir [-O dir] [-M popmap] (filters) [--fstats] [-k [--sigma=150000] [--bootstrap [-N 100]]] (output formats)\n"
          << "populations -V vcf -O dir [-M popmap] (filters) [--fstats] [-k [--sigma=150000] [--bootstrap [-N 100]]] (output formats)\n"

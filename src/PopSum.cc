@@ -128,7 +128,7 @@ LocPopSum::tally_fixed_pos(const CSLocus *cloc, const Datum **d, LocSum *s,
         // position as hEterozygous or hOmozygous.
         //
         if (d[i]->model[pos] == 'E') {
-            cerr << "Model: " << d[i]->model << "\n";
+            cout << "Model: " << d[i]->model << "\n";
             cerr << "Warning: heterozygous model call at fixed nucleotide position: "
                  << "locus " << cloc->id << " individual " << d[i]->id << "; position: " << pos << "\n";
         }
@@ -170,7 +170,7 @@ LocPopSum::tally_heterozygous_pos(const CSLocus *cloc, const Datum **d, LocSum *
     char nuc;
 
     s->nucs[pos].reset();
-    //cerr << "  Calculating summary stats at het locus " << cloc->id << " position " << pos << "; snp_index: " << snp_index << "\n";
+    //cout << "  Calculating summary stats at het locus " << cloc->id << " position " << pos << "; snp_index: " << snp_index << "\n";
 
     //
     // Iterate over each individual in this sub-population.
@@ -259,7 +259,7 @@ LocPopSum::tally_heterozygous_pos(const CSLocus *cloc, const Datum **d, LocSum *
         }
         i++;
     }
-    //cerr << "  P Allele: " << p_allele << "; Q Allele: " << q_allele << "\n";
+    //cout << "  P Allele: " << p_allele << "; Q Allele: " << q_allele << "\n";
 
     //
     // Calculate observed genotype frequencies.
@@ -288,7 +288,7 @@ LocPopSum::tally_heterozygous_pos(const CSLocus *cloc, const Datum **d, LocSum *
         else if (d[i]->obshap[0][snp_index] == q_allele)
             obs_q++;
     }
-    //cerr << "  Num Individuals: " << num_indv << "; Obs Hets: " << obs_het << "; Obs P: " << obs_p << "; Obs Q: " << obs_q << "\n";
+    //cout << "  Num Individuals: " << num_indv << "; Obs Hets: " << obs_het << "; Obs P: " << obs_p << "; Obs Q: " << obs_q << "\n";
 
     if (num_indv == 0) return 0;
 
@@ -313,7 +313,7 @@ LocPopSum::tally_heterozygous_pos(const CSLocus *cloc, const Datum **d, LocSum *
     allele_p = allele_p / tot_alleles;
     allele_q = allele_q / tot_alleles;
 
-    //cerr << "  P allele frequency: " << allele_p << "; Q allele frequency: " << allele_q << "\n";
+    //cout << "  P allele frequency: " << allele_p << "; Q allele frequency: " << allele_q << "\n";
 
     //
     // Calculate expected genotype frequencies.
@@ -322,13 +322,13 @@ LocPopSum::tally_heterozygous_pos(const CSLocus *cloc, const Datum **d, LocSum *
     // double exp_p   = allele_p * allele_p;     // p^2
     // double exp_q   = allele_q * allele_q;     // q^2
 
-    //cerr << "  Expected Het: " << exp_het << "; Expected P: " << exp_p << "; Expected Q: " << exp_q << "\n";
+    //cout << "  Expected Het: " << exp_het << "; Expected P: " << exp_p << "; Expected Q: " << exp_q << "\n";
 
     obs_het = obs_het / num_indv;
     obs_p   = obs_p   / num_indv;
     obs_q   = obs_q   / num_indv;
 
-    //cerr << "  Obs Hets Freq: " << obs_het << "; Obs P Freq: " << obs_p << "; Obs Q Freq: " << obs_q << "\n";
+    //cout << "  Obs Hets Freq: " << obs_het << "; Obs P Freq: " << obs_p << "; Obs Q Freq: " << obs_q << "\n";
 
     //
     // Record the results in the PopSum object.
@@ -697,11 +697,11 @@ LocPopSum::haplotype_diversity(int start, int end, const Datum **d)
         haplotypes.push_back(hit->first);
         k++;
 
-        // cerr << "  Haplotype '" << hit->first << "' occured " << hit->second  << " times; ";
+        // cout << "  Haplotype '" << hit->first << "' occured " << hit->second  << " times; ";
 
         hit->second = hit->second / n;
 
-        // cerr << " frequency of " << hit->second << "%\n";
+        // cout << " frequency of " << hit->second << "%\n";
     }
     //
     // Initialize a two-dimensional array to hold distances between haplotyes.
@@ -743,7 +743,7 @@ LocPopSum::haplotype_diversity(int start, int end, const Datum **d)
     lstat->stat[1] = hapl_diversity;
     lstat->hap_cnt = haplotypes.size();
 
-    // cerr << "  Population " << pop_id << " has haplotype diversity (pi) of " << s[pop_index]->pi << "\n";
+    // cout << "  Population " << pop_id << " has haplotype diversity (pi) of " << s[pop_index]->pi << "\n";
 
     for (k = 0; k < hap_index.size(); k++)
         delete [] hdists[k];
@@ -786,17 +786,17 @@ nuc_substitution_dist(map<string, int> &hap_index, double **hdists)
     // //
     // // Print the distance matrix.
     // //
-    // cerr << "  ";
+    // cout << "  ";
     // for (hit = loc_hap_index.begin(); hit != loc_hap_index.end(); hit++)
-    //  cerr << "\t" << hit->first;
-    // cerr << "\n";
+    //  cout << "\t" << hit->first;
+    // cout << "\n";
     // for (hit = loc_hap_index.begin(); hit != loc_hap_index.end(); hit++) {
-    //  cerr << "  " << hit->first;
+    //  cout << "  " << hit->first;
     //  for (hit_2 = loc_hap_index.begin(); hit_2 != loc_hap_index.end(); hit_2++)
-    //      cerr << "\t" << hdists[hit->second][hit_2->second];
-    //  cerr << "\n";
+    //      cout << "\t" << hdists[hit->second][hit_2->second];
+    //  cout << "\n";
     // }
-    // cerr << "\n";
+    // cout << "\n";
 
     return 0;
 }
@@ -1060,7 +1060,7 @@ LocusDivergence::Fst(const CSLocus *cloc, const LocPopSum *s, int pop_1, int pop
 
     this->fishers_exact_test(pair, p_1, q_1, p_2, q_2);
 
-    // cerr << "Locus: " << locus << ", pos: " << pos << "\n"
+    // cout << "Locus: " << locus << ", pos: " << pos << "\n"
     //   << "    p_1.nuc: " << s_1->nucs[pos].p_nuc << "; q_1.nuc: " << s_1->nucs[pos].q_nuc
     //   << "; p_2.nuc: " << s_2->nucs[pos].p_nuc << "; q_2.nuc: " << s_2->nucs[pos].q_nuc << "\n"
     //   << "    Total alleles: " << tot_alleles << "; " << " s_1.p: " << s_1->nucs[pos].p
@@ -1171,7 +1171,7 @@ LocusDivergence::fishers_exact_test(PopPair *pair, double p_1, double q_1, doubl
     // sprintf(p2_str, "% 3.0f", p_2);
     // sprintf(q2_str, "% 3.0f", q_2);
     //
-    // cerr
+    // cout
     //  << "     | Allele1 | Allele2 | " << "\n"
     //  << "-----+---------+---------+" << "\n"
     //  << "Pop1 |   " << p1_str << "   |   " << q1_str << "   |" << "\n"
@@ -1516,15 +1516,15 @@ LocusDivergence::haplotype_amova(const Datum **d, const LocSum **s, vector<int> 
     if (grps.size() == 0)
         return NULL;
 
-    // cerr << "Groups: ";
+    // cout << "Groups: ";
     // for (uint i = 0; i < grps.size(); i++)
-    //     cerr << grps[i] << ", ";
-    // cerr << "\n";
+    //     cout << grps[i] << ", ";
+    // cout << "\n";
     // for (git = grp_members.begin(); git != grp_members.end(); git++) {
-    //     cerr << "Group " << git->first << ": ";
+    //     cout << "Group " << git->first << ": ";
     //     for (uint i = 0; i < git->second.size(); i++)
-    //  cerr << git->second[i] << ", ";
-    //     cerr << "\n";
+    //  cout << git->second[i] << ", ";
+    //     cout << "\n";
     // }
 
     //
@@ -1597,7 +1597,7 @@ LocusDivergence::haplotype_amova(const Datum **d, const LocSum **s, vector<int> 
     }
     n = (tot_cnt - s_g) / (double) (valid_pop_cnt - num_grps);
 
-    // cerr << "  n: "<< n << "\n";
+    // cout << "  n: "<< n << "\n";
 
     if (num_grps > 1) {
         //
@@ -1612,7 +1612,7 @@ LocusDivergence::haplotype_amova(const Datum **d, const LocSum **s, vector<int> 
         }
         n_1 = (s_g - a) / (double) (num_grps - 1.0);
 
-        // cerr << "  n': "<< n_1 << "\n";
+        // cout << "  n': "<< n_1 << "\n";
 
         //
         // Calculate n''
@@ -1627,7 +1627,7 @@ LocusDivergence::haplotype_amova(const Datum **d, const LocSum **s, vector<int> 
         }
         n_2 = (tot_cnt - b) / (double) (num_grps - 1);
 
-        // cerr << "  n'': "<< n_2 << "\n";
+        // cout << "  n'': "<< n_2 << "\n";
     }
 
     //
@@ -1660,7 +1660,7 @@ LocusDivergence::haplotype_amova(const Datum **d, const LocSum **s, vector<int> 
         phi_st = sigma_total > 0.0 ? sigma_b / sigma_total : 0.0;
     }
 
-    // cerr << "  MSD(AG): " << msd_ag  << "; MSD(AP/WG): " << msd_ap_wg << "; MSD(WP): " << msd_wp  << "; MSD(TOTAL): "  << msd_total   << "\n"
+    // cout << "  MSD(AG): " << msd_ag  << "; MSD(AP/WG): " << msd_ap_wg << "; MSD(WP): " << msd_wp  << "; MSD(TOTAL): "  << msd_total   << "\n"
     //      << "  Sigma_a: " << sigma_a << "; Sigma_b: "    << sigma_b   << "; Sigma_c: " << sigma_c << "; Sigma_Total: " << sigma_total << "\n"
     //      << "  Phi_st: "  << phi_st  << "; Phi_ct: "     << phi_ct    << "; Phi_sc: "  << phi_sc  << "\n";
 
@@ -1755,7 +1755,7 @@ LocusDivergence::amova_ssd_total(vector<string> &loc_haplotypes, map<string, int
     for (uint j = 0; j < loc_haplotypes.size(); j++) {
         for (uint k = 0; k < loc_haplotypes.size(); k++) {
             ssd_total += hdists[loc_hap_index[loc_haplotypes[j]]][loc_hap_index[loc_haplotypes[k]]];
-            // cerr << j << "\t"
+            // cout << j << "\t"
             //   << k << "\t"
             //   << loc_haplotypes[j] << "\t"
             //   << loc_haplotypes[k] << "\t"
@@ -1763,7 +1763,7 @@ LocusDivergence::amova_ssd_total(vector<string> &loc_haplotypes, map<string, int
         }
     }
     ssd_total = (1.0 / (double) (2*loc_haplotypes.size())) * ssd_total;
-    // cerr << "  ssd_total: "<< ssd_total << "\n";
+    // cout << "  ssd_total: "<< ssd_total << "\n";
 
     return ssd_total;
 }
@@ -1788,7 +1788,7 @@ LocusDivergence::amova_ssd_wp(vector<int> &grps, map<int, vector<int>> &grp_memb
             for (uint j = 0; j < pop_haplotypes[pop_id].size(); j++) {
                 for (uint k = 0; k < pop_haplotypes[pop_id].size(); k++) {
                     ssd += hdists[loc_hap_index[pop_haplotypes[pop_id][j]]][loc_hap_index[pop_haplotypes[pop_id][k]]];
-                    // cerr << pop_id << "\t"
+                    // cout << pop_id << "\t"
                     //   << j << "\t"
                     //   << k << "\t"
                     //   << loc_haplotypes[j] << "\t"
@@ -1801,7 +1801,7 @@ LocusDivergence::amova_ssd_wp(vector<int> &grps, map<int, vector<int>> &grp_memb
                 ssd_wp += (1.0 / (double) (2*pop_haplotypes[pop_id].size())) * ssd;
         }
     }
-    // cerr << "  ssd_wp: "<< ssd_wp << "\n";
+    // cout << "  ssd_wp: "<< ssd_wp << "\n";
 
     return ssd_wp;
 }
@@ -1867,7 +1867,7 @@ LocusDivergence::amova_ssd_ap_wg(vector<int> &grps, map<int, vector<int>> &grp_m
 
         ssd_ap_wg += ssd_1 - ssd_2;
     }
-    // cerr << "  ssd_ap_wg: "<< ssd_ap_wg << "\n";
+    // cout << "  ssd_ap_wg: "<< ssd_ap_wg << "\n";
 
     return ssd_ap_wg;
 }
@@ -1915,7 +1915,7 @@ LocusDivergence::amova_ssd_ag(vector<int> &grps, map<int, vector<int>> &grp_memb
 
     ssd_ag = ssd_total - ssd;
 
-    // cerr << "  ssd_ag: "<< ssd_ag << "\n";
+    // cout << "  ssd_ag: "<< ssd_ag << "\n";
 
     return ssd_ag;
 }
@@ -2187,12 +2187,12 @@ LocusDivergence::write_summary(string path)
 
     fh.close();
 
-    cerr << "\nPopulation pair divergence statistics (more in populations.fst_summary.tsv and populations.phistats_summary.tsv):\n";
+    cout << "\nPopulation pair divergence statistics (more in populations.fst_summary.tsv and populations.phistats_summary.tsv):\n";
     n = 0;
     for (uint i = 0; i < this->_mpopi->pops().size() - 1; i++) {
 
         for (uint j = i + 1; j < this->_mpopi->pops().size(); j++) {
-            cerr << "  " << this->_mpopi->pops()[i].name << "-"
+            cout << "  " << this->_mpopi->pops()[i].name << "-"
                  << this->_mpopi->pops()[j].name
                  << ": mean Fst: "    << this->_mean_fst[n]   / this->_mean_fst_cnt[n]
                  << "; mean Phi_st: " << this->_mean_phist[n] / this->_mean_phist_cnt[n]
@@ -2200,7 +2200,7 @@ LocusDivergence::write_summary(string path)
             n++;
         }
     }
-    cerr << "\n";
+    cout << "\n";
 
     return 0;
 }
