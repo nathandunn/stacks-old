@@ -51,9 +51,9 @@ init_log(ostream &fh, int argc, char **argv)
         fh << argv[i];
         if (i < argc - 1) fh << " ";
     }
-    fh << "\n\n";
-    fh << flush;
+    fh << "\n";
 
+    fh << flush;
     return 0;
 }
 
