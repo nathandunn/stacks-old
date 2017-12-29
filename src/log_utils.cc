@@ -222,4 +222,6 @@ void LogAlterator::open_xlog()
 
     x.open(xlog_path);
     check_open(x, xlog_path);
+
+    x << "# Note: Individual BEGIN...END sections can be extracted using the `stacks-xlog-extract` utility.\n";
 }
