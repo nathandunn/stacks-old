@@ -369,8 +369,7 @@ try {
                << "    " << cs.n_aln_reads << " were successfuly aligned ("
                << as_percentage((double) cs.n_aln_reads / cs.n_tot_reads) << ");\n"
                << "  Mean insert length was " << cs.insert_length_olap_mv.mean() << ", stdev: "
-               << cs.insert_length_olap_mv.sd_p() << " (based on aligned reads in overlapped loci).\n"
-               << "\n";
+               << cs.insert_length_olap_mv.sd_p() << " (based on aligned reads in overlapped loci).\n";
         }
 
     } else if (input_type == GStacksInputT::refbased_popmap || input_type == GStacksInputT::refbased_list) {
@@ -454,9 +453,9 @@ try {
                   << '\t' << elem.second
                   << '\n';
     logger->x << "END phasing_rates_loci\n";
-    // phasing_rate_samples
+    // phasing_rates_samples
     logger->x << "\n"
-              << "BEGIN phasing_rate_samples\n"
+              << "BEGIN phasing_rates_samples\n"
               << "sample\tn_gts\tn_multisnp_hets\tn_phased\tmisphasing_rate\n";
     ostream os (logger->x.rdbuf());
     os << std::fixed << std::setprecision(3);
@@ -471,7 +470,7 @@ try {
            << '\t' << 1.0 - (double) stats.n_phased / stats.n_hets_2snps
            << '\n';
     }
-    logger->x << "END phasing_rate_samples\n";
+    logger->x << "END phasing_rates_samples\n";
 
     // Report clockings.
     {
