@@ -2767,23 +2767,21 @@ SumStatsSummary::write_results()
     //
     // Write out locus length and overlap statistics for de novo data.
     //
-    if (loci_ordered == false)
-        cout << "\n"
-             << "Number of loci with PE contig: " << this->_locus_pe_ctg_n << " ("
-             << setprecision(3)
-             << this->_locus_pe_ctg_n / this->_locus_n * 100 << "%);\n"
-             << setprecision(7)
+    ostream os (cout.rdbuf());
+    os << std::fixed << std::setprecision(2);
+    if (!loci_ordered && this->_locus_pe_ctg_n > 0) {
+        os   << "Number of loci with PE contig: " << this->_locus_pe_ctg_n << " ("
+             << as_percentage(this->_locus_pe_ctg_n, this->_locus_n * 100) << ");\n"
              << "  Mean length of loci: " << this->_locus_len_mean_all << "bp "
              << "(stderr " << sqrt(this->_locus_len_var_all) / sqrt(this->_locus_n) << ");\n"
              << "Number of loci with SE/PE overlap: " << this->_locus_overlap_n << " ("
-             << setprecision(3)
-             << this->_locus_overlap_n / this->_locus_n * 100 << "%);\n"
-             << setprecision(fieldw)
+             << as_percentage(this->_locus_overlap_n, this->_locus_n) << ");\n"
              << "  Mean length of overlapping loci: " << this->_locus_len_mean << "bp "
              << "(stderr " << sqrt(this->_locus_len_var) / sqrt(this->_locus_n) << "); "
-             << "mean overlap: " << this->_overlap_mean << "bp (stderr " << sqrt(this->_overlap_var) / sqrt(this->_locus_n) << ");\n";
-    cout << setprecision(7)
-         << "Mean genotyped sites per locus: " << this->_locus_gt_sites_mean << "bp "
+             << "mean overlap: " << this->_overlap_mean
+             << "bp (stderr " << sqrt(this->_overlap_var) / sqrt(this->_locus_n) << ");\n";
+    }
+    os   << "Mean genotyped sites per locus: " << this->_locus_gt_sites_mean << "bp "
          << "(stderr " << sqrt(this->_locus_gt_sites_var) / sqrt(this->_locus_n) << ").\n";
 
     //
