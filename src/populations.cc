@@ -216,11 +216,12 @@ int main (int argc, char* argv[]) {
     SumStatsSummary sumstats(mpopi.pops().size());
 
     const LocusFilter &filter = bloc.filter();
-    cout << "\nProcessing data in batches... (See in 'populations.distribs' for progress.)\n";
+    cout << "\nProcessing data in batches...\n" << flush;
     int loc_cnt = 0;
 
     Timer timer;
     timer.restart();
+    logger->x << "\nBEGIN batch_progress\n";
     do {
         //
         // Read the next set of loci to process.
@@ -229,21 +230,25 @@ int main (int argc, char* argv[]) {
         // - Filter the loci according to command line parameters (-r, -p, --maf, --write_single_snp, etc.)
         // - Sort the loci by basepair if they are ordered.
         //
-        logger->x << "  ";
+        loc_cnt  = bloc.next_batch(logger->x);
+        if (loc_cnt == 0 && filter.batch_seen() == 0)
+            break;
+
         #ifdef DEBUG
         timer.stop();
-        logger->x << "(" << (size_t) timer.elapsed() << "s) ";
+        cout << "(" << (size_t) timer.elapsed() << "s) ";
         timer.restart();
         #endif
-        logger->x << "Begin batch " << bloc.next_batch_number() << "..." << flush;
-        loc_cnt  = bloc.next_batch(logger->x);
+        if (loci_ordered && bloc.loci().size() > 0)
+            cout << bloc.loci().front()->cloc->loc.chr() << "\n" << flush;
+        else
+            cout << bloc.next_batch_number() << "\n" << flush;
 
+        logger->x << "Begin batch " << bloc.next_batch_number() << "...";
         logger->x << "analyzed " << filter.batch_total() << " loci";
         if (loci_ordered && bloc.loci().size() > 0)
             logger->x <<  " from " << bloc.loci().front()->cloc->loc.chr();
         logger->x << "; filtered " << filter.batch_filtered() << " loci; " << filter.batch_seen() << " loci seen.\n";
-
-        if (loc_cnt == 0 && filter.batch_seen() == 0) break;
 
         sumstats.accumulate(bloc.loci());
 
@@ -300,6 +305,7 @@ int main (int argc, char* argv[]) {
         }
 
     } while (loc_cnt > 0 || filter.batch_seen() > 0);
+    logger->x << "END batch_progress\n";
     #ifdef DEBUG
     timer.stop();
     logger->x << "(" << (size_t) timer.elapsed() << "s)\n";
