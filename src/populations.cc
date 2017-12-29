@@ -2771,7 +2771,7 @@ SumStatsSummary::write_results()
     os << std::fixed << std::setprecision(2);
     if (!loci_ordered && this->_locus_pe_ctg_n > 0) {
         os   << "Number of loci with PE contig: " << this->_locus_pe_ctg_n << " ("
-             << as_percentage(this->_locus_pe_ctg_n, this->_locus_n * 100) << ");\n"
+             << as_percentage(this->_locus_pe_ctg_n, this->_locus_n) << ");\n"
              << "  Mean length of loci: " << this->_locus_len_mean_all << "bp "
              << "(stderr " << sqrt(this->_locus_len_var_all) / sqrt(this->_locus_n) << ");\n"
              << "Number of loci with SE/PE overlap: " << this->_locus_overlap_n << " ("
