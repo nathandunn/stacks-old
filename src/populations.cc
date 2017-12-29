@@ -1489,11 +1489,21 @@ int
 CatalogDists::write_results(ostream &log_fh)
 {
     map<size_t, size_t>::iterator cnt_it;
+    string section;
+    auto begin_section = [&](){
+        log_fh << "\n" << "BEGIN " << section << "\n";
+    };
+    auto end_section = [&](){
+        log_fh << "END " << section << "\n";
+    };
 
+    section = "samples_per_loc_prefilters";
+    begin_section();
     log_fh << "# Distribution of valid samples matched to a catalog locus prior to filtering.\n"
-           << "# Valid samples at locus\tCount\n";
+           << "n_samples\tn_loci\n";
     for (cnt_it = this->_pre_valid.begin(); cnt_it != this->_pre_valid.end(); cnt_it++)
         log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
+    end_section();
 
     log_fh << "\n# Distribution of confounded samples for each catalog locus prior to filtering.\n"
            << "# Confounded samples at locus\tCount\n";
@@ -1505,16 +1515,21 @@ CatalogDists::write_results(ostream &log_fh)
     for (cnt_it = this->_pre_absent.begin(); cnt_it != this->_pre_absent.end(); cnt_it++)
         log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
 
-    log_fh << "\n# Distribution of the number of SNPs per catalog locus prior to filtering.\n"
-           << "# Number SNPs\tNumber loci\n";
+    section = "snps_per_loc_prefilters";
+    begin_section();
+    log_fh << "# Distribution of the number of SNPs per catalog locus prior to filtering.\n"
+           << "n_snps\tn_loci\n";
     for (cnt_it = this->_pre_snps_per_loc.begin(); cnt_it != this->_pre_snps_per_loc.end(); cnt_it++)
         log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
-    log_fh << "\n";
+    end_section();
 
+    section = "samples_per_loc_postfilters";
+    begin_section();
     log_fh << "# Distribution of valid samples matched to a catalog locus after filtering.\n"
-           << "# Valid samples at locus\tCount\n";
+           << "n_samples\tn_loci\n";
     for (cnt_it = this->_post_valid.begin(); cnt_it != this->_post_valid.end(); cnt_it++)
         log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
+    end_section();
 
     log_fh << "\n# Distribution of confounded samples for each catalog locus after filtering.\n"
            << "# Confounded samples at locus\tCount\n";
@@ -1526,11 +1541,13 @@ CatalogDists::write_results(ostream &log_fh)
     for (cnt_it = this->_post_absent.begin(); cnt_it != this->_post_absent.end(); cnt_it++)
         log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
 
-    log_fh << "\n# Distribution of the number of SNPs per catalog locus after filtering.\n"
-           << "# Number SNPs\tNumber loci\n";
+    section = "snps_per_loc_postfilters";
+    begin_section();
+    log_fh << "# Distribution of the number of SNPs per catalog locus (after filtering).\n"
+           << "n_snps\tn_loci\n";
     for (cnt_it = this->_post_snps_per_loc.begin(); cnt_it != this->_post_snps_per_loc.end(); cnt_it++)
         log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
-    log_fh << "\n";
+    end_section();
 
     return 0;
 }
