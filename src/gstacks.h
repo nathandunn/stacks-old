@@ -96,10 +96,17 @@ public:
     double mean_n_sites_per_loc() const {return (double) n_sites_tot / n_genotyped_loci;}
 
     // Statistics for --rm-unpaired-reads, --rm-pcr-duplicates.
-    size_t n_unpaired_reads_rm;
-    size_t n_read_pairs_pcr_dupl;
-    size_t n_read_pairs_used;
+    struct PerSampleStats {
+        size_t n_unpaired_reads;
+        size_t n_read_pairs_pcr_dupl;
+        size_t n_read_pairs_used;
+    };
+    vector<PerSampleStats> per_sample_stats;
+    size_t n_unpaired_reads_rm() const {size_t n=0; for(auto& s: per_sample_stats) n+=s.n_unpaired_reads; return n;}
+    size_t n_read_pairs_pcr_dupl() const {size_t n=0; for(auto& s: per_sample_stats) n+=s.n_read_pairs_pcr_dupl; return n;}
+    size_t n_read_pairs_used() const {size_t n=0; for(auto& s: per_sample_stats) n+=s.n_read_pairs_used; return n;}
 
+    GenotypeStats(size_t n_samples) : n_genotyped_loci(0), n_sites_tot(0), per_sample_stats(n_samples, PerSampleStats()) {}
     GenotypeStats& operator+= (const GenotypeStats& other);
 };
 
@@ -208,7 +215,7 @@ struct Timers {
 //
 class LocusProcessor {
 public:
-    LocusProcessor(size_t n_samples) : gt_stats_(), hap_stats_(n_samples), ctg_stats_(), loc_() {}
+    LocusProcessor(size_t n_samples) : gt_stats_(n_samples), hap_stats_(n_samples), ctg_stats_(), loc_() {}
 
     // Process a locus.
     void process(CLocReadSet& loc);
