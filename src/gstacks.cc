@@ -125,8 +125,7 @@ try {
     //
     // Open the log.
     //
-    logger.reset(new LogAlterator(o_prefix + ".log", quiet, argc, argv));
-    logger->open_xlog();
+    logger.reset(new LogAlterator(o_prefix, true, quiet, argc, argv));
     report_options(cout);
     cout << "\n" << flush;
 
