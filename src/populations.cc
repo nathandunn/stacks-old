@@ -104,7 +104,9 @@ void add_export()
         exports.push_back(new E());
 }
 
+
 int main (int argc, char* argv[]) {
+    unique_ptr<LogAlterator> logger;
     IF_NDEBUG_TRY
 
 #ifndef HAVE_LIBZ
@@ -126,9 +128,7 @@ int main (int argc, char* argv[]) {
     //
     // Open and initialize the log file.
     //
-    LogAlterator *logger = new LogAlterator(out_path + out_prefix + ".log", quiet, argc, argv);
-    logger->open_xlog();
-
+    logger.reset(new LogAlterator(out_path + out_prefix, true, quiet, argc, argv));
     output_parameters(cout);
 
     //
@@ -216,7 +216,7 @@ int main (int argc, char* argv[]) {
     SumStatsSummary sumstats(mpopi.pops().size());
 
     const LocusFilter &filter = bloc.filter();
-    cout << "\nProcessing data in batches... (See in 'populations.xlog' for progress.)\n";
+    cout << "\nProcessing data in batches... (See in 'populations.distribs' for progress.)\n";
     int loc_cnt = 0;
 
     Timer timer;
@@ -350,11 +350,7 @@ int main (int argc, char* argv[]) {
     }
 
     cout << "Populations is done.\n";
-
-    delete logger;
-
     return 0;
-
     IF_NDEBUG_CATCH_ALL_EXCEPTIONS
 }
 

@@ -191,37 +191,34 @@ void ProgressMeter::done()
     }
 }
 
-LogAlterator::LogAlterator(const string& log_path, bool quiet, int argc, char** argv)
-    : l(log_path)
+LogAlterator::LogAlterator(const string& prefix, bool distrlog, bool quiet, int argc, char** argv)
+    : l()
     , o(cout.rdbuf())
     , e(cerr.rdbuf())
-    , log_path_(log_path)
+    , x()
     , lo_buf(cout.rdbuf(), l.rdbuf())
     , le_buf(cerr.rdbuf(), l.rdbuf())
 {
+    string log_path = prefix + ".log";
+    string distr_path = prefix + ".distribs";
+
+    l.open(log_path);
     check_open(l, log_path);
     init_log(l, argc, argv);
+    if (distrlog) {
+        x.open(distr_path);
+        check_open(x, distr_path);
+        x << "# Note: Individual distributions can be extracted using the `stacks-dist-extract` utility.\n";
+    }
 
     if (quiet) {
         // Use the fstream buffer only, and not at all stdout and stderr.
         cout.rdbuf(l.rdbuf());
-        cerr.rdbuf(l.rdbuf());
     } else {
-        cout << "Logging to '" << log_path << "'." << endl;
+        cout << "Logging to '" << log_path << "'.\n";
+        if (distrlog)
+            cout << "Distributions will be written to '" << distr_path << "'.\n";
         cout.rdbuf(&lo_buf);
-        cerr.rdbuf(&le_buf);
     }
-}
-
-void LogAlterator::open_xlog()
-{
-    string xlog_path = log_path_;
-    if (xlog_path.length() > 4 && xlog_path.compare(xlog_path.length() - 4, 4, ".log") == 0)
-        xlog_path.resize(xlog_path.length() - 4);
-    xlog_path += ".xlog";
-
-    x.open(xlog_path);
-    check_open(x, xlog_path);
-
-    x << "# Note: Individual BEGIN...END sections can be extracted using the `stacks-xlog-extract` utility.\n";
+    cerr.rdbuf(&le_buf);
 }
