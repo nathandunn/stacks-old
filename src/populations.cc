@@ -217,12 +217,8 @@ int main (int argc, char* argv[]) {
     size_t n_multiloci_sites = 0;
 
     const LocusFilter &filter = bloc.filter();
-    cout << "\nProcessing all data: for each";
-    if (loci_ordered)
-        cout << " chromosome:\n";
-    else
-        cout << " batch of " << batch_size << " acceptable loci:\n";
-    cout << "  * load catalog loci and apply filters\n"
+    cout << "\nProcessing data in batches:\n"
+         << "  * load a batch of catalog loci and apply filters\n"
          << "  * compute SNP- and haplotype-wise per-population statistics\n";
     if (calc_fstats)
         cout << "  * compute F-statistics\n";
@@ -230,8 +226,11 @@ int main (int argc, char* argv[]) {
         cout << "  * smooth per-population statistics\n";
     if (smooth_fstats)
         cout << "  * smooth F-statistics\n";
-    cout << "More details in '" << logger->distribs_path << "'.\n";
-    cout << flush;
+    cout << "  * write the above statistics in the output files\n"
+         << "  * export the genotypes/haplotypes in specified format(s)\n"
+         << "More details in '" << logger->distribs_path << "'.\n"
+         << "Now processing...\n"
+         << flush;
 
     Timer timer;
     logger->x << "\nBEGIN batch_progress\n";
