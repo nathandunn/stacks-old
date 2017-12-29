@@ -104,7 +104,6 @@ void add_export()
         exports.push_back(new E());
 }
 
-
 int main (int argc, char* argv[]) {
     unique_ptr<LogAlterator> logger;
     IF_NDEBUG_TRY
@@ -214,15 +213,29 @@ int main (int argc, char* argv[]) {
     // as the individual loci are read and processed.
     //
     SumStatsSummary sumstats(mpopi.pops().size());
+    size_t n_sites = 0;
+    size_t n_multiloci_sites = 0;
 
     const LocusFilter &filter = bloc.filter();
-    cout << "\nProcessing data in batches...\n" << flush;
-    int loc_cnt = 0;
+    cout << "\nProcessing all data: for each";
+    if (loci_ordered)
+        cout << " chromosome:\n";
+    else
+        cout << " batch of " << batch_size << " acceptable loci:\n";
+    cout << "  * load catalog loci and apply filters\n"
+         << "  * compute SNP- and haplotype-wise per-population statistics\n";
+    if (calc_fstats)
+        cout << "  * compute F-statistics\n";
+    if (smooth_popstats)
+        cout << "  * smooth per-population statistics\n";
+    if (smooth_fstats)
+        cout << "  * smooth F-statistics\n";
+    cout << "More details in '" << logger->distribs_path << "'.\n";
+    cout << flush;
 
     Timer timer;
-    timer.restart();
     logger->x << "\nBEGIN batch_progress\n";
-    do {
+    while (true) {
         //
         // Read the next set of loci to process.
         // - If data are denovo, load blim._batch_size loci.
@@ -230,25 +243,25 @@ int main (int argc, char* argv[]) {
         // - Filter the loci according to command line parameters (-r, -p, --maf, --write_single_snp, etc.)
         // - Sort the loci by basepair if they are ordered.
         //
-        loc_cnt  = bloc.next_batch(logger->x);
+        size_t loc_cnt = bloc.next_batch(logger->x);
         if (loc_cnt == 0 && filter.batch_seen() == 0)
             break;
+        assert(!bloc.loci().empty());
 
         #ifdef DEBUG
-        timer.stop();
         cout << "(" << (size_t) timer.elapsed() << "s) ";
-        timer.restart();
         #endif
-        if (loci_ordered && bloc.loci().size() > 0)
+        if (loci_ordered) {
             cout << bloc.loci().front()->cloc->loc.chr() << "\n" << flush;
-        else
-            cout << bloc.next_batch_number() << "\n" << flush;
-
-        logger->x << "Begin batch " << bloc.next_batch_number() << "...";
-        logger->x << "analyzed " << filter.batch_total() << " loci";
-        if (loci_ordered && bloc.loci().size() > 0)
-            logger->x <<  " from " << bloc.loci().front()->cloc->loc.chr();
-        logger->x << "; filtered " << filter.batch_filtered() << " loci; " << filter.batch_seen() << " loci seen.\n";
+            logger->x << bloc.loci().front()->cloc->loc.chr();
+        } else {
+            cout << "Batch " << bloc.next_batch_number() - 1 << "\n" << flush;
+            logger->x << "Batch " << bloc.next_batch_number() - 1;
+        }
+        logger->x << ": analyzed "
+                  << filter.batch_total() << " loci; filtered "
+                  << filter.batch_filtered() << " loci; "
+                  << filter.batch_seen() << " loci seen.\n";
 
         sumstats.accumulate(bloc.loci());
 
@@ -266,8 +279,16 @@ int main (int argc, char* argv[]) {
         //
         // Calculate and report the extent of overlap between different RAD loci.
         //
-        if (loci_ordered)
-            logger->x << "    " << bloc.report_locus_overlap( (verbose ? &logger->x : NULL) ) << "\n";
+        if (loci_ordered) {
+            size_t chr_n_sites;
+            size_t chr_n_multiloci_sites;
+            bloc.report_locus_overlap(chr_n_sites, chr_n_multiloci_sites, (verbose ? &logger->x : NULL));
+            n_sites += chr_n_sites;
+            n_multiloci_sites += chr_n_multiloci_sites;
+            logger->x << "    " << chr_n_sites << " genomic sites, of which "
+                      << chr_n_multiloci_sites <<  " were covered by multiple loci ("
+                      << as_percentage(chr_n_multiloci_sites, chr_n_sites) << ").\n";
+        }
 
         //
         // Calculate divergence statistics (Fst), if requested.
@@ -303,13 +324,10 @@ int main (int argc, char* argv[]) {
             hdiv_exp->write_batch_pairwise(bloc.loci(), ldiv->haplotype_values(), ldiv->metapop_haplotype_values());
             ldiv->clear(bloc.loci());
         }
-
-    } while (loc_cnt > 0 || filter.batch_seen() > 0);
+    }
     logger->x << "END batch_progress\n";
     #ifdef DEBUG
-    timer.stop();
-    logger->x << "(" << (size_t) timer.elapsed() << "s)\n";
-    timer.restart();
+    cout << "(" << (size_t) timer.elapsed() << "s)\n";
     #endif
 
     //
@@ -321,6 +339,10 @@ int main (int argc, char* argv[]) {
          << "Removed " << filter.filtered() << " loci that did not pass sample/population constraints from " << filter.seen() << " loci.\n"
          << "Kept " << filter.total() << " loci, composed of " << filter.total_sites() << " sites; "
          << filter.filtered_sites() << " of those sites were filtered, " << filter.variant_sites() << " variant sites remained.\n";
+    if (loci_ordered)
+        cout << "    " << n_sites << " genomic sites, of which "
+             << n_multiloci_sites <<  " were covered by multiple loci ("
+             << as_percentage(n_multiloci_sites, n_sites) << ").\n";
     if (filter.total_sites() == 0) {
         cerr << "Error: All data has been filtered out.\n";
         throw exception();
@@ -887,79 +909,43 @@ BatchLocusProcessor::cleanup()
     return 0;
 }
 
-string
-BatchLocusProcessor::report_locus_overlap(ofstream *log_fh)
+void
+BatchLocusProcessor::report_locus_overlap(size_t& n_sites, size_t& n_multiple_sites, ofstream *log_fh)
 {
-    const CSLocus  *loc;
-    const LocSum   *lsum;
+    n_sites = 0;
+    n_multiple_sites = 0;
 
     //
     // Create a vector of maps, to record for each population, which sites overlap between different loci.
     //
-    vector<map<uint, set<uint>>> sites;
-    for (uint i = 0; i < this->_mpopi->pops().size(); i++) {
-        sites.push_back(map<uint, set<uint>>());
-        map<uint, set<uint>> &pop_sites = sites.back();
-
-        for (uint pos = 0; pos < this->_loci.size(); pos++) {
-            loc  = this->_loci[pos]->cloc;
-            lsum = this->_loci[pos]->s->per_pop(i);
-
-            for (uint k = 0; k < loc->len; k++) {
-                if (lsum->nucs[k].num_indv == 0)
-                    continue;
-
-                if (pop_sites.count(lsum->nucs[k].bp) == 0)
-                    pop_sites[lsum->nucs[k].bp] = set<uint>();
-                pop_sites[lsum->nucs[k].bp].insert(loc->id);
-            }
-        }
-    }
-
     map<uint, set<uint>> final_map;
-
-    size_t multiple_sites = 0;
-    //
-    // Iterate over each population and combine all sites that overlap in one or more populations.
-    //
-    for (uint i = 0; i < sites.size(); i++) {
-        for (map<uint, set<uint>>::iterator it = sites[i].begin(); it != sites[i].end(); it++) {
-
-            if (final_map.count(it->first) == 0)
-                final_map[it->first] = set<uint>();
-
-            for (set<uint>::iterator j = it->second.begin(); j != it->second.end(); j++)
-                final_map[it->first].insert(*j);
+    //vector<map<uint, set<uint>>> sites (this->_mpopi->pops().size());
+    for (uint pop = 0; pop < this->_mpopi->pops().size(); pop++) {
+        for (const LocBin* locbin : this->_loci) {
+            const CSLocus* loc = locbin->cloc;
+            const LocSum* lsum = locbin->s->per_pop(pop);
+            for (uint k = 0; k < loc->len; k++)
+                if (lsum->nucs[k].num_indv > 0) {
+                    final_map[lsum->nucs[k].bp].insert(loc->id);
+                    //sites[pop][lsum->nucs[k].bp].insert(loc->id);
+                }
         }
     }
 
-    size_t uniq_sites = final_map.size();
+    n_sites = final_map.size();
 
-    if (verbose && log_fh != NULL)
-        *log_fh << "The following loci overlap on genomic segment " << this->_loci[0]->cloc->loc.chr() << ":\n";
-
-    for (map<uint, set<uint>>::iterator it = final_map.begin(); it != final_map.end(); it++) {
-        if (it->second.size() > 1) {
-            multiple_sites++;
-
-            if (verbose && log_fh != NULL) {
-                for (set<uint>::iterator j = it->second.begin(); j != it->second.end(); j++)
-                    *log_fh << "    " << *j << ", ";
-                *log_fh << it->first + 1  << "bp\t" << "\n";
+    for (auto bp : final_map) {
+        if (bp.second.size() > 1) {
+            n_multiple_sites++;
+            if (log_fh != NULL) {
+                *log_fh << "multilocus_pos"
+                        << '\t' << this->_loci[0]->cloc->loc.chr() << ':' << bp.first + 1
+                        << "\tloci=";
+                join(bp.second, ',', *log_fh);
+                *log_fh << '\n';
             }
         }
     }
-
-    char   buf[max_len];
-    double pct;
-
-    pct = (double) multiple_sites / (double) uniq_sites * 100;
-
-    snprintf(buf, max_len,
-             "%ld unique genomic sites, %ld sites covered by multiple loci (%.03f%%)",
-             uniq_sites, multiple_sites, pct);
-
-    return string(buf);
 }
 
 
@@ -1492,59 +1478,64 @@ CatalogDists::write_results(ostream &log_fh)
 {
     map<size_t, size_t>::iterator cnt_it;
     string section;
-    auto begin_section = [&](){
+    auto begin_section = [&](const string& s){
+        section = s;
         log_fh << "\n" << "BEGIN " << section << "\n";
     };
     auto end_section = [&](){
         log_fh << "END " << section << "\n";
     };
 
-    section = "samples_per_loc_prefilters";
-    begin_section();
+    begin_section("samples_per_loc_prefilters");
     log_fh << "# Distribution of valid samples matched to a catalog locus prior to filtering.\n"
            << "n_samples\tn_loci\n";
     for (cnt_it = this->_pre_valid.begin(); cnt_it != this->_pre_valid.end(); cnt_it++)
         log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
     end_section();
 
+    begin_section("confounded_samples_per_loc_prefilters");
     log_fh << "\n# Distribution of confounded samples for each catalog locus prior to filtering.\n"
            << "# Confounded samples at locus\tCount\n";
     for (cnt_it = this->_pre_confounded.begin(); cnt_it != this->_pre_confounded.end(); cnt_it++)
         log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
+    end_section();
 
+    begin_section("missing_samples_per_loc_prefilters");
     log_fh << "\n# Distribution of missing samples for each catalog locus prior to filtering.\n"
            << "# Absent samples at locus\tCount\n";
     for (cnt_it = this->_pre_absent.begin(); cnt_it != this->_pre_absent.end(); cnt_it++)
         log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
+    end_section();
 
-    section = "snps_per_loc_prefilters";
-    begin_section();
+    begin_section("snps_per_loc_prefilters");
     log_fh << "# Distribution of the number of SNPs per catalog locus prior to filtering.\n"
            << "n_snps\tn_loci\n";
     for (cnt_it = this->_pre_snps_per_loc.begin(); cnt_it != this->_pre_snps_per_loc.end(); cnt_it++)
         log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
     end_section();
 
-    section = "samples_per_loc_postfilters";
-    begin_section();
+    begin_section("samples_per_loc_postfilters");
     log_fh << "# Distribution of valid samples matched to a catalog locus after filtering.\n"
            << "n_samples\tn_loci\n";
     for (cnt_it = this->_post_valid.begin(); cnt_it != this->_post_valid.end(); cnt_it++)
         log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
     end_section();
 
+    begin_section("confounded_samples_per_loc_postfilters");
     log_fh << "\n# Distribution of confounded samples for each catalog locus after filtering.\n"
            << "# Confounded samples at locus\tCount\n";
     for (cnt_it = this->_post_confounded.begin(); cnt_it != this->_post_confounded.end(); cnt_it++)
         log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
+    end_section();
 
+    begin_section("missing_samples_per_loc_postfilters");
     log_fh << "\n# Distribution of missing samples for each catalog locus after filtering.\n"
            << "# Absent samples at locus\tCount\n";
     for (cnt_it = this->_post_absent.begin(); cnt_it != this->_post_absent.end(); cnt_it++)
         log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
+    end_section();
 
-    section = "snps_per_loc_postfilters";
-    begin_section();
+    begin_section("snps_per_loc_postfilters");
     log_fh << "# Distribution of the number of SNPs per catalog locus (after filtering).\n"
            << "n_snps\tn_loci\n";
     for (cnt_it = this->_post_snps_per_loc.begin(); cnt_it != this->_post_snps_per_loc.end(); cnt_it++)

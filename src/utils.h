@@ -201,10 +201,10 @@ class Timer {
     double start_;
 
 public:
-    Timer() : elapsed_(0.0), consumed_(0.0), start_(0.0) {}
-    void   restart() {start_=gettm();}
-    void   stop()    {elapsed_+=gettm()-start_; consumed_+=4.0*std::abs(gettm()-gettm());}
-    double elapsed() const {return elapsed_;}
+    Timer() : elapsed_(0.0), consumed_(0.0), start_(0.0) {restart();}
+    void   restart() {start_=gettm(); consumed_+=2.0*(gettm()-start_);}
+    double elapsed() {double now=gettm(); elapsed_+=now-start_; start_=now; consumed_+=2.0*(gettm()-now); return elapsed_;}
+    void   stop()    {elapsed();}
     double consumed() const {return consumed_;}
 
     Timer& operator+=(const Timer& other) {elapsed_+=other.elapsed_; consumed_+=other.consumed_; return *this;}

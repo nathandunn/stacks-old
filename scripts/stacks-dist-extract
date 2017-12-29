@@ -14,12 +14,16 @@ if { [[ $# -ne 1 ]] && [[ $# -ne 2 ]]; } || [[ "$1" =~ ^(-h|--help|--version)$ ]
     exit 1
 fi
 
-xlog="$1"
-[[ -e "$xlog" ]] || { ls -- "$xlog"; exit 1; }
+dist_f="$1"
+[[ -e "$dist_f" ]] || { ls -- "$dist_f"; exit 1; }
 
 if [[ "$2" ]] ;then
     section="$(echo "$2" | grep -oE '\w+' | tr -d '\n')"
-    sed -n "/^END $section\\b/ q; /^BEGIN $section\\b/,$ p" "$xlog" | sed 1d
+    if ! grep --quiet "^BEGIN $section\\b" "$dist_f" ;then
+        echo "Error: Couldn't find section '$section' in '$dist_f'." >&1
+        exit 1
+    fi
+    sed -n "/^END $section\\b/ q; /^BEGIN $section\\b/,$ p" "$dist_f" | sed 1d
 else
-    grep ^BEGIN "$xlog" | cut -c7-
+    grep ^BEGIN "$dist_f" | cut -c7-
 fi
