@@ -185,7 +185,7 @@ try {
     //
     // Process every locus
     //
-    GenotypeStats gt_stats {};
+    GenotypeStats gt_stats (bam_mpopi->samples().size());
     HaplotypeStats hap_stats (bam_mpopi->samples().size());
     ContigStats denovo_ctg_stats {};
 
@@ -410,9 +410,9 @@ try {
 
     if (rm_unpaired_reads) {
         // Report statistics on pairs.
-        size_t n_unpaired = gt_stats.n_unpaired_reads_rm;
-        size_t n_pcr_dupl = gt_stats.n_read_pairs_pcr_dupl;
-        size_t n_used = gt_stats.n_read_pairs_used;
+        size_t n_unpaired = gt_stats.n_unpaired_reads_rm();
+        size_t n_pcr_dupl = gt_stats.n_read_pairs_pcr_dupl();
+        size_t n_used = gt_stats.n_read_pairs_used();
         size_t n_remaining_loci = gt_stats.n_genotyped_loci;
         cout << "Removed " << n_unpaired << " unpaired reads ("
              << as_percentage((double) n_unpaired / (n_used + n_pcr_dupl)) << "); kept "
@@ -426,8 +426,25 @@ try {
         } else {
             assert(n_pcr_dupl == 0);
         }
+        // discarded_reads_per_sample
+        logger->x << "\n"
+                  << "BEGIN discarded_reads_per_sample\n"
+                  << "sample\tn_used_pairs\tn_pcr_dupl_pairs\tpcr_dupl_rate\tn_unpaired_reads\n";
+        ostream os (logger->x.rdbuf());
+        os << std::fixed << std::setprecision(3);
+        assert(gt_stats.per_sample_stats.size() == bam_mpopi->samples().size());
+        for (size_t sample=0; sample<bam_mpopi->samples().size(); ++sample) {
+            const GenotypeStats::PerSampleStats& stats = gt_stats.per_sample_stats[sample];
+            os << bam_mpopi->samples()[sample].name
+               << '\t' << stats.n_read_pairs_used
+               << '\t' << stats.n_read_pairs_pcr_dupl
+               << '\t' << (double) stats.n_read_pairs_pcr_dupl / (stats.n_read_pairs_pcr_dupl + stats.n_read_pairs_used)
+               << '\t' << stats.n_unpaired_reads
+               << '\n';
+        }
+        logger->x << "END discarded_reads_per_sample\n";
     } else {
-        assert(gt_stats.n_unpaired_reads_rm == 0 && gt_stats.n_read_pairs_pcr_dupl == 0);
+        assert(gt_stats.n_unpaired_reads_rm() == 0 && gt_stats.n_read_pairs_pcr_dupl() == 0);
     }
 
     // Report statistics on genotyping and haplotyping.
@@ -578,9 +595,11 @@ void SnpAlleleCooccurrenceCounter::clear() {
 GenotypeStats& GenotypeStats::operator+= (const GenotypeStats& other) {
     this->n_genotyped_loci += other.n_genotyped_loci;
     this->n_sites_tot      += other.n_sites_tot;
-    this->n_unpaired_reads_rm += other.n_unpaired_reads_rm;
-    this->n_read_pairs_pcr_dupl += other.n_read_pairs_pcr_dupl;
-    this->n_read_pairs_used += other.n_read_pairs_used;
+    for (size_t sample=0; sample<per_sample_stats.size(); ++sample) {
+        per_sample_stats[sample].n_unpaired_reads += other.per_sample_stats[sample].n_unpaired_reads;
+        per_sample_stats[sample].n_read_pairs_pcr_dupl += other.per_sample_stats[sample].n_read_pairs_pcr_dupl;
+        per_sample_stats[sample].n_read_pairs_used += other.per_sample_stats[sample].n_read_pairs_used;
+    }
     return *this;
 }
 
@@ -818,9 +837,11 @@ void
 LocusProcessor::process(CLocAlnSet& aln_loc)
 {
     if (rm_unpaired_reads) {
-        size_t n_before = aln_loc.reads().size();
+        for (size_t sample=0; sample<gt_stats_.per_sample_stats.size(); ++sample)
+            gt_stats_.per_sample_stats[sample].n_unpaired_reads += aln_loc.sample_reads(sample).size();
         aln_loc.remove_unmerged_reads();
-        gt_stats_.n_unpaired_reads_rm += n_before - aln_loc.reads().size();
+        for (size_t sample=0; sample<gt_stats_.per_sample_stats.size(); ++sample)
+            gt_stats_.per_sample_stats[sample].n_unpaired_reads -= aln_loc.sample_reads(sample).size();
         if(aln_loc.reads().empty()) {
             loc_.o_fa.clear();
             loc_.o_vcf.clear();
@@ -831,12 +852,15 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
     ++gt_stats_.n_genotyped_loci;
     if (rm_pcr_duplicates) {
         assert(rm_unpaired_reads);
-        size_t n_before = aln_loc.reads().size();
+        for (size_t sample=0; sample<gt_stats_.per_sample_stats.size(); ++sample)
+            gt_stats_.per_sample_stats[sample].n_read_pairs_pcr_dupl += aln_loc.sample_reads(sample).size();
         aln_loc.remove_pcr_duplicates();
-        gt_stats_.n_read_pairs_pcr_dupl += n_before - aln_loc.reads().size();
+        for (size_t sample=0; sample<gt_stats_.per_sample_stats.size(); ++sample)
+            gt_stats_.per_sample_stats[sample].n_read_pairs_pcr_dupl -= aln_loc.sample_reads(sample).size();
     }
     assert(!aln_loc.reads().empty());
-    gt_stats_.n_read_pairs_used += aln_loc.reads().size();
+    for (size_t sample=0; sample<gt_stats_.per_sample_stats.size(); ++sample)
+        gt_stats_.per_sample_stats[sample].n_read_pairs_used += aln_loc.sample_reads(sample).size();
     if (input_type == GStacksInputT::denovo_popmap || input_type == GStacksInputT::denovo_merger) {
         // Called from process(CLocReadSet&).
         assert(this->loc_.id == aln_loc.id());
