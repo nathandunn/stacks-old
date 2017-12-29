@@ -32,9 +32,9 @@ int init_log(ostream &fh, int argc, char **argv);
 
 // Returns e.g. "23.2%".
 string as_percentage(double d);
+inline string as_percentage(size_t n, size_t tot) {return as_percentage((double) n / tot);}
 
 string to_string(const FileT& ft);
-
 
 // ProgressMeter
 // ==========
@@ -95,6 +95,8 @@ private:
 // ==========
 class LogAlterator {
 public:
+    string log_path;
+    string distribs_path;
     ofstream l; // The actual log file
     ostream o;  // Just stdout
     ostream e;  // Just stderr
@@ -104,7 +106,7 @@ public:
     // cout and cerr will also write to the log file (if quiet
         // is true, output to stdout and stderr is suppressed i.e. they only
     // write to the log file).
-    LogAlterator(const string& prefix_path, bool distlog, bool quiet, int argc, char ** argv);
+    LogAlterator(const string& prefix_path, bool distribs, bool quiet, int argc, char ** argv);
 
     // Upon destruction, restore cout and cerr.
     ~LogAlterator() {

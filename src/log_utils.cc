@@ -120,9 +120,7 @@ ProgressMeter::ProgressMeter(
    n_max_(pct_ ? n_operations : SIZE_MAX),
    n_done_(0),
    next_(pct_ ? n_max_*0.01 : n_operations)
-{
-    timer_.restart();
-}
+{}
 
 ProgressMeter& ProgressMeter::operator+=(size_t n)
 {
@@ -131,9 +129,7 @@ ProgressMeter& ProgressMeter::operator+=(size_t n)
 
     if (n_done_ >= next_) {
         #ifdef DEBUG
-        timer_.stop();
         os_ << '(' << (size_t) timer_.elapsed() << "s) ";
-        timer_.restart();
         #endif
         if (pct_) {
             if (n_done_ >= size_t(n_max_ * 0.5)) {
@@ -180,7 +176,6 @@ ProgressMeter& ProgressMeter::operator+=(size_t n)
 void ProgressMeter::done()
 {
     #ifdef DEBUG
-    timer_.stop();
     os_ << "(" << (size_t) timer_.elapsed() << "s) ";
     #endif
     if (pct_) {
@@ -191,24 +186,25 @@ void ProgressMeter::done()
     }
 }
 
-LogAlterator::LogAlterator(const string& prefix, bool distrlog, bool quiet, int argc, char** argv)
-    : l()
+LogAlterator::LogAlterator(const string& prefix, bool distribs, bool quiet, int argc, char** argv)
+    : log_path(prefix + ".log")
+    , distribs_path(prefix + ".distribs")
+    , l(log_path)
     , o(cout.rdbuf())
     , e(cerr.rdbuf())
     , x()
     , lo_buf(cout.rdbuf(), l.rdbuf())
     , le_buf(cerr.rdbuf(), l.rdbuf())
 {
-    string log_path = prefix + ".log";
-    string distr_path = prefix + ".distribs";
-
-    l.open(log_path);
     check_open(l, log_path);
     init_log(l, argc, argv);
-    if (distrlog) {
-        x.open(distr_path);
-        check_open(x, distr_path);
-        x << "# Note: Individual distributions can be extracted using the `stacks-dist-extract` utility.\n";
+    if (distribs) {
+        x.open(distribs_path);
+        check_open(x, distribs_path);
+        x << "# Note: Individual distributions can be extracted using the `stacks-dist-extract` utility.\n"
+          << "#       e.g. `stacks-dist-extract "
+          << distribs_path.c_str() + (distribs_path.find_last_of('/') + 1)
+          <<" dist_name`\n";
     }
 
     if (quiet) {
@@ -216,9 +212,9 @@ LogAlterator::LogAlterator(const string& prefix, bool distrlog, bool quiet, int 
         cout.rdbuf(l.rdbuf());
     } else {
         cout << "Logging to '" << log_path << "'.\n";
-        if (distrlog)
-            cout << "Distributions will be written to '" << distr_path << "'.\n";
         cout.rdbuf(&lo_buf);
+        if (distribs)
+            cout << "Locus/sample distributions will be written to '" << distribs_path << "'.\n";
     }
     cerr.rdbuf(&le_buf);
 }

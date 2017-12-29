@@ -210,7 +210,6 @@ try {
             ProgressMeter(cout, true, bam_cloc_reader->tally_n_components())
             : ProgressMeter(cout, false, 1000);
 
-    t_parallel.restart();
     bool eof = false;
     #pragma omp parallel num_threads(num_threads)
     try {

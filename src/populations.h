@@ -287,7 +287,7 @@ public:
     VcfHeader*     vcf_header()    { return this->_vcf_header; }
     size_t         batch_size()    { return this->_batch_size; }
     size_t         batch_size(size_t bsize) { this->_batch_size = bsize; return bsize; }
-    string         report_locus_overlap(ofstream *);
+    void           report_locus_overlap(size_t&, size_t&, ofstream* = NULL);
 
     const LocusFilter&      filter() { return this->_loc_filter; }
     const vector<LocBin *>& loci()   { return this->_loci; }
