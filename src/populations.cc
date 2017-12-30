@@ -323,6 +323,7 @@ int main (int argc, char* argv[]) {
             hdiv_exp->write_batch_pairwise(bloc.loci(), ldiv->haplotype_values(), ldiv->metapop_haplotype_values());
             ldiv->clear(bloc.loci());
         }
+        logger->x << flush;
     }
     logger->x << "END batch_progress\n";
     #ifdef DEBUG
