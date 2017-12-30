@@ -548,7 +548,7 @@ try {
     #ifdef DEBUG
     if (typeid(*model) == typeid(MarukiLowModel))
         // Report how many times the "underflow" likelihood equations were used (we'd need to know the total number of calls...)
-        cerr << "\nDEBUG: marukilow: handled " << ((const MarukiLowModel&)*model).n_underflows() << " underflows.\n";
+        cout << "\nDEBUG: marukilow: handled " << ((const MarukiLowModel&)*model).n_underflows() << " underflows.\n";
     #endif
 
     //
