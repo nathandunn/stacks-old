@@ -171,7 +171,7 @@ SumstatsExport::open(const MetaPopInfo *mpopi)
     this->_fh.precision(fieldw);
     this->_fh.setf(std::ios::fixed);
 
-    cerr << "Population-level summary statistics will be written to '" << this->_path << "'\n";
+    cout << "Population-level summary statistics will be written to '" << this->_path << "'\n";
 
     return 0;
 }
@@ -295,7 +295,7 @@ HapstatsExport::open(const MetaPopInfo *mpopi)
     this->_fh.precision(fieldw);
     this->_fh.setf(std::ios::fixed);
 
-    cerr << "Population-level haplotype summary statistics will be written to '" << this->_path << "'\n";
+    cout << "Population-level haplotype summary statistics will be written to '" << this->_path << "'\n";
 
     return 0;
 }
@@ -814,7 +814,7 @@ GenotypesExport::open(const MetaPopInfo *mpopi)
     this->_fh.open(this->_path.c_str(), ofstream::out);
     check_open(this->_fh, this->_path);
 
-    cerr << "Raw Genotypes/Haplotypes will be written to '" << this->_path << "'\n";
+    cout << "Raw Genotypes/Haplotypes will be written to '" << this->_path << "'\n";
 
     return 0;
 }
@@ -906,7 +906,7 @@ MarkersExport::open(const MetaPopInfo *mpopi)
     this->_fh.precision(fieldw);
     this->_fh.setf(std::ios::fixed);
 
-    cerr << "Genotyping markers will be written to '" << this->_path << "'\n";
+    cout << "Genotyping markers will be written to '" << this->_path << "'\n";
 
     return 0;
 }
@@ -972,7 +972,7 @@ FastaLociExport::open(const MetaPopInfo *mpopi)
     this->_fh.open(this->_path.c_str(), ofstream::out);
     check_open(this->_fh, this->_path);
 
-    cerr << "FASTA consensus sequences for each locus in the metapopulation  will be written to '" << this->_path << "'\n";
+    cout << "FASTA consensus sequences for each locus in the metapopulation  will be written to '" << this->_path << "'\n";
 
     return 0;
 }
@@ -1044,7 +1044,7 @@ FastaRawExport::open(const MetaPopInfo *mpopi)
     this->_fh.open(this->_path.c_str(), ofstream::out);
     check_open(this->_fh, this->_path);
 
-    cerr << "Raw FASTA consensus sequences for each sample will be written to '" << this->_path << "'\n";
+    cout << "Raw FASTA consensus sequences for each sample will be written to '" << this->_path << "'\n";
 
     return 0;
 }
@@ -1121,7 +1121,7 @@ FastaSamplesExport::open(const MetaPopInfo *mpopi)
     this->_fh.open(this->_path.c_str(), ofstream::out);
     check_open(this->_fh, this->_path);
 
-    cerr << "FASTA consensus sequences for each sample will be written to '" << this->_path << "'\n";
+    cout << "FASTA consensus sequences for each sample will be written to '" << this->_path << "'\n";
 
     return 0;
 }
@@ -1210,7 +1210,7 @@ write_vcf_haplotypes(map<int, CSLocus *> &catalog,
     //
 
     string path = out_path + out_prefix + ".haplotypes.vcf";
-    cerr << "Writing population data haplotypes to VCF file '" << path << "'\n";
+    cout << "Writing population data haplotypes to VCF file '" << path << "'\n";
 
     VcfHeader header;
     header.add_std_meta();
@@ -1384,7 +1384,7 @@ GenePopExport::open(const MetaPopInfo *mpopi)
     this->_tmpfh.open(this->tmp_path());
     check_open(this->_tmpfh, this->tmp_path());
 
-    cerr << "Polymorphic sites in GenePop format will be written to '" << this->_path << "'\n";
+    cout << "Polymorphic sites in GenePop format will be written to '" << this->_path << "'\n";
 
     return 0;
 }
@@ -1538,7 +1538,7 @@ GenePopHapsExport::open(const MetaPopInfo *mpopi)
     check_open(this->_fh, this->_path);
     this->_tmpfh.open(this->tmp_path());
     check_open(this->_tmpfh, this->tmp_path());
-    cerr << "Polymorphic sites in GenePop format will be written to '" << this->_path << "'\n";
+    cout << "Polymorphic sites in GenePop format will be written to '" << this->_path << "'\n";
     return 0;
 }
 
@@ -1679,7 +1679,7 @@ StructureExport::open(const MetaPopInfo *mpopi)
     this->_tmp_path = out_path + out_prefix + ".structure.part";
     this->_tmpfh.open(this->_tmp_path);
 
-    cerr << "Polymorphic sites in Structure format will be written to '" << this->_path << "'\n";
+    cout << "Polymorphic sites in Structure format will be written to '" << this->_path << "'\n";
 
     return 0;
 }
@@ -1884,10 +1884,10 @@ PhylipExport::open(const MetaPopInfo *mpopi)
                  << "# Seq Pos\tLocus ID\tColumn\tPopulation\n";
 
     if (typeid(*this) == typeid(PhylipVarExport))
-        cerr << "Polymorphic";
+        cout << "Polymorphic";
     else
-        cerr << "Fixed difference";
-    cerr << " sites in Phylip format will be written to '" << this->_path << "'\n"
+        cout << "Fixed difference";
+    cout << " sites in Phylip format will be written to '" << this->_path << "'\n"
          << "   Individual sites written will be logged to '" << this->_log_path << "'\n";
 
     return 0;
@@ -2133,7 +2133,7 @@ int
 VcfExport::open(const MetaPopInfo *mpopi)
 {
     this->_path = out_path + out_prefix + ".snps.vcf";
-    cerr << "SNPs and calls will be written in VCF format to '" << this->_path << "'\n";
+    cout << "SNPs and calls will be written in VCF format to '" << this->_path << "'\n";
 
     this->_mpopi = mpopi;
 
@@ -2214,7 +2214,7 @@ int
 VcfHapsExport::open(const MetaPopInfo *mpopi)
 {
     this->_path = out_path + out_prefix + ".haps.vcf";
-    cerr << "Haplotypes will be written in VCF format to '" << this->_path << "'\n";
+    cout << "Haplotypes will be written in VCF format to '" << this->_path << "'\n";
 
     this->_mpopi = mpopi;
 
@@ -2307,7 +2307,7 @@ write_hzar(map<int, CSLocus *> &catalog,
     //
     string file = out_path + out_prefix + ".hzar.csv";
 
-    cerr << "Writing population data to HZAR file '" << file << "'...";
+    cout << "Writing population data to HZAR file '" << file << "'...";
 
     ofstream fh(file.c_str(), ofstream::out);
 
@@ -2397,7 +2397,7 @@ write_hzar(map<int, CSLocus *> &catalog,
 
     fh.close();
 
-    cerr << "done.\n";
+    cout << "done.\n";
 
     return 0;
 }
@@ -2413,7 +2413,7 @@ write_treemix(map<int, CSLocus *> &catalog,
     //
     string file = out_path + out_prefix + ".treemix";
 
-    cerr << "Writing population data to TreeMix file '" << file << "'; ";
+    cout << "Writing population data to TreeMix file '" << file << "'; ";
 
     ofstream fh(file.c_str(), ofstream::out);
 
@@ -2424,7 +2424,7 @@ write_treemix(map<int, CSLocus *> &catalog,
 
     file += ".log";
 
-    cerr << "logging nucleotide positions to '" << file << "'...";
+    cout << "logging nucleotide positions to '" << file << "'...";
 
     ofstream log_fh(file.c_str(), ofstream::out);
 
@@ -2518,7 +2518,7 @@ write_treemix(map<int, CSLocus *> &catalog,
     fh.close();
     log_fh.close();
 
-    cerr << "done.\n";
+    cout << "done.\n";
 
     return 0;
 }
@@ -2533,7 +2533,7 @@ write_fastphase(map<int, CSLocus *> &catalog,
     //
     // Data will be written as independent, bi-allelic SNPs. We will write one file per chromosome.
     //
-    cerr << "Writing population data to fastPHASE files...";
+    cout << "Writing population data to fastPHASE files...";
 
     map<string, vector<CSLocus *> >::const_iterator it;
     CSLocus  *loc;
@@ -2720,7 +2720,7 @@ write_fastphase(map<int, CSLocus *> &catalog,
         fh.close();
     }
 
-    cerr << "done.\n";
+    cout << "done.\n";
 
     return 0;
 }
@@ -2737,7 +2737,7 @@ write_phase(map<int, CSLocus *> &catalog,
     // (SNPs within a single RAD locus are already phased), and bi-allelic SNPs. We
     // will write one file per chromosome.
     //
-    cerr << "Writing population data to PHASE files...";
+    cout << "Writing population data to PHASE files...";
 
     map<string, vector<CSLocus *> >::const_iterator it;
     CSLocus  *loc;
@@ -2876,7 +2876,7 @@ write_phase(map<int, CSLocus *> &catalog,
                                         gtypes << k + 1 << " ";
                                     }
                                 if (found == false)
-                                    cerr << "Unable to find haplotype " << d[j]->obshap[0] << " from individual "
+                                    cerr << "Error: Unable to find haplotype " << d[j]->obshap[0] << " from individual "
                                          << mpopi.samples()[j].name << "; catalog locus: " << loc->id << "\n";
                             }
                         }
@@ -3002,7 +3002,7 @@ write_phase(map<int, CSLocus *> &catalog,
         fh.close();
     }
 
-    cerr << "done.\n";
+    cout << "done.\n";
 
     return 0;
 }
@@ -3017,7 +3017,7 @@ write_plink(map<int, CSLocus *> &catalog,
     //
     // We will write one file per chromosome.
     //
-    cerr << "Writing population data to PLINK files...";
+    cout << "Writing population data to PLINK files...";
 
     //
     // Obtain the current date.
@@ -3164,7 +3164,7 @@ write_plink(map<int, CSLocus *> &catalog,
 
     fh.close();
 
-    cerr << "done.\n";
+    cout << "done.\n";
 
     return 0;
 }
@@ -3179,7 +3179,7 @@ write_beagle(map<int, CSLocus *> &catalog,
     //
     // We will write one file per chromosome, per population.
     //
-    cerr << "Writing population data to unphased Beagle files...";
+    cout << "Writing population data to unphased Beagle files...";
 
     //
     // Obtain the current date.
@@ -3366,7 +3366,7 @@ write_beagle(map<int, CSLocus *> &catalog,
         }
     }
 
-    cerr << "done.\n";
+    cout << "done.\n";
 
     return 0;
 }
@@ -3382,7 +3382,7 @@ write_beagle_phased(map<int, CSLocus *> &catalog,
     //
     // We will write one file per chromosome.
     //
-    cerr << "Writing population data to phased Beagle files...";
+    cout << "Writing population data to phased Beagle files...";
 
     //
     // Obtain the current date.
@@ -3547,7 +3547,7 @@ write_beagle_phased(map<int, CSLocus *> &catalog,
         }
     }
 
-    cerr << "done.\n";
+    cout << "done.\n";
 
     return 0;
 }
@@ -3566,7 +3566,7 @@ write_fullseq_phylip(map<int, CSLocus *> &catalog,
     //
     string file = out_path + out_prefix + ".fullseq.phylip";
 
-    cerr << "Writing full sequence population data to Phylip file '" << file << "'; ";
+    cout << "Writing full sequence population data to Phylip file '" << file << "'; ";
 
     ofstream fh(file.c_str(), ofstream::out);
 
@@ -3589,7 +3589,7 @@ write_fullseq_phylip(map<int, CSLocus *> &catalog,
     }
 
     file = out_path + out_prefix + ".fullseq.phylip.log";
-    cerr << "logging nucleotide positions to '" << file << "'...";
+    cout << "logging nucleotide positions to '" << file << "'...";
 
     ofstream log_fh(file.c_str(), ofstream::out);
 
@@ -3799,7 +3799,7 @@ write_fullseq_phylip(map<int, CSLocus *> &catalog,
     par_fh.close();
     log_fh.close();
 
-    cerr << "done.\n";
+    cout << "done.\n";
 
     return 0;
 }
