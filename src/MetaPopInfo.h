@@ -89,7 +89,7 @@ public:
     void set_sample_id(size_t index, size_t id) {samples_.at(index).id = id; sample_indexes_by_id_[id] = index;}
     size_t get_sample_index(const size_t& id) const {return sample_indexes_by_id_.at(id);}
 
-    void status(ostream &fh = cerr);
+    void status(ostream &fh);
 
     /*
      * Methods for backwards compatibility

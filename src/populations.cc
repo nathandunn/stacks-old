@@ -160,7 +160,7 @@ int main (int argc, char* argv[]) {
     //
     // Report information on the structure of the populations specified.
     //
-    mpopi.status();
+    mpopi.status(cout);
 
     if (size_t(population_limit) > mpopi.pops().size()) {
         cout << "Notice: Population limit (" << population_limit << ")"
