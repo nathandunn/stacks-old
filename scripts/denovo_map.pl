@@ -57,6 +57,7 @@ my $desc         = ""; # Database description of this dataset
 my $date         = ""; # Date relevent to this data, formatted for SQL: 2009-05-31
 my $gzip         = false;
 my $paired       = false;
+my $time         = "";
 
 my @parents;
 my @progeny;
@@ -162,7 +163,7 @@ sub execute_stacks {
         print $log_fh "$cmd\n";
 
         if ($dry_run == false) {
-            open($pipe_fh, "$cmd 2>&1 |");
+            open($pipe_fh, "$time $cmd 2>&1 |");
             @results = ();
             while (<$pipe_fh>) {
                 print $log_fh $_;
@@ -197,7 +198,7 @@ sub execute_stacks {
     print $log_fh "$cmd\n\n";
 
     if ($dry_run == false) {
-        open($pipe_fh, "$cmd 2>&1 |");
+        open($pipe_fh, "$time $cmd 2>&1 |");
         while (<$pipe_fh>) {
             print $log_fh $_;
             if ($_ =~ /failed/i) { print STDERR "Catalog construction failed.\n"; exit(1); }
@@ -218,7 +219,7 @@ sub execute_stacks {
     print $log_fh "$cmd\n\n";
 
     if ($dry_run == false) {
-        open($pipe_fh, "$cmd 2>&1 |");
+        open($pipe_fh, "$time $cmd 2>&1 |");
         while (<$pipe_fh>) {
             print $log_fh $_;
         }
@@ -244,7 +245,7 @@ sub execute_stacks {
     print $log_fh "$cmd\n";
 
     if (!$dry_run) {
-        open($pipe_fh, "$cmd 2>&1 |");
+        open($pipe_fh, "$time $cmd 2>&1 |");
         while (<$pipe_fh>) {
             print $log_fh $_;
         }
@@ -263,7 +264,7 @@ sub execute_stacks {
     print $log_fh "$cmd\n\n";
 
     if (!$dry_run) {
-        open($pipe_fh, "$cmd 2>&1 |");
+        open($pipe_fh, "$time $cmd 2>&1 |");
         while (<$pipe_fh>) {
             print $log_fh $_;
         }
@@ -283,7 +284,7 @@ sub execute_stacks {
         print $log_fh "$cmd\n\n";
 
         if ($dry_run == 0) {
-            open($pipe_fh, "$cmd 2>&1 |");
+            open($pipe_fh, "$time $cmd 2>&1 |");
             while (<$pipe_fh>) {
                 print $log_fh $_;
             }
@@ -300,7 +301,7 @@ sub execute_stacks {
         print $log_fh "$cmd\n\n";
 
         if ($dry_run == 0) {
-            open($pipe_fh, "$cmd 2>&1 |");
+            open($pipe_fh, "$time $cmd 2>&1 |");
             while (<$pipe_fh>) {
                 print $log_fh $_;
             }
@@ -688,7 +689,7 @@ sub load_sql_data {
     $cmd = $exe_path . "index_radtags.pl -D $db -t -c 2>&1";
     print STDERR  "$cmd\n";
     print $log_fh "$cmd\n";
-    @results =    `$cmd` if ($dry_run == false);
+    @results =    `$time $cmd` if ($dry_run == false);
     print $log_fh @results;
 }
 
@@ -879,6 +880,11 @@ sub parse_command_line {
             	print STDERR "Unknown pipeline program, '$arg'\n";
             	usage();
             }
+        } elsif ($_ =~ /^--time-components$/) {
+            $time = '/usr/bin/time';
+            if (! -e $time) {
+                die "Error: '$time': No such file or directory.\n";
+            }
         } else {
             print STDERR "Unknown command line option: '$_'\n";
             usage();
@@ -977,6 +983,8 @@ denovo_map.pl --samples dir --popmap path -o dir [--paired] (assembly options) (
     --create_db: create the database specified by '-B' and populate the tables.
     --overw_db: delete the database before creating a new copy of it (turns on --create_db).
 
+  Miscellaneous:
+    --time-components (for benchmarking)
 EOQ
 
     exit 1;
