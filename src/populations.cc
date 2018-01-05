@@ -104,9 +104,10 @@ void add_export()
         exports.push_back(new E());
 }
 
-int main (int argc, char* argv[]) {
+int main (int argc, char* argv[])
+{
     unique_ptr<LogAlterator> logger;
-    IF_NDEBUG_TRY
+try {
 
 #ifndef HAVE_LIBZ
     cout << "Stacks was compiled without zlib, and will refuse to parse compressed files.\n";
@@ -243,16 +244,15 @@ int main (int argc, char* argv[]) {
         // - Sort the loci by basepair if they are ordered.
         //
         size_t loc_cnt = bloc.next_batch(logger->x);
-        if (loc_cnt == 0 && filter.batch_seen() == 0)
+        if (filter.batch_seen() == 0)
             break;
-        assert(!bloc.loci().empty());
 
         #ifdef DEBUG
         cout << "(" << (size_t) timer.elapsed() << "s) ";
         #endif
         if (loci_ordered) {
-            cout << bloc.loci().front()->cloc->loc.chr() << "\n" << flush;
-            logger->x << bloc.loci().front()->cloc->loc.chr();
+            cout << bloc.chr() << "\n" << flush;
+            logger->x << bloc.chr();
         } else {
             cout << "Batch " << bloc.next_batch_number() - 1 << "\n" << flush;
             logger->x << "Batch " << bloc.next_batch_number() - 1;
@@ -261,6 +261,10 @@ int main (int argc, char* argv[]) {
                   << filter.batch_total() << " loci; filtered "
                   << filter.batch_filtered() << " loci; "
                   << filter.batch_seen() << " loci seen.\n";
+
+        if (loc_cnt == 0)
+            break;
+        assert(!bloc.loci().empty());
 
         sumstats.accumulate(bloc.loci());
 
@@ -327,7 +331,7 @@ int main (int argc, char* argv[]) {
     }
     logger->x << "END batch_progress\n";
     #ifdef DEBUG
-    cout << "(" << (size_t) timer.elapsed() << "s)\n";
+    cout << "(" << (size_t) timer.elapsed() << "s) done\n";
     #endif
 
     //
@@ -379,7 +383,10 @@ int main (int argc, char* argv[]) {
 
     cout << "Populations is done.\n";
     return 0;
-    IF_NDEBUG_CATCH_ALL_EXCEPTIONS
+
+} catch (exception& e) {
+    return stacks_handle_exceptions(e);
+}
 }
 
 int
@@ -484,10 +491,10 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
 
     LocBin *loc;
     int     cloc_id, rv;
-    string  prev_chr, cur_chr;
     size_t  loc_cnt = 0;
 
     this->_loci.clear();
+    this->_chr.clear();
     this->_loc_filter.batch_clear();
 
     //
@@ -495,15 +502,13 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
     //
     if (this->_next_loc != NULL) {
         this->_loci.push_back(this->_next_loc);
-        prev_chr        = this->_next_loc->cloc->loc.chr();
         this->_loc_filter.locus_seen();
         this->_loc_filter.keep_locus(this->_next_loc);
         this->_next_loc = NULL;
         loc_cnt++;
     }
 
-    do {
-        if (!this->_cloc_reader.read_one_locus(records)) break;
+    while(this->_cloc_reader.read_one_locus(records)) {
 
         //
         // Get the current locus ID.
@@ -534,16 +539,22 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
         //
         // Set the current chromosome.
         //
-        cur_chr = loc->cloc->loc.chr();
-        if (prev_chr.length() == 0)
-            prev_chr = cur_chr;
+        loci_ordered = !loc->cloc->loc.empty();
+        string cur_chr;
+        if (loci_ordered) {
+            cur_chr.assign(loc->cloc->loc.chr());
+            if (this->_chr.empty())
+                this->_chr = cur_chr;
+        }
 
         //
-        // If we are in ordered mode, and there were no loci analyzed on the previous chromosome,
+        // If there were no loci analyzed on the previous chromosome,
         // keep processing the current chromosome without returning.
         //
-        if (cur_chr != prev_chr && this->_loc_filter.batch_filtered() == this->_loc_filter.batch_seen())
-            prev_chr = cur_chr;
+        if (loci_ordered
+                && cur_chr != this->_chr
+                && this->_loc_filter.batch_filtered() == this->_loc_filter.batch_seen())
+            this->_chr = cur_chr;
 
         this->_loc_filter.locus_seen();
 
@@ -611,11 +622,9 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
         //
         // If these data are unordered, provide an arbitrary ordering.
         //
-        if (loc->cloc->loc.empty()) {
+        if (!loci_ordered) {
             loc->cloc->loc.set("un", this->_unordered_bp, strand_plus);
             this->_unordered_bp += loc->cloc->len;
-        } else {
-            loci_ordered = true;
         }
 
         //
@@ -629,19 +638,26 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
         //
         tabulate_locus_haplotypes(loc->cloc, loc->d, this->_mpopi->samples().size());
 
-        if (cur_chr == prev_chr) {
-            this->_loci.push_back(loc);
-            loc_cnt++;
-
-            this->_loc_filter.keep_locus(loc);
-
-        } else {
-            this->_next_loc = loc;
+        if (loci_ordered && cur_chr != this->_chr) {
+            //
+            // End of batch (reference-based).
+            //
+            assert(loci_ordered);
             this->_loc_filter.locus_unsee();
+            this->_next_loc = loc;
+            break;
         }
 
-    } while (( loci_ordered && prev_chr == cur_chr) ||
-             (!loci_ordered && loc_cnt   < this->_batch_size));
+        this->_loci.push_back(loc);
+        this->_loc_filter.keep_locus(loc);
+        loc_cnt++;
+
+        if (!loci_ordered && loc_cnt == this->_batch_size)
+            //
+            // End of batch (denovo).
+            //
+            break;
+    }
 
     //
     // Record the post-filtering distribution of catalog loci for this batch.

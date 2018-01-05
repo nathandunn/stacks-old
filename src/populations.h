@@ -291,6 +291,7 @@ public:
 
     const LocusFilter&      filter() { return this->_loc_filter; }
     const vector<LocBin *>& loci()   { return this->_loci; }
+    const string&           chr()    { return this->_chr; }
     const CatalogDists&     dists()  { return this->_dists; }
 
 private:
@@ -309,6 +310,7 @@ private:
     VcfHeader        *_vcf_header;
     vector<LocBin *>  _loci;
     LocBin           *_next_loc;
+    string            _chr;
     CatalogDists      _dists;
 
     // Counters for external VCF
