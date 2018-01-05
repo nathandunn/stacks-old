@@ -563,7 +563,6 @@ try {
     return 0;
 
 } catch (exception& e) {
-    model.reset();
     return stacks_handle_exceptions(e);
 }
 }
