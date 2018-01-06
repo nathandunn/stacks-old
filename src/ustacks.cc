@@ -2317,6 +2317,7 @@ void load_radtags(string in_file, DNASeqHashMap &radtags, size_t& n_reads) {
         element->second.add_id(i);
         i++;
     }
+    cerr << '\n';
 
     if (i == 0) {
         cerr << "Error: Unable to load data from '" << in_file.c_str() << "'.\n";
