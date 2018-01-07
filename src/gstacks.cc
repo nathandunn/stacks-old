@@ -546,9 +546,14 @@ try {
     }
 
     #ifdef DEBUG
-    if (typeid(*model) == typeid(MarukiLowModel))
-        // Report how many times the "underflow" likelihood equations were used (we'd need to know the total number of calls...)
-        cout << "\nDEBUG: marukilow: handled " << ((const MarukiLowModel&)*model).n_underflows() << " underflows.\n";
+    const MarukiLowModel* m = dynamic_cast<const MarukiLowModel*>(model.get());
+    if (m != NULL)
+        // Report how often the "underflow" likelihood equations were used
+        cout << "\nDEBUG: marukilow: calc_ln_weighted_sums: "
+             << m->n_wsum_tot() << " calls, "
+             << m->n_wsum_underflows() << " underflows ("
+             << as_percentage(m->n_wsum_underflows(), m->n_wsum_tot())
+             << ").\n";
     #endif
 
     //

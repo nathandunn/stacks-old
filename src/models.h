@@ -194,19 +194,21 @@ class MarukiLowModel : public Model {
     double calc_ln_weighted_sum(double freq_MM, double freq_Mm, double freq_mm, const LikData& s_liks) const;
     double calc_ln_weighted_sum_safe(double freq_MM, double freq_Mm, double freq_mm, const LikData& s_liks) const;
 
-    mutable size_t n_underflows_;
+    mutable size_t n_wsum_tot_;
+    mutable size_t n_wsum_underflows_;
 
 public:
     MarukiLowModel(double gt_alpha, double var_alpha)
         : gt_alpha_(gt_alpha), gt_threshold_(qchisq(gt_alpha_,1)),
           var_alpha_(var_alpha), var_threshold_(qchisq(var_alpha_,2)), // df=2
-          n_underflows_(0)
+          n_wsum_tot_(0), n_wsum_underflows_(0)
         {}
 
     SiteCall call(const SiteCounts& depths) const;
     void print(ostream& os) const
         {os << to_string(modelt::marukilow) << " (var_alpha: "  << var_alpha_ << ", gt_alpha: " << gt_alpha_ << ")";}
-    size_t n_underflows() const {return n_underflows_;}
+    size_t n_wsum_tot() const {return n_wsum_tot_;}
+    size_t n_wsum_underflows() const {return n_wsum_underflows_;}
 };
 
 //

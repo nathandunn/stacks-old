@@ -722,12 +722,14 @@ double MarukiLowModel::calc_dimorph_lnl(double freq_MM, double freq_Mm, double f
 
 double MarukiLowModel::calc_ln_weighted_sum(double freq_MM, double freq_Mm, double freq_mm, const LikData& s_liks) const {
     double weighted_sum = freq_MM * s_liks.l_MM + freq_Mm * s_liks.l_Mm + freq_mm * s_liks.l_mm;
+    #pragma omp atomic
+    ++n_wsum_tot_;
     if (weighted_sum >= std::numeric_limits<double>::min()) {
         return log(weighted_sum);
     } else {
         // `weigted_sum` is subnormal or zero.
         #pragma omp atomic
-        ++n_underflows_;
+        ++n_wsum_underflows_;
         return calc_ln_weighted_sum_safe(freq_MM, freq_Mm, freq_mm, s_liks);
     }
 }
