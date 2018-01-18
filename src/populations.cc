@@ -4196,7 +4196,6 @@ void help() {
          << "  -r [float]: minimum percentage of individuals in a population required to process a locus for that population.\n"
          << "  --min_maf [float]: specify a minimum minor allele frequency required to process a nucleotide site at a locus (0 < min_maf < 0.5).\n"
          << "  --max_obs_het [float]: specify a maximum observed heterozygosity required to process a nucleotide site at a locus.\n"
-         << "  -m [int]: specify a minimum stack depth required for individuals at a locus.\n"
          << "  --lnl_lim [float]: filter loci with log likelihood values below this threshold.\n"
          << "  --write_single_snp: restrict data analysis to only the first SNP per locus (implies --no-haps).\n"
          << "  --write_random_snp: restrict data analysis to one random SNP per locus (implies --no-haps).\n"
