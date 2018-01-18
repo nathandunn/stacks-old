@@ -836,7 +836,7 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
     if (rm_unpaired_reads) {
         for (size_t sample=0; sample<gt_stats_.per_sample_stats.size(); ++sample)
             gt_stats_.per_sample_stats[sample].n_unpaired_reads += aln_loc.sample_reads(sample).size();
-        aln_loc.remove_unmerged_reads();
+        aln_loc.remove_unmerged_reads(detailed_output ? &this->loc_.details_ss : NULL);
         for (size_t sample=0; sample<gt_stats_.per_sample_stats.size(); ++sample)
             gt_stats_.per_sample_stats[sample].n_unpaired_reads -= aln_loc.sample_reads(sample).size();
         if(aln_loc.reads().empty()) {
@@ -851,7 +851,7 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
         assert(rm_unpaired_reads);
         for (size_t sample=0; sample<gt_stats_.per_sample_stats.size(); ++sample)
             gt_stats_.per_sample_stats[sample].n_read_pairs_pcr_dupl += aln_loc.sample_reads(sample).size();
-        aln_loc.remove_pcr_duplicates();
+        aln_loc.remove_pcr_duplicates(detailed_output ? &this->loc_.details_ss : NULL);
         for (size_t sample=0; sample<gt_stats_.per_sample_stats.size(); ++sample)
             gt_stats_.per_sample_stats[sample].n_read_pairs_pcr_dupl -= aln_loc.sample_reads(sample).size();
     }

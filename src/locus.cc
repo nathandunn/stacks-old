@@ -23,6 +23,8 @@
 //
 #include "locus.h"
 
+#include "utils.h"
+
 uint
 Locus::sort_bp(uint k) const
 {
@@ -439,27 +441,37 @@ ostream& operator<< (ostream& os, const CLocAlnSet& loc) {
 }
 
 void
-CLocAlnSet::remove_unmerged_reads()
+CLocAlnSet::remove_unmerged_reads(ostream* log)
 {
-    for (SAlnRead& r : reads_)
-        if (r.name.back() != 'm')
+    if (log != NULL)
+        *log << "BEGIN unpaired_reads\n";
+
+    for (SAlnRead& r : reads_) {
+        if (r.name.back() != 'm') {
             r.seq.clear();
+            if (log != NULL)
+                *log << "rm_unpaired\t" << r.name << '\n';
+        }
+    }
 
     // Remove emptied reads.
-    reads_.erase(std::remove_if(
-            reads_.begin(), reads_.end(),
-            [] (const Read& r) { return r.seq.empty(); }
-            ), reads_.end());
+    stacks_erase_if(reads_, [](const Read& r){return r.seq.empty();} );
 
     // Refresh `reads_per_sample_`.
     reads_per_sample_ = vector<vector<size_t>>(mpopi().samples().size());
     for (size_t i=0; i<reads_.size(); ++i)
         reads_per_sample_[reads_[i].sample].push_back(i);
+
+    if (log != NULL)
+        *log << "END unpaired_reads\n";
 }
 
 void
-CLocAlnSet::remove_pcr_duplicates()
+CLocAlnSet::remove_pcr_duplicates(ostream* log)
 {
+    if (log != NULL)
+        *log << "BEGIN pcr_duplicates\n";
+
     //
     // Sort reads by (I) sample; (II) insert size; (III, for stability) name.
     //
@@ -499,28 +511,28 @@ CLocAlnSet::remove_pcr_duplicates()
         ++r2;
         if (r2 == this->reads_.end())
             break;
-
         if (r2->sample != r1->sample)
             continue;
-        if (r1->cigar.back().first == 'D') {
-            if (r2->cigar.back().first == 'D' && r1->cigar.back().second == r2->cigar.back().second)
-                r1->seq.clear();
-        } else if (r2->cigar.back().first != 'D') {
-            // Neither r1 nor r2 have padding.
+
+        if ((r1->cigar.back().first == 'D' && r2->cigar.back().first == 'D' && r1->cigar.back().second == r2->cigar.back().second)
+                || (r1->cigar.back().first != 'D' && r2->cigar.back().first != 'D')
+                ) {
             r1->seq.clear();
+            if (log != NULL)
+                *log << "rm_pcrd\t" << r1->name << '\n';
         }
     }
 
     // Remove emptied reads.
-    reads_.erase(std::remove_if(
-        reads_.begin(), reads_.end(),
-        [](const Read& r) { return r.seq.empty(); }
-        ), reads_.end());
+    stacks_erase_if(reads_, [](const Read& r){return r.seq.empty();} );
 
     // Refresh `reads_per_sample_`.
     reads_per_sample_ = vector<vector<size_t>>(mpopi().samples().size());
     for (size_t i=0; i<reads_.size(); ++i)
         reads_per_sample_[reads_[i].sample].push_back(i);
+
+    if (log != NULL)
+        *log << "END pcr_duplicates\n";
 }
 
 CLocAlnSet
