@@ -78,6 +78,8 @@ const char *notI[]    = {"GGCCGC",            // GC/GGCCGC, NotI
                          "GCGGCC"};
 const char *nsiI[]    = {"TGCAT",             // ATGCA/T, NsiI
                          "ATGCA"};
+const char *nspI[]    = {"CATGA", "CATGG",    // R/CATGY, NspI
+                         "GCATG", "ACATG"};
 const char *pstI[]    = {"TGCAG",             // CTGCA/G, PstI
                          "CTGCA"};
 const char *rsaI[]    = {"AC",                // GT/AC, RsaI
@@ -110,6 +112,7 @@ initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, ma
     renz["pstI"]    = pstI;    // CTGCA/G, PstI
     renz["notI"]    = notI;    // GC/GGCCGC, NotI
     renz["ecoRI"]   = ecoRI;   // G/AATTC, EcoRI
+    renz["nspI"]    = nspI;
     renz["sgrAI"]   = sgrAI;   // CR/CCGGYG, SgrAI; R=A or G; Y=C or T
     renz["apeKI"]   = apeKI;   // G/CWGC, ApeKI; W=A or T
     renz["hindIII"] = hindIII; // A/AGCTT, HindIII
@@ -159,6 +162,7 @@ initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, ma
     renz_cnt["pstI"]    = 1;
     renz_cnt["notI"]    = 1;
     renz_cnt["ecoRI"]   = 1;
+    renz_cnt["nspI"]    = 2;
     renz_cnt["sgrAI"]   = 2;
     renz_cnt["apeKI"]   = 2;
     renz_cnt["hindIII"] = 1;
@@ -208,6 +212,7 @@ initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, ma
     renz_len["pstI"]    = 5;
     renz_len["notI"]    = 6;
     renz_len["ecoRI"]   = 5;
+    renz_len["nspI"]    = 5;
     renz_len["sgrAI"]   = 6;
     renz_len["apeKI"]   = 4;
     renz_len["hindIII"] = 5;
