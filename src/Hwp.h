@@ -250,13 +250,30 @@ public:
 };
 
 class GuoThompson_Hwp {
+    size_t _n_alleles = 4;
+    size_t _burnin    = 10000;
+    size_t _steps     = 10000;
+    size_t _batches   = 20;
+
+    //
+    // Initialize the random number generator.
+    //
+    std::random_device _r;
+    std::seed_seq      seed{_r(), _r(), _r(), _r(), _r(), _r(), _r(), _r()};
+    std::mt19937       eng{seed};
+
+    //
+    // Random number generator for choosing whether to transition between state.
+    //
+    std::uniform_real_distribution<double>  _transition(0, 1);
+
 public:
     double exec_locus();
-    double walk_chain(HWMatrix **, HWMatrix **, HWMatrix **, std::uniform_int_distribution<uint16_t>, std::uniform_real_distribution<double>, double);
+    double walk_chain(HWMatrix **, HWMatrix **, HWMatrix **, std::uniform_int_distribution<uint16_t>, double);
     double r_switch(HWMatrix &, HWMatrix &, size_t i_1, size_t j_1, size_t i_2, size_t j_2, Switchable &sw);
     double d_switch(HWMatrix &, HWMatrix &, size_t i_1, size_t j_1, size_t i_2, size_t j_2, Switchable &sw);
-    double log_hwe_probability(HWMatrix &g);
-    double hwe_probability(HWMatrix &g);
+    double log_hwe_probability(HWMatrix &);
+    double hwe_probability(HWMatrix &);
 
 };
 
