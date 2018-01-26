@@ -31,8 +31,7 @@ GuoThompson_Hwp::exec_locus()
     //      g: the current matrix on the Markov chain.
     //      g' (gprime): the next potential matrix on the Markov chain.
     //
-    size_t   n_alleles = 4;
-    HWMatrix f(n_alleles), g_1(n_alleles), g_2(n_alleles), g_3(n_alleles);
+    HWMatrix f(this->_n_alleles), g_1(this->_n_alleles), g_2(this->_n_alleles), g_3(this->_n_alleles);
 
     //
     // 2. Populate the matrix.
@@ -47,8 +46,7 @@ GuoThompson_Hwp::exec_locus()
     //
     // Setup two random number generators we will need.
     //
-    std::uniform_int_distribution<uint16_t> indexes(0, n_alleles - 1);
-    std::uniform_real_distribution<double>  transition(0, 1);
+    std::uniform_int_distribution<uint16_t> indexes(0, this->_n_alleles - 1);
 
     g_1 = f;
     HWMatrix *g          = &g_1;
@@ -56,15 +54,11 @@ GuoThompson_Hwp::exec_locus()
     HWMatrix *g_rswitch  = &g_3;
     double    rho        = 0.0;
 
-    size_t burnin     = 10000;
-    size_t estimation = 10000;
-    size_t batches    = 20;
-
     //
-    // Burn-in period.
+    // Markov chain burn-in period.
     //
-    for (size_t n = 0; n < burnin; n++)
-        rho = walk_chain(&g, &g_dswitch, &g_rswitch, indexes, transition, rho);
+    for (size_t n = 0; n < this->_burnin; n++)
+        rho = walk_chain(&g, &g_dswitch, &g_rswitch, indexes, rho);
 
     double p_mean   = 0;
     double p_square = 0;
@@ -73,26 +67,26 @@ GuoThompson_Hwp::exec_locus()
     //
     // Execute the Markov chain in b batches, with n steps in each batch. Average the estimated p-value.
     //
-    for (size_t b = 0; b < batches; b++) {
+    for (size_t b = 0; b < this->_batches; b++) {
 
         size_t k = 0;    
 
-        for (size_t n = 0; n < estimation; n++) {
-            rho = walk_chain(&g, &g_dswitch, &g_rswitch, indexes, transition, rho);
+        for (size_t n = 0; n < this->_steps; n++) {
+            rho = walk_chain(&g, &g_dswitch, &g_rswitch, indexes, rho);
 
             if (rho <= 0.0)
                 k++;
         }    
 
-        p_sim     = (double) k / (double) estimation;
+        p_sim     = (double) k / (double) this->_steps;
         p_mean   += p_sim;
         p_square += p_sim * p_sim;
 
-        cerr << "N: " << estimation << ", K: " << k << ", p-value: " << p_sim << "\n";
+        cerr << "N: " << this->_steps << ", K: " << k << ", p-value: " << p_sim << "\n";
     }
 
-    p_mean = p_mean / batches;
-    se     = p_square / ((double) batches) / ((double)batches - 1.0) - p_mean / ( (double) batches - 1.0 ) * p_mean;
+    p_mean = p_mean / this->_batches;
+    se     = p_square / ((double) this->_batches) / ((double) this->_batches - 1.0) - p_mean / ( (double) this->_batches - 1.0 ) * p_mean;
     se     = sqrt ( se );
 
     cerr << "P-value: " << p_mean << " (" << se << " SE) \n";
@@ -103,7 +97,6 @@ GuoThompson_Hwp::exec_locus()
 double
 GuoThompson_Hwp::walk_chain(HWMatrix **g, HWMatrix **g_dswitch, HWMatrix **g_rswitch,
                             std::uniform_int_distribution<uint16_t> indexes,
-                            std::uniform_real_distribution<double>  transition,
                             double log_rho)
 {
     HWMatrix *gptr;
@@ -113,14 +106,14 @@ GuoThompson_Hwp::walk_chain(HWMatrix **g, HWMatrix **g_dswitch, HWMatrix **g_rsw
     // 1. Randomly select two pairs of indexes to access two cells in the matrix.
     //    Make sure i_1 < i_2 and j_1 < j_2 to keep all valules in the lower diagonal of the matrix.
     //
-    size_t i_1 = indexes(eng);
-    size_t j_1 = indexes(eng);
+    size_t i_1 = indexes(this->_eng);
+    size_t j_1 = indexes(this->_eng);
     size_t i_2, j_2;
     do {
-        i_2 = indexes(eng);
+        i_2 = indexes(this->_eng);
     } while (i_2 == i_1);
     do {
-        j_2 = indexes(eng);
+        j_2 = indexes(this->_eng);
     } while (j_2 == j_1);
 
     if (i_2 < i_1)
@@ -150,7 +143,7 @@ GuoThompson_Hwp::walk_chain(HWMatrix **g, HWMatrix **g_dswitch, HWMatrix **g_rsw
         //
         double pr_lim_d = this->transition_prob(pr_d);
         double pr_lim_r = pr_lim_d + this->transition_prob(pr_r);
-        double tr_pr    = transition(eng);
+        double tr_pr    = this->_transition(this->_eng);
             
         if (tr_pr <= pr_lim_d) {
             gptr           = *g;
@@ -178,7 +171,7 @@ GuoThompson_Hwp::walk_chain(HWMatrix **g, HWMatrix **g_dswitch, HWMatrix **g_rsw
         //   Otherwise, we do not switch.
         //
         double pr_lim_d = this->transition_prob(pr_d);
-        double tr_pr    = transition(eng);
+        double tr_pr    = this->_transition(this->_eng);
 
         if (tr_pr <= pr_lim_d) {
             gptr           = *g;
@@ -200,7 +193,7 @@ GuoThompson_Hwp::walk_chain(HWMatrix **g, HWMatrix **g_dswitch, HWMatrix **g_rsw
         //   Otherwise, we do not switch.
         //
         double pr_lim_r = this->transition_prob(pr_r);
-        double tr_pr    = transition(eng);            
+        double tr_pr    = this->_transition(this->_eng);            
 
         if (tr_pr <= pr_lim_r) {
             gptr           = *g;
