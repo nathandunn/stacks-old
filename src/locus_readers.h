@@ -551,9 +551,6 @@ bool BamCLocBuilder::next_record(size_t bam_f_i)
         }
 
         // Assess whether this alignment should be treated as a forward read.
-        // N.B. We don't discriminate the case when the READ1/READ2 flags are
-        // set and the case when these flags are not set but the read names end
-        // with /1, /2.
         if (!cfg_.paired) {
             treat_as_fw = true;
         } else if (r.is_read1()) {
