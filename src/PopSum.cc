@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2011-2017, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2011-2018, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -640,15 +640,25 @@ LocPopSum::tally_observed_haplotypes(const vector<char *> &obshap, int snp_index
 int
 LocPopSum::calc_hapstats(const CSLocus *cloc, const Datum **d, const MetaPopInfo &mpopi)
 {
-    const vector<Pop> &pops = mpopi.pops();
+    const vector<Pop>  &pops = mpopi.pops();
 
     for (uint j = 0; j < pops.size(); j++) {
 
-        this->_hapstats_per_pop[j] = this->haplotype_diversity(pops[j].first_sample, pops[j].last_sample, d);
-
-        if (this->_hapstats_per_pop[j] != NULL) {
+        if ( (this->_hapstats_per_pop[j] = this->haplotype_diversity(pops[j].first_sample, pops[j].last_sample, d)) != NULL) {
             this->_hapstats_per_pop[j]->loc_id = cloc->id;
             this->_hapstats_per_pop[j]->bp     = cloc->sort_bp();
+
+            //
+            // Initialize the object and Calculate Hardy-Weinberg Proportions.
+            //
+            GuoThompson_Hwp *hwp = new GuoThompson_Hwp(this->_hapstats_per_pop[j]->hap_cnt);
+
+            hwp->exec_locus(pops[j].first_sample, pops[j].last_sample, d, this->_hapstats_per_pop[j]->hap_cnt);
+            
+            this->_hapstats_per_pop[j]->stat[2] = hwp->_p_value;
+            this->_hapstats_per_pop[j]->stat[3] = hwp->_se;
+
+            delete hwp;
         }
     }
 
@@ -662,24 +672,22 @@ LocPopSum::haplotype_diversity(int start, int end, const Datum **d)
     vector<string>      haplotypes;
     map<string, double> hap_freq;
     map<string, int>    hap_index;
-    double   n              = 0.0;
-    double   gene_diversity = 0.0;
-    double   hapl_diversity = 0.0;
-    LocStat *lstat;
+    double gene_diversity = 0.0;
+    double hapl_diversity = 0.0;
+
+    LocStat *lstat = new LocStat;
 
     //
     // Tabulate the haplotypes in this population.
     //
-    n = count_haplotypes_at_locus(start, end, d, hap_freq);
+    double n = count_haplotypes_at_locus(start, end, d, hap_freq);
 
     //
     // If this haplotype is fixed, don't calculate any statistics.
     //
     if (n == 0)
         return NULL;
-
-    lstat = new LocStat;
-
+    
     //
     // Store a summary of the haplotype counts to output below.
     //
@@ -709,7 +717,7 @@ LocPopSum::haplotype_diversity(int start, int end, const Datum **d)
     double **hdists = new double *[hap_index.size()];
     for (k = 0; k < hap_index.size(); k++) {
         hdists[k] = new double[hap_index.size()];
-        memset(hdists[k], 0, hap_index.size());
+        memset(hdists[k], 0, hap_index.size() * sizeof(double));
     }
 
     //
@@ -833,7 +841,7 @@ count_haplotypes_at_locus(int start, int end, const Datum **d, map<string, doubl
         } else {
             // Heterozygote.
             for (uint j = 0; j < d[i]->obshap.size(); j++) {
-                if(!uncalled_haplotype(d[i]->obshap[0])) {
+                if(!uncalled_haplotype(d[i]->obshap[j])) {
                     n++;
                     hap_cnts[d[i]->obshap[j]]++;
                 }
@@ -1543,9 +1551,9 @@ LocusDivergence::haplotype_amova(const Datum **d, const LocSum **s, vector<int> 
     double **hdists_max = new double *[loc_hap_index.size()];
     for (uint k = 0; k < loc_hap_index.size(); k++) {
         hdists[k] = new double[loc_hap_index.size()];
-        memset(hdists[k], 0, loc_hap_index.size());
+        memset(hdists[k], 0, loc_hap_index.size() * sizeof(double));
         hdists_max[k] = new double[loc_hap_index.size()];
-        memset(hdists_max[k], 0, loc_hap_index.size());
+        memset(hdists_max[k], 0, loc_hap_index.size() * sizeof(double));
     }
 
     //

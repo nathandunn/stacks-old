@@ -21,8 +21,23 @@
 #ifndef __HWP_H__
 #define __HWP_H__
 
+#include <random>
+using std::uniform_real_distribution;
+using std::uniform_int_distribution;
+using std::random_device;
+using std::mt19937;
+using std::seed_seq;
+
+#include <iterator>
 #include "constants.h"
 #include "utils.h"
+#include "PopMap.h"
+#include "PopSum.h"
+
+//
+// Utility identity function used in both GuoThompson_Hwp and Switchable.
+//
+size_t kronecker(size_t i, size_t j);
 
 class HWMatrix {
     vector<string>      _hap_list;
@@ -42,7 +57,7 @@ class HWMatrix {
         this->_g           = new size_t * [this->_n_alleles];
         for (uint i = 0; i < this->_n_alleles; i++) {
             this->_g[i] = new size_t[this->_n_alleles];
-            memset(this->_g[i], 0, this->_n_alleles);
+            memset(this->_g[i], 0, this->_n_alleles * sizeof(size_t));
         }
     }
     HWMatrix(const HWMatrix &rhs) {
@@ -53,7 +68,7 @@ class HWMatrix {
 
         for (uint i = 0; i < this->_n_alleles; i++) {
             this->_g[i] = new size_t[this->_n_alleles];
-            memset(this->_g[i], 0, this->_n_alleles);
+            memset(this->_g[i], 0, this->_n_alleles * sizeof(size_t));
             for (uint j = 0; j <= i; j++)
                 this->_g[i][j] = rhs._g[i][j];
         }
@@ -102,6 +117,7 @@ class HWMatrix {
     size_t hets() const { return this->_hets; }
     size_t genotypes() const { return this->_n_genotypes; }
     map<string, size_t>& hap_cnts() { return this->_hap_cnts; }
+
     void add_genotype(string allele_1, string allele_2) {
         if (this->_hap_index.count(allele_1) == 0) {
             _hap_index[allele_1] = _hap_list.size();
@@ -161,6 +177,7 @@ class HWMatrix {
 
         return (j > i) ? this->_g[j][i] : this->_g[i][j];
     }
+    void populate(int, int, const Datum **);
     void dump_matrix();
 };
 
@@ -250,31 +267,47 @@ public:
 };
 
 class GuoThompson_Hwp {
-    size_t _n_alleles = 4;
-    size_t _burnin    = 10000;
-    size_t _steps     = 10000;
-    size_t _batches   = 20;
+    const size_t _burnin  = 10000;
+    const size_t _steps   = 10000;
+    const size_t _batches = 20;
 
+    random_device _r;
+    mt19937       _eng;
     //
-    // Initialize the random number generator.
+    // Random number generator for choosing whether to transition between states.
     //
-    std::random_device _r;
-    std::seed_seq      seed{_r(), _r(), _r(), _r(), _r(), _r(), _r(), _r()};
-    std::mt19937       eng{seed};
-
+    uniform_real_distribution<double> _transition;
     //
-    // Random number generator for choosing whether to transition between state.
+    // Random number generator for choosing cells from our genotype matrix.
     //
-    std::uniform_real_distribution<double>  _transition(0, 1);
+    uniform_int_distribution<uint16_t> _indexes;
 
 public:
-    double exec_locus();
-    double walk_chain(HWMatrix **, HWMatrix **, HWMatrix **, std::uniform_int_distribution<uint16_t>, double);
-    double r_switch(HWMatrix &, HWMatrix &, size_t i_1, size_t j_1, size_t i_2, size_t j_2, Switchable &sw);
-    double d_switch(HWMatrix &, HWMatrix &, size_t i_1, size_t j_1, size_t i_2, size_t j_2, Switchable &sw);
+    size_t _n_alleles;
+    double _p_value;
+    double _se;
+
+    GuoThompson_Hwp(size_t n_alleles) {
+        this->_n_alleles  = n_alleles;
+
+        seed_seq seed{_r(), _r(), _r(), _r(), _r(), _r(), _r(), _r()};
+        _eng.seed(seed);
+
+        this->_indexes    = uniform_int_distribution<uint16_t>(0, n_alleles - 1);
+        this->_transition = uniform_real_distribution<double>(0, 1);
+    }
+
+    double exec_locus(int, int, const Datum **, size_t);
     double log_hwe_probability(HWMatrix &);
     double hwe_probability(HWMatrix &);
 
+private:
+    double walk_chain(HWMatrix **, HWMatrix **, HWMatrix **, double);
+    double r_switch(HWMatrix &, HWMatrix &, size_t i_1, size_t j_1, size_t i_2, size_t j_2, Switchable &sw);
+    double d_switch(HWMatrix &, HWMatrix &, size_t i_1, size_t j_1, size_t i_2, size_t j_2, Switchable &sw);
+    double delta(size_t i_1, size_t j_1, size_t i_2, size_t j_2);
+    double gamma(size_t Delta, size_t i_1, size_t j_1, size_t i_2, size_t j_2);
+    double transition_prob(double pr);
 };
 
 #endif // __HWP_H__

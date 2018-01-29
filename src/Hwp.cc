@@ -21,47 +21,39 @@
 #include "Hwp.h"
 
 double
-GuoThompson_Hwp::exec_locus()
+GuoThompson_Hwp::exec_locus(int start, int end, const Datum **d, size_t hap_cnt)
 {
     std::ostream_iterator<unsigned long> out (cerr, " ");
 
     //
     // 1. Create several NxN diagonal matrix containing all N possible genotype combinations found in the population.
-    //      f: the empirically observed matrix containing genotype counts.
     //      g: the current matrix on the Markov chain.
-    //      g' (gprime): the next potential matrix on the Markov chain.
+    //      g_dswitch: the next potential matrix on the Markov chain if we d-switch.
+    //      g_rswitch: the next potential matrix on the Markov chain if we r-switch.
     //
-    HWMatrix f(this->_n_alleles), g_1(this->_n_alleles), g_2(this->_n_alleles), g_3(this->_n_alleles);
+    HWMatrix g_1(hap_cnt), g_2(hap_cnt), g_3(hap_cnt);
 
     //
     // 2. Populate the matrix.
     //
-    for (uint i = 0; i < haplotypes.size(); i++) {
+    g_1.populate(start, end, d);
 
-        if (haplotypes[i].size() > 2)
-            continue;
-        f.add_genotype(haplotypes[i][0], haplotypes[i][1]);
-    }
+    // g_1.dump_matrix();
+    // cerr << "Populated matrix. Number of alleles: " << g_1.alleles() << "; number of genotypes: " << g_1.genotypes() << "; number of hets: " << g_1.hets() << "\n";
 
-    //
-    // Setup two random number generators we will need.
-    //
-    std::uniform_int_distribution<uint16_t> indexes(0, this->_n_alleles - 1);
-
-    g_1 = f;
     HWMatrix *g          = &g_1;
     HWMatrix *g_dswitch  = &g_2;
     HWMatrix *g_rswitch  = &g_3;
-    double    rho        = 0.0;
+    double    log_rho    = 0.0;
 
     //
     // Markov chain burn-in period.
     //
     for (size_t n = 0; n < this->_burnin; n++)
-        rho = walk_chain(&g, &g_dswitch, &g_rswitch, indexes, rho);
-
-    double p_mean   = 0;
-    double p_square = 0;
+        log_rho = walk_chain(&g, &g_dswitch, &g_rswitch, log_rho);
+    
+    double p_mean   = 0.0;
+    double p_square = 0.0;
     double p_sim, se;
 
     //
@@ -69,20 +61,20 @@ GuoThompson_Hwp::exec_locus()
     //
     for (size_t b = 0; b < this->_batches; b++) {
 
-        size_t k = 0;    
+        size_t k = 0;
 
         for (size_t n = 0; n < this->_steps; n++) {
-            rho = walk_chain(&g, &g_dswitch, &g_rswitch, indexes, rho);
+            log_rho = walk_chain(&g, &g_dswitch, &g_rswitch, log_rho);
 
-            if (rho <= 0.0)
+            if (log_rho <= 0.0)
                 k++;
-        }    
+        }
 
         p_sim     = (double) k / (double) this->_steps;
         p_mean   += p_sim;
         p_square += p_sim * p_sim;
 
-        cerr << "N: " << this->_steps << ", K: " << k << ", p-value: " << p_sim << "\n";
+        // cerr << "N: " << this->_steps << ", K: " << k << ", p-value: " << p_sim << "\n";
     }
 
     p_mean = p_mean / this->_batches;
@@ -91,13 +83,14 @@ GuoThompson_Hwp::exec_locus()
 
     cerr << "P-value: " << p_mean << " (" << se << " SE) \n";
 
+    this->_p_value = p_mean;
+    this->_se = se;
+
     return p_mean;
 }
 
 double
-GuoThompson_Hwp::walk_chain(HWMatrix **g, HWMatrix **g_dswitch, HWMatrix **g_rswitch,
-                            std::uniform_int_distribution<uint16_t> indexes,
-                            double log_rho)
+GuoThompson_Hwp::walk_chain(HWMatrix **g, HWMatrix **g_dswitch, HWMatrix **g_rswitch, double log_rho)
 {
     HWMatrix *gptr;
     double    log_rho_prime = log_rho;
@@ -106,14 +99,14 @@ GuoThompson_Hwp::walk_chain(HWMatrix **g, HWMatrix **g_dswitch, HWMatrix **g_rsw
     // 1. Randomly select two pairs of indexes to access two cells in the matrix.
     //    Make sure i_1 < i_2 and j_1 < j_2 to keep all valules in the lower diagonal of the matrix.
     //
-    size_t i_1 = indexes(this->_eng);
-    size_t j_1 = indexes(this->_eng);
+    size_t i_1 = this->_indexes(this->_eng);
+    size_t j_1 = this->_indexes(this->_eng);
     size_t i_2, j_2;
     do {
-        i_2 = indexes(this->_eng);
+        i_2 = this->_indexes(this->_eng);
     } while (i_2 == i_1);
     do {
-        j_2 = indexes(this->_eng);
+        j_2 = this->_indexes(this->_eng);
     } while (j_2 == j_1);
 
     if (i_2 < i_1)
@@ -193,7 +186,7 @@ GuoThompson_Hwp::walk_chain(HWMatrix **g, HWMatrix **g_dswitch, HWMatrix **g_rsw
         //   Otherwise, we do not switch.
         //
         double pr_lim_r = this->transition_prob(pr_r);
-        double tr_pr    = this->_transition(this->_eng);            
+        double tr_pr    = this->_transition(this->_eng);
 
         if (tr_pr <= pr_lim_r) {
             gptr           = *g;
@@ -294,14 +287,8 @@ GuoThompson_Hwp::delta(size_t i_1, size_t j_1, size_t i_2, size_t j_2)
     return (kronecker(i_1, j_1) + kronecker(i_2, j_2)) - (kronecker(i_1, j_1) * kronecker(i_2, j_2));
 }
 
-inline size_t
-GuoThompson_Hwp::kronecker(size_t i, size_t j)
-{
-    return i == j ? 1 : 0;
-}
-
 inline double
-log_hwe_probability(HWMatrix &g)
+GuoThompson_Hwp::log_hwe_probability(HWMatrix &g)
 {
     //
     // Implementation of equation 1 from Guo and Thompson, 1992.
@@ -342,7 +329,7 @@ log_hwe_probability(HWMatrix &g)
 }
 
 inline double
-hwe_probability(HWMatrix &g)
+GuoThompson_Hwp::hwe_probability(HWMatrix &g)
 {
     size_t n_genotypes = 0;
     size_t hets        = 0;
@@ -376,6 +363,7 @@ hwe_probability(HWMatrix &g)
 void
 HWMatrix::dump_matrix()
 {
+    int  padding = 3;
     char buf[id_len];
 
     cerr << "Allele cnts:\n";
@@ -392,11 +380,45 @@ HWMatrix::dump_matrix()
     
         for(uint j = 0; j < this->_hap_list.size(); j++) {
             if (j <= i)
-                snprintf(buf, id_len, "% 2lu  ", this->_g[i][j]);
+                snprintf(buf, id_len, "%*lu  ", padding, this->_g[i][j]);
             else
-                snprintf(buf, id_len, "% 2lu  ", 0);
+                snprintf(buf, id_len, "%*d  ", padding, 0);
             cerr << buf;
         }
         cerr << "\n";
     }
+}
+
+void
+HWMatrix::populate(int start, int end, const Datum **d)
+{
+    for (int i = start; i <= end; i++) {
+        if (d[i] == NULL)
+            // No data, ignore this sample.
+            continue;
+
+        const vector<char*>& haps = d[i]->obshap;
+
+        if (haps.size() > 2) {
+            // Too many haplotypes, ignore this sample.
+            continue;
+
+        } else if (haps.size() == 1) {
+            // Homozygote.
+            if(!uncalled_haplotype(d[i]->obshap[0]))
+                this->add_genotype(d[i]->obshap[0], d[i]->obshap[0]);
+
+        } else {
+            // Heterozygote.
+            if(!uncalled_haplotype(d[i]->obshap[0]) &&
+               !uncalled_haplotype(d[i]->obshap[1]))
+                this->add_genotype(d[i]->obshap[0], d[i]->obshap[1]);
+        }
+    }
+}
+
+inline size_t
+kronecker(size_t i, size_t j)
+{
+    return i == j ? 1 : 0;
 }
