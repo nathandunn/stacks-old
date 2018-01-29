@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2011-2017, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2011-2018, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -35,6 +35,7 @@
 #include "locus.h"
 #include "PopMap.h"
 #include "MetaPopInfo.h"
+#include "Hwp.h"
 
 extern bool      log_fst_comp;
 extern double    minor_allele_freq;
@@ -109,6 +110,8 @@ public:
 class LocStat: public PopStat {
     // PopStat[0]: gene diversity
     // PopStat[1]: haplotype diversity (Pi)
+    // PopStat[2]: Hardy-Weinberg proportions p-value
+    // PopStat[3]: Hardy-Weinberg proportions p-value standard error.
 public:
     uint     hap_cnt; // Number of unique haplotypes at this locus.
     string   hap_str; // Human-readable string of haplotype counts.

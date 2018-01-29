@@ -330,7 +330,9 @@ HapstatsExport::write_header()
         << "Haplotype Diversity"          << "\t"
         << "Smoothed Haplotype Diversity" << "\t"
         << "Smoothed Haplotype Diversity P-value" << "\t"
-        << "Haplotypes"                   << "\n";
+        << "HWE P-value"    << "\t"
+        << "HWE P-value SE" << "\t"
+        << "Haplotypes"     << "\n";
 
     return 0;
 }
@@ -363,6 +365,8 @@ HapstatsExport::write_batch(const vector<LocBin *> &loci)
                 << l->stat[1]       << "\t"
                 << l->smoothed[1]   << "\t"
                 << l->bs[1]         << "\t"
+                << l->stat[2]       << "\t"
+                << l->stat[3]       << "\t"
                 << l->hap_str       << "\n";
         }
     }

@@ -53,7 +53,8 @@ libpop_a_SOURCES = \
 	src/PopMap.h \
 	src/PopSum.h src/PopSum.cc \
 	src/smoothing.h \
-	src/smoothing_utils.h
+	src/smoothing_utils.h \
+	src/Hwp.h src/Hwp.cc
 
 libcore_a_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
 libpop_a_CXXFLAGS  = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
