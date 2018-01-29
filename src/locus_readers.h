@@ -69,17 +69,17 @@ public:
 
     struct BamStats {
         size_t n_records;
+        size_t n_ignored_read2_recs;
         size_t n_primary;
         size_t n_primary_mapq;
         size_t n_primary_softclipped;
+        size_t n_primary_kept_read2;
         size_t n_secondary;
         size_t n_supplementary;
         size_t n_unmapped;
-        size_t n_ignored_read2_recs;
-
-        size_t n_loci_built;
 
         size_t n_primary_kept() const {return n_primary - n_primary_mapq - n_primary_softclipped;}
+        size_t n_primary_kept_read1() const {return n_primary_kept() - n_primary_kept_read2;}
     };
 
     struct LocStats {
@@ -551,21 +551,20 @@ bool BamCLocBuilder::next_record(size_t bam_f_i)
         }
 
         // Assess whether this alignment should be treated as a forward read.
-        // N.B. We don't discriminate the case when the READ1/READ2 flags are
-        // set and the case when these flags are not set but the read names end
-        // with /1, /2.
-        if (!cfg_.paired) {
-            treat_as_fw = true;
-        } else if (r.is_read1()) {
-            treat_as_fw = true;
-        } else if (r.is_read2()) {
-            treat_as_fw = false;
+        if (r.is_read2()) {
+            treat_as_fw = cfg_.paired ? false : true;
         } else {
-            cerr << "Error: --paired is on but BAM record '" << r.qname()
-                 << "' is not flagged as READ1 nor READ2.\n";
-            throw exception();
+            treat_as_fw = true;
+            if ((bam_stats_.n_primary_kept_read2 > 0 || bam_stats_.n_ignored_read2_recs > 0)
+                    && !r.is_read1()) {
+                static bool emitted = false;
+                if (!emitted) {
+                    emitted = true;
+                    cerr << "WARNING: Some records (e.g. '" << r.qname()
+                         << "') are missing a READ1/READ2 flag.\n";
+                }
+            }
         }
-
         // Check that there's a sequence.
         if (r.hts_l_seq() <= 0) {
             cerr << "Error: No sequence at BAM record '" << r.qname() << "'.\n";
@@ -601,8 +600,12 @@ bool BamCLocBuilder::next_record(size_t bam_f_i)
             ++bam_stats_.n_primary_softclipped;
             continue;
         }
+
+        // Keep this record.
         break;
     }
+    if (r.is_read2())
+        ++bam_stats_.n_primary_kept_read2;
     return true;
 }
 
