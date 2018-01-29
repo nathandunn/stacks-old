@@ -648,17 +648,19 @@ LocPopSum::calc_hapstats(const CSLocus *cloc, const Datum **d, const MetaPopInfo
             this->_hapstats_per_pop[j]->loc_id = cloc->id;
             this->_hapstats_per_pop[j]->bp     = cloc->sort_bp();
 
-            //
-            // Initialize the object and Calculate Hardy-Weinberg Proportions.
-            //
-            GuoThompson_Hwp *hwp = new GuoThompson_Hwp(this->_hapstats_per_pop[j]->hap_cnt);
+            if (0) {
+                //
+                // Initialize the object and Calculate Hardy-Weinberg Proportions.
+                //
+                GuoThompson_Hwp *hwp = new GuoThompson_Hwp(this->_hapstats_per_pop[j]->hap_cnt);
 
-            hwp->exec_locus(pops[j].first_sample, pops[j].last_sample, d, this->_hapstats_per_pop[j]->hap_cnt);
+                hwp->exec_locus(pops[j].first_sample, pops[j].last_sample, d, this->_hapstats_per_pop[j]->hap_cnt);
             
-            this->_hapstats_per_pop[j]->stat[2] = hwp->_p_value;
-            this->_hapstats_per_pop[j]->stat[3] = hwp->_se;
+                this->_hapstats_per_pop[j]->stat[2] = hwp->_p_value;
+                this->_hapstats_per_pop[j]->stat[3] = hwp->_se;
 
-            delete hwp;
+                delete hwp;
+            }
         }
     }
 
