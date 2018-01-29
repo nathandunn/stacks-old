@@ -43,7 +43,7 @@ vector<string> in_bams;      // Set if -B is given, or if -P is given without -M
 
 string o_prefix;
 
-BamCLocBuilder::Config refbased_cfg {false, 1000, 10, 0.20, 1, false};
+BamCLocBuilder::Config refbased_cfg {true, 1000, 10, 0.20, 1, false};
 
 int    num_threads        = 1;
 bool   quiet              = false;
@@ -377,7 +377,10 @@ try {
         cout << "\n"
              << "Read " << bam_stats.n_records << " BAM records:\n"
              << "  kept " << bam_stats.n_primary_kept() << " primary alignments ("
-             << as_percentage((double) bam_stats.n_primary_kept() / tot) << ")\n"
+             << as_percentage(bam_stats.n_primary_kept(), tot) << ")";
+        if (refbased_cfg.paired)
+            cout << ", of which " << bam_stats.n_primary_kept_read2 << " paired-end reads";
+        cout << "\n"
              << "  skipped " << bam_stats.n_primary_mapq << " primary alignments with insufficient mapping qualities ("
              << as_percentage((double) bam_stats.n_primary_mapq / tot) << ")\n"
              << "  skipped " << bam_stats.n_primary_softclipped << " excessively soft-clipped primary alignments ("
@@ -2134,14 +2137,14 @@ const string help_string = string() +
         "      de novo Stacks pipeline, ustacks-cstacks-sstacks-tsv2bam\n"
         "\n"
         "Reference-based mode:\n"
-        "  gstacks -I bam_dir -M popmap [-S suffix] -O out_dir [--paired]\n"
-        "  gstacks -B bam_file [-B ...] -O out_dir [--paired]\n"
+        "  gstacks -I bam_dir -M popmap [-S suffix] -O out_dir\n"
+        "  gstacks -B bam_file [-B ...] -O out_dir\n"
         "\n"
         "  -I: input directory containing BAM files\n"
         "  -S: with -I/-M, suffix to use to build BAM file names: by default this\n"
         "      is just '.bam', i.e. the program expects 'SAMPLE_NAME.bam'\n"
         "  -B: input BAM file(s)\n"
-        "  --paired: reads are paired (RAD loci will be defined by READ1 alignments)\n"
+        "  --unpaired: ignore read pairing (for ddRAD; treat READ2's as if they were READ1's)\n"
         "\n"
         "  The input BAM file(s) must be sorted by coordinate.\n"
         "  With -B, records must be assigned to samples using BAM \"reads groups\"\n"
@@ -2155,7 +2158,6 @@ const string help_string = string() +
         "      directory)\n"
         "  -t,--threads: number of threads to use (default: 1)\n"
         "  --ignore-pe-reads: ignore paired-end reads even if present in the input\n"
-        "                     (in reference-based mode, this implies --paired)\n"
         "\n"
         "Model options:\n"
         "  --model: model to use to call variants and genotypes; one of\n"
@@ -2167,13 +2169,13 @@ const string help_string = string() +
         "  (De novo mode)\n"
         "  --kmer-length: kmer length for the de Bruijn graph (default: 31, max. 31)\n"
         "  --min-kmer-cov: minimum coverage to consider a kmer (default: 2)\n"
-        "  --rm-unpaired-reads: discard unpaired reads (in reference-based mode, implies --paired)\n"
+        "  --rm-unpaired-reads: discard unpaired reads\n"
         "  --rm-pcr-duplicates: remove read pairs of the same insert length (implies --rm-unpaired-reads)\n"
         "\n"
         "  (Reference-based mode)\n"
         "  --min-mapq: minimum PHRED-scaled mapping quality to consider a read (default: 10)\n"
         "  --max-clipped: maximum soft-clipping level, in fraction of read length (default: 0.20)\n"
-        "  --max-insert-len: maximum allowed sequencing insert length (for --paired; default: 1000)\n"
+        "  --max-insert-len: maximum allowed sequencing insert length (default: 1000)\n"
         "\n"
         "  --details: write a heavier output\n"
         "\n"
@@ -2215,7 +2217,7 @@ try {
         {"suffix",       required_argument, NULL,  'S'}, {"spacer", required_argument, NULL, 's'},
         {"popmap",       required_argument, NULL,  'M'},
         {"out-dir",      required_argument, NULL,  'O'},
-        {"paired",       no_argument,       NULL,  1007},
+        {"unpaired",     no_argument,       NULL,  1007}, {"paired", no_argument, NULL, 3007},
         {"threads",      required_argument, NULL,  't'},
         {"model",        required_argument, NULL,  1006},
         {"gt-alpha",     required_argument, NULL,  1005},
@@ -2301,8 +2303,11 @@ try {
         case 'O':
             out_dir = optarg;
             break;
-        case 1007: //paired
-            refbased_cfg.paired = true;
+        case 1007: //unpaired
+            refbased_cfg.paired = false;
+            break;
+        case 3007: // xxx Remove this after the beta
+            cerr << "WARNING: --paired is deprecated: it is ON by default, see --unpaired instead.\n";
             break;
         case 1006: //model
             model_type = parse_model_type(optarg);
@@ -2327,7 +2332,7 @@ try {
         case 1001://kmer-length
             km_length = atoi(optarg);
             if (km_length < 2 || km_length > 31) {
-                cerr << "Error: Illegal -t option value '" << optarg << "'.\n";
+                cerr << "Error: Illegal -t option value '" << optarg << "' (valid range is 2-31).\n";
                 bad_args();
             }
             break;
@@ -2450,8 +2455,8 @@ try {
     }
 
     if (input_type == In::denovo_popmap || input_type == In::denovo_merger) {
-        if (refbased_cfg.paired) {
-            cerr << "Error: --paired is for the reference-based mode.\n";
+        if (!refbased_cfg.paired) {
+            cerr << "Error: --unpaired is for the reference-based mode.\n";
             bad_args();
         }
         if (suffix != ".bam") {
@@ -2459,8 +2464,10 @@ try {
             bad_args();
         }
     } else if (input_type == In::refbased_popmap || input_type == In::refbased_list) {
-        if (rm_unpaired_reads)
-            refbased_cfg.paired = true;
+        if (!refbased_cfg.paired && rm_unpaired_reads) {
+            cerr << "Error: --unpaired and --rm-unpaired-reads/--rm-pcr-duplicates are not compatible.\n";
+            bad_args();
+        }
         if (out_dir.empty()) {
             cerr << "Error: Please specify an output directory (-O).\n";
             bad_args();
@@ -2533,10 +2540,9 @@ void report_options(ostream& os) {
     case GStacksInputT::refbased_popmap:
     case GStacksInputT::refbased_list:
         os << "  Input mode: reference-based";
-        if (refbased_cfg.paired)
-            os << ", paired-end\n";
-        else
-            os << ", single-end\n";
+        if (!refbased_cfg.paired)
+            os << ", unpaired";
+        os << "\n";
         break;
     default:
         DOES_NOT_HAPPEN;
