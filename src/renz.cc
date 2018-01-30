@@ -201,7 +201,7 @@ initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, ma
     renz_cnt["rsaI"]    = 1;
     renz_cnt["aciI"]    = 2;
     renz_cnt["bfaI"]    = 1;
-    renz_cnt["bfuCI"]   = 0;
+    renz_cnt["bfuCI"]   = 1;
     renz_cnt["aseI"]    = 1;
     renz_cnt["bspDI"]   = 1;
     renz_cnt["csp6I"]   = 1;
