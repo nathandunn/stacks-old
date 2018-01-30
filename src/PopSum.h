@@ -37,6 +37,7 @@
 #include "MetaPopInfo.h"
 #include "Hwp.h"
 
+extern bool      calc_hwp;
 extern bool      log_fst_comp;
 extern double    minor_allele_freq;
 extern corr_type fst_correction;

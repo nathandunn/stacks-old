@@ -1850,6 +1850,72 @@ StructureExport::close()
 }
 
 int
+FineStructureExport::open(const MetaPopInfo *mpopi)
+{
+    this->_mpopi = mpopi;
+
+    //
+    // Write a FineStructure file, https://people.maths.bris.ac.uk/~madjl/finestructure/finestructure_info.html
+    //
+    this->_path = out_path + out_prefix + ".finestructure";
+
+    cout << "Polymorphic loci in FineStructure format will be written to '" << this->_path << "'\n";
+
+    return 0;
+}
+
+int
+FineStructureExport::write_header()
+{
+    this->_tmpfh << "\t";
+    for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
+        const Pop& pop = this->_mpopi->pops()[p];
+        for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
+            this->_tmpfh << mpopi.samples()[j].name << "\t" << mpopi.samples()[j].name;
+            if (j < this->_mpopi->samples().size() - 1)
+                this->_tmpfh << "\t";
+        }
+    }
+    this->_tmpfh << "\n";
+
+    this->_tmpfh << "\t";
+    for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
+        const Pop& pop = this->_mpopi->pops()[p];
+        for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
+            this->_tmpfh << pop.name << "\t" << pop.name;
+            if (j < this->_mpopi->samples().size() - 1)
+                this->_tmpfh << "\t";
+        }
+    }
+    this->_tmpfh << "\n";
+
+    return 0;
+}
+
+int
+FineStructureExport::write_site(const CSLocus *loc, const LocPopSum *lps, Datum const*const* d, size_t col, size_t snp_index)
+{
+    return 0;
+}
+
+int
+FineStructureExport::post_processing()
+{
+
+    return 1;
+}
+
+void
+FineStructureExport::close()
+{
+    //
+    // Close and delete the temporary files.
+    //
+    this->_fh.close();
+    return;
+}
+
+int
 PhylipExport::open(const MetaPopInfo *mpopi)
 {
     this->_mpopi = mpopi;

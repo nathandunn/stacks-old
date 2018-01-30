@@ -47,6 +47,7 @@ double    sample_limit      = 0.0;
 int       population_limit  = 1;
 int       batch_size        = 10000;
 bool      calc_fstats       = false;
+bool      calc_hwp          = false;
 bool      bootstrap         = false;
 bool      bootstrap_fst     = false;
 bool      bootstrap_pifis   = false;
@@ -903,10 +904,14 @@ BatchLocusProcessor::summarize(ostream &log_fh)
 int
 BatchLocusProcessor::hapstats(ostream &log_fh)
 {
-    for (uint i = 0; i < this->_loci.size(); i++) {
-        LocBin *loc = this->_loci[i];
+    #pragma omp parallel
+    {
+        #pragma omp for schedule(dynamic, 1)
+        for (uint i = 0; i < this->_loci.size(); i++) {
+            LocBin *loc = this->_loci[i];
 
-        loc->s->calc_hapstats(loc->cloc, (const Datum **) loc->d, *this->_mpopi);
+            loc->s->calc_hapstats(loc->cloc, (const Datum **) loc->d, *this->_mpopi);
+        }
     }
 
     return 0;
@@ -3760,6 +3765,7 @@ parse_command_line(int argc, char* argv[])
             {"fasta_samples",  no_argument,       NULL, 'J'}, {"fasta_strict", no_argument, NULL, 'J'},
             {"fasta_samples_raw", no_argument,    NULL, 'F'}, {"fasta", no_argument, NULL, 'F'},
             {"structure",      no_argument,       NULL, 'S'},
+            {"finestructure",  no_argument,       NULL, 1015},
             {"fastphase",      no_argument,       NULL, 'A'},
             {"phase",          no_argument,       NULL, 'C'},
             {"beagle",         no_argument,       NULL, 'E'},
@@ -3794,6 +3800,7 @@ parse_command_line(int argc, char* argv[])
             {"smooth_fstats",     no_argument,       NULL, 1007},
             {"smooth_popstats",   no_argument,       NULL, 1008},
             {"fstats",            no_argument,       NULL, '6'},
+            {"hwe",               no_argument,       NULL, 1014},
             {"log_fst_comp",      no_argument,       NULL, 'l'},
             {"bootstrap_type",    required_argument, NULL, 1001},
             {"bootstrap_reps",    required_argument, NULL, 1003},
@@ -3988,6 +3995,12 @@ parse_command_line(int argc, char* argv[])
         case 1011: //genepop-haps-3digits
             add_export<GenePopHapsExport>();
             dynamic_cast<GenePopHapsExport&>(**find_export<GenePopHapsExport>()).set_digits(3);
+            break;
+        case 1015: // --finestructure
+            add_export<FineStructureExport>();
+            break;
+        case 1014: // --hwe
+            calc_hwp = true;
             break;
         case 'S':
             add_export<StructureExport>();
@@ -4207,6 +4220,9 @@ void help() {
          << "  --merge_sites: merge loci that were produced from the same restriction enzyme cutsite (requires reference-aligned data).\n"
          << "  --merge_prune_lim: when merging adjacent loci, if at least X% samples posses both loci prune the remaining samples out of the analysis.\n"
          << "\n"
+         << "Locus stats:\n"
+         << "  --hwe: calculate divergence from Hardy-Weinberg equilibrium for each locus.\n"
+         << "\n"
          << "Fstats:\n"
          << "  --fstats: enable SNP and haplotype-based F statistics.\n"
          << "  --fst_correction: specify a correction to be applied to Fst values: 'p_value', 'bonferroni_win', or 'bonferroni_gen'. Default: off.\n"
@@ -4233,6 +4249,7 @@ void help() {
          << "  --vcf: output SNPs and haplotypes in Variant Call Format (VCF).\n"
          << "  --genepop: output SNPs and haplotypes in GenePop format.\n"
          << "  --structure: output results in Structure format.\n"
+         << "  --finestructure: output results in FineStructure format.\n"
          << "  --phase*: output genotypes in PHASE format.\n"
          << "  --fastphase*: output genotypes in fastPHASE format.\n"
          << "  --beagle*: output genotypes in Beagle format.\n"

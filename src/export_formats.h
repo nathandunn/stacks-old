@@ -275,6 +275,25 @@ class StructureExport: public OrderableExport {
     int write_site(const CSLocus* cloc, const LocPopSum* psum, Datum const*const* datums, size_t col, size_t index);
 };
 
+class FineStructureExport: public Export {
+    const MetaPopInfo *_mpopi;
+    string   _tmp_path;
+    ofstream _tmpfh;
+    ifstream _intmpfh;
+
+ public:
+    FineStructureExport() : _mpopi(NULL) {}
+    ~FineStructureExport() {}
+    int  open(const MetaPopInfo *mpopi);
+    int  write_header();
+    int  write_batch(const vector<LocBin *> &) { return 0; }
+    int  post_processing();
+    void close();
+
+ private:
+    int write_site(const CSLocus* cloc, const LocPopSum* psum, Datum const*const* datums, size_t col, size_t index);
+};
+
 class PhylipExport: public OrderableExport {
 protected:
     const MetaPopInfo *_mpopi;
