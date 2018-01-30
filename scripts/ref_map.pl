@@ -658,8 +658,11 @@ sub parse_command_line {
             #	usage();
             #    }
 
-        } elsif ($_ =~ /^--paired$/) {
-            push(@_gstacks, "--paired");
+        } elsif ($_ =~ /^--unpaired$/) {
+            push(@_gstacks, "--unpaired");
+
+        } elsif ($_ =~ /^--ignore-pe-reads$/) {
+            push(@_gstacks, "--ignore-pe-reads");
 
         } elsif ($_ =~ /^-T$/) {
             $arg = shift @ARGV;
@@ -751,7 +754,8 @@ ref_map.pl --samples dir --popmap path [-s spacer] [--paired] -o dir (database o
        named 'SAMPLE_NAME.bam'; if this option is given the program looks for files
         named 'SAMPLE_NAME.SPACER.bam'.
     o: path to an output directory.
-    --paired: assume reads in the BAM file are paired; build loci based on READ1.
+    --unpaired: ignore read pairing (for ddRAD; treat READ2's as if they were READ1's)
+    --ignore-pe-reads: ignore paired-end reads even if present in the input
 
   General options:
     A: (To be reimplemented) for a mapping cross, specify the type; one of 'CP', 'F2', 'BC1', 'DH', or 'GEN'.
