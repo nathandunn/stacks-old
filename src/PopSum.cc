@@ -648,7 +648,7 @@ LocPopSum::calc_hapstats(const CSLocus *cloc, const Datum **d, const MetaPopInfo
             this->_hapstats_per_pop[j]->loc_id = cloc->id;
             this->_hapstats_per_pop[j]->bp     = cloc->sort_bp();
 
-            if (0) {
+            if (calc_hwp && this->_hapstats_per_pop[j]->hap_cnt > 1) {
                 //
                 // Initialize the object and Calculate Hardy-Weinberg Proportions.
                 //

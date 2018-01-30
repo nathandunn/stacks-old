@@ -81,7 +81,7 @@ GuoThompson_Hwp::exec_locus(int start, int end, const Datum **d, size_t hap_cnt)
     se     = p_square / ((double) this->_batches) / ((double) this->_batches - 1.0) - p_mean / ( (double) this->_batches - 1.0 ) * p_mean;
     se     = sqrt ( se );
 
-    cerr << "P-value: " << p_mean << " (" << se << " SE) \n";
+    // cerr << "P-value: " << p_mean << " (" << se << " SE) \n";
 
     this->_p_value = p_mean;
     this->_se = se;
