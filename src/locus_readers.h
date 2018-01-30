@@ -80,6 +80,8 @@ public:
 
         size_t n_primary_kept() const {return n_primary - n_primary_mapq - n_primary_softclipped;}
         size_t n_primary_kept_read1() const {return n_primary_kept() - n_primary_kept_read2;}
+
+        BamStats& operator+= (const BamStats&);
     };
 
     struct LocStats {
@@ -100,7 +102,7 @@ public:
 
     const MetaPopInfo& mpopi() const {return bpopi_.mpopi();}
     const vector<Bam*>& bam_fs() const {return bam_fs_;}
-    const BamStats& bam_stats() const {return bam_stats_;}
+    const vector<BamStats>& bam_stats_per_sample() const {return bam_stats_;}
     const LocStats& loc_stats() const {return loc_stats_;}
 
 private:
@@ -124,7 +126,7 @@ private:
     };
 
     Config cfg_;
-    BamStats bam_stats_;
+    vector<BamStats> bam_stats_;
     LocStats loc_stats_;
 
     vector<Bam*> bam_fs_;
@@ -354,6 +356,7 @@ size_t BamPopInfo::sample_of(const BamRecord& rec, size_t bam_f_i)
     } else {
         sample = file_samples_.at(bam_f_i);
     }
+    assert(sample < mpopi_->samples().size());
     return sample;
 }
 
@@ -489,7 +492,7 @@ BamCLocBuilder::BamCLocBuilder(
         const vector<string>& samples
 ) :
     cfg_(cfg),
-    bam_stats_(),
+    bam_stats_(samples.size()),
     loc_stats_(),
     bam_fs_(move(bam_fs)),
     bpopi_(samples.empty() ? BamPopInfo(bam_fs_) : BamPopInfo(bam_fs_, samples)),
@@ -514,6 +517,21 @@ BamCLocBuilder::BamCLocBuilder(
 }
 
 inline
+BamCLocBuilder::BamStats& BamCLocBuilder::BamStats::operator+= (const BamCLocBuilder::BamStats& other)
+{
+    n_records += other.n_records;
+    n_ignored_read2_recs += other.n_ignored_read2_recs;
+    n_primary += other.n_primary;
+    n_primary_mapq += other.n_primary_mapq;
+    n_primary_softclipped += other.n_primary_softclipped;
+    n_primary_kept_read2 += other.n_primary_kept_read2;
+    n_secondary += other.n_secondary;
+    n_supplementary += other.n_supplementary;
+    n_unmapped += other.n_unmapped;
+    return *this;
+}
+
+inline
 bool BamCLocBuilder::next_record(size_t bam_f_i)
 {
     Bam* bam_f = bam_fs_[bam_f_i];
@@ -523,30 +541,31 @@ bool BamCLocBuilder::next_record(size_t bam_f_i)
     while (true) {
         if(!bam_f->next_record_ordered(r))
             return false;
-        ++bam_stats_.n_records;
+        BamStats& bstats = bam_stats_[bpopi_.sample_of(r, bam_f_i)];
+        ++bstats.n_records;
 
         if (cfg_.ign_pe_reads && r.is_read2()) {
-            ++bam_stats_.n_ignored_read2_recs;
+            ++bstats.n_ignored_read2_recs;
             continue;
         }
 
         // Check if the record is primary.
         if (r.is_unmapped()) {
-            ++bam_stats_.n_unmapped;
+            ++bstats.n_unmapped;
             continue;
         } else if (r.is_secondary()) {
-            ++bam_stats_.n_secondary;
+            ++bstats.n_secondary;
             continue;
         } else if (r.is_supplementary()) {
-            ++bam_stats_.n_supplementary;
+            ++bstats.n_supplementary;
             continue;
         }
         assert(r.is_primary());
-        ++bam_stats_.n_primary;
+        ++bstats.n_primary;
 
         // Check the MAPQ
         if (r.mapq() < cfg_.min_mapq) {
-            ++bam_stats_.n_primary_mapq;
+            ++bstats.n_primary_mapq;
             continue;
         }
 
@@ -555,7 +574,7 @@ bool BamCLocBuilder::next_record(size_t bam_f_i)
             treat_as_fw = cfg_.paired ? false : true;
         } else {
             treat_as_fw = true;
-            if ((bam_stats_.n_primary_kept_read2 > 0 || bam_stats_.n_ignored_read2_recs > 0)
+            if ((bstats.n_primary_kept_read2 > 0 || bstats.n_ignored_read2_recs > 0)
                     && !r.is_read1()) {
                 static bool emitted = false;
                 if (!emitted) {
@@ -580,12 +599,12 @@ bool BamCLocBuilder::next_record(size_t bam_f_i)
             if (r.is_rev_compl()) {
                 if(BamRecord::cig_op_t(r.hts_cigar()[r.hts_n_cigar()-1]) != BAM_CMATCH) {
                     // A cutsite is expected, and it is not aligned.
-                    ++bam_stats_.n_primary_softclipped;
+                    ++bstats.n_primary_softclipped;
                     continue;
                 }
             } else {
                 if(BamRecord::cig_op_t(r.hts_cigar()[0]) != BAM_CMATCH) {
-                    ++bam_stats_.n_primary_softclipped;
+                    ++bstats.n_primary_softclipped;
                     continue;
                 }
             }
@@ -597,15 +616,15 @@ bool BamCLocBuilder::next_record(size_t bam_f_i)
         // xxx Terminal insertions should count as soft-clipping.
         if ((double) softclipped / r.hts_l_seq() > cfg_.max_clipped) {
             // Too much soft-clipping.
-            ++bam_stats_.n_primary_softclipped;
+            ++bstats.n_primary_softclipped;
             continue;
         }
 
-        // Keep this record.
+        // Keep this record (`next_records_` has been updated).
+        if (r.is_read2())
+            ++bstats.n_primary_kept_read2;
         break;
     }
-    if (r.is_read2())
-        ++bam_stats_.n_primary_kept_read2;
     return true;
 }
 

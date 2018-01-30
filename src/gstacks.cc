@@ -371,8 +371,11 @@ try {
         }
 
     } else if (input_type == GStacksInputT::refbased_popmap || input_type == GStacksInputT::refbased_list) {
-        // Report statistics on the input BAM.
-        const BamCLocBuilder::BamStats& bam_stats = bam_cloc_builder->bam_stats();
+        // Report statistics on the input BAM(s).
+        BamCLocBuilder::BamStats bam_stats {};
+        const vector<BamCLocBuilder::BamStats>& bam_stats_s = bam_cloc_builder->bam_stats_per_sample();
+        for (auto& bstats : bam_stats_s)
+            bam_stats += bstats;
         size_t tot = bam_stats.n_primary + bam_stats.n_unmapped;
         cout << "\n"
              << "Read " << bam_stats.n_records << " BAM records:\n"
@@ -392,15 +395,70 @@ try {
         if (refbased_cfg.ign_pe_reads)
             cout << "  ignored " << bam_stats.n_ignored_read2_recs << " READ2 records\n";
 
+        // Per sample BAM stats.
+        logger->x << "\n"
+                  << "BEGIN bam_stats_per_sample\n"
+                  << "sample"
+                     "\trecords"
+                     "\tprimary_kept"
+                     "\tkept_frac"
+                     "\tprimary_kept_read2"
+                     "\tprimary_disc_mapq"
+                     "\tprimary_disc_sclip"
+                     "\tunmapped"
+                     "\tsecondary"
+                     "\tsupplementary\n";
+        size_t min_recs = SIZE_MAX;
+        size_t max_recs = 0;
+        double mean_recs = 0.0;
+        size_t min_kept = SIZE_MAX;
+        size_t max_kept = 0;
+        double mean_kept = 0.0;
+        assert(bam_stats_s.size() == bam_mpopi->samples().size());
+        ostream x_fp3 (logger->x.rdbuf());
+        x_fp3 << std::fixed << std::setprecision(3);
+        for (size_t sample=0; sample<bam_stats_s.size(); ++sample) {
+            auto& bstats = bam_stats_s[sample];
+            x_fp3 << bam_mpopi->samples()[sample].name << '\t'
+                  << bstats.n_records << '\t'
+                  << bstats.n_primary_kept() << '\t'
+                  << (double) bstats.n_primary_kept() / bstats.n_records << '\t'
+                  << bstats.n_primary_kept_read2 << '\t'
+                  << bstats.n_primary_mapq << '\t'
+                  << bstats.n_primary_softclipped << '\t'
+                  << bstats.n_unmapped << '\t'
+                  << bstats.n_secondary << '\t'
+                  << bstats.n_supplementary << '\n';
+            mean_recs += bstats.n_records;
+            if (bstats.n_records < min_recs)
+                min_recs = bstats.n_records;
+            if (bstats.n_records > max_recs)
+                max_recs = bstats.n_records;
+            size_t kept = bstats.n_primary_kept();
+            mean_kept += kept;
+            if (kept < min_kept)
+                min_kept = kept;
+            if (kept > max_kept)
+                max_kept = kept;
+        }
+        logger->x << "END bam_stats_per_sample\n";
+        mean_recs /= bam_mpopi->samples().size();
+        mean_kept /= bam_mpopi->samples().size();
+        ostream os (cout.rdbuf());
+        os << std::fixed << std::setprecision(1);
+        os << "  [For per-sample stats see "
+           << logger->distribs_path.substr(logger->distribs_path.rfind('/') + 1)
+           << "; read " << mean_recs << " records/sample ("
+           << min_recs << "-" << max_recs << "), kept " << mean_kept
+           << " records/sample (" << min_kept << "-" << max_kept << ").]\n";
+
         // Report statistics on the loci that were built.
         const BamCLocBuilder::LocStats& loc_stats = bam_cloc_builder->loc_stats();
         cout << "\n"
              << "Built " << loc_stats.n_loci_built << " loci comprising "
              << loc_stats.n_fw_reads;
         if (refbased_cfg.paired) {
-            ostream os (cout.rdbuf());
-            os << std::fixed << std::setprecision(1)
-               << " forward reads and "
+            os << " forward reads and "
                << loc_stats.n_read_pairs() << " matching paired-end reads;"
                << " mean insert length was " << loc_stats.insert_lengths_mv.mean()
                << " (sd: " << loc_stats.insert_lengths_mv.sd_p() << ").\n";
