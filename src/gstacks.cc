@@ -336,6 +336,14 @@ try {
     //
     // Report statistics.
     //
+    ostream o_fp1 (cout.rdbuf());
+    o_fp1 << std::fixed << std::setprecision(1);
+    ostream o_fp3 (cout.rdbuf());
+    o_fp3 << std::fixed << std::setprecision(3);
+    ostream x_fp1 (logger->x.rdbuf());
+    x_fp1 << std::fixed << std::setprecision(1);
+    ostream x_fp3 (logger->x.rdbuf());
+    x_fp3 << std::fixed << std::setprecision(3);
 
     if (input_type == GStacksInputT::denovo_popmap || input_type == GStacksInputT::denovo_merger) {
         if (denovo_ctg_stats.n_loci_w_pe_reads == 0) {
@@ -349,9 +357,7 @@ try {
             size_t pe_ctg = cs.n_loci_ctg();
             auto pct = [&cs](size_t n) { return as_percentage((double) n / cs.n_nonempty_loci); };
 
-            ostream os (cout.rdbuf());
-            os << std::fixed << std::setprecision(1)
-               << "\n"
+            o_fp1 << "\n"
                << "Attempted to assemble and align paired-end reads for " << cs.n_nonempty_loci << " loci:\n"
                << "  " << no_pe << " loci had no or almost no paired-end reads (" << pct(no_pe) << ");\n"
                << "  " << pe_ndag << " loci had paired-end reads that couldn't be assembled into a contig ("
@@ -415,8 +421,6 @@ try {
         size_t max_kept = 0;
         double mean_kept = 0.0;
         assert(bam_stats_s.size() == bam_mpopi->samples().size());
-        ostream x_fp3 (logger->x.rdbuf());
-        x_fp3 << std::fixed << std::setprecision(3);
         for (size_t sample=0; sample<bam_stats_s.size(); ++sample) {
             auto& bstats = bam_stats_s[sample];
             x_fp3 << bam_mpopi->samples()[sample].name << '\t'
@@ -444,13 +448,11 @@ try {
         logger->x << "END bam_stats_per_sample\n";
         mean_recs /= bam_mpopi->samples().size();
         mean_kept /= bam_mpopi->samples().size();
-        ostream os (cout.rdbuf());
-        os << std::fixed << std::setprecision(1);
-        os << "  [For per-sample stats see "
-           << logger->distribs_path.substr(logger->distribs_path.rfind('/') + 1)
-           << "; read " << mean_recs << " records/sample ("
-           << min_recs << "-" << max_recs << "), kept " << mean_kept
-           << " records/sample (" << min_kept << "-" << max_kept << ").]\n";
+        o_fp1 << "  [For per-sample stats see "
+              << logger->distribs_path.substr(logger->distribs_path.rfind('/') + 1)
+              << "; read " << mean_recs << " records/sample ("
+              << min_recs << "-" << max_recs << "), kept " << mean_kept
+              << " records/sample (" << min_kept << "-" << max_kept << ").]\n";
 
         // Report statistics on the loci that were built.
         const BamCLocBuilder::LocStats& loc_stats = bam_cloc_builder->loc_stats();
@@ -458,10 +460,10 @@ try {
              << "Built " << loc_stats.n_loci_built << " loci comprising "
              << loc_stats.n_fw_reads;
         if (refbased_cfg.paired) {
-            os << " forward reads and "
-               << loc_stats.n_read_pairs() << " matching paired-end reads;"
-               << " mean insert length was " << loc_stats.insert_lengths_mv.mean()
-               << " (sd: " << loc_stats.insert_lengths_mv.sd_p() << ").\n";
+            o_fp1 << " forward reads and "
+                  << loc_stats.n_read_pairs() << " matching paired-end reads;"
+                  << " mean insert length was " << loc_stats.insert_lengths_mv.mean()
+                  << " (sd: " << loc_stats.insert_lengths_mv.sd_p() << ").\n";
         } else {
             cout << " reads.\n";
         }
@@ -489,12 +491,10 @@ try {
         logger->x << "\n"
                   << "BEGIN discarded_reads_per_sample\n"
                   << "sample\tn_used_pairs\tn_pcr_dupl_pairs\tpcr_dupl_rate\tn_unpaired_reads\n";
-        ostream os (logger->x.rdbuf());
-        os << std::fixed << std::setprecision(3);
         assert(gt_stats.per_sample_stats.size() == bam_mpopi->samples().size());
         for (size_t sample=0; sample<bam_mpopi->samples().size(); ++sample) {
             const GenotypeStats::PerSampleStats& stats = gt_stats.per_sample_stats[sample];
-            os << bam_mpopi->samples()[sample].name
+            x_fp3 << bam_mpopi->samples()[sample].name
                << '\t' << stats.n_read_pairs_used
                << '\t' << stats.n_read_pairs_pcr_dupl
                << '\t' << (double) stats.n_read_pairs_pcr_dupl / (stats.n_read_pairs_pcr_dupl + stats.n_read_pairs_used)
@@ -533,13 +533,11 @@ try {
     logger->x << "\n"
               << "BEGIN phasing_rates_samples\n"
               << "sample\tn_gts\tn_multisnp_hets\tn_phased\tmisphasing_rate\n";
-    ostream os (logger->x.rdbuf());
-    os << std::fixed << std::setprecision(3);
     assert(hap_stats.per_sample_stats.size() == bam_mpopi->samples().size());
     for (size_t sample=0; sample<bam_mpopi->samples().size(); ++sample) {
         const HaplotypeStats::PerSampleStats& stats = hap_stats.per_sample_stats[sample];
 
-        os << bam_mpopi->samples()[sample].name
+        x_fp3 << bam_mpopi->samples()[sample].name
            << '\t' << stats.n_diploid_loci
            << '\t' << stats.n_hets_2snps
            << '\t' << stats.n_phased
@@ -579,9 +577,7 @@ try {
                  + t_writing_vcf.consumed()
                  ;
 
-        ostream os (logger->x.rdbuf());
-        os << std::fixed << std::setprecision(2)
-           << "\n"
+        x_fp1 << "\n"
            << "BEGIN clockings\n"
            << "Num. threads: " << num_threads << "\n"
            << "Parallel time: " << ll << "\n"
@@ -590,16 +586,16 @@ try {
            << std::setw(8) << p << "  processing (" << as_percentage(p / ll) << ")\n";
         if (a != 0.0)
             // De novo mode & paired-ends.
-            os << std::setw(16) << a << "  assembling (" << as_percentage(a / ll) << ")\n"
+            x_fp1 << std::setw(16) << a << "  assembling (" << as_percentage(a / ll) << ")\n"
                << std::setw(16) << o << "  aligning/overlapping (" << as_percentage(o / ll) << ")\n";
-        os << std::setw(16) << u << "  computing consensus (" << as_percentage(u / ll) << ")\n"
+        x_fp1 << std::setw(16) << u << "  computing consensus (" << as_percentage(u / ll) << ")\n"
            << std::setw(16) << g << "  genotyping/haplotyping (" << as_percentage(g / ll) << ")\n"
            << std::setw(16) << b_v << "  building_vcf (" << as_percentage(b_v / ll) << ")\n"
            << std::setw(8) << w_f << "  writing_fa (" << as_percentage(w_f / ll) << ")\n"
            << std::setw(8) << w_v << "  writing_vcf (" << as_percentage(w_v / ll) << ")\n";
         if (detailed_output)
-            os << std::setw(8) << w_d << "  writing_details (" << as_percentage(w_d / ll) << ")\n";
-        os << std::setw(8) << c << "  clocking (" << as_percentage(c / ll) << ")\n"
+            x_fp1 << std::setw(8) << w_d << "  writing_details (" << as_percentage(w_d / ll) << ")\n";
+        x_fp1 << std::setw(8) << c << "  clocking (" << as_percentage(c / ll) << ")\n"
            << "Total time spent writing vcf: " << v << " (" << as_percentage(v / ll) << ")\n"
            << "VCFwrite block size: mean=" << (double) gt_stats.n_genotyped_loci / n_writes
                << "(n=" << n_writes << "); max=" << max_size_before_write << "\n"
