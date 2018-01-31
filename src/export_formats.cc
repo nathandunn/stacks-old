@@ -99,7 +99,8 @@ bool Export::is_hap_export()
 {
     static const set<std::type_index> hap_exports = {
         typeid(GenePopHapsExport),
-        typeid(VcfHapsExport)
+        typeid(VcfHapsExport),
+        typeid(FineStructureExport)
     };
     return hap_exports.count(typeid(*this));
 }
@@ -1863,47 +1864,80 @@ FineStructureExport::open(const MetaPopInfo *mpopi)
 
     cout << "Polymorphic loci in FineStructure format will be written to '" << this->_path << "'\n";
 
+    this->_fh.open(this->_path.c_str(), ofstream::out);
+    check_open(this->_fh, this->_path);
+
+    cout << "Population-level summary statistics will be written to '" << this->_path << "'\n";
+
     return 0;
 }
 
 int
 FineStructureExport::write_header()
 {
-    this->_tmpfh << "\t";
     for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
         const Pop& pop = this->_mpopi->pops()[p];
         for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
-            this->_tmpfh << mpopi.samples()[j].name << "\t" << mpopi.samples()[j].name;
+            this->_fh << mpopi.samples()[j].name;
             if (j < this->_mpopi->samples().size() - 1)
-                this->_tmpfh << "\t";
+                this->_fh << "\t";
         }
     }
-    this->_tmpfh << "\n";
-
-    this->_tmpfh << "\t";
-    for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
-        const Pop& pop = this->_mpopi->pops()[p];
-        for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
-            this->_tmpfh << pop.name << "\t" << pop.name;
-            if (j < this->_mpopi->samples().size() - 1)
-                this->_tmpfh << "\t";
-        }
-    }
-    this->_tmpfh << "\n";
+    this->_fh << "\n";
 
     return 0;
 }
 
 int
-FineStructureExport::write_site(const CSLocus *loc, const LocPopSum *lps, Datum const*const* d, size_t col, size_t snp_index)
+FineStructureExport::write_batch(const vector<LocBin *> &loci)
 {
+    const CSLocus*     cloc;
+    Datum const*const* d;
+    
+    for (const LocBin* loc : loci) {
+        cloc = loc->cloc;
+        d    = loc->d;
+
+        // Monomorphic locus.
+        if (cloc->snps.empty())
+            continue;
+ 
+        //
+        // Tally and sort haplotypes.
+        //
+        vector<pair<const char*, size_t>>   sorted_haps;
+        map<const char*, size_t, LessCStrs> hap_indexes;
+
+        tally_complete_haplotypes(d, this->_mpopi->samples().size(), cloc->loc.strand,
+                                  sorted_haps, hap_indexes);
+
+        if (sorted_haps.size() < 2)
+            continue;
+
+        for (const Pop& pop : this->_mpopi->pops()) {
+
+            for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
+
+                if (d[j] != NULL && strchr(d[j]->obshap[0], 'N') == NULL) {
+                    size_t i0 = hap_indexes.at(d[j]->obshap[0]);
+                    size_t i1 = hap_indexes.at(d[j]->obshap[1]);
+
+                    this->_fh << sorted_haps[min(i0, i1)].first << "/"
+                              << sorted_haps[max(i0, i1)].first;
+                }
+                if (j < pop.last_sample - 1)
+                    this->_fh << "\t";
+            }
+        }
+        this->_fh << "\n";
+    }
+
     return 0;
 }
 
 int
 FineStructureExport::post_processing()
 {
-
     return 1;
 }
 
@@ -1914,6 +1948,7 @@ FineStructureExport::close()
     // Close and delete the temporary files.
     //
     this->_fh.close();
+
     return;
 }
 

@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2012-2017, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2012-2018, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -286,7 +286,7 @@ class FineStructureExport: public Export {
     ~FineStructureExport() {}
     int  open(const MetaPopInfo *mpopi);
     int  write_header();
-    int  write_batch(const vector<LocBin *> &) { return 0; }
+    int  write_batch(const vector<LocBin *> &);
     int  post_processing();
     void close();
 
