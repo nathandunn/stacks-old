@@ -1,3 +1,9 @@
+Stacks 2.0 
+--------------------------------
+    Feature: populations: Now calculated deviation from Hardy-Weinberg equilibrium at the SNP level
+             (using an exact test), and at the haplotype level (using Guo+Thompson's MCMC algorithm).
+    Feature: populations: added an export type for FineRADStructure. 
+
 Stacks 2.0 Beta 7 - Dec 29, 2017
 --------------------------------
     Feature: gstacks: Added an option to remove PCR duplicates based on insert
