@@ -158,8 +158,8 @@ try {
 
     VcfHeader vcf_header;
     vcf_header.add_std_meta();
-    for(auto& s : bam_mpopi->samples())
-        vcf_header.add_sample(s.name);
+    for(size_t s : bam_mpopi->sample_indexes_orig_order())
+        vcf_header.add_sample(bam_mpopi->samples()[s].name);
     o_vcf_f.reset(new VcfWriter(o_prefix + ".vcf.gz", move(vcf_header)));
 
     if (detailed_output) {
@@ -1823,7 +1823,7 @@ void LocusProcessor::write_one_locus (
             rec.append_format("GL");
 
             // Genotypes.
-            for (size_t sample=0; sample<mpopi.samples().size(); ++sample) {
+            for (size_t sample : mpopi.sample_indexes_orig_order()) {
                 const Counts<Nt2>& sdepths = sitedepths.samples[sample];
                 const SampleCall& scall = sitecall.sample_calls()[sample];
                 if (sdepths.sum() == 0) {
