@@ -2247,8 +2247,8 @@ VcfExport::open(const MetaPopInfo *mpopi)
     VcfHeader header;
     header.add_std_meta();
     header.add_meta(VcfMeta::predefs::info_loc_strand);
-    for(auto& s : this->_mpopi->samples())
-        header.add_sample(s.name);
+    for(size_t s : this->_mpopi->sample_indexes_orig_order())
+        header.add_sample(this->_mpopi->samples()[s].name);
 
     this->_writer = new VcfWriter(this->_path, move(header));
 
@@ -2283,8 +2283,11 @@ VcfExport::write_site(const CSLocus* cloc,
     rec.append_format("GT");
     rec.append_format("DP");
     rec.append_format("AD");
+    rec.append_format("GQ");
+    rec.append_format("GL");
 
-    for (size_t s=0; s<this->_mpopi->samples().size(); s++) {
+    const vector<Nt2> alleles {Nt2(ref), Nt2(alt)};
+    for (size_t s : _mpopi->sample_indexes_orig_order()) {
         stringstream sample;
 
         if (d[s] == NULL || col >= uint(d[s]->len) || d[s]->model[col] == 'U') {
@@ -2309,6 +2312,11 @@ VcfExport::write_site(const CSLocus* cloc,
                        << "," << d[s]->snpdata[index].nt_depths[Nt2(alt)];
             else
                 sample << ":.";
+            // GQ.
+            assert(d[s]->snpdata[index].gq != -1);
+            sample << ':' << int(d[s]->snpdata[index].gq);
+            // GL.
+            sample << ':' << VcfRecord::util::fmt_gt_gl(alleles, d[s]->snpdata[index].gtliks);
         }
         rec.append_sample(sample.str());
     }
