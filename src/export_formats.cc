@@ -211,6 +211,7 @@ SumstatsExport::write_header()
               << "Fis"          << "\t"
               << "Smoothed Fis" << "\t"
               << "Smoothed Fis P-value" << "\t"
+              << "HWE P-value"  << "\t"
               << "Private"      << "\n";
     return 0;
 }
@@ -273,7 +274,8 @@ SumstatsExport::write_batch(const vector<LocBin *> &loci)
                               << s->nucs[pos].bs[0]       << "\t"  // Pi bootstrapped p-value
                               << (s->nucs[pos].stat[1] == -7.0 ? 0.0 : s->nucs[pos].stat[1]) << "\t"  // Fis
                               << s->nucs[pos].smoothed[1] << "\t"  // Smoothed Fis
-                              << s->nucs[pos].bs[1]       << "\t"; // Fis bootstrapped p-value.
+                              << s->nucs[pos].bs[1]       << "\t" // Fis bootstrapped p-value.
+                              << s->nucs[pos].stat[2]     << "\t"; // HWE p-value.
                     (t->nucs[pos].priv_allele == (int) pop) ? this->_fh << "1\n" : this->_fh << "0\n";
                 }
             }

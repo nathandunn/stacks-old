@@ -165,6 +165,7 @@ public:
 class SumStat: public PopStat {
     // PopStat[0]: pi
     // PopStat[1]: fis
+    // PopStat[2]: HWE p-value
 public:
     bool    incompatible_site;
     bool    filtered_site;
@@ -190,6 +191,8 @@ public:
         snp_cnt   = 0;
         incompatible_site = false;
         filtered_site     = false;
+
+        this->stat[2] = 1.0; // The default value for the HWE p-value should be 1.0, not 0.
     }
     int reset() {
         PopStat::reset();
@@ -301,6 +304,7 @@ public:
     size_t          pop_cnt()                          const { return this->_pop_cnt; }
     static double   pi(double, double, double);
     static double   binomial_coeff(double, double);
+    double          hwe(double, double, double, double, double, double);
 
 private:
     int      tally_heterozygous_pos(const CSLocus *, const Datum **, LocSum *, int, int, uint, uint);
@@ -308,6 +312,7 @@ private:
     int      tally_ref_alleles(int, uint16_t &, char &, char &, uint16_t &, uint16_t &);
     int      tally_observed_haplotypes(const vector<char *> &, int);
     LocStat *haplotype_diversity(int, int, const Datum **);
+    double   log_hwp_pr(double, double, double, double, double, double);
 };
 
 struct LocBin {
