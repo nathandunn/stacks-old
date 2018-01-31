@@ -77,9 +77,10 @@ invert_cigar(string cigar)
 int
 parse_cigar(const char *cigar_str, Cigar &cigar, bool check_correctness)
 {
+    assert(cigar_str && *cigar_str);
     cigar.clear();
-    const char* p      = cigar_str;
-    uint        seqlen = 0;
+    const char* p = cigar_str;
+    uint padded_len = 0;
 
     while(*p != '\0') {
         char* q;
@@ -110,11 +111,11 @@ parse_cigar(const char *cigar_str, Cigar &cigar, bool check_correctness)
         }
 
         cigar.push_back({c, len});
-        seqlen += len;
+        padded_len += len;
         p = q + 1;
     }
 
-    return seqlen;
+    return padded_len;
 }
 
 string
