@@ -231,6 +231,7 @@ void run(const vector<int>& cloc_ids,
     int prev_sloc = -1;
     Cigar c;
     for (const CatMatch* m : matches) {
+        c.clear();
         assert(m->tag_id >= prev_sloc); // Matches files are sorted by sloc_id
         if (m->tag_id == prev_sloc)
             // We have already aligned this sample locus.
@@ -241,25 +242,33 @@ void run(const vector<int>& cloc_ids,
         if (itr == sloci.end())
             // Loci that aren't bijective with the catalog have been removed.
             continue;
-        Locus* l = itr->second;
+        Locus* sloc = itr->second;
 
-        if (cloc_lengths.at(m->cat_id) == l->len)
-            // No alignment to do.
-            continue;
-        if (m->cigar == NULL || m->cigar[0] == '\0') {
-            c.clear();
-            c.push_back({'M', l->len});
-        } else {
+        // 201801 @Nick: I'm not 100% about what the expectations/special cases
+        // are for "matches" CIGARs. `apply_cigar_to_seq` returns a padded sequence,
+        // so insertions would be a problem. However, "matches" CIGARs should in
+        // principle not contain them. (But what happens when read lengths
+        // are variable, especially if not all individuals are in the catalog?)
+        size_t cloc_len = cloc_lengths.at(m->cat_id);
+        assert(sloc->len <= cloc_len);
+        assert(m->cigar == NULL || (cigar_is_MDI(c) && strchr(m->cigar, 'I') == NULL));
+
+        // Retrieve the match CIGAR.
+        if (m->cigar == NULL || m->cigar[0] == '\0')
+            // Implicit.
+            c.push_back({'M', sloc->len});
+        else
             parse_cigar(m->cigar, c);
-            // `apply_cigar_to_seq` returns a padded sequence, so insertions would be
-            // a problem. However, "match" CIGARs should in principle not contain them.
-            assert(cigar_is_MDI(c) && strchr(m->cigar, 'I') == NULL);
-        }
         size_t cig_len = cigar_length_ref(c);
-        if (cig_len < cloc_lengths.at(m->cat_id))
-            cigar_extend_right(c, cloc_lengths.at(m->cat_id) - cig_len);
-        cigar_apply_to_locus(l, c);
-        assert(l->len == cloc_lengths.at(m->cat_id));
+        if (cig_len < cloc_len)
+            cigar_extend_right(c, cloc_len - cig_len);
+
+        // Apply the CIGAR.
+        if (c.size() > 1)
+            cigar_apply_to_locus(sloc, c);
+        else
+            assert(c.size() == 1 && c.front() == make_pair('M', uint(cloc_len)));
+        assert(sloc->len == cloc_len);
     }
 
     //
