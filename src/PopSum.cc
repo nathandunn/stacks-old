@@ -307,6 +307,15 @@ LocPopSum::tally_heterozygous_pos(const CSLocus *cloc, const Datum **d, LocSum *
     if (s->nucs[pos].stat[0] == 0.0)
         s->nucs[pos].fixed = true;
 
+    double hwe_pval = 0.0;
+    //
+    // Calculate deviation from Hardy-Weinberg equilibrium.
+    //
+    if (calc_hwp) {
+        hwe_pval = this->hwe(num_indv, allele_p, allele_q, obs_p, obs_q, obs_het);
+        s->nucs[pos].stat[2] = hwe_pval;
+    }
+
     //
     // Convert to allele frequencies
     //
@@ -388,6 +397,66 @@ LocPopSum::binomial_coeff(double n, double k)
         r = r * i / (n - i + 1);
 
     return r;
+}
+
+double
+LocPopSum::hwe(double n, double p, double q, double p_hom, double q_hom, double hets)
+{
+    //
+    // Compute the deviation from Hardy-Weinberg equilibrium using an exact test.
+    //   Weir, Genetic Data Analysis II, 1996, Chapter 3, pp98-100.
+    //   Wray and Visscher. Population genetics and its relevance to gene mapping. Chapter 6 in
+    //     Statistical Genetics: Gene Mapping Through Linkage and Association. pp 90-91.
+    //
+
+    double p_fac = 0.0;
+    for (uint i = 1; i <= p; i++) p_fac += log(i);
+    double q_fac = 0.0;
+    for (uint i = 1; i <= q; i++) q_fac += log(i);
+    double n_fac = 0.0;
+    for (uint i = n+1; i <= 2*n; i++) n_fac += log(i);
+
+    double hwe_pr = 0;
+
+    //
+    // To get the exact value we must also calculate all the probabilities less likely, that is
+    // given the same marginal totals, with fewer heterozygotes.
+    // To do this we will subtract 2 from hets and add 1 each to the homozygote classes until
+    // we reach 1 or 0 hets.
+    //
+    // Defined in:
+    //   Louis and Dempster, 1987. An Exact Test for Hardy-Weinberg and Multiple Alleles. Biometrics, Vol. 43, No. 4.
+    //
+    do {
+        double log_pr = log_hwp_pr(n_fac, p_fac, q_fac, p_hom, q_hom, hets);
+        hwe_pr += exp(log_pr);
+        
+        hets  -=2;
+        p_hom += 1;
+        q_hom += 1;
+
+    } while (hets > 1);
+
+    return hwe_pr;
+}
+
+inline double
+LocPopSum::log_hwp_pr(double n_fac, double p_fac, double q_fac, double pp, double qq, double pq)
+{
+    //
+    // [n! (n_p)! (n_q)! 2^(n_pq)] / [(n_pp)! (n_pq)! (n_qq)! (2n)! ]
+    //
+    double num = p_fac + q_fac + (pq * log(2));
+
+    double a = 0.0;
+    for (uint i = 1; i <= pp; i++)  a += log(i);
+    double b = 0.0;
+    for (uint i = 1; i <= pq; i++)  b += log(i);
+    double c = 0.0;
+    for (uint i = 1; i <= qq; i++)  c += log(i);
+    double den = a + b + c + n_fac;
+
+    return num - den;
 }
 
 int
