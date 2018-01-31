@@ -43,8 +43,10 @@ public:
     struct SNPData {
         size_t tot_depth;
         Counts<Nt2> nt_depths;
+        uint8_t gq;
+        GtLiks gtliks;
 
-        SNPData() : tot_depth(0) {}
+        SNPData() : tot_depth(0), gq(-1) {}
     };
 
     int            id;            // Stack ID
@@ -176,6 +178,7 @@ void PopMap<LocusT>::populate_locus(Datum** locdata,
     model.resize(cloc.len, 'U');
     pair<string,string> obshaps;
 
+    vector<Nt2> vcfrec_alleles;
     for (size_t sample = 0; sample < mpopi.samples().size(); ++sample) {
         size_t sample_vcf_i = header.sample_index(mpopi.samples()[sample].name);
     try {
@@ -303,6 +306,32 @@ void PopMap<LocusT>::populate_locus(Datum** locdata,
                         cerr << "Error: Bad AD field.\n";
                         throw exception();
                     }
+
+                    // GQ.
+                    size_t gq_index = rec->index_of_gt_subfield("GQ");
+                    const char* gq_str = VcfRecord::util::find_gt_subfield(sample_gt, gq_index);
+                    if (gq_str == NULL) {
+                        cerr << "Error: GQ field is missing.\n";
+                        throw exception();
+                    }
+                    long gq = strtol(gq_str, NULL, 10);
+                    if (gq < 0 || gq > UINT8_MAX) {
+                        cerr << "Error: Bad DP field.\n";
+                        throw exception();
+                    }
+                    d->snpdata.back().gq = gq;
+
+                    // GL.
+                    size_t gl_index = rec->index_of_gt_subfield("GL");
+                    const char* gl_str = VcfRecord::util::find_gt_subfield(sample_gt, gl_index);
+                    if (gl_str == NULL) {
+                        cerr << "Error: GL field is missing.\n";
+                        throw exception();
+                    }
+                    vcfrec_alleles.clear();
+                    for (auto a=rec->begin_alleles(); a!=rec->end_alleles(); ++a)
+                        vcfrec_alleles.push_back(Nt2(**a));
+                    d->snpdata.back().gtliks = VcfRecord::util::parse_gt_gl(vcfrec_alleles, gl_str);
 
                 } catch (exception&) {
                     cerr << "Error: In VCF record '" << rec->chrom() << ":" << rec->pos()+1 << "'.\n";
