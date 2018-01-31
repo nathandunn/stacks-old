@@ -158,8 +158,8 @@ try {
 
     VcfHeader vcf_header;
     vcf_header.add_std_meta();
-    for(auto& s : bam_mpopi->samples())
-        vcf_header.add_sample(s.name);
+    for(size_t s : bam_mpopi->sample_indexes_orig_order())
+        vcf_header.add_sample(bam_mpopi->samples()[s].name);
     o_vcf_f.reset(new VcfWriter(o_prefix + ".vcf.gz", move(vcf_header)));
 
     if (detailed_output) {
@@ -336,6 +336,14 @@ try {
     //
     // Report statistics.
     //
+    ostream o_fp1 (cout.rdbuf());
+    o_fp1 << std::fixed << std::setprecision(1);
+    ostream o_fp3 (cout.rdbuf());
+    o_fp3 << std::fixed << std::setprecision(3);
+    ostream x_fp1 (logger->x.rdbuf());
+    x_fp1 << std::fixed << std::setprecision(1);
+    ostream x_fp3 (logger->x.rdbuf());
+    x_fp3 << std::fixed << std::setprecision(3);
 
     if (input_type == GStacksInputT::denovo_popmap || input_type == GStacksInputT::denovo_merger) {
         if (denovo_ctg_stats.n_loci_w_pe_reads == 0) {
@@ -349,9 +357,7 @@ try {
             size_t pe_ctg = cs.n_loci_ctg();
             auto pct = [&cs](size_t n) { return as_percentage((double) n / cs.n_nonempty_loci); };
 
-            ostream os (cout.rdbuf());
-            os << std::fixed << std::setprecision(1)
-               << "\n"
+            o_fp1 << "\n"
                << "Attempted to assemble and align paired-end reads for " << cs.n_nonempty_loci << " loci:\n"
                << "  " << no_pe << " loci had no or almost no paired-end reads (" << pct(no_pe) << ");\n"
                << "  " << pe_ndag << " loci had paired-end reads that couldn't be assembled into a contig ("
@@ -371,8 +377,11 @@ try {
         }
 
     } else if (input_type == GStacksInputT::refbased_popmap || input_type == GStacksInputT::refbased_list) {
-        // Report statistics on the input BAM.
-        const BamCLocBuilder::BamStats& bam_stats = bam_cloc_builder->bam_stats();
+        // Report statistics on the input BAM(s).
+        BamCLocBuilder::BamStats bam_stats {};
+        const vector<BamCLocBuilder::BamStats>& bam_stats_s = bam_cloc_builder->bam_stats_per_sample();
+        for (auto& bstats : bam_stats_s)
+            bam_stats += bstats;
         size_t tot = bam_stats.n_primary + bam_stats.n_unmapped;
         cout << "\n"
              << "Read " << bam_stats.n_records << " BAM records:\n"
@@ -392,18 +401,69 @@ try {
         if (refbased_cfg.ign_pe_reads)
             cout << "  ignored " << bam_stats.n_ignored_read2_recs << " READ2 records\n";
 
+        // Per sample BAM stats.
+        logger->x << "\n"
+                  << "BEGIN bam_stats_per_sample\n"
+                  << "sample"
+                     "\trecords"
+                     "\tprimary_kept"
+                     "\tkept_frac"
+                     "\tprimary_kept_read2"
+                     "\tprimary_disc_mapq"
+                     "\tprimary_disc_sclip"
+                     "\tunmapped"
+                     "\tsecondary"
+                     "\tsupplementary\n";
+        size_t min_recs = SIZE_MAX;
+        size_t max_recs = 0;
+        double mean_recs = 0.0;
+        size_t min_kept = SIZE_MAX;
+        size_t max_kept = 0;
+        double mean_kept = 0.0;
+        assert(bam_stats_s.size() == bam_mpopi->samples().size());
+        for (size_t sample=0; sample<bam_stats_s.size(); ++sample) {
+            auto& bstats = bam_stats_s[sample];
+            x_fp3 << bam_mpopi->samples()[sample].name << '\t'
+                  << bstats.n_records << '\t'
+                  << bstats.n_primary_kept() << '\t'
+                  << (double) bstats.n_primary_kept() / bstats.n_records << '\t'
+                  << bstats.n_primary_kept_read2 << '\t'
+                  << bstats.n_primary_mapq << '\t'
+                  << bstats.n_primary_softclipped << '\t'
+                  << bstats.n_unmapped << '\t'
+                  << bstats.n_secondary << '\t'
+                  << bstats.n_supplementary << '\n';
+            mean_recs += bstats.n_records;
+            if (bstats.n_records < min_recs)
+                min_recs = bstats.n_records;
+            if (bstats.n_records > max_recs)
+                max_recs = bstats.n_records;
+            size_t kept = bstats.n_primary_kept();
+            mean_kept += kept;
+            if (kept < min_kept)
+                min_kept = kept;
+            if (kept > max_kept)
+                max_kept = kept;
+        }
+        logger->x << "END bam_stats_per_sample\n";
+        mean_recs /= bam_mpopi->samples().size();
+        mean_kept /= bam_mpopi->samples().size();
+        o_fp1 << "  [For per-sample stats see "
+              << logger->distribs_path.substr(logger->distribs_path.rfind('/') + 1)
+              << "; read " << mean_recs << " records/sample ("
+              << min_recs << "-" << max_recs << "), kept " << mean_kept
+              << " records/sample (" << min_kept << "-" << max_kept << ").]\n";
+
         // Report statistics on the loci that were built.
         const BamCLocBuilder::LocStats& loc_stats = bam_cloc_builder->loc_stats();
         cout << "\n"
              << "Built " << loc_stats.n_loci_built << " loci comprising "
              << loc_stats.n_fw_reads;
         if (refbased_cfg.paired) {
-            ostream os (cout.rdbuf());
-            os << std::fixed << std::setprecision(1)
-               << " forward reads and "
-               << loc_stats.n_read_pairs() << " matching paired-end reads;"
-               << " mean insert length was " << loc_stats.insert_lengths_mv.mean()
-               << " (sd: " << loc_stats.insert_lengths_mv.sd_p() << ").\n";
+            o_fp1 << " forward reads and "
+                  << loc_stats.n_read_pairs() << " matching paired-end reads;"
+                  << " mean insert length was " << loc_stats.insert_lengths_mv.mean()
+                  << " (sd: " << loc_stats.insert_lengths_mv.sd_p() << ").\n";
         } else {
             cout << " reads.\n";
         }
@@ -431,12 +491,10 @@ try {
         logger->x << "\n"
                   << "BEGIN discarded_reads_per_sample\n"
                   << "sample\tn_used_pairs\tn_pcr_dupl_pairs\tpcr_dupl_rate\tn_unpaired_reads\n";
-        ostream os (logger->x.rdbuf());
-        os << std::fixed << std::setprecision(3);
         assert(gt_stats.per_sample_stats.size() == bam_mpopi->samples().size());
         for (size_t sample=0; sample<bam_mpopi->samples().size(); ++sample) {
             const GenotypeStats::PerSampleStats& stats = gt_stats.per_sample_stats[sample];
-            os << bam_mpopi->samples()[sample].name
+            x_fp3 << bam_mpopi->samples()[sample].name
                << '\t' << stats.n_read_pairs_used
                << '\t' << stats.n_read_pairs_pcr_dupl
                << '\t' << (double) stats.n_read_pairs_pcr_dupl / (stats.n_read_pairs_pcr_dupl + stats.n_read_pairs_used)
@@ -475,13 +533,11 @@ try {
     logger->x << "\n"
               << "BEGIN phasing_rates_samples\n"
               << "sample\tn_gts\tn_multisnp_hets\tn_phased\tmisphasing_rate\n";
-    ostream os (logger->x.rdbuf());
-    os << std::fixed << std::setprecision(3);
     assert(hap_stats.per_sample_stats.size() == bam_mpopi->samples().size());
     for (size_t sample=0; sample<bam_mpopi->samples().size(); ++sample) {
         const HaplotypeStats::PerSampleStats& stats = hap_stats.per_sample_stats[sample];
 
-        os << bam_mpopi->samples()[sample].name
+        x_fp3 << bam_mpopi->samples()[sample].name
            << '\t' << stats.n_diploid_loci
            << '\t' << stats.n_hets_2snps
            << '\t' << stats.n_phased
@@ -521,9 +577,7 @@ try {
                  + t_writing_vcf.consumed()
                  ;
 
-        ostream os (logger->x.rdbuf());
-        os << std::fixed << std::setprecision(2)
-           << "\n"
+        x_fp1 << "\n"
            << "BEGIN clockings\n"
            << "Num. threads: " << num_threads << "\n"
            << "Parallel time: " << ll << "\n"
@@ -532,16 +586,16 @@ try {
            << std::setw(8) << p << "  processing (" << as_percentage(p / ll) << ")\n";
         if (a != 0.0)
             // De novo mode & paired-ends.
-            os << std::setw(16) << a << "  assembling (" << as_percentage(a / ll) << ")\n"
+            x_fp1 << std::setw(16) << a << "  assembling (" << as_percentage(a / ll) << ")\n"
                << std::setw(16) << o << "  aligning/overlapping (" << as_percentage(o / ll) << ")\n";
-        os << std::setw(16) << u << "  computing consensus (" << as_percentage(u / ll) << ")\n"
+        x_fp1 << std::setw(16) << u << "  computing consensus (" << as_percentage(u / ll) << ")\n"
            << std::setw(16) << g << "  genotyping/haplotyping (" << as_percentage(g / ll) << ")\n"
            << std::setw(16) << b_v << "  building_vcf (" << as_percentage(b_v / ll) << ")\n"
            << std::setw(8) << w_f << "  writing_fa (" << as_percentage(w_f / ll) << ")\n"
            << std::setw(8) << w_v << "  writing_vcf (" << as_percentage(w_v / ll) << ")\n";
         if (detailed_output)
-            os << std::setw(8) << w_d << "  writing_details (" << as_percentage(w_d / ll) << ")\n";
-        os << std::setw(8) << c << "  clocking (" << as_percentage(c / ll) << ")\n"
+            x_fp1 << std::setw(8) << w_d << "  writing_details (" << as_percentage(w_d / ll) << ")\n";
+        x_fp1 << std::setw(8) << c << "  clocking (" << as_percentage(c / ll) << ")\n"
            << "Total time spent writing vcf: " << v << " (" << as_percentage(v / ll) << ")\n"
            << "VCFwrite block size: mean=" << (double) gt_stats.n_genotyped_loci / n_writes
                << "(n=" << n_writes << "); max=" << max_size_before_write << "\n"
@@ -549,9 +603,14 @@ try {
     }
 
     #ifdef DEBUG
-    if (typeid(*model) == typeid(MarukiLowModel))
-        // Report how many times the "underflow" likelihood equations were used (we'd need to know the total number of calls...)
-        cout << "\nDEBUG: marukilow: handled " << ((const MarukiLowModel&)*model).n_underflows() << " underflows.\n";
+    const MarukiLowModel* m = dynamic_cast<const MarukiLowModel*>(model.get());
+    if (m != NULL)
+        // Report how often the "underflow" likelihood equations were used
+        cout << "\nDEBUG: marukilow: calc_ln_weighted_sums: "
+             << m->n_wsum_tot() << " calls, "
+             << m->n_wsum_underflows() << " underflows ("
+             << as_percentage(m->n_wsum_underflows(), m->n_wsum_tot())
+             << ").\n";
     #endif
 
     //
@@ -1764,7 +1823,7 @@ void LocusProcessor::write_one_locus (
             rec.append_format("GL");
 
             // Genotypes.
-            for (size_t sample=0; sample<mpopi.samples().size(); ++sample) {
+            for (size_t sample : mpopi.sample_indexes_orig_order()) {
                 const Counts<Nt2>& sdepths = sitedepths.samples[sample];
                 const SampleCall& scall = sitecall.sample_calls()[sample];
                 if (sdepths.sum() == 0) {

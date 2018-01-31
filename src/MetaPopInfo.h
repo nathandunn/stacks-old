@@ -51,6 +51,10 @@ class MetaPopInfo {
     void reset_pop_map();
     void reset_group_map();
 
+    vector<string> orig_sample_order_; // Safeguards the original input sample order.
+    vector<size_t> sample_indexes_orig_order_;
+    void reset_orig_order();
+
     map<size_t,size_t> sample_indexes_by_id_; // Links a sample ID with an index in [samples_].
     void reset_sample_id_map();
 
@@ -80,6 +84,8 @@ public:
     const vector<Sample>& samples() const {return samples_;}
     const vector<Pop>& pops() const {return pops_;}
     const vector<Group>& groups() const {return groups_;}
+
+    const vector<size_t>& sample_indexes_orig_order() const {return sample_indexes_orig_order_;}
 
     size_t get_sample_index(const string& name) const {return sample_indexes_.at(name);}
     size_t get_pop_index(const string& name) const {return pop_indexes_.at(name);}
