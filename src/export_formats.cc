@@ -2144,8 +2144,8 @@ VcfExport::open(const MetaPopInfo *mpopi)
     VcfHeader header;
     header.add_std_meta();
     header.add_meta(VcfMeta::predefs::info_loc_strand);
-    for(auto& s : this->_mpopi->samples())
-        header.add_sample(s.name);
+    for(size_t s : this->_mpopi->sample_indexes_orig_order())
+        header.add_sample(this->_mpopi->samples()[s].name);
 
     this->_writer = new VcfWriter(this->_path, move(header));
 
@@ -2184,7 +2184,7 @@ VcfExport::write_site(const CSLocus* cloc,
     rec.append_format("GL");
 
     const vector<Nt2> alleles {Nt2(ref), Nt2(alt)};
-    for (size_t s=0; s<this->_mpopi->samples().size(); s++) {
+    for (size_t s : _mpopi->sample_indexes_orig_order()) {
         stringstream sample;
 
         if (d[s] == NULL || col >= uint(d[s]->len) || d[s]->model[col] == 'U') {

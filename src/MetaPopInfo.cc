@@ -49,7 +49,19 @@ void MetaPopInfo::reset_group_map() {
     }
 }
 
+void MetaPopInfo::reset_orig_order() {
+    sample_indexes_orig_order_.clear();
+    for (const string& name : orig_sample_order_) {
+        auto itr = sample_indexes_.find(name);
+        if (itr != sample_indexes_.end())
+            // This sample is still there (n.b. delete_samples/intersect_with).
+            sample_indexes_orig_order_.push_back(itr->second);
+    }
+    assert(sample_indexes_orig_order_.size() == samples_.size());
+}
+
 void MetaPopInfo::init_popmap(const string& pmap_path) {
+    assert(samples_.empty());
 
     ifstream fh(pmap_path.c_str(), ifstream::in);
     if (fh.fail()) {
@@ -96,6 +108,7 @@ void MetaPopInfo::init_popmap(const string& pmap_path) {
         //
 
         samples_.push_back(Sample(parts[0]));
+        orig_sample_order_.push_back(parts[0]);
 
         //
         // Process the population field.
@@ -182,6 +195,7 @@ void MetaPopInfo::init_popmap(const string& pmap_path) {
 
     sort(samples_.begin(), samples_.end());
     reset_sample_map();
+    reset_orig_order();
 
     size_t curr_pop = 0;
     pops_[curr_pop].first_sample = 0;
@@ -200,6 +214,9 @@ void MetaPopInfo::init_names(const vector<string>& sample_names) {
         cerr << "Error: No samples.\n";
         throw exception();
     }
+    assert(samples_.empty());
+
+    orig_sample_order_ = sample_names;
 
     // Create the samples
     for (vector<string>::const_iterator s=sample_names.begin(); s!= sample_names.end(); ++s) {
@@ -222,6 +239,7 @@ void MetaPopInfo::init_names(const vector<string>& sample_names) {
     reset_sample_map();
     reset_pop_map();
     reset_group_map();
+    reset_orig_order();
 }
 
 void MetaPopInfo::init_directory(const string& dir_path) {
@@ -315,6 +333,7 @@ void MetaPopInfo::delete_samples(const vector<size_t>& rm_samples) {
     reset_pop_map();
     reset_group_map();
     reset_sample_id_map();
+    reset_orig_order();
 }
 
 void MetaPopInfo::intersect_with(const vector<string>& samples) {
