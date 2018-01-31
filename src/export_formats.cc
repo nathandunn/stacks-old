@@ -2180,7 +2180,10 @@ VcfExport::write_site(const CSLocus* cloc,
     rec.append_format("GT");
     rec.append_format("DP");
     rec.append_format("AD");
+    rec.append_format("GQ");
+    rec.append_format("GL");
 
+    const vector<Nt2> alleles {Nt2(ref), Nt2(alt)};
     for (size_t s=0; s<this->_mpopi->samples().size(); s++) {
         stringstream sample;
 
@@ -2206,6 +2209,11 @@ VcfExport::write_site(const CSLocus* cloc,
                        << "," << d[s]->snpdata[index].nt_depths[Nt2(alt)];
             else
                 sample << ":.";
+            // GQ.
+            assert(d[s]->snpdata[index].gq != -1);
+            sample << ':' << int(d[s]->snpdata[index].gq);
+            // GL.
+            sample << ':' << VcfRecord::util::fmt_gt_gl(alleles, d[s]->snpdata[index].gtliks);
         }
         rec.append_sample(sample.str());
     }
