@@ -106,9 +106,23 @@ sub check_return_value {
     # terminated by a signal, and by `$? >> 8` if it exited normally.
     my ($rv, $log_fh) = @_;
     if ($rv != 0) {
-        my $msg = "ref_map.pl: Aborted because the last command failed. (" . ($rv & 255 ? $rv : 128 + ($rv >> 8) % 128) . ")\n";
-        print $log_fh $msg;
-        print STDERR $msg;
+        my $code = ($rv >> 8) & 127;
+        if ($rv & 255 || ($rv >> 8) > 127) {
+            $code += 128;
+        }
+        my $msg = "\nref_map.pl: Aborted because the last command failed ($code";
+        if ($code == 129 || $code == 130 || $code == 131) {
+            $msg .= "/interrupted";
+        } elsif ($code == 137 || $code == 143) {
+            $msg .= "/killed";
+        } elsif ($code == 134) {
+            $msg .= "/SIGABRT";
+        } elsif ($code == 139) {
+            $msg .= "/segmentation fault";
+        }
+        $msg .= ")";
+        print $log_fh ($msg . ".\n");
+        print STDERR ($msg . "; see log file.\n");
         exit 1;
     }
 }
