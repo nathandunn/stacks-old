@@ -506,25 +506,24 @@ CLocAlnSet::remove_pcr_duplicates(ostream* log)
 
     // Remove reads that have the same insert length.
     vector<SAlnRead>::iterator dupl = reads_.begin();
+    size_t dupl_len = compute_insert_length(dupl->cigar);
     assert(!reads_.empty());
     for (auto r=++this->reads_.begin(); r!=reads_.end(); ++r) {
-        if (r->sample == dupl->sample
-            && (
-                (
-                    r->cigar.back().first == 'D' && dupl->cigar.back().first == 'D'
-                    && r->cigar.back().second == dupl->cigar.back().second
-                ) || (
-                    r->cigar.back().first != 'D' && dupl->cigar.back().first != 'D'
-                )
-            )
-        ) {} else {
+        size_t len = compute_insert_length(r->cigar);
+        if (r->sample != dupl->sample
+            || len != dupl_len
+        ) {
             // Not a duplicate; process the group.
-            for (auto r2=dupl; r2!=r-1; ++r2) {
+            for (auto r2=++dupl; r2<r; ++r2)
                 r2->seq.clear();
-                if (log != NULL)
-                    *log << "rm_pcrd\t" << r2->name << '\n';
+            if (log != NULL && r - dupl > 1) {
+                *log << "rm_pcrd\t";
+                for (auto r2=dupl; r2<r; ++r2)
+                    *log << ',' << r2->name;;
+                *log << '\n';
             }
             dupl = r;
+            dupl_len = len;
         }
     }
 
