@@ -43,7 +43,7 @@ vector<string> in_bams;      // Set if -B is given, or if -P is given without -M
 
 string o_prefix;
 
-BamCLocBuilder::Config refbased_cfg {true, 1000, 10, 0.20, 1, false};
+BamCLocBuilder::Config refbased_cfg {true, 1000, 10, 0.20, 1, false, 1};
 
 int    num_threads        = 1;
 bool   quiet              = false;
@@ -2252,6 +2252,7 @@ const string help_string = string() +
         "  --dbg-true-reference: align paired-end reads to the true reference\n"
         "  --dbg-log-stats-phasing: log detailed phasing statistics\n"
         "  --dbg-min-spl-reads: discard samples with less than this many reads (ref-based)\n"
+        "  --dbg-min-loc-spls: discard loci with less than this many samples (ref-based)\n"
         "\n"
 #endif
         ;
@@ -2301,6 +2302,7 @@ try {
         {"dbg-no-overlaps", no_argument,    NULL,  2008},
         {"dbg-no-haps",  no_argument,       NULL,  2009},
         {"dbg-min-spl-reads", required_argument, NULL, 2014},
+        {"dbg-min-loc-spls", required_argument, NULL, 2017},
         {0, 0, 0, 0}
     };
 
@@ -2462,6 +2464,9 @@ try {
             break;
         case 2014://dbg-min-spl-reads
             refbased_cfg.min_reads_per_sample = stoi(optarg);
+            break;
+        case 2017://dbg-min-loc-spls
+            refbased_cfg.min_samples_per_locus = stoi(optarg);
             break;
         case '?':
             bad_args();
