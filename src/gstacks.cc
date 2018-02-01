@@ -895,6 +895,18 @@ LocusProcessor::process(CLocReadSet& loc)
 void
 LocusProcessor::process(CLocAlnSet& aln_loc)
 {
+    if (input_type == GStacksInputT::denovo_popmap || input_type == GStacksInputT::denovo_merger) {
+        // Called from process(CLocReadSet&).
+        assert(this->loc_.id == aln_loc.id());
+    } else {
+        this->loc_.clear();
+        this->loc_.id = aln_loc.id();
+        this->loc_.pos = aln_loc.pos();
+        this->loc_.mpopi = &aln_loc.mpopi();
+        if (detailed_output)
+            this->loc_.details_ss << "BEGIN locus " << loc_.id << "\n";
+    }
+
     if (rm_unpaired_reads) {
         for (size_t sample=0; sample<gt_stats_.per_sample_stats.size(); ++sample)
             gt_stats_.per_sample_stats[sample].n_unpaired_reads += aln_loc.sample_reads(sample).size();
@@ -902,9 +914,7 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
         for (size_t sample=0; sample<gt_stats_.per_sample_stats.size(); ++sample)
             gt_stats_.per_sample_stats[sample].n_unpaired_reads -= aln_loc.sample_reads(sample).size();
         if(aln_loc.reads().empty()) {
-            loc_.o_fa.clear();
-            loc_.o_vcf.clear();
-            loc_.o_details.clear();
+            loc_.clear();
             return;
         }
     }
@@ -920,17 +930,6 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
     assert(!aln_loc.reads().empty());
     for (size_t sample=0; sample<gt_stats_.per_sample_stats.size(); ++sample)
         gt_stats_.per_sample_stats[sample].n_read_pairs_used += aln_loc.sample_reads(sample).size();
-    if (input_type == GStacksInputT::denovo_popmap || input_type == GStacksInputT::denovo_merger) {
-        // Called from process(CLocReadSet&).
-        assert(this->loc_.id == aln_loc.id());
-    } else {
-        this->loc_.clear();
-        this->loc_.id = aln_loc.id();
-        this->loc_.pos = aln_loc.pos();
-        this->loc_.mpopi = &aln_loc.mpopi();
-        if (detailed_output)
-            this->loc_.details_ss << "BEGIN locus " << loc_.id << "\n";
-    }
 
     timers_.cpt_consensus.restart();
     aln_loc.recompute_consensus();
