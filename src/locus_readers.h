@@ -65,6 +65,7 @@ public:
         double max_clipped;
         size_t min_reads_per_sample;
         bool ign_pe_reads;
+        size_t min_samples_per_locus;
     };
 
     struct BamStats {
@@ -775,7 +776,7 @@ bool BamCLocBuilder::build_one_locus(CLocAlnSet& aln_loc)
     // Find the next locus.
     //
 
-    vector<size_t> fw_samples;
+    vector<SampleIdx> fw_samples;
     while(true) {
         //
         // Fill the window.
@@ -804,6 +805,18 @@ bool BamCLocBuilder::build_one_locus(CLocAlnSet& aln_loc)
                 loc_records.begin(), loc_records.end(),
                 [] (const pair<BamRecord,SampleIdx>& r) { return r.first.empty(); }
                 ), loc_records.end());
+
+        // Check that we have enough samples.
+        if (cfg_.min_samples_per_locus > 1) {
+            fw_samples.clear();
+            for (auto& r : loc_records)
+                fw_samples.push_back(r.second);
+            std::sort(fw_samples.begin(), fw_samples.end());
+            fw_samples.erase(std::unique(fw_samples.begin(), fw_samples.end()), fw_samples.end());
+            if (fw_samples.size() < cfg_.min_samples_per_locus)
+                // Not enough, discard the locus.
+                loc_records.clear();
+        }
 
         if (loc_records.empty()) {
             // Discard the locus; regenerate the window and retry.
