@@ -313,12 +313,18 @@ try {
         } else if (smooth_fstats || smooth_popstats) {
             logger->x << "    Generating kernel-smoothed population statistics...";
             if (smooth_popstats) {
+                //Timer t;
                 smooth->snpstats(bloc.loci(), logger->x);
+                // cerr << "Completed PopSum SNP smoothing: " << (size_t) t.elapsed() << "s\n";
                 smooth->hapstats(bloc.loci(), logger->x);
+                // cerr << "Completed PopSum haplotype smoothing: " << (size_t) t.elapsed() << "s\n";
             }
             if (smooth_fstats) {
+                // Timer t;
                 smooth->snp_divergence(bloc.loci(), ldiv->snp_values(), logger->x);
+                // cerr << "Completed fstat SNP smoothing: " << (size_t) t.elapsed() << "s\n";
                 smooth->hap_divergence(bloc.loci(), ldiv->haplotype_values(), ldiv->metapop_haplotype_values(), logger->x);
+                // cerr << "Completed fstat haplotype smoothing: " << (size_t) t.elapsed() << "s\n";
             }
             logger->x << "done.\n";
         }
@@ -3071,9 +3077,10 @@ LocusSmoothing::snpstats(const vector<LocBin *> &loci, ofstream &log_fh)
 int
 LocusSmoothing::hapstats(const vector<LocBin *> &loci, ofstream &log_fh)
 {
+    vector<const LocStat *> sites;
 
     for (uint i = 0; i < this->_mpopi->pops().size(); i++) {
-        vector<const LocStat *> sites;
+        sites.clear();
 
         this->_ord_ls->order(sites, loci);
         this->_ks_ls->smooth(sites);
@@ -3085,11 +3092,13 @@ LocusSmoothing::hapstats(const vector<LocBin *> &loci, ofstream &log_fh)
 int
 LocusSmoothing::snp_divergence(const vector<LocBin *> &loci, const vector<vector<PopPair **>> &div, ofstream &log_fh)
 {
+    vector<const PopPair *> sites;
+
     for (uint i = 0; i < div.size(); i++) {
         assert(div[i].size() == loci.size());
 
-        vector<const PopPair *> sites;
-
+        sites.clear();
+        
         if (this->_ord_pp->order(sites, loci, div[i]))
             this->_ks_pp->smooth(sites);
     }
@@ -3103,11 +3112,13 @@ LocusSmoothing::hap_divergence(const vector<LocBin *> &loci,
                                const vector<HapStat *> &metadiv,
                                ofstream &log_fh)
 {
+    vector<const HapStat *> sites;
+
     for (uint i = 0; i < div.size(); i++) {
         assert(div[i].size() == loci.size());
 
-        vector<const HapStat *> sites;
-
+        sites.clear();
+        
         this->_ord_hs->order(sites, loci, div[i]);
         this->_ks_hs->smooth(sites);
     }
@@ -3115,7 +3126,7 @@ LocusSmoothing::hap_divergence(const vector<LocBin *> &loci,
     //
     // Kernel-smooth the haplotype divergence statistics for the metapopulation.
     //
-    vector<const HapStat *> sites;
+    sites.clear();
 
     this->_ord_hs->order(sites, loci, metadiv);
     this->_ks_hs->smooth(sites);
