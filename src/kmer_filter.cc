@@ -1751,7 +1751,7 @@ int parse_command_line(int argc, char* argv[]) {
         default:
             cerr << "Unknown command line option '" << (char) c << "'\n";
             help();
-            abort();
+            exit(1);
         }
     }
 

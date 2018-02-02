@@ -505,21 +505,28 @@ CLocAlnSet::remove_pcr_duplicates(ostream* log)
         });
 
     // Remove reads that have the same insert length.
-    for (auto r1 = this->reads_.begin(); r1 != this->reads_.end(); ++r1) {
-        assert(r1->name.back() == 'm'); // Read pairs should have been merged & unpaired reads removed.
-        auto  r2 = r1;
-        ++r2;
-        if (r2 == this->reads_.end())
-            break;
-        if (r2->sample != r1->sample)
-            continue;
-
-        if ((r1->cigar.back().first == 'D' && r2->cigar.back().first == 'D' && r1->cigar.back().second == r2->cigar.back().second)
-                || (r1->cigar.back().first != 'D' && r2->cigar.back().first != 'D')
-                ) {
-            r1->seq.clear();
-            if (log != NULL)
-                *log << "rm_pcrd\t" << r1->name << '\n';
+    vector<SAlnRead>::iterator r = this->reads_.begin();
+    assert(r != this->reads_.end());
+    size_t len = compute_insert_length(r->cigar);
+    while (r != this->reads_.end()) {
+        auto group = r;
+        size_t group_len = len;
+        ++r;
+        while (r != this->reads_.end()) {
+            len = compute_insert_length(r->cigar);
+            if (r->sample != group->sample || len != group_len)
+                break;
+            ++r;
+        }
+        if (r - group >= 2) {
+            if (log != NULL) {
+                *log << "pcr_dupls\t";
+                for (auto r2=group; r2!=r; ++r2)
+                    *log << ',' << r2->name;;
+                *log << '\n';
+            }
+            for (auto r2=++group; r2!=r; ++r2)
+                r2->seq.clear();
         }
     }
 
