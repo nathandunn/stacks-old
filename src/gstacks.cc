@@ -417,9 +417,8 @@ try {
         size_t min_recs = SIZE_MAX;
         size_t max_recs = 0;
         double mean_recs = 0.0;
-        size_t min_kept = SIZE_MAX;
-        size_t max_kept = 0;
-        double mean_kept = 0.0;
+        double min_keep_rate = DBL_MAX;
+        double max_keep_rate = 0.0;
         assert(bam_stats_s.size() == bam_mpopi->samples().size());
         for (size_t sample=0; sample<bam_stats_s.size(); ++sample) {
             auto& bstats = bam_stats_s[sample];
@@ -438,21 +437,22 @@ try {
                 min_recs = bstats.n_records;
             if (bstats.n_records > max_recs)
                 max_recs = bstats.n_records;
-            size_t kept = bstats.n_primary_kept();
-            mean_kept += kept;
-            if (kept < min_kept)
-                min_kept = kept;
-            if (kept > max_kept)
-                max_kept = kept;
+            double keep_rate = (double) bstats.n_primary_kept() / bstats.n_records;
+            if (keep_rate < min_keep_rate)
+                min_keep_rate = keep_rate;
+            if (keep_rate > max_keep_rate)
+                max_keep_rate = keep_rate;
         }
         logger->x << "END bam_stats_per_sample\n";
         mean_recs /= bam_mpopi->samples().size();
-        mean_kept /= bam_mpopi->samples().size();
-        o_fp1 << "  [For per-sample stats see "
+        o_fp1 << "\n"
+              << "  Per-sample stats (for details see '"
               << logger->distribs_path.substr(logger->distribs_path.rfind('/') + 1)
-              << "; read " << mean_recs << " records/sample ("
-              << min_recs << "-" << max_recs << "), kept " << mean_kept
-              << " records/sample (" << min_kept << "-" << max_kept << ").]\n";
+              << "'):\n"
+              << "    read " << mean_recs << " records/sample (" << min_recs
+              << "-" << max_recs << ")\n"
+              << "    kept " << as_percentage(min_keep_rate) << "-"
+              << as_percentage(max_keep_rate) << " of these\n";
 
         // Report statistics on the loci that were built.
         const BamCLocBuilder::LocStats& loc_stats = bam_cloc_builder->loc_stats();
@@ -487,21 +487,6 @@ try {
         } else {
             assert(n_pcr_dupl == 0);
         }
-        // discarded_reads_per_sample
-        logger->x << "\n"
-                  << "BEGIN discarded_reads_per_sample\n"
-                  << "sample\tn_used_pairs\tn_pcr_dupl_pairs\tpcr_dupl_rate\tn_unpaired_reads\n";
-        assert(gt_stats.per_sample_stats.size() == bam_mpopi->samples().size());
-        for (size_t sample=0; sample<bam_mpopi->samples().size(); ++sample) {
-            const GenotypeStats::PerSampleStats& stats = gt_stats.per_sample_stats[sample];
-            x_fp3 << bam_mpopi->samples()[sample].name
-               << '\t' << stats.n_read_pairs_used
-               << '\t' << stats.n_read_pairs_pcr_dupl
-               << '\t' << (double) stats.n_read_pairs_pcr_dupl / (stats.n_read_pairs_pcr_dupl + stats.n_read_pairs_used)
-               << '\t' << stats.n_unpaired_reads
-               << '\n';
-        }
-        logger->x << "END discarded_reads_per_sample\n";
     } else {
         assert(gt_stats.n_unpaired_reads_rm() == 0 && gt_stats.n_read_pairs_pcr_dupl() == 0);
     }
@@ -509,8 +494,21 @@ try {
     // Report statistics on genotyping and haplotyping.
     size_t n_hap_attempts = hap_stats.n_halplotyping_attempts();
     size_t n_hap_pairs = hap_stats.n_consistent_hap_pairs();
-    cout << "\n"
+    OnlineMeanVar ecov_mean;
+    double ecov_min = DBL_MAX;
+    double ecov_max = 0.0;
+    for (const GenotypeStats::PerSampleStats& sample : gt_stats.per_sample_stats) {
+        double cov = (double) sample.n_read_pairs_used / sample.n_loci_with_sample;
+        ecov_mean.increment(cov);
+        if (cov < ecov_min)
+            ecov_min = cov;
+        if (cov > ecov_max)
+            ecov_max = cov;
+    }
+    o_fp1 << "\n"
          << "Genotyped " << gt_stats.n_genotyped_loci << " loci:\n"
+         << "  effective per-sample coverage: mean=" << ecov_mean.mean() << "x, stdev="
+         << ecov_mean.sd_p() << "x, min=" << ecov_min << "x, max=" << ecov_max << "x (per locus where sample is present)\n"
          << "  mean number of sites per locus: " << gt_stats.mean_n_sites_per_loc() << "\n"
          << "  a consistent phasing was found for " << n_hap_pairs << " of out " << n_hap_attempts
          << " (" << as_percentage((double) n_hap_pairs / n_hap_attempts)
@@ -519,6 +517,40 @@ try {
         cerr << "Error: There wasn't any locus to genotype (c.f. above; check input/arguments).\n";
         throw exception();
     }
+
+    // effective_coverages_per_sample
+    logger->x << "\n"
+              << "BEGIN effective_coverages_per_sample\n";
+    logger->x << "sample"
+                 "\tmean_cov"
+                 "\tn_loci"
+                 "\tn_used_reads";
+    if (rm_unpaired_reads) {
+        logger->x << "\tn_unpaired_reads";
+        if (rm_pcr_duplicates) {
+            logger->x << "\tn_pcr_dupl_pairs"
+                         "\tpcr_dupl_rate";
+        }
+    }
+    logger->x << '\n';
+    assert(gt_stats.per_sample_stats.size() == bam_mpopi->samples().size());
+    for (size_t sample=0; sample<bam_mpopi->samples().size(); ++sample) {
+        const GenotypeStats::PerSampleStats& stats = gt_stats.per_sample_stats[sample];
+        x_fp3 << bam_mpopi->samples()[sample].name
+           << '\t' << (double) stats.n_read_pairs_used / stats.n_loci_with_sample
+           << '\t' << stats.n_loci_with_sample
+           << '\t' << stats.n_read_pairs_used;
+        if (rm_unpaired_reads) {
+            x_fp3 << '\t' << stats.n_unpaired_reads;
+            if (rm_pcr_duplicates) {
+                x_fp3 << '\t' << stats.n_read_pairs_pcr_dupl
+                      << '\t' << (double) stats.n_read_pairs_pcr_dupl / (stats.n_read_pairs_pcr_dupl + stats.n_read_pairs_used);
+            }
+        }
+        x_fp3 << '\n';
+    }
+    logger->x << "END effective_coverages_per_sample\n";
+
     // phasing_rates_loci
     logger->x << "\n"
               << "BEGIN phasing_rates_loci\n"
@@ -529,9 +561,10 @@ try {
                   << '\t' << elem.second
                   << '\n';
     logger->x << "END phasing_rates_loci\n";
+
     // phasing_rates_samples
     logger->x << "\n"
-              << "BEGIN phasing_rates_samples\n"
+              << "BEGIN phasing_rates_per_samples\n"
               << "sample\tn_gts\tn_multisnp_hets\tn_phased\tmisphasing_rate\n";
     assert(hap_stats.per_sample_stats.size() == bam_mpopi->samples().size());
     for (size_t sample=0; sample<bam_mpopi->samples().size(); ++sample) {
@@ -658,6 +691,7 @@ GenotypeStats& GenotypeStats::operator+= (const GenotypeStats& other) {
         per_sample_stats[sample].n_unpaired_reads += other.per_sample_stats[sample].n_unpaired_reads;
         per_sample_stats[sample].n_read_pairs_pcr_dupl += other.per_sample_stats[sample].n_read_pairs_pcr_dupl;
         per_sample_stats[sample].n_read_pairs_used += other.per_sample_stats[sample].n_read_pairs_used;
+        per_sample_stats[sample].n_loci_with_sample += other.per_sample_stats[sample].n_loci_with_sample;
     }
     return *this;
 }
@@ -928,8 +962,12 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
             gt_stats_.per_sample_stats[sample].n_read_pairs_pcr_dupl -= aln_loc.sample_reads(sample).size();
     }
     assert(!aln_loc.reads().empty());
-    for (size_t sample=0; sample<gt_stats_.per_sample_stats.size(); ++sample)
-        gt_stats_.per_sample_stats[sample].n_read_pairs_used += aln_loc.sample_reads(sample).size();
+    for (size_t sample=0; sample<gt_stats_.per_sample_stats.size(); ++sample) {
+        if (!aln_loc.sample_reads(sample).empty()) {
+            gt_stats_.per_sample_stats[sample].n_read_pairs_used += aln_loc.sample_reads(sample).size();
+            ++gt_stats_.per_sample_stats[sample].n_loci_with_sample;
+        }
+    }
 
     timers_.cpt_consensus.restart();
     aln_loc.recompute_consensus();
@@ -2621,6 +2659,12 @@ void report_options(ostream& os) {
 
     if (ignore_pe_reads)
         os << "  Ignoring paired-end reads.\n";
+    if (!refbased_cfg.paired)
+        os << "  Ignoring pairing information.\n";
+    if (rm_unpaired_reads)
+        os << "  Discarding unpaired reads.\n";
+    if (rm_pcr_duplicates)
+        os << "  Removing PCR duplicates.\n";
     if (km_length != 31)
         os << "  Kmer length: " << km_length << "\n";
     if (min_km_count != 2)

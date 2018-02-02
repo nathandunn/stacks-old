@@ -100,6 +100,7 @@ public:
         size_t n_unpaired_reads;
         size_t n_read_pairs_pcr_dupl;
         size_t n_read_pairs_used;
+        size_t n_loci_with_sample;
     };
     vector<PerSampleStats> per_sample_stats;
     size_t n_unpaired_reads_rm() const {size_t n=0; for(auto& s: per_sample_stats) n+=s.n_unpaired_reads; return n;}
