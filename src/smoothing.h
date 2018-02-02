@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2018, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2014-2018, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -75,7 +75,7 @@ KSmooth<StatT>::smooth(vector<const StatT *> &popstats)
         for (uint pos_c = 0; pos_c < popstats.size(); pos_c++) {
             c = popstats[pos_c];
 
-            if (c == NULL)
+            if (c == NULL || c->fixed == true)
                 continue;
 
             for (uint i = 0; i < this->size; i++) {
