@@ -524,7 +524,7 @@ try {
     logger->x << "sample"
                  "\tmean_cov"
                  "\tn_loci"
-                 "\tn_used_reads";
+                 "\tn_used_fw_reads";
     if (rm_unpaired_reads) {
         logger->x << "\tn_unpaired_reads";
         if (rm_pcr_duplicates) {
