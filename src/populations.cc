@@ -313,18 +313,12 @@ try {
         } else if (smooth_fstats || smooth_popstats) {
             logger->x << "    Generating kernel-smoothed population statistics...";
             if (smooth_popstats) {
-                //Timer t;
                 smooth->snpstats(bloc.loci(), logger->x);
-                // cerr << "Completed PopSum SNP smoothing: " << (size_t) t.elapsed() << "s\n";
                 smooth->hapstats(bloc.loci(), logger->x);
-                // cerr << "Completed PopSum haplotype smoothing: " << (size_t) t.elapsed() << "s\n";
             }
             if (smooth_fstats) {
-                // Timer t;
                 smooth->snp_divergence(bloc.loci(), ldiv->snp_values(), logger->x);
-                // cerr << "Completed fstat SNP smoothing: " << (size_t) t.elapsed() << "s\n";
                 smooth->hap_divergence(bloc.loci(), ldiv->haplotype_values(), ldiv->metapop_haplotype_values(), logger->x);
-                // cerr << "Completed fstat haplotype smoothing: " << (size_t) t.elapsed() << "s\n";
             }
             logger->x << "done.\n";
         }
