@@ -341,8 +341,11 @@ def draw_scale_bars(cr, img, chrs_sorted):
 	    #
 	    # Scale the starting point for proper placement on the chromosome arc
 	    #
-	    start_degree = (float(start_bp) / float(chr_len)) * (c['end_deg'] - c['start_deg'])
-	    start_degree = c['start_deg'] + start_degree
+            if c['end_deg'] < c['start_deg']:
+                start_degree = float((360 - c['start_deg']) + c['end_deg'])
+            else:
+	        start_degree = float(c['end_deg'] - c['start_deg'])
+	    start_degree = (c['start_deg'] + ((float(start_bp) / float(chr_len)) * start_degree)) % 360
 
 	    #
 	    # Convert the point to an x,y coordinate
@@ -439,7 +442,11 @@ def draw_chromosome_labels(cr, img, chr, radius):
     #
     regex    = re.compile('group')
     text     = regex.sub('', chr)
-    text_loc = float(end_deg + start_deg) / 2.0;
+
+    if end_deg < start_deg:
+        text_loc = (start_deg + float((360 - start_deg) + end_deg) / 2.0) % 360
+    else:
+        text_loc = float(end_deg + start_deg) / 2.0
 
     (x, y) = get_x_y_coordinates(text_loc, img['max_radius'] + 40)
 
@@ -771,7 +778,15 @@ def draw_stat_values(cr, img, stats, mean, chr, radius, file_type):
     # Determine the number of degrees occupied by this chromosome.
     #
     buckets_per_degree = 8
-    deg = img['chrs'][chr]['end_deg'] - img['chrs'][chr]['start_deg']
+
+    #
+    # Handle the case where a chromosome crosses over the 0 degree boundary such that
+    # the end degree is smaller than the start degree.
+    #
+    if img['chrs'][chr]['end_deg'] < img['chrs'][chr]['start_deg']:
+        deg = (360 - img['chrs'][chr]['start_deg']) + img['chrs'][chr]['end_deg']
+    else:
+        deg = img['chrs'][chr]['end_deg'] - img['chrs'][chr]['start_deg']
 
     bcnt    = int(deg * buckets_per_degree)
     buckets = bucket_stat_values(img, chr, stats, radius, bcnt)
