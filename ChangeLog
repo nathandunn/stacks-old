@@ -2,9 +2,17 @@ Stacks 2.0 Beta 8
 --------------------------------
     Feature: populations: Now calculated deviation from Hardy-Weinberg equilibrium at the SNP level
              (using an exact test), and at the haplotype level (using Guo+Thompson's MCMC algorithm).
-    Feature: populations: added an export type for FineRADStructure.
+    Feature: populations: Added an export type for FineRADStructure.
+    Feature: populations: Added the GQ/GL fields in the VCF SNPs output.
+    Feature: gstacks: Made the default behavior regarding paired-end reads more logical (in
+             reference-based mode --paired has been replaced with --unpaired).
+    Feature: gstacks: Added details about samples and coverages to the log outputs.
+    Feautre: Added enzymes NspI, BbvCI, fixed BfuCI.
     Bugfix:  corrected a major performance bottleneck in populations when smoothing population statistics
              across the genome.
+    Bugfix:  populations: The VCF output now preserves the input sample order.
+    Bugfix:  gstacks: Fixed the handling of a rare special case in the PCR duplicates code.
+    Bugfix:  gstacks: Fixed 100% being added to all per-thread timings.
 
 Stacks 2.0 Beta 7 - Dec 29, 2017
 --------------------------------
