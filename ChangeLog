@@ -1,4 +1,4 @@
-Stacks 2.0 Beta 8
+Stacks 2.0 Beta 8 - Feb 03, 2018
 --------------------------------
     Feature: populations: Now calculated deviation from Hardy-Weinberg equilibrium at the SNP level
              (using an exact test), and at the haplotype level (using Guo+Thompson's MCMC algorithm).
