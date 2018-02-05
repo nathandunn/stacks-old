@@ -287,7 +287,8 @@ private:
             vector<PhaseSet>& phase_sets,
             const vector<size_t>& het_snps,
             const vector<const SampleCall*>& sample_het_calls,
-            const SnpAlleleCooccurrenceCounter& cooccurrences
+            const SnpAlleleCooccurrenceCounter& cooccurrences,
+            const size_t min_n_cooccurrences
             ) const;
 
     // Create the fasta/vcf text outputs.

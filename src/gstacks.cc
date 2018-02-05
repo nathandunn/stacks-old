@@ -62,6 +62,8 @@ size_t km_length         = 31;
 size_t min_km_count      = 2;
 size_t max_fragment_alns = 2;
 
+pair<size_t,size_t> phasing_cooccurrences_thr_range = {1, 2};
+
 bool   dbg_no_overlaps     = false;
 bool   dbg_no_haplotypes   = false;
 bool   dbg_write_gfa       = false;
@@ -1466,7 +1468,16 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
         // Assemble phase sets.
         //
         vector<PhaseSet> phase_sets;
-        if (!assemble_phase_sets(phase_sets, het_snps, sample_het_calls, cooccurrences)) {
+        bool phased = false;
+        for (size_t min_n_cooccurrences = phasing_cooccurrences_thr_range.first;
+                min_n_cooccurrences <= phasing_cooccurrences_thr_range.second;
+                ++min_n_cooccurrences) {
+            if (assemble_phase_sets(phase_sets, het_snps, sample_het_calls, cooccurrences, min_n_cooccurrences)) {
+                phased = true;
+                break;
+            }
+        }
+        if (!phased) {
             if (dbg_write_misphased_hapgraphs && !dbg_write_hapgraphs) {
                 has_subgraphs = true;
                 write_sample_hapgraph(o_hapgraph_ss, sample, het_snps, snp_cols, sample_het_calls, cooccurrences);
@@ -1585,16 +1596,15 @@ bool LocusProcessor::assemble_phase_sets(
         vector<PhaseSet>& phase_sets,
         const vector<size_t>& het_snps,
         const vector<const SampleCall*>& sample_het_calls,
-        const SnpAlleleCooccurrenceCounter& cooccurrences
+        const SnpAlleleCooccurrenceCounter& cooccurrences,
+        const size_t min_n_cooccurrences
 ) const {
-
-    static const size_t min_n_cooccurrences = 2;
-
     phase_sets.clear();
 
     // We keep track of which phase set each het is currently part of.
     vector<size_t> allele_to_ps (het_snps.size(), SIZE_MAX);
 
+    assert(het_snps.size() == sample_het_calls.size());
     for (size_t het_i=0; het_i<het_snps.size(); ++het_i) {
         size_t snp_i = het_snps[het_i];
         size_t& ps_i = allele_to_ps[het_i]; //(by reference; always up to date)
@@ -2274,6 +2284,9 @@ const string help_string = string() +
         "  --max-insert-len: maximum allowed sequencing insert length (default: 1000)\n"
         "\n"
         "  --details: write a heavier output\n"
+        "  --phasing-cooccurences-thr-range: range of edge coverage thresholds to\n"
+        "        iterate over when building the graph of allele cooccurrences for\n"
+        "        SNP phasing (default: 1,2)\n"
         "\n"
 #ifdef DEBUG
         "Debug options:\n"
@@ -2328,6 +2341,7 @@ try {
         {"max-insert-len", required_argument, NULL,  1016},
         {"rm-unpaired-reads", no_argument,  NULL,  1017},
         {"rm-pcr-duplicates", no_argument,  NULL,  1018},
+        {"phasing-cooccurrences-thr-range", required_argument, NULL, 1019},
         //debug options
         {"dbg-gfa",      no_argument,       NULL,  2003},
         {"dbg-alns",     no_argument,       NULL,  2004}, {"alns", no_argument, NULL, 3004},
@@ -2354,6 +2368,7 @@ try {
 
     int c;
     int long_options_i;
+    std::cmatch tmp_cmatch;
     while (true) {
 
         c = getopt_long(argc, argv, "hqP:I:B:S:s:M:O:W:t:m:", long_options, &long_options_i);
@@ -2463,6 +2478,18 @@ try {
         case 1018://rm-pcr-duplicates
             rm_pcr_duplicates = true;
             rm_unpaired_reads = true;
+            break;
+        case 1019: //phasing-cooccurrences-thr-range
+            std::regex_search(optarg, tmp_cmatch, std::regex("^[0-9]+,[0-9]+$"));
+            if (!tmp_cmatch.empty()) {
+                phasing_cooccurrences_thr_range.first = atoi(optarg);
+                phasing_cooccurrences_thr_range.second = atoi(strchr(optarg, ',') + 1);
+            }
+            if (tmp_cmatch.empty() || phasing_cooccurrences_thr_range.first > phasing_cooccurrences_thr_range.second) {
+                cerr << "Error: Illegal --phasing-cooccurrences-thr-range value '"
+                     << optarg << "'; expected 'INT_MIN,INT_MAX'.\n";
+                bad_args();
+            }
             break;
 
         //

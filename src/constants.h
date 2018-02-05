@@ -51,6 +51,7 @@
 #include <algorithm>
 #include <functional>
 #include <memory>
+#include <regex>
 
 // OpenMP
 #ifdef _OPENMP
