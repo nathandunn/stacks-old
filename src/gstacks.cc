@@ -69,7 +69,6 @@ bool   dbg_no_haplotypes   = false;
 bool   dbg_write_gfa       = false;
 bool   dbg_write_alns      = false;
 bool   dbg_write_hapgraphs = false;
-bool   dbg_write_misphased_hapgraphs = false;
 bool   dbg_write_nt_depths = false;
 bool   dbg_write_phased_only = false;
 bool   dbg_true_reference  = false;
@@ -176,7 +175,7 @@ try {
         o_aln_f << o_aln_header;
     }
 
-    if (dbg_write_hapgraphs || dbg_write_misphased_hapgraphs) {
+    if (dbg_write_hapgraphs) {
         string o_hapgraphs_path = o_prefix + ".hapgraphs.dot";
         o_hapgraphs_f.open(o_hapgraphs_path);
         check_open(o_hapgraphs_f, o_hapgraphs_path);
@@ -654,7 +653,7 @@ try {
 
     gzclose(o_gzfasta_f);
     model.reset();
-    if (dbg_write_hapgraphs || dbg_write_misphased_hapgraphs)
+    if (dbg_write_hapgraphs)
         o_hapgraphs_f << "}\n";
     cout << "\ngstacks is done.\n";
     return 0;
@@ -1414,7 +1413,7 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
 
     stringstream o_hapgraph_ss;
     bool has_subgraphs = false;
-    if (dbg_write_hapgraphs || dbg_write_misphased_hapgraphs) {
+    if (dbg_write_hapgraphs) {
         o_hapgraph_ss << "\n"
                       << "subgraph cluster_loc" << loc_.id << " {\n"
                       << "\tlabel=\"locus " << loc_.id << "\";\n"
@@ -1423,7 +1422,10 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
         o_hapgraph_ss << "\n";
     }
 
+    vector<size_t> het_snps;
+    vector<const SampleCall*> sample_het_calls;
     SnpAlleleCooccurrenceCounter cooccurrences (snp_cols.size());
+    vector<PhaseSet> phase_sets;
     assert(hap_stats.per_sample_stats.size() == loc_.mpopi->samples().size());
     for (size_t sample=0; sample<loc_.mpopi->samples().size(); ++sample) {
         if (aln_loc.sample_reads(sample).empty())
@@ -1433,7 +1435,7 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
         //
         // Find heterozygous positions & check that we have >= 2 hets.
         //
-        vector<size_t> het_snps;
+        het_snps.clear();
         for(size_t snp_i=0; snp_i<snp_cols.size(); ++snp_i)
             if (calls[snp_cols[snp_i]].sample_calls()[sample].call() == snp_type_het)
                 het_snps.push_back(snp_i);
@@ -1450,7 +1452,7 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
         ++hap_stats.per_sample_stats[sample].n_hets_2snps;
         ++n_hets_needing_phasing;
 
-        vector<const SampleCall*> sample_het_calls;
+        sample_het_calls.clear();
         for (size_t het_i=0; het_i<het_snps.size(); ++het_i)
             sample_het_calls.push_back(&calls[snp_cols[het_snps[het_i]]].sample_calls()[sample]);
 
@@ -1466,8 +1468,11 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
 
         //
         // Assemble phase sets.
+        // xxx 2018 Feb. @Nick: Actually all of this would be more simple and efficient
+        // if we used a single vector of PhasedHet's, with each het starting in its own
+        // phase set.
         //
-        vector<PhaseSet> phase_sets;
+        phase_sets.clear();
         bool phased = false;
         for (size_t min_n_cooccurrences = phasing_cooccurrences_thr_range.first;
                 min_n_cooccurrences <= phasing_cooccurrences_thr_range.second;
@@ -1477,13 +1482,8 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
                 break;
             }
         }
-        if (!phased) {
-            if (dbg_write_misphased_hapgraphs && !dbg_write_hapgraphs) {
-                has_subgraphs = true;
-                write_sample_hapgraph(o_hapgraph_ss, sample, het_snps, snp_cols, sample_het_calls, cooccurrences);
-            }
+        if (!phased)
             continue;
-        }
         ++hap_stats.per_sample_stats[sample].n_phased;
         ++n_consistent_hets;
 
@@ -1535,7 +1535,7 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
         }
     }
 
-    if ((dbg_write_hapgraphs || dbg_write_misphased_hapgraphs) && has_subgraphs) {
+    if (dbg_write_hapgraphs && has_subgraphs) {
         o_hapgraph_ss << "}\n";
         #pragma omp critical
         o_hapgraphs_f << o_hapgraph_ss.rdbuf();
@@ -1617,11 +1617,8 @@ bool LocusProcessor::assemble_phase_sets(
             for (Nt2 nti : allelesi) {
                 for (Nt2 ntj : allelesj) {
                     size_t n = cooccurrences.at(snp_i, nti, snp_j, ntj);
-                    if (n == 0)
-                        continue;
-
                     if (n < min_n_cooccurrences)
-                        // Discard low-coverage edges.
+                        // Inexistent (n==0) or low-coverage edge.
                         continue;
 
                     if (ps_i == SIZE_MAX && ps_j == SIZE_MAX) {
@@ -2348,7 +2345,6 @@ try {
         {"dbg-depths",   no_argument,       NULL,  2007},
         {"dbg-no-unphased-snps", no_argument, NULL, 2015},
         {"dbg-hapgraphs", no_argument,      NULL,  2010},
-        {"dbg-hapgraphs-misphased", no_argument, NULL, 2016},
         {"dbg-true-reference", no_argument, NULL,  2012},
         {"dbg-true-alns", no_argument,      NULL,  2011}, {"true-alns", no_argument, NULL, 3011},
         {"dbg-no-overlaps", no_argument,    NULL,  2008},
@@ -2511,9 +2507,6 @@ try {
             break;
         case 2010://dbg-hapgraphs
             dbg_write_hapgraphs = true;
-            break;
-        case 2016://dbg-hapgraphs-misphased
-            dbg_write_misphased_hapgraphs = true;
             break;
         case 2007://dbg-depths
             dbg_write_nt_depths = true;
