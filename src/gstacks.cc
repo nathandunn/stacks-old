@@ -1412,8 +1412,12 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
         if (calls[i].alleles().size() > 1)
             snp_cols.push_back(i);
 
-    if (snp_cols.empty())
+    if (snp_cols.empty()) {
+        if (detailed_output)
+            loc_.details_ss << "END phasing\n";
+        ++hap_stats.n_badly_phased_samples[ {n_consistent_hets, n_hets_needing_phasing} ];
         return phased_samples;
+    }
 
     stringstream o_hapgraph_ss;
     bool has_subgraphs = false;
