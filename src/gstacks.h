@@ -74,9 +74,9 @@ public:
 //
 class SnpAlleleCooccurrenceCounter {
     size_t n_snps_;
-    vector<array<array<size_t,4>,4>> cooccurences_;
+    vector<array<array<size_t,4>,4>> cooccurrences_;
 public:
-    SnpAlleleCooccurrenceCounter(size_t n_snps) : n_snps_(n_snps), cooccurences_(n_snps_*n_snps_) {};
+    SnpAlleleCooccurrenceCounter(size_t n_snps) : n_snps_(n_snps), cooccurrences_(n_snps_*n_snps_) {};
     void clear();
 
     const size_t& at(size_t snp_i1, Nt2 snp1_allele, size_t snp_i2, Nt2 snp2_allele) const;

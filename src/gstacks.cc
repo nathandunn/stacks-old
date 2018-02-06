@@ -447,7 +447,7 @@ try {
         logger->x << "END bam_stats_per_sample\n";
         mean_recs /= bam_mpopi->samples().size();
         o_fp1 << "\n"
-              << "  Per-sample stats (for details see '"
+              << "  Per-sample stats (details in '"
               << logger->distribs_path.substr(logger->distribs_path.rfind('/') + 1)
               << "'):\n"
               << "    read " << mean_recs << " records/sample (" << min_recs
@@ -671,13 +671,13 @@ try {
 
 const size_t& SnpAlleleCooccurrenceCounter::at(size_t snp_i1, Nt2 snp1_allele, size_t snp_i2, Nt2 snp2_allele) const {
     assert(snp_i1 < snp_i2);
-    return cooccurences_[snp_i1*n_snps_+snp_i2][size_t(snp1_allele)][size_t(snp2_allele)];
+    return cooccurrences_[snp_i1*n_snps_+snp_i2][size_t(snp1_allele)][size_t(snp2_allele)];
 }
 
 void SnpAlleleCooccurrenceCounter::clear() {
     for(size_t i=0; i<n_snps_; ++i)
         for(size_t j=i+1; j<n_snps_; ++j)
-            cooccurences_[i*n_snps_+j] = array<array<size_t,4>,4>();
+            cooccurrences_[i*n_snps_+j] = array<array<size_t,4>,4>();
 }
 
 //
@@ -2296,7 +2296,7 @@ const string help_string = string() +
         "  --max-insert-len: maximum allowed sequencing insert length (default: 1000)\n"
         "\n"
         "  --details: write a heavier output\n"
-        "  --phasing-cooccurences-thr-range: range of edge coverage thresholds to\n"
+        "  --phasing-cooccurrences-thr-range: range of edge coverage thresholds to\n"
         "        iterate over when building the graph of allele cooccurrences for\n"
         "        SNP phasing (default: 1,2)\n"
         "\n"
