@@ -32,6 +32,8 @@
 #include "ordered.h" // for "snp"
 #include "populations.h" // for "merget", "InputMode", "uncalled_haplotype()", "count_haplotypes_at_locus()"
 
+extern bool ordered_export;
+
 void tally_complete_haplotypes(
         Datum const*const* data,
         size_t n_samples,
@@ -176,12 +178,17 @@ class SnpDivergenceExport: public Export {
     //
     const MetaPopInfo *_mpopi;
     vector<ofstream *> _fhs;
+    OPopPair<PopPair> *_order;
 
  public:
-    SnpDivergenceExport() : _mpopi(NULL) {}
+    SnpDivergenceExport(ofstream &log_fh) : _mpopi(NULL) {
+        if (ordered_export)
+            this->_order = new OPopPair<PopPair>(log_fh);
+    }
     ~SnpDivergenceExport() {
         for (uint i = 0; i < this->_fhs.size(); i++)
             delete this->_fhs[i];
+        delete this->_order;
     }
     int  open(const MetaPopInfo *mpopi);
     int  write_header();
@@ -193,6 +200,9 @@ class SnpDivergenceExport: public Export {
             this->_fhs[i]->close();
         return;
     }
+
+private:
+    int write_site(ofstream *fh, const PopPair *pp, string chr);
 };
 
 class HapDivergenceExport: public Export {
