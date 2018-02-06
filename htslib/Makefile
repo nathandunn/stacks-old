@@ -22,16 +22,11 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
-CC     = gcc
-AR     = ar
-RANLIB = ranlib
+RANLIB ?= ranlib
 
-CPPFLAGS =
 # TODO: probably update cram code to make it compile cleanly with -Wc++-compat
-CFLAGS   = -g -Wall -O2
+CFLAGS := $(CFLAGS) -g -Wall -O2
 EXTRA_CFLAGS_PIC = -fpic
-LDFLAGS  =
-LIBS     =
 
 # For now these don't work too well as samtools also needs to know to
 # add -lbz2 and -llzma if linking against the static libhts.a library.
