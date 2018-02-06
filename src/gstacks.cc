@@ -63,6 +63,7 @@ size_t min_km_count      = 2;
 size_t max_fragment_alns = 2;
 
 pair<size_t,size_t> phasing_cooccurrences_thr_range = {1, 2};
+bool phasing_dont_prune_hets = false;
 
 bool   dbg_no_overlaps     = false;
 bool   dbg_no_haplotypes   = false;
@@ -1429,6 +1430,9 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
     vector<const SampleCall*> sample_het_calls;
     SnpAlleleCooccurrenceCounter cooccurrences (snp_cols.size());
     vector<PhaseSet> phase_sets;
+    vector<array<bool,2>> alleles_with_edges;
+    vector<size_t> het_snps_reduced;
+    vector<const SampleCall*> sample_het_calls_reduced;
     assert(hap_stats.per_sample_stats.size() == loc_.mpopi->samples().size());
     for (size_t sample=0; sample<loc_.mpopi->samples().size(); ++sample) {
         if (aln_loc.sample_reads(sample).empty())
@@ -1481,6 +1485,7 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
                 min_n_cooccurrences <= phasing_cooccurrences_thr_range.second;
                 ++min_n_cooccurrences) {
             if (assemble_phase_sets(phase_sets, het_snps, sample_het_calls, cooccurrences, min_n_cooccurrences)) {
+                // Phasing succeeded.
                 phased = true;
                 if (detailed_output)
                     loc_.details_ss << "phasing_ok\t"
@@ -1488,6 +1493,67 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
                         << "\tn_hets=" << het_snps.size()
                         << "\tcooc_thr=" << min_n_cooccurrences << '\n';
                 break;
+            } else if (min_n_cooccurrences > 1 && !phasing_dont_prune_hets) {
+                // Phasing failed. find alleles that are not connected to any
+                // others, discard the het calls they are part of, and retry.
+                alleles_with_edges.clear();
+                alleles_with_edges.resize(het_snps.size(), {false, false});
+                for (size_t het_i=0; het_i<het_snps.size(); ++het_i) {
+                    array<Nt2,2> allelesi = sample_het_calls[het_i]->nts();
+                    for (size_t het_j=het_i+1; het_j<het_snps.size(); ++het_j) {
+                        array<Nt2,2> allelesj = sample_het_calls[het_j]->nts();
+                        for (size_t allelei=0; allelei<2; ++allelei) {
+                            for (size_t allelej=0; allelej<2; ++allelej) {
+                                if (cooccurrences.at(het_snps[het_i],
+                                                     allelesi[allelei],
+                                                     het_snps[het_j],
+                                                     allelesj[allelej])
+                                        >= min_n_cooccurrences
+                                ) {
+                                    alleles_with_edges[het_i][allelei] = true;
+                                    alleles_with_edges[het_j][allelej] = true;
+                                }
+                            }
+                        }
+                    }
+                }
+                het_snps_reduced.clear();
+                sample_het_calls_reduced.clear();
+                for (size_t het_i=0; het_i<het_snps.size(); ++het_i) {
+                    if (alleles_with_edges[het_i] == array<bool,2>({true, true})) {
+                        // Keep this het.
+                        het_snps_reduced.push_back(het_snps[het_i]);
+                        sample_het_calls_reduced.push_back(sample_het_calls[het_i]);
+                    }
+                }
+                if (het_snps_reduced.size() == het_snps.size())
+                    // No hets were removed; the situation is unchanged and phasing will fail again.
+                    continue;
+                assert(!het_snps_reduced.empty()); // Otherwise the phasing wouldn't have previously failed.
+                if (het_snps_reduced.size() == 1
+                    || assemble_phase_sets(phase_sets,
+                                           het_snps_reduced,
+                                           sample_het_calls_reduced,
+                                           cooccurrences,
+                                           min_n_cooccurrences)
+                ) {
+                    // Phasing succeeded or became trivial.
+                    // We just downsize `het_snps`. We can do this because `phased_samples`
+                    // doesn't keep track of all the hets; only those of the best phase set.
+                    // In addition, unphased HETs are eventually discarded (as of Feb. 2018,
+                    // v2.0Beta8; c.f. PopMap::populate_locus) so we don't need to do anything
+                    // more to blacklist those genotypes.
+                    phased = true;
+                    if (detailed_output)
+                        loc_.details_ss << "phasing_ok_rmhets\t"
+                            << loc_.mpopi->samples()[sample].name
+                            << "\tn_hets=" << het_snps.size()
+                            << "\tcooc_thr=" << min_n_cooccurrences
+                            << "\tn_kept_hets=" << het_snps_reduced.size() << '\n';
+                    het_snps = het_snps_reduced;
+                    sample_het_calls = sample_het_calls_reduced;
+                    break;
+                }
             }
         }
         if (!phased) {
@@ -1495,6 +1561,13 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
                 loc_.details_ss << "phasing_failed\t"
                     << loc_.mpopi->samples()[sample].name
                     << "\tn_hets=" << het_snps.size() << '\n';
+            continue;
+        }
+        if (het_snps.size() == 1) {
+            // After pruning hets, sample has trivial 1nt-long haplotypes.
+            size_t col = snp_cols[het_snps[0]];
+            const SampleCall& c = *sample_het_calls[0];
+            phased_samples[sample].insert({col, {col, c.nt0(), c.nt1()}});
             continue;
         }
         ++hap_stats.per_sample_stats[sample].n_phased;
@@ -2299,6 +2372,8 @@ const string help_string = string() +
         "  --phasing-cooccurrences-thr-range: range of edge coverage thresholds to\n"
         "        iterate over when building the graph of allele cooccurrences for\n"
         "        SNP phasing (default: 1,2)\n"
+        "  --phasing-dont-prune-hets: don't try to ignore dubious heterozygote\n"
+        "        genotypes during phasing\n"
         "\n"
 #ifdef DEBUG
         "Debug options:\n"
@@ -2353,6 +2428,7 @@ try {
         {"rm-unpaired-reads", no_argument,  NULL,  1017},
         {"rm-pcr-duplicates", no_argument,  NULL,  1018},
         {"phasing-cooccurrences-thr-range", required_argument, NULL, 1019},
+        {"phasing-dont-prune-hets", no_argument, NULL, 1020},
         //debug options
         {"dbg-gfa",      no_argument,       NULL,  2003},
         {"dbg-alns",     no_argument,       NULL,  2004}, {"alns", no_argument, NULL, 3004},
@@ -2500,6 +2576,9 @@ try {
                      << optarg << "'; expected 'INT_MIN,INT_MAX'.\n";
                 bad_args();
             }
+            break;
+        case 1020: //phasing-dont-prune-hets
+            phasing_dont_prune_hets = true;
             break;
 
         //
