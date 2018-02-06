@@ -182,7 +182,7 @@ try {
     SnpDivergenceExport *sdiv_exp = NULL;
     HapDivergenceExport *hdiv_exp = NULL;
     if (calc_fstats) {
-        sdiv_exp = new SnpDivergenceExport();
+        sdiv_exp = new SnpDivergenceExport(logger->x);
         exports.push_back(sdiv_exp);
         hdiv_exp = new HapDivergenceExport();
         exports.push_back(hdiv_exp);
@@ -3912,13 +3912,16 @@ parse_command_line(int argc, char* argv[])
             smooth_popstats = true;
             smooth_fstats   = true;
             calc_fstats     = true;
+            ordered_export  = true;
             break;
         case 1007:
             smooth_fstats   = true;
             calc_fstats     = true;
+            ordered_export  = true;
             break;
         case 1008:
             smooth_popstats = true;
+            ordered_export  = true;
             break;
         case '6':
             calc_fstats = true;
@@ -4237,6 +4240,7 @@ void help() {
          << "  -k,--smooth: enable kernel-smoothed Pi, Fis, Fst, Fst', and Phi_st calculations.\n"
          << "  --smooth_fstats: enable kernel-smoothed Fst, Fst', and Phi_st calculations.\n"
          << "  --smooth_popstats: enable kernel-smoothed Pi and Fis calculations.\n"
+         << "    (Note: turning on smoothing implies --ordered_export.)\n"
          << "  --sigma [int]: standard deviation of the kernel smoothing weight distribution. Default 150kb.\n"
          << "  --bootstrap: turn on boostrap resampling for all smoothed statistics.\n"
          << "  -N,--bootstrap_reps [int]: number of bootstrap resamplings to calculate (default 100).\n"

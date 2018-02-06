@@ -1,7 +1,6 @@
-
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2012-2017, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2012-2018, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -28,7 +27,6 @@
 #include "MetaPopInfo.h"
 #include "nucleotides.h"
 #include "Vcf.h"
-
 #include "export_formats.h"
 
 using namespace std;
@@ -476,73 +474,90 @@ SnpDivergenceExport::write_header()
 int
 SnpDivergenceExport::write_batch_pairwise(const vector<LocBin *> &loci, const vector<vector<PopPair **>> &div)
 {
-    ofstream *fh;
-    PopPair **pp;
-    LocBin   *loc;
-    size_t    cloc_len;
+    vector<const PopPair *> sites;
 
     for (uint i = 0; i < div.size(); i++) {
 
-        fh = this->_fhs[i];
         assert(div[i].size() == loci.size());
+        sites.clear();
 
-        for (uint j = 0; j < div[i].size(); j++) {
+        if (ordered_export) {
+            this->_order->order(sites, loci, div[i]);
 
-            loc      = loci[j];
-            cloc_len = loc->cloc->len;
-            pp       = div[i][j];
+            string chr = loci[0]->cloc->loc.chr();
 
-            for (uint pos = 0; pos < cloc_len; pos++) {
+            for (uint j = 0; j < sites.size(); j++)
+                if (sites[j] != NULL)
+                    this->write_site(this->_fhs[i], sites[j], chr);
+            
+        } else {
+            PopPair **pp;
+            size_t    cloc_len;
+            LocBin   *loc;
 
-                if (pp[pos] == NULL)
-                        continue;
+            for (uint j = 0; j < div[i].size(); j++) {
 
-                *fh << pp[pos]->loc_id      << "\t"
-                    << this->_mpopi->pops()[pp[pos]->pop_1].name << "\t"
-                    << this->_mpopi->pops()[pp[pos]->pop_2].name << "\t"
-                    << loc->cloc->loc.chr() << "\t"
-                    << pp[pos]->bp + 1      << "\t"
-                    << pp[pos]->col         << "\t"
-                    << pp[pos]->pi          << "\t"
-                    << pp[pos]->amova_fst   << "\t"
-                    << std::setprecision(9)      << pp[pos]->fet_p  << "\t"
-                    << std::setprecision(fieldw) << pp[pos]->fet_or << "\t"
-                    << pp[pos]->ci_low      << "\t"
-                    << pp[pos]->ci_high     << "\t"
-                    << pp[pos]->lod         << "\t"
-                    << pp[pos]->stat[1]     << "\t"
-                    << pp[pos]->smoothed[1] << "\t"
-                    << pp[pos]->bs[1]       << "\t"
-                    << pp[pos]->snp_cnt;
+                loc = loci[j];
+                cloc_len = loc->cloc->len;
+                pp       = div[i][j];
 
-                if (log_fst_comp) {
-                    *fh << "\t"
-                        << pp[pos]->comp[0]   << "\t"
-                        << pp[pos]->comp[1]   << "\t"
-                        << pp[pos]->comp[2]   << "\t"
-                        << pp[pos]->comp[3]   << "\t"
-                        << pp[pos]->comp[4]   << "\t"
-                        << pp[pos]->comp[5]   << "\t"
-                        << pp[pos]->comp[6]   << "\t"
-                        << pp[pos]->comp[7]   << "\t"
-                        << pp[pos]->comp[8]   << "\t"
-                        << pp[pos]->comp[9]   << "\t"
-                        << pp[pos]->comp[10]  << "\t"
-                        << pp[pos]->comp[11]  << "\t"
-                        << pp[pos]->fst       << "\t"
-                        << pp[pos]->comp[12]  << "\t"
-                        << pp[pos]->comp[13]  << "\t"
-                        << pp[pos]->comp[14]  << "\t"
-                        << pp[pos]->comp[15]  << "\t"
-                        << pp[pos]->comp[16]  << "\t"
-                        << pp[pos]->comp[17]  << "\t"
-                        << pp[pos]->amova_fst << "\n";
-                } else {
-                    *fh << "\n";
-                }
+                for (uint pos = 0; pos < cloc_len; pos++)
+                    if (pp[pos] != NULL)
+                        this->write_site(this->_fhs[i], pp[pos], loc->cloc->loc.chr());
             }
         }
     }
+
+    return 0;
+}
+
+inline int
+SnpDivergenceExport::write_site(ofstream *fh, const PopPair *pp, string chr)
+{
+    *fh << pp->loc_id      << "\t"
+        << this->_mpopi->pops()[pp->pop_1].name << "\t"
+        << this->_mpopi->pops()[pp->pop_2].name << "\t"
+        << chr             << "\t"
+        << pp->bp + 1      << "\t"
+        << pp->col         << "\t"
+        << pp->pi          << "\t"
+        << pp->amova_fst   << "\t"
+        << std::setprecision(9)      << pp->fet_p  << "\t"
+        << std::setprecision(fieldw) << pp->fet_or << "\t"
+        << pp->ci_low      << "\t"
+        << pp->ci_high     << "\t"
+        << pp->lod         << "\t"
+        << pp->stat[1]     << "\t"
+        << pp->smoothed[1] << "\t"
+        << pp->bs[1]       << "\t"
+        << pp->snp_cnt;
+
+    if (log_fst_comp) {
+        *fh << "\t"
+            << pp->comp[0]   << "\t"
+            << pp->comp[1]   << "\t"
+            << pp->comp[2]   << "\t"
+            << pp->comp[3]   << "\t"
+            << pp->comp[4]   << "\t"
+            << pp->comp[5]   << "\t"
+            << pp->comp[6]   << "\t"
+            << pp->comp[7]   << "\t"
+            << pp->comp[8]   << "\t"
+            << pp->comp[9]   << "\t"
+            << pp->comp[10]  << "\t"
+            << pp->comp[11]  << "\t"
+            << pp->fst       << "\t"
+            << pp->comp[12]  << "\t"
+            << pp->comp[13]  << "\t"
+            << pp->comp[14]  << "\t"
+            << pp->comp[15]  << "\t"
+            << pp->comp[16]  << "\t"
+            << pp->comp[17]  << "\t"
+            << pp->amova_fst << "\n";
+    } else {
+        *fh << "\n";
+    }
+
     return 0;
 }
 
