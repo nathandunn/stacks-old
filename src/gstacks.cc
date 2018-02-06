@@ -1399,6 +1399,9 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
         const CLocAlnSet& aln_loc,
         HaplotypeStats& hap_stats
 ) const {
+    if (detailed_output)
+        loc_.details_ss << "BEGIN phasing\n";
+
     size_t n_hets_needing_phasing = 0;
     size_t n_consistent_hets = 0;
 
@@ -1479,11 +1482,21 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
                 ++min_n_cooccurrences) {
             if (assemble_phase_sets(phase_sets, het_snps, sample_het_calls, cooccurrences, min_n_cooccurrences)) {
                 phased = true;
+                if (detailed_output)
+                    loc_.details_ss << "phasing_ok\t"
+                        << loc_.mpopi->samples()[sample].name
+                        << "\tn_hets=" << het_snps.size()
+                        << "\tcooc_thr=" << min_n_cooccurrences << '\n';
                 break;
             }
         }
-        if (!phased)
+        if (!phased) {
+            if (detailed_output)
+                loc_.details_ss << "phasing_failed\t"
+                    << loc_.mpopi->samples()[sample].name
+                    << "\tn_hets=" << het_snps.size() << '\n';
             continue;
+        }
         ++hap_stats.per_sample_stats[sample].n_phased;
         ++n_consistent_hets;
 
@@ -1542,6 +1555,8 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
     }
 
     ++hap_stats.n_badly_phased_samples[ {n_consistent_hets, n_hets_needing_phasing} ];
+    if (detailed_output)
+        loc_.details_ss << "END phasing\n";
     return phased_samples;
 }
 
@@ -2292,7 +2307,6 @@ const string help_string = string() +
         "  --dbg-gfa: output a GFA file for each locus\n"
         "  --dbg-alns: output a file showing the contigs & alignments\n"
         "  --dbg-hapgraphs: output a dot graph file showing phasing information\n"
-        "  --dbg-hapgraphs-misphased: same, but only for misphased diploid loci\n"
         "  --dbg-depths: write detailed depth data in the output VCF\n"
         "  --dbg-no-unphased-snps: don't write unphased SNPs in the output VCF\n"
         "  --dbg-true-alns: use true alignments (for simulated data; read IDs must\n"
