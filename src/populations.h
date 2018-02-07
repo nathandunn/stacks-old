@@ -75,7 +75,8 @@ const int max_snp_dist = 500;
 //
 class SumStatsSummary {
     size_t  _pop_cnt;
-    int    *_private_cnt;
+    size_t *_private_cnt;
+    size_t *_sig_hwe_dev;
     double *_num_indv_mean,         *_p_mean,         *_obs_het_mean,         *_obs_hom_mean,         *_exp_het_mean,         *_exp_hom_mean,         *_pi_mean,         *_fis_mean;
     double *_num_indv_acc_mean,     *_p_acc_mean,     *_obs_het_acc_mean,     *_obs_hom_acc_mean,     *_exp_het_acc_mean,     *_exp_hom_acc_mean,     *_pi_acc_mean,     *_fis_acc_mean;
     double *_num_indv_var,          *_p_var,          *_obs_het_var,          *_obs_hom_var,          *_exp_het_var,          *_exp_hom_var,          *_pi_var,          *_fis_var;
@@ -269,6 +270,7 @@ public:
     ~BatchLocusProcessor() {
         for (uint i = 0; i < this->_loci.size(); i++)
             delete this->_loci[i];
+        delete [] this->_sig_hwe_dev;
     };
 
     int            init(string, string);
@@ -293,6 +295,9 @@ public:
     const vector<LocBin *>& loci()   { return this->_loci; }
     const string&           chr()    { return this->_chr; }
     const CatalogDists&     dists()  { return this->_dists; }
+
+    // Per-population haplotype counters
+    size_t           *_sig_hwe_dev;
 
 private:
     InputMode    _input_mode;
