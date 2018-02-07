@@ -274,12 +274,6 @@ try {
         bloc.hapstats(logger->x);
 
         //
-        // Export this subset of the loci.
-        //
-        for (uint i = 0; i < exports.size(); i++)
-            exports[i]->write_batch(bloc.loci());
-
-        //
         // Calculate and report the extent of overlap between different RAD loci.
         //
         if (loci_ordered) {
@@ -321,6 +315,12 @@ try {
             }
             logger->x << "done.\n";
         }
+
+        //
+        // Export this subset of the loci.
+        //
+        for (uint i = 0; i < exports.size(); i++)
+            exports[i]->write_batch(bloc.loci());
 
         if (calc_fstats) {
             sdiv_exp->write_batch_pairwise(bloc.loci(), ldiv->snp_values());
