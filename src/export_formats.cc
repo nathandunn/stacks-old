@@ -265,16 +265,16 @@ SumstatsExport::write_batch(const vector<LocBin *> &loci)
                     this->_fh << "\t" << (int) s->nucs[pos].num_indv << "\t"
                               << std::setprecision(8)      << p_freq << "\t"
                               << std::setprecision(fieldw) << s->nucs[pos].obs_het << "\t"
-                              << s->nucs[pos].obs_hom   << "\t"
-                              << s->nucs[pos].exp_het   << "\t"
-                              << s->nucs[pos].exp_hom   << "\t"
-                              << s->nucs[pos].stat[0]   << "\t" // Pi
-                              << s->nucs[pos].smoothed[0] << "\t"  // Smoothed Pi
-                              << s->nucs[pos].bs[0]       << "\t"  // Pi bootstrapped p-value
+                              << s->nucs[pos].obs_hom      << "\t"
+                              << s->nucs[pos].exp_het      << "\t"
+                              << s->nucs[pos].exp_hom      << "\t"
+                              << s->nucs[pos].stat[0]      << "\t" // Pi
+                              << s->nucs[pos].smoothed[0]  << "\t"  // Smoothed Pi
+                              << s->nucs[pos].bs[0]        << "\t"  // Pi bootstrapped p-value
                               << (s->nucs[pos].stat[1] == -7.0 ? 0.0 : s->nucs[pos].stat[1]) << "\t"  // Fis
-                              << s->nucs[pos].smoothed[1] << "\t"  // Smoothed Fis
-                              << s->nucs[pos].bs[1]       << "\t" // Fis bootstrapped p-value.
-                              << s->nucs[pos].stat[2]     << "\t"; // HWE p-value.
+                              << s->nucs[pos].smoothed[1]  << "\t"  // Smoothed Fis
+                              << s->nucs[pos].bs[1]        << "\t"  // Fis bootstrapped p-value.
+                              << s->nucs[pos].stat[2]      << "\t"; // HWE p-value.
                     (t->nucs[pos].priv_allele == (int) pop) ? this->_fh << "1\n" : this->_fh << "0\n";
                 }
             }

@@ -61,7 +61,7 @@ Ordered<StatT>::init_sites(vector<const StatT *> &sites, map<uint, uint> &sites_
 {
     const CSLocus  *loc;
     const LocTally *ltally;
-    set<int> bps;
+    vector<int>     bps;
 
     //
     // We need to create an array to store all the SNPs for exporting. We must
@@ -73,19 +73,23 @@ Ordered<StatT>::init_sites(vector<const StatT *> &sites, map<uint, uint> &sites_
 
         for (uint k = 0; k < loc->len; k++) {
             if (ltally->nucs[k].allele_cnt == 2)
-                bps.insert(ltally->nucs[k].bp);
+                bps.push_back(ltally->nucs[k].bp);
         }
     }
 
-    sites.resize(bps.size(), NULL);
+    sort(bps.begin(), bps.end());
+    vector<int>::iterator new_end = std::unique(bps.begin(), bps.end());
+
+    sites.resize(std::distance(bps.begin(), new_end), NULL);
 
     //
     // Create a key describing where in the sites array to find each basepair coordinate.
     //
-    set<int>::iterator it;
     int i = 0;
-    for (it = bps.begin(); it != bps.end(); it++) {
-        sites_key[*it] = i;
+    map<uint, uint>::iterator key_it = sites_key.begin();
+
+    for (vector<int>::iterator it = bps.begin(); it != bps.end(); it++) {
+        key_it = sites_key.insert(key_it, pair<uint, uint>(*it, i));
         i++;
     }
 
@@ -98,31 +102,36 @@ Ordered<StatT>::init_sites(vector<const StatT *> &sites, map<uint, uint> &sites_
 {
     const CSLocus *loc;
     const LocSum  *lsum;
-    set<int> bps;
+    vector<int>    bps;
 
     //
     // We need to create an array to store all the summary statistics for smoothing. We must
     // account for positions in the genome that are covered by more than one RAD tag.
     //
+    Timer T;
     for (uint pos = 0; pos < sorted_loci.size(); pos++) {
         loc  = sorted_loci[pos]->cloc;
         lsum = sorted_loci[pos]->s->per_pop(pop_id);
 
         for (uint k = 0; k < loc->len; k++) {
-            if (lsum->nucs[k].num_indv > 0)
-                bps.insert(lsum->nucs[k].bp);
+            if (lsum->nucs[k].num_indv > 0) 
+                bps.push_back(lsum->nucs[k].bp);
         }
     }
 
-    sites.resize(bps.size(), NULL);
+    sort(bps.begin(), bps.end());
+    vector<int>::iterator new_end = std::unique(bps.begin(), bps.end());
+
+    sites.resize(std::distance(bps.begin(), new_end), NULL);
 
     //
     // Create a key describing where in the sites array to find each basepair coordinate.
     //
-    set<int>::iterator it;
-    int i = 0;
-    for (it = bps.begin(); it != bps.end(); it++) {
-        sites_key[*it] = i;
+    size_t i = 0;
+    map<uint, uint>::iterator key_it = sites_key.begin();
+
+    for (vector<int>::iterator it = bps.begin(); it != new_end; it++) {
+        key_it = sites_key.insert(key_it, pair<uint, uint>(*it, i));
         i++;
     }
 
@@ -135,7 +144,7 @@ Ordered<StatT>::init_sites(vector<const StatT *> &sites, map<uint, uint> &sites_
 {
     const CSLocus *loc;
     const LocSum  *lsum_1, *lsum_2;
-    set<int> bps;
+    vector<int>    bps;
 
     //
     // We need to create an array to store all the pair values for computing smoothed Fst. We must
@@ -149,19 +158,23 @@ Ordered<StatT>::init_sites(vector<const StatT *> &sites, map<uint, uint> &sites_
         for (uint k = 0; k < loc->len; k++) {
             if (lsum_1->nucs[k].num_indv > 0 &&
                 lsum_2->nucs[k].num_indv > 0)
-                bps.insert(lsum_1->nucs[k].bp); // slow
+                bps.push_back(lsum_1->nucs[k].bp);
         }
     }
 
-    sites.resize(bps.size(), NULL);
+    sort(bps.begin(), bps.end());
+    vector<int>::iterator new_end = std::unique(bps.begin(), bps.end());
+
+    sites.resize(std::distance(bps.begin(), new_end), NULL);
 
     //
     // Create a key describing where in the sites array to find each basepair coordinate.
     //
-    set<int>::iterator it;
-    int i = 0;
-    for (it = bps.begin(); it != bps.end(); it++) {
-        sites_key[*it] = i; // slow
+    size_t i = 0;
+    map<uint, uint>::iterator key_it = sites_key.begin();
+    
+    for (vector<int>::iterator it = bps.begin(); it != bps.end(); it++) {
+        key_it = sites_key.insert(key_it, pair<uint, uint>(*it, i));
         i++;
     }
 
@@ -173,25 +186,29 @@ int
 Ordered<StatT>::init_haplotypes(vector<const StatT *> &sites, map<uint, uint> &sites_key, const vector<LocBin *> &sorted_loci)
 {
     const CSLocus *loc;
-    int      bp;
-    set<int> bps;
+    int         bp;
+    vector<int> bps;
 
     for (uint pos = 0; pos < sorted_loci.size(); pos++) {
         loc = sorted_loci[pos]->cloc;
         bp  = loc->sort_bp();
 
-        bps.insert(bp);
+        bps.push_back(bp);
     }
 
-    sites.resize(bps.size(), NULL);
+    sort(bps.begin(), bps.end());
+    vector<int>::iterator new_end = std::unique(bps.begin(), bps.end());
+
+    sites.resize(std::distance(bps.begin(), new_end), NULL);
 
     //
     // Create a key describing where in the sites array to find each basepair coordinate.
     //
-    set<int>::iterator it;
     int i = 0;
-    for (it = bps.begin(); it != bps.end(); it++) {
-        sites_key[*it] = i;
+    map<uint, uint>::iterator key_it = sites_key.begin();
+
+    for (vector<int>::iterator it = bps.begin(); it != bps.end(); it++) {
+        key_it = sites_key.insert(key_it, pair<uint, uint>(*it, i));
         i++;
     }
 
