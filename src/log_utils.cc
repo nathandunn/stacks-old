@@ -129,6 +129,7 @@ ProgressMeter& ProgressMeter::operator+=(size_t n)
 
     if (n_done_ >= next_) {
         #ifdef DEBUG
+        timer_.update();
         os_ << '(' << (size_t) timer_.elapsed() << "s) ";
         #endif
         if (pct_) {
@@ -176,6 +177,7 @@ ProgressMeter& ProgressMeter::operator+=(size_t n)
 void ProgressMeter::done()
 {
     #ifdef DEBUG
+    timer_.update();
     os_ << "(" << (size_t) timer_.elapsed() << "s) ";
     #endif
     if (pct_) {
