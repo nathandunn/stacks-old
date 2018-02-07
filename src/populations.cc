@@ -248,9 +248,6 @@ try {
         if (filter.batch_seen() == 0)
             break;
 
-        #ifdef DEBUG
-        cout << "(" << (size_t) timer.elapsed() << "s) ";
-        #endif
         if (loci_ordered) {
             cout << bloc.chr() << "\n" << flush;
             logger->x << bloc.chr();
@@ -329,6 +326,10 @@ try {
             ldiv->clear(bloc.loci());
         }
         logger->x << flush;
+        #ifdef DEBUG
+        cout << "(" << (size_t) timer.elapsed() << "s) ";
+        #endif
+
     }
     logger->x << "END batch_progress\n";
     #ifdef DEBUG
@@ -358,6 +359,15 @@ try {
     //
     sumstats.final_calculation();
     sumstats.write_results();
+
+    if (calc_hwp) {
+        cout << "\n"
+             << "Number of loci found to be significantly out of Hardy-Weinberg equilibrium:\n";
+        for (uint j = 0; j < mpopi.pops().size(); j++)
+            cout << "  "
+                 << mpopi.pops()[j].name << ": "
+                 << bloc._sig_hwe_dev[j] << "\n";
+    }
 
     if (calc_fstats)
         ldiv->write_summary(out_path + out_prefix);
@@ -411,6 +421,12 @@ BatchLocusProcessor::init(string in_path, string pmap_path)
         this->init_external_loci(in_vcf_path, pmap_path);
     else
         this->init_stacks_loci(in_path, pmap_path);
+
+    //
+    // Initialize our per-population haplotype counters.
+    //
+    this->_sig_hwe_dev = new size_t[this->_mpopi->pops().size()];
+    memset(this->_sig_hwe_dev, 0, sizeof(size_t)*this->_mpopi->pops().size());
 
     return 0;
 }
@@ -911,6 +927,22 @@ BatchLocusProcessor::hapstats(ostream &log_fh)
             LocBin *loc = this->_loci[i];
 
             loc->s->calc_hapstats(loc->cloc, (const Datum **) loc->d, *this->_mpopi);
+        }
+    }
+
+    if (calc_hwp) {
+        const LocStat *l;
+        const vector<Pop> &pops = this->_mpopi->pops();
+
+        for (uint i = 0; i < this->_loci.size(); i++) {
+            for (uint j = 0; j < pops.size(); j++) {
+                l = this->_loci[i]->s->hapstats_per_pop(j);
+
+                if (l == NULL)
+                    continue;
+
+                this->_sig_hwe_dev[j] += l->stat[2] < p_value_cutoff ? 1 : 0;
+            }
         }
     }
 
@@ -2422,7 +2454,8 @@ call_population_genotypes(CSLocus *locus, Datum **d, int sample_cnt)
 SumStatsSummary::SumStatsSummary(size_t pop_cnt)
 {
     this->_pop_cnt           = pop_cnt;
-    this->_private_cnt       = new int[this->_pop_cnt];
+    this->_private_cnt       = new size_t[this->_pop_cnt];
+    this->_sig_hwe_dev       = new size_t[this->_pop_cnt];
     this->_n                 = new double[this->_pop_cnt];
     this->_var_sites         = new double[this->_pop_cnt];
 
@@ -2482,6 +2515,7 @@ SumStatsSummary::SumStatsSummary(size_t pop_cnt)
 
     for (uint j = 0; j < this->_pop_cnt; j++) {
         this->_private_cnt[j]       = 0;
+        this->_sig_hwe_dev[j]       = 0;
         this->_n[j]                 = 0.0;
         this->_var_sites[j]         = 0.0;
         this->_num_indv_mean[j]     = 0.0;
@@ -2593,6 +2627,11 @@ SumStatsSummary::accumulate(const vector<LocBin *> &loci)
 
                     if (s->nucs[pos].pi > 0) _var_sites[pop]++;
 
+                    //
+                    // Record if site deviates from HWE.
+                    //
+                    if (calc_hwp && s->nucs[pos].stat[2] < p_value_cutoff) _sig_hwe_dev[pop]++;
+                    
                     //
                     // Accumulate sums for each variable to calculate the means.
                     //
@@ -2805,7 +2844,7 @@ SumStatsSummary::write_results()
     }
     os   << "Mean genotyped sites per locus: " << this->_locus_gt_sites_mean << "bp "
          << "(stderr " << sqrt(this->_locus_gt_sites_var) / sqrt(this->_locus_n) << ").\n";
-
+   
     //
     // Write out summary statistics of the summary statistics.
     //
@@ -2940,6 +2979,15 @@ SumStatsSummary::write_results()
     }
 
     fh.close();
+
+    if (calc_hwp) {
+        os << "\n"
+           << "Number of sites found to be significantly out of Hardy-Weinberg equilibrium:\n";
+        for (uint j = 0; j < this->_pop_cnt; j++)
+            os << "  "
+               << mpopi.pops()[j].name << ": "
+               << _sig_hwe_dev[j]      << "\n";
+    }
 
     return 0;
 }
