@@ -222,6 +222,8 @@ try {
     cout << "\nProcessing data in batches:\n"
          << "  * load a batch of catalog loci and apply filters\n"
          << "  * compute SNP- and haplotype-wise per-population statistics\n";
+    if (calc_hwp)
+        cout << "  * compute SNP- and haplotype-wise deviation from HWE\n";
     if (calc_fstats)
         cout << "  * compute F-statistics\n";
     if (smooth_popstats)
@@ -249,10 +251,10 @@ try {
             break;
 
         if (loci_ordered) {
-            cout << bloc.chr() << "\n" << flush;
+            cout << bloc.chr() << " " << flush;
             logger->x << bloc.chr();
         } else {
-            cout << "Batch " << bloc.next_batch_number() - 1 << "\n" << flush;
+            cout << "Batch " << bloc.next_batch_number() - 1 << " " << flush;
             logger->x << "Batch " << bloc.next_batch_number() - 1;
         }
         logger->x << ": analyzed "
@@ -326,15 +328,15 @@ try {
             ldiv->clear(bloc.loci());
         }
         logger->x << flush;
+        timer.update();
         #ifdef DEBUG
-        cout << "(" << (size_t) timer.elapsed() << "s) ";
+        cout << "(" << (size_t) timer.elapsed() << "s)\n" << flush;
+        #else
+        cout << "\n";
         #endif
 
     }
     logger->x << "END batch_progress\n";
-    #ifdef DEBUG
-    cout << "(" << (size_t) timer.elapsed() << "s) done\n";
-    #endif
 
     //
     // Report what we read from the input files.
@@ -361,12 +363,12 @@ try {
     sumstats.write_results();
 
     if (calc_hwp) {
-        cout << "\n"
-             << "Number of loci found to be significantly out of Hardy-Weinberg equilibrium:\n";
+        cout << "Number of loci found to be significantly out of Hardy-Weinberg equilibrium (<" << p_value_cutoff << "):\n";
         for (uint j = 0; j < mpopi.pops().size(); j++)
             cout << "  "
                  << mpopi.pops()[j].name << ": "
                  << bloc._sig_hwe_dev[j] << "\n";
+        cout << "(more detail in populations.sumstats.tsv and populations.hapstats.tsv)\n";
     }
 
     if (calc_fstats)
@@ -2982,7 +2984,7 @@ SumStatsSummary::write_results()
 
     if (calc_hwp) {
         os << "\n"
-           << "Number of sites found to be significantly out of Hardy-Weinberg equilibrium:\n";
+           << "Number of variable sites found to be significantly out of Hardy-Weinberg equilibrium (<" << p_value_cutoff << "):\n";
         for (uint j = 0; j < this->_pop_cnt; j++)
             os << "  "
                << mpopi.pops()[j].name << ": "
