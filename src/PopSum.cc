@@ -153,6 +153,7 @@ LocPopSum::tally_fixed_pos(const CSLocus *cloc, const Datum **d, LocSum *s,
         s->nucs[pos].exp_het  =  0.0;
         s->nucs[pos].stat[0]  =  0.0; // pi
         s->nucs[pos].stat[1]  = -7.0; // fis
+        s->nucs[pos].stat[2]  =  0.0; // HWE deviation
     }
 
     return 0;
@@ -309,10 +310,11 @@ LocPopSum::tally_heterozygous_pos(const CSLocus *cloc, const Datum **d, LocSum *
 
     double hwe_pval = 0.0;
     //
-    // Calculate deviation from Hardy-Weinberg equilibrium.
+    // Calculates deviation from Hardy-Weinberg equilibrium.
     //
     if (calc_hwp) {
         hwe_pval = this->hwe(num_indv, allele_p, allele_q, obs_p, obs_q, obs_het);
+
         s->nucs[pos].stat[2] = hwe_pval;
     }
 
@@ -416,26 +418,39 @@ LocPopSum::hwe(double n, double p, double q, double p_hom, double q_hom, double 
     double n_fac = 0.0;
     for (uint i = n+1; i <= 2*n; i++) n_fac += log(i);
 
-    double hwe_pr = 0;
-
     //
-    // To get the exact value we must also calculate all the probabilities less likely, that is
-    // given the same marginal totals, with fewer heterozygotes.
+    // To get the exact value we must also calculate all the probabilities that are less likely
+    // than the observed probability. That is, given the same marginal totals, those with fewer heterozygotes.
     // To do this we will subtract 2 from hets and add 1 each to the homozygote classes until
     // we reach 1 or 0 hets.
     //
     // Defined in:
     //   Louis and Dempster, 1987. An Exact Test for Hardy-Weinberg and Multiple Alleles. Biometrics, Vol. 43, No. 4.
     //
-    do {
-        double log_pr = log_hwp_pr(n_fac, p_fac, q_fac, p_hom, q_hom, hets);
-        hwe_pr += exp(log_pr);
-        
-        hets  -=2;
-        p_hom += 1;
-        q_hom += 1;
+    double s_hets, s_p_hom, s_q_hom;
 
-    } while (hets > 1);
+    if (p <= q) {
+        s_p_hom = 0;
+        s_hets  = p;
+        s_q_hom = (q - p) / 2.0;
+    } else {
+        s_p_hom = (p - q) / 2.0;
+        s_hets  = q;
+        s_q_hom = 0;
+    }
+
+    double obs_log_pr = log_hwp_pr(n_fac, p_fac, q_fac, p_hom, q_hom, hets);
+    double hwe_pr     = 0.0;
+
+    while (s_hets >= 0) {
+        double log_pr = log_hwp_pr(n_fac, p_fac, q_fac, s_p_hom, s_q_hom, s_hets);
+        double pr     = exp(log_pr);
+        hwe_pr += log_pr > obs_log_pr ? 0.0 : pr;
+
+        s_hets  -= 2;
+        s_p_hom += 1;
+        s_q_hom += 1;
+    } 
 
     return hwe_pr;
 }
@@ -456,6 +471,20 @@ LocPopSum::log_hwp_pr(double n_fac, double p_fac, double q_fac, double pp, doubl
     for (uint i = 1; i <= qq; i++)  c += log(i);
     double den = a + b + c + n_fac;
 
+    // cerr << " n_fac: " << n_fac
+    //      << " p_fac: " << p_fac
+    //      << " q_fac: " << q_fac
+    //      << " pp: " << pp
+    //      << " qq: " << qq
+    //      << " pq: " << pq
+    //      << " pp_fac: " << a
+    //      << " pq_fac: " << b
+    //      << " qq_fac: " << c
+    //      << " num: " << num
+    //      << " den: " << den
+    //      << " log(hwe_pr): " << num - den
+    //      << " hwe_pr: " << exp(num - den) << "\n";
+    
     return num - den;
 }
 
