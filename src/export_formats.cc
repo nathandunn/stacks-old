@@ -1558,7 +1558,7 @@ GenePopHapsExport::open(const MetaPopInfo *mpopi)
     check_open(this->_fh, this->_path);
     this->_tmpfh.open(this->tmp_path());
     check_open(this->_tmpfh, this->tmp_path());
-    cout << "Polymorphic sites in GenePop format will be written to '" << this->_path << "'\n";
+    cout << "Polymorphic loci in GenePop format will be written to '" << this->_path << "'\n";
     return 0;
 }
 
