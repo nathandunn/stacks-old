@@ -1351,30 +1351,28 @@ OrderableExport::write_batch(const vector<LocBin*> &loci)
         OLocTally<NucTally> ord;
         ord.order(sites, loci);
 
-        uint k = 0;
+        map<size_t, size_t> key;
+        map<size_t, size_t>::iterator key_it = key.begin();
+
+        for (size_t k = 0; k < loci.size(); k++)
+            key_it = key.insert(key_it, pair<size_t, size_t>(loci[k]->cloc->id, k));
+
         for (uint pos = 0; pos < sites.size(); pos++) {
             int loc_id = sites[pos]->loc_id;
 
-            //
-            // Advance through the loci list until we find the proper locus.
-            //
-            while (k < loci.size() && loci[k]->cloc->id != loc_id)
-                k++;
-            assert(loci[k]->cloc->id == loc_id);
-
-            const LocBin* loc  = loci[k];
-            size_t col       = sites[pos]->col;
-            size_t snp_index = loc->cloc->snp_index(col);
+            const LocBin* loc = loci[key[loc_id]];
+            size_t        col = sites[pos]->col;
+            size_t  snp_index = loc->cloc->snp_index(col);
 
             this->write_site(loc->cloc, loc->s, loc->d, col, snp_index);
         }
 
     } else {
         for (uint k = 0; k < loci.size(); k++) {
-            const LocBin* loc = loci[k];
-            const CSLocus* cloc = loc->cloc;
+            const LocBin*    loc = loci[k];
+            const CSLocus*  cloc = loc->cloc;
             Datum const*const* d = loc->d;
-            const LocTally* t = loc->s->meta_pop();
+            const LocTally*    t = loc->s->meta_pop();
 
             for (uint snp_index = 0; snp_index < cloc->snps.size(); snp_index++) {
                 uint col = cloc->snps[snp_index]->col;
