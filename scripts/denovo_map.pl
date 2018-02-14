@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 #
-# Copyright 2010-2017, Julian Catchen <jcatchen@illinois.edu>
+# Copyright 2010-2018, Julian Catchen <jcatchen@illinois.edu>
 #
 # This file is part of Stacks.
 #
@@ -16,15 +16,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with Stacks.  If not, see <http://www.gnu.org/licenses/>.
-#
-
-#
-# Process the data for a genetic map: build stacks in parents and progeny,
-# create a catalog from the parents, and match progeny against the catatlog.
-# Call genotypes, and load all data into an MySQL database along the way.
-#
-# For the database interactions to work, the 'mysql' program is expected to be
-# on the path and sufficient permissions set to access the specified database.
 #
 
 use strict;
@@ -48,7 +39,6 @@ my $out_path     = "";
 my $popmap_path  = "";
 my $sample_path  = "";
 my $db           = "";
-my $data_type    = "map";
 my $min_cov      = 0;
 my $min_rcov     = 0;
 my $batch_id     = 1;
@@ -63,7 +53,7 @@ my @parents;
 my @progeny;
 my @samples;
 
-my (@_ustacks, @_cstacks, @_sstacks, @_tsv2bam, @_gstacks, @_genotypes, @_populations);
+my (@_ustacks, @_cstacks, @_sstacks, @_tsv2bam, @_gstacks, @_populations);
 
 my $cmd_str = $0 . " " . join(" ", @ARGV);
 
@@ -74,7 +64,7 @@ my $cnf = (-e $ENV{"HOME"} . "/.my.cnf") ? $ENV{"HOME"} . "/.my.cnf" : $mysql_co
 #
 # Check for the existence of the necessary pipeline programs
 #
-foreach my $prog ("ustacks", "cstacks", "sstacks", "tsv2bam", "gstacks", "populations", "index_radtags.pl") {
+foreach my $prog ("ustacks", "cstacks", "sstacks", "tsv2bam", "gstacks", "populations") {
     die "Unable to find '" . $exe_path . $prog . "'.\n" if (!-e $exe_path . $prog);
 }
 
@@ -114,7 +104,7 @@ sub check_return_value {
         if ($rv & 255 || ($rv >> 8) > 127) {
             $code += 128;
         }
-        my $msg = "\nref_map.pl: Aborted because the last command failed ($code";
+        my $msg = "\ndenovo_map.pl: Aborted because the last command failed ($code";
         if ($code == 129 || $code == 130 || $code == 131) {
             $msg .= "/interrupted";
         } elsif ($code == 137 || $code == 143) {
@@ -284,42 +274,20 @@ sub execute_stacks {
         check_return_value($?, $log_fh);
     }
 
-    if ($data_type eq "map") {
-        #
-        # Generate a set of observed haplotypes and a set of markers and generic genotypes
-        #
-        printf(STDERR "Generating genotypes...\n");
-        print $log_fh "\ngenotypes\n==========\n";
+    printf(STDERR "Calculating population-level summary statistics\n");
+    print $log_fh "\npopulations\n==========\n";
 
-        $cmd = $exe_path . "genotypes" . " -b $batch_id -P $out_path -r 1 -c -s " . join(" ", @_genotypes);
-        print STDERR  "$cmd\n\n";
-        print $log_fh "$cmd\n\n";
+    $cmd = $exe_path . "populations" . " -P $out_path " . join(" ", @_populations);
+    print STDERR  "  $cmd\n\n";
+    print $log_fh "$cmd\n\n";
 
-        if ($dry_run == 0) {
-            open($pipe_fh, "$time $cmd 2>&1 |");
-            while (<$pipe_fh>) {
-                print $log_fh $_;
-            }
-            close($pipe_fh);
-            check_return_value($?, $log_fh);
+    if ($dry_run == 0) {
+        open($pipe_fh, "$time $cmd 2>&1 |");
+        while (<$pipe_fh>) {
+            print $log_fh $_;
         }
-
-    } else {
-        printf(STDERR "Calculating population-level summary statistics\n");
-        print $log_fh "\npopulations\n==========\n";
-
-        $cmd = $exe_path . "populations" . " -P $out_path " . join(" ", @_populations);
-        print STDERR  "  $cmd\n\n";
-        print $log_fh "$cmd\n\n";
-
-        if ($dry_run == 0) {
-            open($pipe_fh, "$time $cmd 2>&1 |");
-            while (<$pipe_fh>) {
-                print $log_fh $_;
-            }
-            close($pipe_fh);
-            check_return_value($?, $log_fh);
-        }
+        close($pipe_fh);
+        check_return_value($?, $log_fh);
     }
     
     print STDERR  "denovo_map.pl is done.\n";
@@ -520,9 +488,9 @@ sub initialize_database {
     # Set the SQL Batch ID for this set of loci, along with description and date of
     # sequencing. Insert this batch data into the database.
     #
-    `mysql --defaults-file=$cnf $db -e "INSERT INTO batches SET id=$batch_id, description='$desc', date='$date', type='$data_type'"` if ($dry_run == false);
+    `mysql --defaults-file=$cnf $db -e "INSERT INTO batches SET id=$batch_id, description='$desc', date='$date', type='population'"` if ($dry_run == false);
 
-    print $log_fh "mysql --defaults-file=$cnf $db -e \"INSERT INTO batches SET id=$batch_id, description='$desc', date='$date', type='$data_type'\"\n";
+    print $log_fh "mysql --defaults-file=$cnf $db -e \"INSERT INTO batches SET id=$batch_id, description='$desc', date='$date', type='population'\"\n";
 
     print $log_fh "Loading sample data into the MySQL database...\n";
 
@@ -633,63 +601,51 @@ sub load_sql_data {
         $i++;
     }
 
-    if ($data_type eq "map") {
-        #
-        # Load the outputs generated by genotypes to the database.
-        #
-        $file = "$out_path/batch_" . $batch_id . ".markers.tsv";
-        import_sql_file($log_fh, $file, "markers", 1);
+    #
+    # Load the outputs generated by populations to the database.
+    #
+    $file = "$out_path/batch_" . $batch_id . ".markers.tsv";
+    import_sql_file($log_fh, $file, "markers", 1);
 
-        $file = "$out_path/batch_" . $batch_id . ".genotypes_1.txt";
-        import_sql_file($log_fh, $file, "catalog_genotypes", 1);
+    $file = "$out_path/batch_" . $batch_id . ".sumstats.tsv";
+    import_sql_file($log_fh, $file, "sumstats", $pop_cnt+1);
 
-    } else {
-        #
-        # Load the outputs generated by populations to the database.
-        #
-        $file = "$out_path/batch_" . $batch_id . ".markers.tsv";
-        import_sql_file($log_fh, $file, "markers", 1);
+    $file = "$out_path/batch_" . $batch_id . ".hapstats.tsv";
+    import_sql_file($log_fh, $file, "hapstats", $pop_cnt+1);
 
-        $file = "$out_path/batch_" . $batch_id . ".sumstats.tsv";
-        import_sql_file($log_fh, $file, "sumstats", $pop_cnt+1);
+    #
+    # Import the Fst files.
+    #
+    my $fst_cnt = 0;
+    my (@keys, $m, $n);
+    @keys = sort keys %pops;
+    for ($m = 0; $m < scalar(@keys); $m++) {
+        for ($n = 0; $n < scalar(@keys); $n++) {
+            $file = "$out_path/batch_" . $batch_id . ".fst_" . $keys[$m] . "-" . $keys[$n] . ".tsv";
 
-        $file = "$out_path/batch_" . $batch_id . ".hapstats.tsv";
-        import_sql_file($log_fh, $file, "hapstats", $pop_cnt+1);
-
-        #
-        # Import the Fst files.
-        #
-        my $fst_cnt = 0;
-        my (@keys, $m, $n);
-        @keys = sort keys %pops;
-        for ($m = 0; $m < scalar(@keys); $m++) {
-            for ($n = 0; $n < scalar(@keys); $n++) {
-                $file = "$out_path/batch_" . $batch_id . ".fst_" . $keys[$m] . "-" . $keys[$n] . ".tsv";
-
-                if (-e $file) {
-                    import_sql_file($log_fh, $file, "fst", 1);
-                    $fst_cnt++;
-                }
+            if (-e $file) {
+                import_sql_file($log_fh, $file, "fst", 1);
+                $fst_cnt++;
             }
         }
-        print STDERR "Imported $fst_cnt Fst file(s).\n";
-
-        #
-        # Import the Phi_st files.
-        #
-        $fst_cnt = 0;
-        for ($m = 0; $m < scalar(@keys); $m++) {
-            for ($n = 0; $n < scalar(@keys); $n++) {
-                $file = "$out_path/batch_" . $batch_id . ".phistats_" . $keys[$m] . "-" . $keys[$n] . ".tsv";
-
-                if (-e $file) {
-                    import_sql_file($log_fh, $file, "phist", 3);
-                    $fst_cnt++;
-                }
-            }
-        }
-        print STDERR "Imported $fst_cnt Haplotype Fst file(s).\n";
     }
+    print STDERR "Imported $fst_cnt Fst file(s).\n";
+
+    #
+    # Import the Phi_st files.
+    #
+    $fst_cnt = 0;
+    for ($m = 0; $m < scalar(@keys); $m++) {
+        for ($n = 0; $n < scalar(@keys); $n++) {
+            $file = "$out_path/batch_" . $batch_id . ".phistats_" . $keys[$m] . "-" . $keys[$n] . ".tsv";
+
+            if (-e $file) {
+                import_sql_file($log_fh, $file, "phist", 3);
+                $fst_cnt++;
+            }
+        }
+    }
+    print STDERR "Imported $fst_cnt Haplotype Fst file(s).\n";
 
     print $log_fh "\n";
 
@@ -855,16 +811,11 @@ sub parse_command_line {
             $cstacks_mismatch = shift @ARGV;
             push(@_cstacks, "-n " . $cstacks_mismatch);
 
-        } elsif ($_ =~ /^--bound_low$/) {
-            push(@_ustacks, "--bound_low " . shift @ARGV);
-            push(@_ustacks, "--model_type bounded");
+        } elsif ($_ =~ /^--var-alpha$/) {
+            push(@_gstacks, "--var-alpha " . shift @ARGV);
 
-        } elsif ($_ =~ /^--bound_high$/) {
-            push(@_ustacks, "--bound_high " . shift @ARGV);
-            push(@_ustacks, "--model_type bounded");
-
-        } elsif ($_ =~ /^--alpha$/) {
-            push(@_ustacks, "--alpha " . shift @ARGV);
+        } elsif ($_ =~ /^--gt-alpha$/) {
+            push(@_gstacks, "--gt-alpha " . shift @ARGV);
 
         } elsif ($_ =~ /^-X$/) {
             #
@@ -884,8 +835,6 @@ sub parse_command_line {
             	push(@_tsv2bam, $opt);
             } elsif ($prog eq "gstacks") {
             	push(@_gstacks, $opt);
-            } elsif ($prog eq "genotypes") {
-            	push(@_genotypes, $opt);
             } elsif ($prog eq "populations") {
             	push(@_populations, $opt);
             } else {
@@ -929,12 +878,6 @@ sub parse_command_line {
         $sample_path .= "/" if (substr($sample_path, -1) ne "/");
     }
 
-    if (scalar(@samples) > 0 || length($popmap_path) > 0) {
-        $data_type = "population";
-    } else {
-        $data_type = "map";
-    }
-
     if ($paired == true) {
         if (length($sample_path) == 0) {
             print STDERR "If you want to assemble paired-ends, you must use a population map to specify samples.\n";
@@ -960,7 +903,7 @@ sub usage {
     version();
 
     print STDERR <<EOQ;
-denovo_map.pl --samples dir --popmap path -o dir [--paired] (assembly options) (database options) [-X prog:"opts" ...]
+denovo_map.pl --samples dir --popmap path -o dir [--paired] (assembly options) [-X prog:"opts" ...]
 
   Input/Output files:
     --samples: path to the directory containing the samples reads files.
@@ -968,7 +911,6 @@ denovo_map.pl --samples dir --popmap path -o dir [--paired] (assembly options) (
     o: path to an output directory.
 
   General options:
-    A: for a mapping cross, specify the type; one of 'CP', 'F2', 'BC1', 'DH', or 'GEN'.
     X: additional options for specific pipeline components, e.g. -X "populations: -p 3 -r 0.50".
     T: the number of threads/CPUs to use (default: 1).
     d: Dry run. Do not actually execute anything, just print the commands that would be executed.
@@ -979,15 +921,13 @@ denovo_map.pl --samples dir --popmap path -o dir [--paired] (assembly options) (
     --gapped: perform gapped comparisons (for ustacks, cstacks, sstacks; default: off).
 
   SNP model options:
-    --alpha: significance level at which to call genotypes (for ustacks; default: 0.05).
-    For the bounded model:
-      --bound_low <num>: lower bound for epsilon, the error rate, between 0 and 1.0 (default 0.0).
-      --bound_high <num>: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1.0).
+    --var-alpha: significance level at which to call variant sites (for gstacks; default: 0.05).
+    --gt-alpha: significance level at which to call genotypes (for gstacks; default: 0.05).
 
   Paired-end options:
     --paired: after assembling RAD loci, assemble mini-contigs with paired-end reads.
 
-  Database options (currently disabled in beta):
+  Database options (currently disabled):
     S: disable database interaction.
     B: specify an SQL database to load data into.
     D: a description of this batch to be stored in the database.
