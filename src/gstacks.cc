@@ -911,7 +911,8 @@ LocusProcessor::process(CLocReadSet& loc)
                                         << '\n';
                 } else {
                     if (detailed_output)
-                        loc_.details_ss << "pe_aln_fail\t" << aln_loc.reads().back().name << '\n';
+                        // `r` hasn't been moved.
+                        loc_.details_ss << "pe_aln_fail\t" << r.name << '\n';
                 }
             }
             if (detailed_output)
@@ -1507,7 +1508,7 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
                 // All het alleles will have an edge.
                 continue;
             alleles_with_edges.clear();
-            alleles_with_edges.resize(het_snps.size(), {false, false});
+            alleles_with_edges.resize(het_snps.size(), {{false, false}});
             for (size_t het_i=0; het_i<het_snps.size(); ++het_i) {
                 array<Nt2,2> allelesi = sample_het_calls[het_i]->nts();
                 for (size_t het_j=het_i+1; het_j<het_snps.size(); ++het_j) {
@@ -1530,7 +1531,7 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
             het_snps_reduced.clear();
             sample_het_calls_reduced.clear();
             for (size_t het_i=0; het_i<het_snps.size(); ++het_i) {
-                if (alleles_with_edges[het_i] == array<bool,2>({true, true})) {
+                if (alleles_with_edges[het_i] == array<bool,2>({{true, true}})) {
                     // Keep this het.
                     het_snps_reduced.push_back(het_snps[het_i]);
                     sample_het_calls_reduced.push_back(sample_het_calls[het_i]);
