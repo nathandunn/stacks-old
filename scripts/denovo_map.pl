@@ -28,12 +28,7 @@ use constant true  => 1;
 use constant false => 0;
 
 my $dry_run      = false;
-my $sql          = false;
-my $create_db    = false;
-my $overw_db     = false;
 my $gapped_alns  = false;
-my $mysql_config = "_PKGDATADIR_" . "sql/mysql.cnf";
-my $mysql_tables = "_PKGDATADIR_" . "sql/stacks.sql";
 my $exe_path     = "_BINDIR_";
 my $out_path     = "";
 my $popmap_path  = "";
@@ -58,8 +53,6 @@ my (@_ustacks, @_cstacks, @_sstacks, @_tsv2bam, @_gstacks, @_populations);
 my $cmd_str = $0 . " " . join(" ", @ARGV);
 
 parse_command_line();
-
-my $cnf = (-e $ENV{"HOME"} . "/.my.cnf") ? $ENV{"HOME"} . "/.my.cnf" : $mysql_config;
 
 #
 # Check for the existence of the necessary pipeline programs
@@ -86,11 +79,7 @@ print $log_fh
         "denovo_map.pl version ", stacks_version, " started at ", strftime("%Y-%m-%d %H:%M:%S", (localtime(time))), "\n",
         $cmd_str, "\n";
 
-initialize_database($log_fh, \@parents, \@progeny, \@samples, \%sample_ids) if ($sql == true);
-
 execute_stacks($log_fh, $sample_id, \@parents, \@progeny, \@samples, \%sample_ids);
-
-load_sql_data($log_fh, \%pops, \@parents, \@progeny, \@samples) if ($sql == true);
 
 print $log_fh "\ndenovo_map.pl completed at ", strftime("%Y-%m-%d %H:%M:%S", (localtime(time))), "\n";
 close($log_fh);
@@ -452,215 +441,6 @@ sub initialize_samples {
     print STDERR "Found ", scalar(@{$samples}), " sample file(s).\n\n" if (scalar(@{$samples}) > 0);
 }
 
-sub initialize_database {
-    my ($log_fh, $parents, $progeny, $samples, $sample_ids) = @_;
-
-    my (@results, $sample_id, $sample);
-
-    print $log_fh "Initializing the database...\n";
-
-    #
-    # Create the database.
-    #
-    if ($create_db) {
-        #
-        # Check that the database doesn't already exist.
-        #
-        if ($dry_run == false) {
-            @results = `mysql --defaults-file=$cnf -N -B -e "SHOW DATABASES LIKE '$db'"`;
-            if (scalar(@results) > 0 && $overw_db == false) {
-                die("Unable to create database '$db', it already exists.\n");
-            }
-        }
-
-        if ($overw_db == true) {
-            `mysql --defaults-file=$cnf -N -B -e "DROP DATABASE IF EXISTS $db"` if ($dry_run == false);
-            print $log_fh "mysql --defaults-file=$cnf -N -B -e \"DROP DATABASE IF EXISTS $db\"\n";
-        }
-
-        `mysql --defaults-file=$cnf -e "CREATE DATABASE $db"` if ($dry_run == false);
-        print $log_fh "mysql --defaults-file=$cnf $db -e \"CREATE DATABASE $db\"\n";
-        `mysql --defaults-file=$cnf $db < $mysql_tables` if ($dry_run == false);
-        print $log_fh "mysql --defaults-file=$cnf $db < $mysql_tables\n";
-    }
-
-    #
-    # Set the SQL Batch ID for this set of loci, along with description and date of
-    # sequencing. Insert this batch data into the database.
-    #
-    `mysql --defaults-file=$cnf $db -e "INSERT INTO batches SET id=$batch_id, description='$desc', date='$date', type='population'"` if ($dry_run == false);
-
-    print $log_fh "mysql --defaults-file=$cnf $db -e \"INSERT INTO batches SET id=$batch_id, description='$desc', date='$date', type='population'\"\n";
-
-    print $log_fh "Loading sample data into the MySQL database...\n";
-
-    my $i = 1;
-
-    foreach $sample (@{$parents}, @{$progeny}, @{$samples}) {
-
-    if ($dry_run == false) {
-        `mysql --defaults-file=$cnf $db -e "INSERT INTO samples SET sample_id=$i, batch_id=$batch_id, type='$sample->{'type'}', file='$sample->{'file'}', pop_id='$sample->{'pop_id'}', group_id='$sample->{'grp_id'}'"`;
-        @results = `mysql --defaults-file=$cnf $db -N -B -e "SELECT id FROM samples WHERE sample_id=$i AND batch_id=$batch_id AND type='$sample->{'type'}' AND file='$sample->{'file'}'"`;
-        chomp $results[0];
-        $sample_id = $results[0];
-
-        #
-        # Save the sample ID to use when running ustacks.
-        #
-        $sample_ids->{$sample->{'file'}} = $sample_id;
-    }
-    print $log_fh "mysql --defaults-file=$cnf $db -e \"INSERT INTO samples SET sample_id=$i, batch_id=$batch_id, type='$sample->{'type'}', file='$sample->{'file'}', pop_id='$sample->{'pop_id'}', group_id='$sample->{'grp_id'}'\"\n";
-
-        $i++;
-    }
-
-    print $log_fh "\n";
-}
-
-sub load_sql_data {
-    my ($log_fh, $pops, $parents, $progeny, $samples) = @_;
-
-    my ($pop_cnt, $sample, $num_files, $i, $file);
-
-    print STDERR "\nComputation is complete, loading results to the database '$db'.\n";
-
-    my $pop_cnt = scalar(keys %{$pops});
-
-    $i         = 1;
-    $num_files = scalar(@{$parents}) + scalar(@{$progeny}) + scalar(@{$samples});
-
-    foreach $sample (@{$parents}, @{$progeny}, @{$samples}) {
-
-        printf(STDERR "Loading ustacks output to $db; file % 3s of % 3s [%s]...", $i, $num_files, $sample->{'file'});
-
-        if ($gzip == true) {
-            $file = "$out_path/$sample->{'file'}" . ".tags.tsv.gz";
-            import_gzsql_file($log_fh, $file, "unique_tags", 1);
-
-            $file = "$out_path/$sample->{'file'}" . ".snps.tsv.gz";
-            import_gzsql_file($log_fh, $file, "snps", 1);
-
-            $file = "$out_path/$sample->{'file'}" . ".alleles.tsv.gz";
-            import_gzsql_file($log_fh, $file, "alleles", 1);
-
-        } else {
-            $file = "$out_path/$sample->{'file'}" . ".tags.tsv";
-            import_sql_file($log_fh, $file, "unique_tags", 1);
-
-            $file = "$out_path/$sample->{'file'}" . ".snps.tsv";
-            import_sql_file($log_fh, $file, "snps", 1);
-
-            $file = "$out_path/$sample->{'file'}" . ".alleles.tsv";
-            import_sql_file($log_fh, $file, "alleles", 1);
-        }
-        print STDERR "done.\n";
-
-        $i++;
-    }
-
-    print STDERR "Importing catalog to $db...";
-
-    my $cat_file = "batch_" . $batch_id;
-
-    if ($gzip == true) {
-        $file = "$out_path/$cat_file" . ".catalog.tags.tsv.gz";
-        import_gzsql_file($log_fh, $file, "catalog_tags", 1);
-
-        $file = "$out_path/$cat_file" . ".catalog.snps.tsv.gz";
-        import_gzsql_file($log_fh, $file, "catalog_snps", 1);
-
-        $file = "$out_path/$cat_file" . ".catalog.alleles.tsv.gz";
-        import_gzsql_file($log_fh, $file, "catalog_alleles", 1);
-
-    } else {
-        $file = "$out_path/$cat_file" . ".catalog.tags.tsv";
-        import_sql_file($log_fh, $file, "catalog_tags", 1);
-
-        $file = "$out_path/$cat_file" . ".catalog.snps.tsv";
-        import_sql_file($log_fh, $file, "catalog_snps", 1);
-
-        $file = "$out_path/$cat_file" . ".catalog.alleles.tsv";
-        import_sql_file($log_fh, $file, "catalog_alleles", 1);
-    }
-    print STDERR "done.\n";
-
-    #
-    # Load the sstacks results to the database if requested.
-    #
-    $i = 1;
-    foreach $sample (@{$parents}, @{$progeny}, @{$samples}) {
-        printf(STDERR "Loading sstacks output to $db; file % 3s of % 3s [%s]...", $i, $num_files, $sample->{'file'});
-        if ($gzip == true) {
-            $file = "$out_path/" . $sample->{'file'} . ".matches.tsv.gz";
-            import_gzsql_file($log_fh, $file, "matches", 1);
-        } else {
-            $file = "$out_path/" . $sample->{'file'} . ".matches.tsv";
-            import_sql_file($log_fh, $file, "matches", 1);
-        }
-        print STDERR "done.\n";
-        $i++;
-    }
-
-    #
-    # Load the outputs generated by populations to the database.
-    #
-    $file = "$out_path/batch_" . $batch_id . ".markers.tsv";
-    import_sql_file($log_fh, $file, "markers", 1);
-
-    $file = "$out_path/batch_" . $batch_id . ".sumstats.tsv";
-    import_sql_file($log_fh, $file, "sumstats", $pop_cnt+1);
-
-    $file = "$out_path/batch_" . $batch_id . ".hapstats.tsv";
-    import_sql_file($log_fh, $file, "hapstats", $pop_cnt+1);
-
-    #
-    # Import the Fst files.
-    #
-    my $fst_cnt = 0;
-    my (@keys, $m, $n);
-    @keys = sort keys %pops;
-    for ($m = 0; $m < scalar(@keys); $m++) {
-        for ($n = 0; $n < scalar(@keys); $n++) {
-            $file = "$out_path/batch_" . $batch_id . ".fst_" . $keys[$m] . "-" . $keys[$n] . ".tsv";
-
-            if (-e $file) {
-                import_sql_file($log_fh, $file, "fst", 1);
-                $fst_cnt++;
-            }
-        }
-    }
-    print STDERR "Imported $fst_cnt Fst file(s).\n";
-
-    #
-    # Import the Phi_st files.
-    #
-    $fst_cnt = 0;
-    for ($m = 0; $m < scalar(@keys); $m++) {
-        for ($n = 0; $n < scalar(@keys); $n++) {
-            $file = "$out_path/batch_" . $batch_id . ".phistats_" . $keys[$m] . "-" . $keys[$n] . ".tsv";
-
-            if (-e $file) {
-                import_sql_file($log_fh, $file, "phist", 3);
-                $fst_cnt++;
-            }
-        }
-    }
-    print STDERR "Imported $fst_cnt Haplotype Fst file(s).\n";
-
-    print $log_fh "\n";
-
-    #
-    # Index the radtags database
-    #
-    my ($cmd, @results);
-    print STDERR "Indexing the database...\n";
-    $cmd = $exe_path . "index_radtags.pl -D $db -t -c 2>&1";
-    print STDERR  "$cmd\n";
-    print $log_fh "$cmd\n";
-    @results =    `$time $cmd` if ($dry_run == false);
-    print $log_fh @results;
-}
-
 sub write_results {
     my ($results, $log_fh) = @_;
 
@@ -686,54 +466,6 @@ sub write_depths_of_cov {
     }
 }
 
-sub import_sql_file {
-    my ($log_fh, $file, $table, $skip_lines) = @_;
-
-    my (@results, $ignore);
-
-    $ignore = "IGNORE $skip_lines LINES" if ($skip_lines > 0);
-
-    @results = `mysql --defaults-file=$cnf $db -e "LOAD DATA LOCAL INFILE '$file' INTO TABLE $table $ignore"` if ($sql == true && $dry_run == false);
-
-    if ($sql == true) {
-        print $log_fh "mysql --defaults-file=$cnf $db -e \"LOAD DATA LOCAL INFILE '$file' INTO TABLE $table $ignore\"\n", @results;
-    }
-}
-
-sub import_gzsql_file {
-    my ($log_fh, $file, $table, $skip_lines) = @_;
-
-    my (@results, $ignore);
-
-    $ignore = "IGNORE $skip_lines LINES" if ($skip_lines > 0);
-
-    #
-    # Get a temporary file name and create a named pipe.
-    #
-    my $tmpdir     = File::Spec->tmpdir();
-    my $named_pipe = mktemp($tmpdir . "/denovo_map_XXXXXX");
-    if ($sql == true && $dry_run == false) {
-        mkfifo($named_pipe, 0700) || die("Unable to create named pipe for loading gzipped data: $named_pipe, $!");
-        print $log_fh "Streaming $file into named pipe $named_pipe.\n";
-    }
-
-    #
-    # Dump our gzipped data onto the named pipe.
-    #
-    system("gunzip -c $file > $named_pipe &") if ($sql == true && $dry_run == false);
-
-    @results = `mysql --defaults-file=$cnf $db -e "LOAD DATA LOCAL INFILE '$named_pipe' INTO TABLE $table $ignore"` if ($sql == true && $dry_run == false);
-
-    if ($sql == true) {
-      print $log_fh "mysql --defaults-file=$cnf $db -e \"LOAD DATA LOCAL INFILE '$named_pipe' INTO TABLE $table $ignore\"\n", @results;
-    }
-
-    #
-    # Remove the pipe.
-    #
-    unlink($named_pipe) if ($sql == true && $dry_run == false);
-}
-
 sub parse_command_line {
     my ($arg);
 
@@ -747,12 +479,6 @@ sub parse_command_line {
         elsif ($_ =~ /^-d$/ || $_ =~ /^--dry-run$/) { $dry_run   = true; }
         elsif ($_ =~ /^-o$/) { $out_path  = shift @ARGV; }
         elsif ($_ =~ /^-e$/) { $exe_path  = shift @ARGV; }
-        # elsif ($_ =~ /^-D$/) { $desc      = shift @ARGV; }
-        # elsif ($_ =~ /^-b$/) { $batch_id  = shift @ARGV; }
-        # elsif ($_ =~ /^-i$/) { $sample_id = shift @ARGV; }
-        # elsif ($_ =~ /^-a$/) { $date      = shift @ARGV; }
-        # elsif ($_ =~ /^-S$/) { $sql       = false; }
-        # elsif ($_ =~ /^-B$/) { $db        = shift @ARGV; }
         elsif ($_ =~ /^-m$/)        { $min_cov     = shift @ARGV; }
         elsif ($_ =~ /^-P$/)        { $min_rcov    = shift @ARGV; }
         elsif ($_ =~ /^--paired$/)  { $paired      = true; } 
@@ -770,23 +496,6 @@ sub parse_command_line {
             push(@_ustacks, "--gapped ");
             push(@_cstacks, "--gapped ");
             push(@_sstacks, "--gapped ");
-
-        # } elsif ($_ =~ /^--create_db$/) {
-        #         $create_db = true;
-
-        #     } elsif ($_ =~ /^--overw_db$/) {
-        #         $overw_db  = true;
-        #         $create_db = true;
-
-        #     } elsif ($_ =~ /^-A$/) {
-        #     $arg = shift @ARGV;
-        #     push(@_genotypes, "-t " . $arg);
-
-        #     $arg = lc($arg);
-        #     if ($arg ne "gen" && $arg ne "cp" && $arg ne "f2" && $arg ne "bc1" && $arg ne "dh") {
-        # 	print STDERR "Unknown genetic mapping cross specified: '$arg'\n";
-        # 	usage();
-        #     }
 
         } elsif ($_ =~ /^-t$/) {
             push(@_ustacks, "-d ");
@@ -855,10 +564,6 @@ sub parse_command_line {
     $exe_path = $exe_path . "/"          if (substr($exe_path, -1) ne "/");
     $out_path = substr($out_path, 0, -1) if (substr($out_path, -1) eq "/");
 
-    if ($sql == true && length($date) == 0) {
-        $date = strftime("%Y-%m-%d", (localtime(time)));
-    }
-
     if (scalar(@parents) > 0 && scalar(@samples) > 0) {
         print STDERR "You must specify either parent or sample files, but not both.\n";
         usage();
@@ -926,14 +631,6 @@ denovo_map.pl --samples dir --popmap path -o dir [--paired] (assembly options) [
 
   Paired-end options:
     --paired: after assembling RAD loci, assemble mini-contigs with paired-end reads.
-
-  Database options (currently disabled):
-    S: disable database interaction.
-    B: specify an SQL database to load data into.
-    D: a description of this batch to be stored in the database.
-    i: starting sample_id, this is determined automatically if database interaction is enabled.
-    --create_db: create the database specified by '-B' and populate the tables.
-    --overw_db: delete the database before creating a new copy of it (turns on --create_db).
 
   Miscellaneous:
     --time-components (for benchmarking)
