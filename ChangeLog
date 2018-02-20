@@ -1,3 +1,9 @@
+Stacks 2.0
+--------------------------------
+    Feature: Cleaned up tags/snps/alleles/matches files. We removed the batch ID from ustacks and cstacks 
+             output, and the deprecated log likelihood fields from ustacks and cstacks. We also removed 
+             the chromosome/bp/strand fields as they are no longer used in these files.
+
 Stacks 2.0 Beta 8 - Feb 03, 2018
 --------------------------------
     Feature: populations: Now calculated deviation from Hardy-Weinberg equilibrium at the SNP level
