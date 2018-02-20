@@ -1302,14 +1302,11 @@ write_matches(string sample_path, map<int, QLocus *> &sample)
                     qloc->alleles.count(qloc->matches[j]->cat_type) > 0 ?
                     qloc->alleles[qloc->matches[j]->cat_type] : qloc->depth;
 
-            sstr << "0"         << "\t"
-                 << batch_id    << "\t"
-                 << qloc->matches[j]->cat_id   << "\t"
-                 << samp_id     << "\t"
-                 << qloc->id    << "\t"
+            sstr << qloc->matches[j]->cat_id   << "\t"
+                 << samp_id                    << "\t"
+                 << qloc->id                   << "\t"
                  << qloc->matches[j]->cat_type << "\t"
-                 << match_depth << "\t"
-                 << 1.0         << "\t" // (formerly `qloc->lnl`.)
+                 << match_depth                << "\t"
                  << qloc->matches[j]->cigar    << "\n";
         }
 
