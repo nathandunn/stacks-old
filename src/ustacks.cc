@@ -1794,20 +1794,18 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
     string tag_file = prefix_path + ".tags.tsv";
     string snp_file = prefix_path + ".snps.tsv";
     string all_file = prefix_path + ".alleles.tsv";
-    string mod_file = prefix_path + ".models.tsv";
 
     if (gzip) {
         tag_file += ".gz";
         snp_file += ".gz";
         all_file += ".gz";
-        mod_file += ".gz";
     }
 
     //
     // Open the output files for writing.
     //
-    gzFile   gz_tags=NULL, gz_snps=NULL, gz_alle=NULL, gz_mods=NULL;
-    ofstream tags, snps, alle, mods;
+    gzFile   gz_tags=NULL, gz_snps=NULL, gz_alle=NULL;
+    ofstream tags, snps, alle;
     if (gzip) {
         gz_tags = gzopen(tag_file.c_str(), "wb");
         if (!gz_tags) {
@@ -1816,14 +1814,6 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
         }
         #if ZLIB_VERNUM >= 0x1240
         gzbuffer(gz_tags, libz_buffer_size);
-        #endif
-        gz_mods = gzopen(mod_file.c_str(), "wb");
-        if (!gz_mods) {
-            cerr << "Error: Unable to open gzipped model file '" << mod_file << "': " << strerror(errno) << ".\n";
-            exit(1);
-        }
-        #if ZLIB_VERNUM >= 0x1240
-        gzbuffer(gz_mods, libz_buffer_size);
         #endif
         gz_snps = gzopen(snp_file.c_str(), "wb");
         if (!gz_snps) {
@@ -1845,11 +1835,6 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
         tags.open(tag_file.c_str());
         if (tags.fail()) {
             cerr << "Error: Unable to open tag file for writing.\n";
-            exit(1);
-        }
-        mods.open(mod_file.c_str());
-        if (mods.fail()) {
-            cerr << "Error: Unable to open model file for writing.\n";
             exit(1);
         }
         snps.open(snp_file.c_str());
@@ -1879,12 +1864,10 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
     log << "# ustacks version " << VERSION << "; generated on " << date << "\n";
     if (gzip) {
         gzputs(gz_tags, log.str().c_str());
-        gzputs(gz_mods, log.str().c_str());
         gzputs(gz_snps, log.str().c_str());
         gzputs(gz_alle, log.str().c_str());
     } else {
         tags << log.str();
-        mods << log.str();
         snps << log.str();
         alle << log.str();
     }
@@ -1904,31 +1887,20 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
         tag_1->calc_likelihood();
 
         // First write the consensus sequence
-        sstr << "0"              << "\t"
-             << sql_id           << "\t"
-             << tag_1->id        << "\t"
-            //<< tag_1->cohort_id << "\t"
-             << ""               << "\t" // chr
-             << 0                << "\t" // bp
-             << "+"              << "\t" // strand
-             << "consensus\t"    << "\t"
+        sstr << sql_id             << "\t"
+             << tag_1->id          << "\t"
+             << "consensus\t"      << "\t"
              << "\t"
              << tag_1->con         << "\t"
              << tag_1->deleveraged << "\t"
              << tag_1->blacklisted << "\t"
-             << tag_1->lumberjackstack << "\t"
-             << tag_1->lnl << "\n";
+             << tag_1->lumberjackstack << "\n";
 
         //
         // Write a sequence recording the output of the SNP model for each nucleotide.
         //
-        sstr << "0" << "\t"
-             << sql_id << "\t"
+        sstr << sql_id << "\t"
              << tag_1->id << "\t"
-            //<< "\t" // cohort_id
-             << "\t"  // chr
-             << "\t"  // bp
-             << "\t"  // strand
              << "model\t" << "\t"
              << "\t";
         for (s = tag_1->snps.begin(); s != tag_1->snps.end(); s++) {
@@ -1947,11 +1919,9 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
         sstr << "\t"
              << "\t"
              << "\t"
-             << "\t"
              << "\n";
 
         if (gzip) gzputs(gz_tags, sstr.str().c_str()); else tags << sstr.str();
-        if (gzip) gzputs(gz_mods, sstr.str().c_str()); else mods << sstr.str();
         sstr.str("");
 
         //
@@ -1963,18 +1933,13 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
             total += tag_2->count();
 
             for (uint j = 0; j < tag_2->map.size(); j++) {
-                sstr << "0"       << "\t"
-                     << sql_id    << "\t"
+                sstr << sql_id    << "\t"
                      << tag_1->id << "\t"
-                    //<< "\t" // cohort_id
-                     << "\t" // chr
-                     << "\t" // bp
-                     << "\t" // strand
                      << "primary\t"
                      << id << "\t"
                      << seq_ids[tag_2->map[j]] << "\t"
                      << tag_2->seq->seq()
-                     << "\t\t\t\t\n";
+                     << "\t\t\t\n";
 
                 if (gzip) gzputs(gz_tags, sstr.str().c_str()); else tags << sstr.str();
                 sstr.str("");
@@ -1991,18 +1956,13 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
             total += rem->map.size();
 
             for (uint j = 0; j < rem->map.size(); j++)
-                sstr << "0"       << "\t"
-                     << sql_id    << "\t"
+                sstr << sql_id    << "\t"
                      << tag_1->id << "\t"
-                    //<< "\t" // cohort_id
-                     << "\t" // chr
-                     << "\t" // bp
-                     << "\t" // strand
                      << "secondary\t"
                      << "\t"
                      << seq_ids[rem->map[j]] << "\t"
                      << rem->seq->seq()
-                     << "\t\t\t\t\n";
+                     << "\t\t\t\n";
 
             if (gzip) gzputs(gz_tags, sstr.str().c_str()); else tags << sstr.str();
             sstr.str("");
@@ -2012,8 +1972,7 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
         // Write out the model calls for each nucleotide in this locus.
         //
         for (s = tag_1->snps.begin(); s != tag_1->snps.end(); s++) {
-            sstr << "0"          << "\t"
-                 << sql_id       << "\t"
+            sstr << sql_id       << "\t"
                  << tag_1->id    << "\t"
                  << (*s)->col    << "\t";
 
@@ -2043,8 +2002,7 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
         // the percentage of tags a particular allele occupies.
         //
         for (t = tag_1->alleles.begin(); t != tag_1->alleles.end(); t++) {
-            sstr << "0"         << "\t"
-                 << sql_id      << "\t"
+            sstr << sql_id      << "\t"
                  << tag_1->id   << "\t"
                  << (*t).first  << "\t"
                  << (((*t).second/total) * 100) << "\t"
@@ -2057,12 +2015,10 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
 
     if (gzip) {
         gzclose(gz_tags);
-        gzclose(gz_mods);
         gzclose(gz_snps);
         gzclose(gz_alle);
     } else {
         tags.close();
-        mods.close();
         snps.close();
         alle.close();
     }

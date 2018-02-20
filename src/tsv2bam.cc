@@ -177,12 +177,6 @@ void run(const vector<int>& cloc_ids,
             cerr << "Error: Unable to load matches from '"
                  << prefix_path + ".matches.tsv(.gz)'.\n";
             throw exception();
-        } else if (matches[0]->batch_id != batch_id) {
-            cerr << "Error: The catalog batch ID is " << batch_id
-                 << " but matches file '" << prefix_path
-                 << ".matches.tsv.gz' corresponds to batch ID "
-                 << matches[0]->batch_id << ".\n";
-            throw exception();
         }
         sample_id = matches[0]->sample_id;
 

@@ -1585,8 +1585,6 @@ write_simple_output(CLocus *tag, ofstream &cat_file, ofstream &snp_file, ofstrea
     sources = sources.substr(0, sources.length() - 1);
 
     cat_file <<
-        "0"          << "\t" <<
-        batch_id     << "\t" <<
         tag->id      << "\t" <<
         tag->loc.chr() << "\t" <<
         tag->loc.bp  << "\t" <<
@@ -1604,10 +1602,8 @@ write_simple_output(CLocus *tag, ofstream &cat_file, ofstream &snp_file, ofstrea
     // Output the SNPs associated with the catalog tag
     //
     for (snp_it = tag->snps.begin(); snp_it != tag->snps.end(); snp_it++) {
-        snp_file << "0"    << "\t" <<
-            batch_id       << "\t" <<
-            tag->id        << "\t" <<
-            (*snp_it)->col << "\t";
+        snp_file <<   tag->id        << "\t"
+                 << (*snp_it)->col << "\t";
 
         switch((*snp_it)->type) {
         case snp_type_het:
@@ -1634,8 +1630,6 @@ write_simple_output(CLocus *tag, ofstream &cat_file, ofstream &snp_file, ofstrea
     //
     for (all_it = tag->alleles.begin(); all_it != tag->alleles.end(); all_it++)
         all_file <<
-            "0"           << "\t" <<
-            batch_id      << "\t" <<
             tag->id       << "\t" <<
             all_it->first << "\t" <<
             "0"           << "\t" <<    // These two fields are used in the
@@ -1661,21 +1655,15 @@ write_gzip_output(CLocus *tag, gzFile &cat_file, gzFile &snp_file, gzFile &all_f
 
     sstr.str("");
 
-    sstr <<
-        "0"          << "\t" <<
-        batch_id     << "\t" <<
-        tag->id      << "\t" <<
-        tag->loc.chr() << "\t" <<
-        tag->loc.bp  << "\t" <<
-        (tag->loc.strand == strand_plus ? "+" : "-") << "\t" <<
-        "consensus"  << "\t" <<
-        "0"          << "\t" <<
-        sources      << "\t" <<
-        tag->con     << "\t" <<
-        0            << "\t" <<  // These flags are unused in cstacks, but important in ustacks
-        0            << "\t" <<
-        0            << "\t" <<
-        0            << "\n";
+    sstr << "0"         << "\t"
+         << tag->id     << "\t"
+         << "consensus" << "\t"
+         << "0"         << "\t"
+         << sources     << "\t"
+         << tag->con    << "\t"
+         << 0           << "\t" // These flags are unused in cstacks, but important in ustacks
+         << 0           << "\t"
+         << 0           << "\n";
 
     gzputs(cat_file, sstr.str().c_str());
     sstr.str("");
@@ -1684,10 +1672,9 @@ write_gzip_output(CLocus *tag, gzFile &cat_file, gzFile &snp_file, gzFile &all_f
     // Output the SNPs associated with the catalog tag
     //
     for (snp_it = tag->snps.begin(); snp_it != tag->snps.end(); snp_it++) {
-        sstr << "0"        << "\t" <<
-            batch_id       << "\t" <<
-            tag->id        << "\t" <<
-            (*snp_it)->col << "\t";
+        sstr << "0"            << "\t"
+             <<   tag->id      << "\t"
+             << (*snp_it)->col << "\t";
 
         switch((*snp_it)->type) {
         case snp_type_het:
@@ -1716,13 +1703,11 @@ write_gzip_output(CLocus *tag, gzFile &cat_file, gzFile &snp_file, gzFile &all_f
     // Output the alleles associated with the two matched tags
     //
     for (all_it = tag->alleles.begin(); all_it != tag->alleles.end(); all_it++)
-        sstr
-            << "0\t"
-            << batch_id  << "\t"
-            << tag->id  << "\t"
-            << all_it->first << "\t"
-            << 0 << "\t"
-            << 0 << "\n";
+        sstr << "0"     << "\t"
+             << tag->id << "\t"
+             << all_it->first << "\t"
+             << 0       << "\t"
+             << 0       << "\n";
 
     gzputs(all_file, sstr.str().c_str());
 

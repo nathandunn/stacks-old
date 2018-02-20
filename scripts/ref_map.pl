@@ -322,7 +322,7 @@ sub parse_command_line {
 
     while (@ARGV) {
         $_ = shift @ARGV;
-        if    ($_ =~ /^-v$/) { version(); exit 1; }
+        if    ($_ =~ /^-v$/ || $_ =~ /^--version$/) { version(); exit 1; }
         elsif ($_ =~ /^-h$/) { usage(); }
         elsif ($_ =~ /^-d$/ || $_ =~ /^--dry-run$/) { $dry_run = true; }
         elsif ($_ =~ /^-o$/) { $out_path  = shift @ARGV; }

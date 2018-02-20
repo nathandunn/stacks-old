@@ -49,34 +49,30 @@ void load_catalog_matches(string sample,  vector<CatMatch *> &matches, bool verb
 
         cnt = parts.size();
 
-        if (cnt != num_matches_fields && cnt != num_matches_fields - 1) {
+        if (cnt != num_matches_fields) {
             cerr << "Error parsing " << f.c_str() << " at line: " << line_num << ". (" << parts.size() << " fields).\n";
             throw exception();
         }
 
-
-        char c = parts[5].at(0);
-        if (parts[5] != "consensus" && c != 'A' && c != 'C' && c != 'G' && c != 'T')
+        char c = parts[3].at(0);
+        if (parts[3] != "consensus" && c != 'A' && c != 'C' && c != 'G' && c != 'T') {
             // This sample locus was blacklisted, because:
             // "multi": it matches multiple c-loci
             // "extra_snp": it has a SNP unknown to the catalog
             // "ambig_aln": its alignment to the catalog is inconsistent
             // "none_verified": all its haplotypes are unknown to the catalog
             continue;
+        }
 
         m = new CatMatch;
-        m->batch_id  = atoi(parts[1].c_str());
-        m->cat_id    = atoi(parts[2].c_str());
-        m->sample_id = atoi(parts[3].c_str());
-        m->tag_id    = atoi(parts[4].c_str());
-        m->haplotype = new char[parts[5].length() + 1];
-        strcpy(m->haplotype, parts[5].c_str());
-        m->depth     = atoi(parts[6].c_str());
-
-        if (cnt == num_matches_fields && parts[8].length() > 0) {
-            m->cigar = new char[parts[8].length() + 1];
-            strcpy(m->cigar, parts[8].c_str());
-        }
+        m->cat_id    = atoi(parts[0].c_str());
+        m->sample_id = atoi(parts[1].c_str());
+        m->tag_id    = atoi(parts[2].c_str());
+        m->haplotype = new char[parts[3].length() + 1];
+        strcpy(m->haplotype, parts[3].c_str());
+        m->depth     = atoi(parts[4].c_str());
+        m->cigar     = new char[parts[5].length() + 1];
+        strcpy(m->cigar, parts[5].c_str());
 
         matches.push_back(m);
     }
@@ -262,32 +258,32 @@ int load_snp_calls(string sample,  map<int, SNPRes *> &snpres) {
             return 0;
         }
 
-        samp_id = atoi(parts[1].c_str());
-        id      = atoi(parts[2].c_str());
+        samp_id = atoi(parts[0].c_str());
+        id      = atoi(parts[1].c_str());
 
         snp         = new SNP;
-        snp->col    = atoi(parts[3].c_str());
+        snp->col    = atoi(parts[2].c_str());
 
-        if (parts[4] == "O")
+        if (parts[3] == "O")
             snp->type = snp_type_hom;
-        else if (parts[4] == "E")
+        else if (parts[3] == "E")
             snp->type = snp_type_het;
         else
             snp->type = snp_type_unk;
 
-        snp->lratio = atof(parts[5].c_str());
-        snp->rank_1 = parts[6].at(0);
-        snp->rank_2 = parts[7].at(0) == '-' ? 0 : parts[7].at(0);
+        snp->lratio = atof(parts[4].c_str());
+        snp->rank_1 = parts[5].at(0);
+        snp->rank_2 = parts[6].at(0) == '-' ? 0 : parts[6].at(0);
 
-        if (parts.size() == 10) {
-            if (parts[8].length() == 0 || parts[8].at(0) == '-')
+        if (parts.size() == 9) {
+            if (parts[7].length() == 0 || parts[7].at(0) == '-')
                 snp->rank_3 = 0;
             else
                 snp->rank_3 = parts[8].at(0);
-            if (parts[9].length() == 0 || parts[9].at(0) == '-')
+            if (parts[8].length() == 0 || parts[8].at(0) == '-')
                 snp->rank_4 = 0;
             else
-                snp->rank_4 = parts[9].at(0);
+                snp->rank_4 = parts[8].at(0);
         }
 
         if (snpres.count(id) == 0) {

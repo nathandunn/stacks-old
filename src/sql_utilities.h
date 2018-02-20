@@ -32,10 +32,10 @@
 //
 // The expected number of tab-separated fields in our SQL input files.
 //
-const uint num_tags_fields    = 14;
-const uint num_snps_fields    = 10;
-const uint num_alleles_fields =  6;
-const uint num_matches_fields =  9;
+const uint num_tags_fields    = 9;
+const uint num_snps_fields    = 9;
+const uint num_alleles_fields = 5;
+const uint num_matches_fields = 6;
 
 void load_catalog_matches(string sample,  vector<CatMatch *> &matches, bool verbose=true);
 int load_model_results(string sample,  map<int, ModRes *> &modres);
@@ -70,34 +70,6 @@ load_loci(const string& sample,  map<int, LocusT *> &loci, int store_reads, bool
     bool  gzip      = false;
     bool  open_fail = true;
     int   fh_status = 1;
-
-    // //
-    // // First, try to parse the models file to pull in the consensus sequence and model string
-    // // for each locus. If the models file is not available or we are requested to store the
-    // // reads from each stack, fall back to the tags file.
-    // //
-    // if (!store_reads) {
-    //     f = sample + ".models.tsv";
-    //     fh.open(f.c_str(), ifstream::in);
-    //     open_fail = fh.fail() ? true : false;
-    // }
-
-    // if (!store_reads && open_fail) {
-    //     //
-    //     // Test for a gzipped MODELs file.
-    //     //
-    //     f = sample + ".models.tsv.gz";
-    //     gz_fh = gzopen(f.c_str(), "rb");
-    //     if (!gz_fh) {
-    //         open_fail = true;
-    //     } else {
-    //         open_fail = false;
-    //         #if ZLIB_VERNUM >= 0x1240
-    //         gzbuffer(gz_fh, libz_buffer_size);
-    //         #endif
-    //         gzip = true;
-    //     }
-    // }
 
     if (open_fail) {
         //
@@ -154,9 +126,9 @@ load_loci(const string& sample,  map<int, LocusT *> &loci, int store_reads, bool
             return 0;
         }
 
-        id = atoi(parts[2].c_str());
+        id = atoi(parts[1].c_str());
 
-        if (parts[6] != "consensus") {
+        if (parts[2] != "consensus") {
             if (blacklisted.count(id)) continue;
 
             //
@@ -168,9 +140,9 @@ load_loci(const string& sample,  map<int, LocusT *> &loci, int store_reads, bool
                 // Read the model sequence, a series of letters specifying if the model called a
                 // homozygous base (O), a heterozygous base (E), or if the base type was unknown (U).
                 //
-                if (parts[6] == "model") {
-                    loci[id]->model = new char[parts[9].length() + 1];
-                    strcpy(loci[id]->model, parts[9].c_str());
+                if (parts[2] == "model") {
+                    loci[id]->model = new char[parts[5].length() + 1];
+                    strcpy(loci[id]->model, parts[5].c_str());
 
                 } else {
                     //
@@ -181,23 +153,23 @@ load_loci(const string& sample,  map<int, LocusT *> &loci, int store_reads, bool
                     if (store_reads >= 1) {
                         if (store_reads >= 2) {
                             // Load the actual sequences (otherwise don't).
-                            char *read = new char[parts[9].length() + 1];
-                            strcpy(read, parts[9].c_str());
+                            char *read = new char[parts[5].length() + 1];
+                            strcpy(read, parts[5].c_str());
                             loci[id]->reads.push_back(read);
                         }
 
-                        char *read_id = new char[parts[8].length() + 1];
-                        strcpy(read_id, parts[8].c_str());
+                        char *read_id = new char[parts[4].length() + 1];
+                        strcpy(read_id, parts[4].c_str());
                         loci[id]->comp.push_back(read_id);
                         //
                         // Store the internal stack number for this read.
                         //
-                        loci[id]->comp_cnt.push_back(atoi(parts[7].c_str()));
+                        loci[id]->comp_cnt.push_back(atoi(parts[3].c_str()));
 
                         //
                         // Store the read type.
                         //
-                        if (parts[6] == "primary")
+                        if (parts[2] == "primary")
                             loci[id]->comp_type.push_back(primary);
                         else
                             loci[id]->comp_type.push_back(secondary);
@@ -215,31 +187,26 @@ load_loci(const string& sample,  map<int, LocusT *> &loci, int store_reads, bool
         // Do not include blacklisted tags in the catalog. They are tags that are composed
         // of noise and/or repetitive sequence.
         //
-        if (parts[11] == "1") {
+        if (parts[7] == "1") {
             blacklisted.insert(id);
             continue;
         }
 
         c = new LocusT;
-        c->sample_id = atoi(parts[1].c_str());
+        c->sample_id = atoi(parts[0].c_str());
         c->id        = id;
-        c->add_consensus(parts[9].c_str());
+        c->add_consensus(parts[5].c_str());
 
         //
         // Read in the flags
         //
-        c->deleveraged     = (parts[10] == "1" ? true : false);
-        c->lumberjackstack = (parts[12] == "1" ? true : false);
-
-        //
-        // Parse the physical genome location of this locus.
-        //
-        c->loc.set(parts[3].c_str(), atoi(parts[4].c_str()), (parts[5] == "+" ? strand_plus : strand_minus));
+        c->deleveraged     = (parts[6] == "1" ? true : false);
+        c->lumberjackstack = (parts[8] == "1" ? true : false);
 
         //
         // Parse the components of this stack (either the Illumina ID, or the catalog constituents)
         //
-        q = parts[8].c_str();
+        q = parts[4].c_str();
         while (*q != '\0') {
             for (p = q; *q != ',' && *q != '\0'; q++);
             len = q - p;
@@ -298,12 +265,12 @@ load_loci(const string& sample,  map<int, LocusT *> &loci, int store_reads, bool
 
         parse_tsv(line, parts);
 
-        if (parts.size() != num_snps_fields && parts.size() != num_snps_fields - 2) {
+        if (parts.size() != num_snps_fields) {
             cerr << "Error parsing " << f.c_str() << " at line: " << line_num << ". (" << parts.size() << " fields).\n";
             return 0;
         }
 
-        id = atoi(parts[2].c_str());
+        id = atoi(parts[1].c_str());
 
         if (blacklisted.count(id))
             continue;
@@ -311,33 +278,31 @@ load_loci(const string& sample,  map<int, LocusT *> &loci, int store_reads, bool
         //
         // Only load heterozygous model calls.
         //
-        if (load_all_model_calls == false && parts[4] != "E")
+        if (load_all_model_calls == false && parts[3] != "E")
             continue;
 
         snp         = new SNP;
-        snp->col    = atoi(parts[3].c_str());
-        snp->lratio = atof(parts[5].c_str());
-        snp->rank_1 = parts[6].at(0);
-        snp->rank_2 = parts[7].at(0) == '-' ? 0 : parts[7].at(0);
+        snp->col    = atoi(parts[2].c_str());
+        snp->lratio = atof(parts[4].c_str());
+        snp->rank_1 = parts[5].at(0);
+        snp->rank_2 = parts[6].at(0) == '-' ? 0 : parts[6].at(0);
 
-        if (parts[4] == "E")
+        if (parts[3] == "E")
             snp->type = snp_type_het;
-        else if (parts[4] == "O")
+        else if (parts[3] == "O")
             snp->type = snp_type_hom;
         else
             snp->type = snp_type_unk;
 
-        if (parts.size() == 10) {
-            if (parts[8].length() == 0 || parts[8].at(0) == '-')
-                snp->rank_3 = 0;
-            else
-                snp->rank_3 = parts[8].at(0);
+        if (parts[7].length() == 0 || parts[7].at(0) == '-')
+            snp->rank_3 = 0;
+        else
+            snp->rank_3 = parts[7].at(0);
 
-            if (parts[9].length() == 0 || parts[9].at(0) == '-')
-                snp->rank_4 = 0;
-            else
-                snp->rank_4 = parts[9].at(0);
-        }
+        if (parts[8].length() == 0 || parts[8].at(0) == '-')
+            snp->rank_4 = 0;
+        else
+            snp->rank_4 = parts[8].at(0);
 
         if (loci.count(id) > 0) {
             loci[id]->snps.push_back(snp);
@@ -397,13 +362,13 @@ load_loci(const string& sample,  map<int, LocusT *> &loci, int store_reads, bool
             return 0;
         }
 
-        id = atoi(parts[2].c_str());
+        id = atoi(parts[1].c_str());
 
         if (blacklisted.count(id))
             continue;
 
         if (loci.count(id) > 0) {
-            loci[id]->alleles[parts[3]] = atoi(parts[5].c_str());
+            loci[id]->alleles[parts[2]] = atoi(parts[4].c_str());
         } else {
             cerr << "Error parsing " << f.c_str() << " at line: " << line_num << ". SNP asks for nonexistent locus with ID: " << id << "\n";
             return 0;
