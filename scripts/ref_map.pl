@@ -35,8 +35,6 @@ my $sample_path  = "";
 my $db           = "";
 my $batch_id     = 1;
 my $sample_id    = 1;
-my $desc         = ""; # Database description of this dataset
-my $date         = ""; # Date relevent to this data, formatted for SQL: 2009-05-31
 my $gzip         = false;
 my $time         = "";
 
@@ -290,6 +288,10 @@ sub initialize_samples {
     print STDERR "Found ", scalar(@{$parents}), " parental file(s).\n\n" if (scalar(@{$parents}) > 0);
     print STDERR "Found ", scalar(@{$progeny}), " progeny file(s).\n\n" if (scalar(@{$progeny}) > 0);
     print STDERR "Found ", scalar(@{$samples}), " sample file(s).\n\n" if (scalar(@{$samples}) > 0);
+
+    if ( scalar(@{$samples}) > 0 && (scalar(@{$parents}) > 0 || scalar(@{$progeny}) > 0) ) {
+	die("Both samples and parents/progeny were specified either on the command line (-s/-r/-p) or within the population map. Only one of the other may be specified.\n");
+    }
 }
 
 sub write_results {
