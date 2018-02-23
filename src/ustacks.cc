@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010-2016, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2010-2018, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -278,7 +278,7 @@ merge_gapped_alns(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, Merg
 
         //
         // Found one or more gapped alignments. Make sure the best alignment for each of the aligned pairs
-        // of tags are, reciprocal to each other..
+        // of tags are reciprocal to each other.
         //
         tag_2 = merged[tag_1->alns[0].id];
         sort(tag_2->alns.begin(), tag_2->alns.end(), rank_alignments);
@@ -2279,8 +2279,10 @@ void load_radtags(string in_file, DNASeqHashMap &radtags, size_t& n_reads) {
         cerr << "Error: Unable to load data from '" << in_file.c_str() << "'.\n";
         exit(1);
     }
-    if (len_mismatch)
-        cerr << "Warning: different sequence lengths detected, this will interfere with Stacks algorithms.\n";
+    if (len_mismatch) {
+        cerr << "Error: different sequence lengths detected, this will interfere with Stacks algorithms.\n";
+        exit(1);
+    }
     if (corrected > 0)
         cerr << "Warning: Input reads contained " << corrected << " uncalled nucleotides.\n";
 
