@@ -33,7 +33,6 @@ my $out_path     = "";
 my $popmap_path  = "";
 my $sample_path  = "";
 my $db           = "";
-my $batch_id     = 1;
 my $sample_id    = 1;
 my $gzip         = false;
 my $time         = "";
