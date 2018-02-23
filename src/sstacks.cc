@@ -46,7 +46,7 @@ int     samp_id      =  0;
 bool    verify_haplotypes       = true;
 bool    impute_haplotypes       = true;
 bool    require_uniq_haplotypes = false;
-bool    gapped_alignments       = false;
+bool    gapped_alignments       = true;
 searcht search_type             = sequence;
 bool    write_all_matches       = false;
 
@@ -72,10 +72,7 @@ int main (int argc, char* argv[]) {
     bool compressed = false;
     int  res;
 
-    if (search_type == sequence)
-        cerr << "Searching for matches by sequence identity...\n";
-    else if (search_type == genomic_loc)
-        cerr << "Searching for matches by genomic location...\n";
+    cerr << "Searching for matches by sequence identity...\n";
 
     catalog_path += ".catalog";
     res = load_loci(catalog_path, catalog, 0, false, compressed);
@@ -123,18 +120,12 @@ int main (int argc, char* argv[]) {
         //dump_loci(catalog);
         //dump_loci(sample);
 
-        if (search_type == sequence) {
-            cerr << "Searching for sequence matches...\n";
-            find_matches_by_sequence(catalog, sample);
+        cerr << "Searching for sequence matches...\n";
+        find_matches_by_sequence(catalog, sample);
 
-            if (gapped_alignments) {
-                cerr << "Searching for gapped alignments...\n";
-                search_for_gaps(catalog, sample, kmer_map, allele_map, min_match_len);
-            }
-
-        } else if (search_type == genomic_loc) {
-            cerr << "Searching for matches by genomic location...\n";
-            find_matches_by_genomic_loc(catalog, sample);
+        if (gapped_alignments) {
+            cerr << "Searching for gapped alignments...\n";
+            search_for_gaps(catalog, sample, kmer_map, allele_map, min_match_len);
         }
 
         write_matches(sample_path, sample);
@@ -1333,7 +1324,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"aligned",           no_argument, NULL, 'g'},
             {"verify_hap",        no_argument, NULL, 'x'},
             {"uniq_haplotypes",   no_argument, NULL, 'u'},
-            {"gapped",            no_argument, NULL, 'G'},
+            {"disable_gapped",    no_argument, NULL, 'G'},
             {"num_threads", required_argument, NULL, 'p'},
             {"batch_id",    required_argument, NULL, 'b'},
             {"catalog",     required_argument, NULL, 'c'},
@@ -1385,7 +1376,7 @@ int parse_command_line(int argc, char* argv[]) {
             require_uniq_haplotypes = true;
             break;
         case 'G':
-            gapped_alignments = true;
+            gapped_alignments = false;
             break;
         case 'P':
             in_dir = optarg;
@@ -1500,20 +1491,19 @@ void version() {
 
 void help() {
     cerr << "sstacks " << VERSION << "\n"
-              << "sstacks [--aligned] -P dir [-b batch_id] -M popmap [-p n_threads]" << "\n"
-              << "sstacks [--aligned] -c catalog_path -s sample_path [-s sample_path ...] -o path [-p n_threads]" << "\n"
+              << "sstacks -P dir [-b batch_id] -M popmap [-p n_threads]" << "\n"
+              << "sstacks -c catalog_path -s sample_path [-s sample_path ...] -o path [-p n_threads]" << "\n"
               << "  b: database/batch ID of the catalog to consider (default: guess)." << "\n"
               << "  P: path to the directory containing Stacks files.\n"
               << "  M: path to a population map file from which to take sample names.\n"
               << "  s: filename prefix from which to load sample loci." << "\n"
               << "  c: path to the catalog." << "\n"
-              << "  g,--aligned: base matching on alignment position, not sequence identity." << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
               << "  o: output path to write results." << "\n"
               << "  x: don't verify haplotype of matching locus." << "\n"
               << "\n"
               << "Gapped assembly options:\n"
-              << "  --gapped: preform gapped alignments between stacks.\n"
+              << "  --disable_gapped: disable gapped alignments between stacks (default: enable gapped alignments).\n"
               << "\n"
               << "Sheared paired-ends options:\n"
               << "  --pe_reads: path to the sample's paired-end read sequences (if any)." << "\n"
