@@ -35,7 +35,6 @@ my $sample_path  = "";
 my $db           = "";
 my $min_cov      = 0;
 my $min_rcov     = 0;
-my $batch_id     = 1;
 my $sample_id    = 1;
 my $gzip         = false;
 my $paired       = false;
@@ -111,7 +110,7 @@ sub execute_stacks {
     my ($log_fh, $sample_id, $parents, $progeny, $samples, $sample_ids) = @_;
 
     my (@results, @depths_of_cov);
-    my ($pop_cnt, $sample, $num_files, $i, $cmd, $pipe_fh, $cat_file);
+    my ($pop_cnt, $sample, $num_files, $i, $cmd, $pipe_fh);
 
     my $minc  = $min_cov  > 0 ? " -m $min_cov"  : "";
     my $minrc = $min_rcov > 0 ? " -m $min_rcov" : $minc;
@@ -201,7 +200,6 @@ sub execute_stacks {
     print STDERR "Matching samples to the catalog...\n";
     print $log_fh "\nsstacks\n==========\n";
 
-    $cat_file = "batch_" . $batch_id;
     $cmd      = $exe_path . "sstacks -P $out_path " . join(" ", @_sstacks);
     print STDERR  "  $cmd\n\n";
     print $log_fh "$cmd\n\n";
