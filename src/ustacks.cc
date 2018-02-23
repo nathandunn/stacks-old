@@ -48,7 +48,7 @@ bool    remove_rep_stacks = true;
 double  removal_threshold = 2.0;
 int     max_utag_dist     = 2;
 int     max_rem_dist      = -1;
-bool    gapped_alignments = false;
+bool    gapped_alignments = true;
 double  min_match_len     = 0.80;
 double  max_gaps          = 2.0;
 //int     deleverage_trigger;
@@ -2361,7 +2361,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"retain_rem",       no_argument,       NULL, 'R'},
             {"graph",            no_argument,       NULL, 'g'},
             {"sec_hapl",         no_argument,       NULL, 'H'},
-            {"gapped",           no_argument,       NULL, 'G'},
+            {"disable-gapped",   no_argument,       NULL, 'G'},
             {"max_gaps",         required_argument, NULL, 'X'},
             {"min_aln_len",      required_argument, NULL, 'x'},
             {"model_type",       required_argument, NULL, 'T'},
@@ -2448,7 +2448,7 @@ int parse_command_line(int argc, char* argv[]) {
             dump_graph++;
             break;
         case 'G':
-            gapped_alignments = true;
+            gapped_alignments = false;
             break;
         case 'X':
             max_gaps = is_double(optarg);
@@ -2585,40 +2585,40 @@ void version() {
 
 void help() {
     cerr << "ustacks " << VERSION << "\n"
-              << "ustacks -f file_path -i id -o path [-M max_dist] [-m min_cov] [-p num_threads]" << "\n"
-              << "  f: input file path.\n"
-              << "  i: a unique integer ID for this sample.\n"
-              << "  o: output path to write results.\n"
-              << "  M: Maximum distance (in nucleotides) allowed between stacks (default 2).\n"
-              << "  m: Minimum depth of coverage required to create a stack (default 3).\n"
-              << "  N: Maximum distance allowed to align secondary reads to primary stacks (default: M + 2).\n"
-              << "  p: enable parallel execution with num_threads threads.\n"
-              << "  t: input file type. Supported types: fasta, fastq, gzfasta, or gzfastq (default: guess).\n"
-              << "  --name: a name for the sample (default: input file name minus the suffix).\n"
-              << "  R: retain unused reads.\n"
-              << "  H: disable calling haplotypes from secondary reads.\n"
-              << "\n"
-              << "  Stack assembly options:\n"
-              << "    d,--deleverage: enable the Deleveraging algorithm, used for resolving over merged tags.\n"
-              << "    --keep_high_cov: disable the algorithm that removes highly-repetitive stacks and nearby errors.\n"
-              << "    --high_cov_thres: highly-repetitive stacks threshold, in standard deviation units (default: 2.0).\n"
-              << "    --max_locus_stacks <num>: maximum number of stacks at a single de novo locus (default 3).\n"
-              << "     --k_len <len>: specify k-mer size for matching between alleles and loci (automatically calculated by default).\n\n"
-              << "  Gapped assembly options:\n"
-              << "    --gapped: preform gapped alignments between stacks.\n"
-              << "    --max_gaps: number of gaps allowed between stacks before merging (default: 2).\n"
-              << "    --min_aln_len: minimum length of aligned sequence in a gapped alignment (default: 0.80).\n\n"
-              << "  Model options:\n"
-              << "    --model_type: either 'snp' (default), 'bounded', or 'fixed'\n"
-              << "    For the SNP or Bounded SNP model:\n"
-              << "      --alpha <num>: chi square significance level required to call a heterozygote or homozygote, either 0.1, 0.05 (default), 0.01, or 0.001.\n"
-              << "    For the Bounded SNP model:\n"
-              << "      --bound_low <num>: lower bound for epsilon, the error rate, between 0 and 1.0 (default 0).\n"
-              << "      --bound_high <num>: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1).\n"
-              << "    For the Fixed model:\n"
-              << "      --bc_err_freq <num>: specify the barcode error frequency, between 0 and 1.0.\n"
-              << "\n"
-              << "  h: display this help messsage.\n";
+         << "ustacks -f file_path -i id -o path [-M max_dist] [-m min_cov] [-p num_threads]" << "\n"
+         << "  f: input file path.\n"
+         << "  i: a unique integer ID for this sample.\n"
+         << "  o: output path to write results.\n"
+         << "  M: Maximum distance (in nucleotides) allowed between stacks (default 2).\n"
+         << "  m: Minimum depth of coverage required to create a stack (default 3).\n"
+         << "  N: Maximum distance allowed to align secondary reads to primary stacks (default: M + 2).\n"
+         << "  p: enable parallel execution with num_threads threads.\n"
+         << "  t: input file type. Supported types: fasta, fastq, gzfasta, or gzfastq (default: guess).\n"
+         << "  --name: a name for the sample (default: input file name minus the suffix).\n"
+         << "  R: retain unused reads.\n"
+         << "  H: disable calling haplotypes from secondary reads.\n"
+         << "\n"
+         << "  Stack assembly options:\n"
+         << "    d,--deleverage: enable the Deleveraging algorithm, used for resolving over merged tags.\n"
+         << "    --keep_high_cov: disable the algorithm that removes highly-repetitive stacks and nearby errors.\n"
+         << "    --high_cov_thres: highly-repetitive stacks threshold, in standard deviation units (default: 2.0).\n"
+         << "    --max_locus_stacks <num>: maximum number of stacks at a single de novo locus (default 3).\n"
+         << "     --k_len <len>: specify k-mer size for matching between alleles and loci (automatically calculated by default).\n\n"
+         << "  Gapped assembly options:\n"
+         << "    --max_gaps: number of gaps allowed between stacks before merging (default: 2).\n"
+         << "    --min_aln_len: minimum length of aligned sequence in a gapped alignment (default: 0.80).\n\n"
+         << "    --disable-gapped: do not preform gapped alignments between stacks (default: gapped alignements enabled).\n"
+         << "  Model options:\n"
+         << "    --model_type: either 'snp' (default), 'bounded', or 'fixed'\n"
+         << "    For the SNP or Bounded SNP model:\n"
+         << "      --alpha <num>: chi square significance level required to call a heterozygote or homozygote, either 0.1, 0.05 (default), 0.01, or 0.001.\n"
+         << "    For the Bounded SNP model:\n"
+         << "      --bound_low <num>: lower bound for epsilon, the error rate, between 0 and 1.0 (default 0).\n"
+         << "      --bound_high <num>: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1).\n"
+         << "    For the Fixed model:\n"
+         << "      --bc_err_freq <num>: specify the barcode error frequency, between 0 and 1.0.\n"
+         << "\n"
+         << "  h: display this help messsage.\n";
 
     exit(1);
 }
