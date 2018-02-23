@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010-2016, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2010-2018, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -41,7 +41,6 @@ string  catalog_path;
 string  out_path;
 FileT   in_file_type = FileT::sql;
 int     num_threads  =  1;
-int     batch_id     = -1;
 int     samp_id      =  0;
 bool    verify_haplotypes       = true;
 bool    impute_haplotypes       = true;
@@ -1326,7 +1325,6 @@ int parse_command_line(int argc, char* argv[]) {
             {"uniq_haplotypes",   no_argument, NULL, 'u'},
             {"disable_gapped",    no_argument, NULL, 'G'},
             {"num_threads", required_argument, NULL, 'p'},
-            {"batch_id",    required_argument, NULL, 'b'},
             {"catalog",     required_argument, NULL, 'c'},
             {"sample_path", required_argument, NULL, 's'},
             {"outpath",     required_argument, NULL, 'o'},
@@ -1337,7 +1335,7 @@ int parse_command_line(int argc, char* argv[]) {
         };
 
         int option_index = 0;
-        int c = getopt_long(argc, argv, "hgGxuvs:c:o:b:p:P:M:", long_options, &option_index);
+        int c = getopt_long(argc, argv, "hgGxuvs:c:o:p:P:M:", long_options, &option_index);
 
         // Detect the end of the options.
         if (c == -1)
@@ -1349,13 +1347,6 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 'p':
             num_threads = atoi(optarg);
-            break;
-        case 'b':
-            batch_id = is_integer(optarg);
-            if (batch_id < 0) {
-                cerr << "Batch ID (-b) must be an integer, e.g. 1, 2, 3\n";
-                help();
-            }
             break;
         case 's':
             samples.push(optarg);
@@ -1422,24 +1413,12 @@ int parse_command_line(int argc, char* argv[]) {
             help();
         }
 
-        if (batch_id < 0) {
-            vector<int> cat_ids = find_catalogs(in_dir);
-            if (cat_ids.size() == 1) {
-                batch_id = cat_ids[0];
-            } else if (cat_ids.empty()) {
-                cerr << "Error: Unable to find a catalog in '" << in_dir << "'.\n";
-                help();
-            } else {
-                cerr << "Error: Input directory contains several catalogs, please specify -b.\n";
-                help();
-            }
-        }
 
         if (in_dir.back() != '/')
             in_dir += "/";
 
         // Set `catalog_path`.
-        catalog_path = in_dir + "batch_" + to_string(batch_id);
+        catalog_path = in_dir;
 
         // Set `samples`.
         if (!popmap_path.empty()) {
@@ -1453,21 +1432,6 @@ int parse_command_line(int argc, char* argv[]) {
         out_path = in_dir;
 
     } else if (!catalog_path.empty()) {
-        if (batch_id < 0) {
-            regex r ("batch_([0-9]+)");
-            smatch m;
-            regex_search(catalog_path, m, r);
-            if (m.size()==2) {
-                // full match plus one submatch
-                batch_id = stoi(m[1].str());
-            }
-
-            if (batch_id < 0) {
-                cerr << "Unable to guess batch ID.\n";
-                help();
-            }
-        }
-
         if (samples.size() == 0) {
             cerr << "You must specify at least one sample file.\n";
             help();
@@ -1493,7 +1457,6 @@ void help() {
     cerr << "sstacks " << VERSION << "\n"
               << "sstacks -P dir [-b batch_id] -M popmap [-p n_threads]" << "\n"
               << "sstacks -c catalog_path -s sample_path [-s sample_path ...] -o path [-p n_threads]" << "\n"
-              << "  b: database/batch ID of the catalog to consider (default: guess)." << "\n"
               << "  P: path to the directory containing Stacks files.\n"
               << "  M: path to a population map file from which to take sample names.\n"
               << "  s: filename prefix from which to load sample loci." << "\n"

@@ -33,7 +33,6 @@ void cigar_apply_to_locus(Locus* l, const Cigar& c);
 //
 bool quiet = false;
 string in_dir;
-int batch_id = -1;
 vector<string> samples;
 string popmap_path;
 vector<string> pe_reads_paths;
@@ -87,7 +86,7 @@ int run() {
     //
     cout << "Loading the catalog..." << endl;
     map<int, Locus*> catalog;
-    string catalog_prefix = in_dir + "batch_" + to_string(batch_id) + ".catalog";
+    string catalog_prefix = in_dir + "catalog";
     bool dummy;
     int rv = load_loci(catalog_prefix, catalog, 0, false, dummy, false);
     if (rv != 1) {
@@ -480,14 +479,13 @@ void parse_command_line(int argc, char* argv[]) {
 
     const string help_string = string() +
             prog_name + " " + VERSION  + "\n" +
-            prog_name + " -P stacks_dir -M popmap [-b batch_id] [-R paired_reads_dir]\n" +
-            prog_name + " -P stacks_dir -s sample [-s sample ...] [-b batch_id] [-R paired_reads_dir]\n" +
+            prog_name + " -P stacks_dir -M popmap [-R paired_reads_dir]\n" +
+            prog_name + " -P stacks_dir -s sample [-s sample ...] [-R paired_reads_dir]\n" +
             "\n"
             "  -P,--in-dir: input directory.\n"
             "  -M,--popmap: population map.\n"
             "  -s,--sample: name of one sample.\n"
             "  -R,--pe-reads-dir: directory where to find the paired-end reads files (in fastq/fasta/bam (gz) format).\n"
-            "  -b: catalog batch ID (default: guess).\n"
             "  -t: number of threads to use (default: 1).\n"
             "\n"
 #ifdef DEBUG
@@ -511,7 +509,6 @@ void parse_command_line(int argc, char* argv[]) {
         {"popmap",       required_argument, NULL, 'M'},
         {"sample",       required_argument, NULL, 's'},
         {"pe-reads-dir", required_argument, NULL, 'R'},
-        {"batch-id",     required_argument, NULL, 'b'},
         {"threads",      required_argument, NULL, 't'},
         {"dbg-reversed-pe-reads", no_argument, NULL, 2000},
         {0, 0, 0, 0}
@@ -523,7 +520,7 @@ void parse_command_line(int argc, char* argv[]) {
     int long_options_i;
     while (true) {
 
-        c = getopt_long(argc, argv, "hqt:P:b:M:s:R:", long_options, &long_options_i);
+        c = getopt_long(argc, argv, "hqt:P:M:s:R:", long_options, &long_options_i);
 
         // Detect the end of the options.
         if (c == -1)
@@ -556,13 +553,6 @@ void parse_command_line(int argc, char* argv[]) {
             pe_reads_dir = optarg;
             if (pe_reads_dir.back() != '/')
                 pe_reads_dir += '/';
-            break;
-        case 'b':
-            batch_id = is_integer(optarg);
-            if (batch_id < 0) {
-                cerr << "Error: Illegal -b option value '" << optarg << "'.\n";
-                bad_args();
-            }
             break;
         case 't':
             num_threads = is_integer(optarg);
@@ -603,20 +593,6 @@ void parse_command_line(int argc, char* argv[]) {
         bad_args();
     }
 
-    // -b
-    if (batch_id < 0) {
-        vector<int> cat_ids = find_catalogs(in_dir);
-        if (cat_ids.empty()) {
-            cerr << "Error: Unable to find a catalog in '" << in_dir << "'.\n";
-            bad_args();
-        } else if (cat_ids.size() == 1) {
-            batch_id = cat_ids[0];
-        }  else {
-            cerr << "Error: Input directory contains several catalogs, please specify -b.\n";
-            bad_args();
-        }
-    }
-
     //
     // Process arguments.
     //
@@ -652,8 +628,7 @@ void parse_command_line(int argc, char* argv[]) {
 
 void report_options(ostream& os) {
     os << "Configuration for this run:\n";
-    os << "  Stacks directory: '" << in_dir << "'\n"
-       << "  Batch ID: " << batch_id << "\n";
+    os << "  Stacks directory: '" << in_dir << "'\n";
     if (!popmap_path.empty())
         os << "  Population map: '" << popmap_path << "'\n";
     os << "  Num. samples: " << samples.size() << "\n";

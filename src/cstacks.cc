@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010-2016, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2010-2018, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -23,7 +23,6 @@
 //
 
 #include "MetaPopInfo.h"
-
 #include "cstacks.h"
 
 // Global variables to hold command-line options.
@@ -31,7 +30,6 @@ queue<pair<int, string> > samples;
 string  out_path;
 string  catalog_path;
 FileT   in_file_type      = FileT::sql;
-int     batch_id          = -1;
 int     ctag_dist         = 1;
 bool    set_kmer_len      = true;
 int     kmer_len          = 0;
@@ -997,15 +995,9 @@ int write_catalog(map<int, CLocus *> &catalog) {
 
     bool gzip = (in_file_type == FileT::gzsql) ? true : false;
 
-    //
-    // Parse the input file names to create the output file
-    //
-    stringstream prefix;
-    prefix << out_path << "batch_" << batch_id;
-
-    string tag_file = prefix.str() + ".catalog.tags.tsv";
-    string snp_file = prefix.str() + ".catalog.snps.tsv";
-    string all_file = prefix.str() + ".catalog.alleles.tsv";
+    string tag_file = "catalog.tags.tsv";
+    string snp_file = "catalog.snps.tsv";
+    string all_file = "catalog.alleles.tsv";
 
     if (gzip) {
         tag_file += ".gz";
@@ -1810,7 +1802,6 @@ int parse_command_line(int argc, char* argv[]) {
             {"disable_gapped",  no_argument, NULL, 'G'},
             {"max_gaps",        required_argument, NULL, 'X'},
             {"min_aln_len",     required_argument, NULL, 'x'},
-            {"batch_id",        required_argument, NULL, 'b'},
             {"ctag_dist",       required_argument, NULL, 'n'},
             {"k_len",           required_argument, NULL, 'k'},
             {"catalog",         required_argument, NULL, 'c'},
@@ -1821,7 +1812,7 @@ int parse_command_line(int argc, char* argv[]) {
         };
 
         int option_index = 0;
-        int c = getopt_long(argc, argv, "hgvuRmGX:x:o:s:c:b:p:n:k:P:M:", long_options, &option_index);
+        int c = getopt_long(argc, argv, "hgvuRmGX:x:o:s:c:p:n:k:P:M:", long_options, &option_index);
 
         // Detect the end of the options.
         if (c == -1)
@@ -1830,9 +1821,6 @@ int parse_command_line(int argc, char* argv[]) {
         switch (c) {
         case 'h':
             help();
-            break;
-        case 'b':
-            batch_id = is_integer(optarg);
             break;
         case 'n':
             ctag_dist = is_integer(optarg);
@@ -1925,18 +1913,12 @@ int parse_command_line(int argc, char* argv[]) {
         // Set `out_path`.
         out_path = in_dir;
 
-        if (batch_id < 0)
-            batch_id = 1;
-
     } else if (!samples.empty()) {
         if (out_path.empty())
             out_path = ".";
 
         if (out_path.back() != '/')
             out_path += "/";
-
-        if (batch_id < 0)
-            batch_id = 1;
     }
 
     if (set_kmer_len == false && (kmer_len < 5 || kmer_len > 31)) {
@@ -1955,15 +1937,13 @@ void version() {
 
 void help() {
     cerr << "cstacks " << VERSION << "\n"
-              << "cstacks -P in_dir -M popmap [-n num_mismatches] [--gapped] [-p num_threads] [-b batch_id]" << "\n"
-              << "cstacks --aligned -P in_dir -M popmap [-p num_threads] [-b batch_id]" << "\n"
-              << "cstacks -s sample1_path [-s sample2_path ...] -o path [-n num_mismatches] [--gapped] [-p num_threads] [-b batch_id]" << "\n"
-              << "cstacks --aligned -s sample1_path [-s sample2_path ...] -o path [-p num_threads] [-b batch_id]" << "\n"
+              << "cstacks -P in_dir -M popmap [-n num_mismatches] [--gapped] [-p num_threads]" << "\n"
+              << "cstacks --aligned -P in_dir -M popmap [-p num_threads]" << "\n"
+              << "cstacks -s sample1_path [-s sample2_path ...] -o path [-n num_mismatches] [--gapped] [-p num_threads]" << "\n"
+              << "cstacks --aligned -s sample1_path [-s sample2_path ...] -o path [-p num_threads]" << "\n"
               << "\n"
-              << "  b: database/batch ID for this catalog (default 1)." << "\n"
               << "  P: path to the directory containing Stacks files.\n"
               << "  M: path to a population map file.\n"
-              << "  g,--aligned: base catalog construction on alignment position, not sequence identity." << "\n"
               << "  n: number of mismatches allowed between sample loci when build the catalog (default 1)." << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
               << "  s: sample prefix from which to load loci into the catalog." << "\n"
