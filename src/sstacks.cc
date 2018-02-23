@@ -73,7 +73,7 @@ int main (int argc, char* argv[]) {
 
     cerr << "Searching for matches by sequence identity...\n";
 
-    catalog_path += ".catalog";
+    catalog_path += "catalog";
     res = load_loci(catalog_path, catalog, 0, false, compressed);
 
     if (res == 0) {
