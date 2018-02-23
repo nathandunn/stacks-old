@@ -51,7 +51,6 @@ int     max_rem_dist      = -1;
 bool    gapped_alignments = true;
 double  min_match_len     = 0.80;
 double  max_gaps          = 2.0;
-//int     deleverage_trigger;
 int     removal_trigger;
 
 //
@@ -1597,10 +1596,19 @@ int calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist) {
                 d = dist(tag_1, tag_2);
 
                 //
+                // Check if any of the mismatches occur at the 3' end of the read. If they
+                // do, they may indicate a frameshift is present at the 3' end of the read,
+                // which will cause problems when we try to merge loci across samples.
+                // If found, do not merge these tags, leave them for the gapped alignmnet
+                // algorithm.
+                //
+                if (d <= utag_dist && check_frameshift(tag_1, tag_2, (size_t) utag_dist))
+                    continue;
+
+                //
                 // Store the distance between these two sequences if it is
-                // below the maximum distance (which governs those
-                // sequences to be merged in the following step of the
-                // algorithm.)
+                // below the maximum distance. Thesesequences will then be
+                //  merged in the following step of the algorithm.
                 //
                 if (d <= utag_dist)
                     tag_1->add_dist(tag_2->id, d);

@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2018, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -32,11 +32,6 @@
 #include <iostream>
 #include <unordered_map>
 
-#ifdef HAVE_SPARSEHASH
-#include <sparsehash/sparse_hash_map>
-using google::sparse_hash_map;
-#endif
-
 #include "stacks.h"
 #include "locus.h"
 #include "mstack.h"
@@ -61,13 +56,8 @@ struct eqstr {
     }
 };
 
-#ifdef HAVE_SPARSEHASH
-typedef sparse_hash_map<const char *, vector<int>, hash_charptr, eqstr> KmerHashMap;
-typedef sparse_hash_map<const char *, vector<pair<string, int> >, hash_charptr, eqstr> CatKmerHashMap;
-#else
 typedef unordered_map<const char *, vector<int>, hash_charptr, eqstr> KmerHashMap;
 typedef unordered_map<const char *, vector<pair<string, int> >, hash_charptr, eqstr> CatKmerHashMap;
-#endif
 
 int  determine_kmer_length(int, int);
 int  calc_min_kmer_matches(int, int, int, bool);
@@ -93,6 +83,8 @@ int dist(const char *, Locus *, allele_type);
 int dist(Locus *, Locus *);
 int dist(MergedStack *, MergedStack *);
 int dist(MergedStack *, char *);
+int check_frameshift(MergedStack *, MergedStack *, size_t);
+int check_frameshift(const char *, Locus *, allele_type, size_t);
 
 //
 // For sorting functions.

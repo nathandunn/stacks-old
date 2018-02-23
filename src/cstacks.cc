@@ -40,7 +40,7 @@ int     num_threads       = 1;
 bool    mult_matches      = false;
 bool    report_mmatches   = false;
 bool    require_uniq_haplotypes = false;
-bool    gapped_alignments = false;
+bool    gapped_alignments = true;
 double  min_match_len     = 0.80;
 double  max_gaps          = 2.0;
 
@@ -54,12 +54,10 @@ int main (int argc, char* argv[]) {
     uint sample_cnt = samples.size();
 
     cerr << "cstacks parameters selected:\n"
-         << "  Database/Batch ID: " << batch_id << "\n"
-         << "  Loci matched based on " << (search_type == sequence ? "sequence identity" : "aligned genomic location") << ".\n";
-    if (search_type == sequence)
-        cerr << "  Number of mismatches allowed between stacks: " << ctag_dist << "\n"
-             << "  Gapped alignments: " << (gapped_alignments ? "enabled" : "disabled") << "\n";
-    cerr << "Constructing catalog from " << sample_cnt << " samples.\n";
+         << "  Loci matched based on sequence identity.\n"
+         << "  Number of mismatches allowed between stacks: " << ctag_dist << "\n"
+         << "  Gapped alignments: " << (gapped_alignments ? "enabled" : "disabled") << "\n"
+         << "Constructing catalog from " << sample_cnt << " samples.\n";
 
     //
     // Set the number of OpenMP parallel threads to execute.
@@ -133,18 +131,12 @@ int main (int argc, char* argv[]) {
 
         //dump_loci(sample);
 
-        if (search_type == sequence) {
-            cerr << "Searching for sequence matches...\n";
-            find_kmer_matches_by_sequence(catalog, sample, ctag_dist);
+        cerr << "Searching for sequence matches...\n";
+        find_kmer_matches_by_sequence(catalog, sample, ctag_dist);
 
-            if (gapped_alignments) {
-                cerr << "Searching for gapped alignments...\n";
-                search_for_gaps(catalog, sample, min_match_len, ctag_dist);
-            }
-
-        } else if (search_type == genomic_loc) {
-            cerr << "Searching for matches by genomic location...\n";
-            find_matches_by_genomic_loc(cat_index, sample);
+        if (gapped_alignments) {
+            cerr << "Searching for gapped alignments...\n";
+            search_for_gaps(catalog, sample, min_match_len, ctag_dist);
         }
 
         cerr << "Merging matches into catalog...\n";
@@ -166,10 +158,6 @@ int main (int argc, char* argv[]) {
             cat_it->second->match_cnt = 0;
         }
 
-        if (search_type == genomic_loc) {
-            cerr << "  Updating catalog index...\n";
-            update_catalog_index(catalog, cat_index);
-        }
         i++;
 
         for (query_it = sample.begin(); query_it != sample.end(); query_it++)
@@ -643,10 +631,16 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
 
                     d = dist(allele->second.c_str(), tag_2, cat_hit.first);
 
-                    if (d < 0)
-                        cerr <<
-                            "Unknown error calculating distance between " <<
-                            tag_1->id << " and " << tag_2->id << "; query allele: " << allele->first << "\n";
+                    assert(d >= 0);
+
+                    //
+                    // Check if any of the mismatches occur at the 3' end of the read. If they
+                    // do, they may indicate a frameshift is present at the 3' end of the read.
+                    // If found, do not merge these tags, leave them for the gapped alignmnet
+                    // algorithm.
+                    //
+                    if (d <= ctag_dist && check_frameshift(allele->second.c_str(), tag_2, cat_hit.first, (size_t) ctag_dist))
+                        continue;
 
                     //
                     // Add a match to the query sequence: catalog ID, catalog allele, query allele, distance
@@ -1813,7 +1807,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"aligned",         no_argument, NULL, 'g'},
             {"uniq_haplotypes", no_argument, NULL, 'u'},
             {"report_mmatches", no_argument, NULL, 'R'},
-            {"gapped",          no_argument, NULL, 'G'},
+            {"disable_gapped",  no_argument, NULL, 'G'},
             {"max_gaps",        required_argument, NULL, 'X'},
             {"min_aln_len",     required_argument, NULL, 'x'},
             {"batch_id",        required_argument, NULL, 'b'},
@@ -1869,7 +1863,7 @@ int parse_command_line(int argc, char* argv[]) {
             require_uniq_haplotypes = true;
             break;
         case 'G':
-            gapped_alignments = true;
+            gapped_alignments = false;
             break;
         case 'X':
             max_gaps = is_double(optarg);
@@ -1977,9 +1971,9 @@ void help() {
               << "  --catalog <path>: add to an existing catalog.\n"
               << "\n"
               << "Gapped assembly options:\n"
-              << "  --gapped: preform gapped alignments between stacks.\n"
               << "  --max_gaps: number of gaps allowed between stacks before merging (default: 2).\n"
               << "  --min_aln_len: minimum length of aligned sequence in a gapped alignment (default: 0.80).\n"
+              << "  --disable_gapped: disable gapped alignments between stacks (default: use gapped alignments).\n"
               << "\n"
               << "Advanced options:\n"
               << "  m: include tags in the catalog that match to more than one entry (default false)." << "\n"
