@@ -38,8 +38,6 @@ my $min_cov      = 0;
 my $min_rcov     = 0;
 my $batch_id     = 1;
 my $sample_id    = 1;
-my $desc         = ""; # Database description of this dataset
-my $date         = ""; # Date relevent to this data, formatted for SQL: 2009-05-31
 my $gzip         = false;
 my $paired       = false;
 my $time         = "";
@@ -334,7 +332,7 @@ sub initialize_samples {
         my @fmts     = ("fastq", "fastq", "gzfastq", "gzfastq",  "fasta", "fasta", "gzfasta", "gzfasta");
 
         #
-        # If a population map was specified and no samples were provided on the command line.
+        # Read the samples in from the population map.
         #
         my ($i, $extension, $extension_pe);
         my $first = true;
@@ -439,6 +437,10 @@ sub initialize_samples {
     print STDERR "Found ", scalar(@{$parents}), " parental file(s).\n\n" if (scalar(@{$parents}) > 0);
     print STDERR "Found ", scalar(@{$progeny}), " progeny file(s).\n\n" if (scalar(@{$progeny}) > 0);
     print STDERR "Found ", scalar(@{$samples}), " sample file(s).\n\n" if (scalar(@{$samples}) > 0);
+
+    if ( scalar(@{$samples}) > 0 && (scalar(@{$parents}) > 0 || scalar(@{$progeny}) > 0) ) {
+	die("Both samples and parents/progeny were specified either on the command line (-s/-r/-p) or within the population map. Only one of the other may be specified.\n");
+    }
 }
 
 sub write_results {
@@ -477,8 +479,8 @@ sub parse_command_line {
         if    ($_ =~ /^-v$/ || $_ =~ /^--version$/) { version(); exit 1; }
         elsif ($_ =~ /^-h$/) { usage(); }
         elsif ($_ =~ /^-d$/ || $_ =~ /^--dry-run$/) { $dry_run   = true; }
-        elsif ($_ =~ /^-o$/) { $out_path  = shift @ARGV; }
-        elsif ($_ =~ /^-e$/) { $exe_path  = shift @ARGV; }
+        elsif ($_ =~ /^-o$/)        { $out_path  = shift @ARGV; }
+        elsif ($_ =~ /^-e$/)        { $exe_path  = shift @ARGV; }
         elsif ($_ =~ /^-m$/)        { $min_cov     = shift @ARGV; }
         elsif ($_ =~ /^-P$/)        { $min_rcov    = shift @ARGV; }
         elsif ($_ =~ /^--paired$/)  { $paired      = true; } 

@@ -3,6 +3,8 @@ Stacks 2.0
     Feature: Cleaned up tags/snps/alleles/matches files. We removed the batch ID from ustacks and cstacks 
              output, and the deprecated log likelihood fields from ustacks and cstacks. We also removed 
              the chromosome/bp/strand fields as they are no longer used in these files.
+    Bugfix: Made gapped alignments mandatory in ustacks, cstacks, and sstacks. Added check for frameshift 
+            at 3' end of the read -- if found, a match is deferred to the gapped aligner.
 
 Stacks 2.0 Beta 8 - Feb 03, 2018
 --------------------------------
