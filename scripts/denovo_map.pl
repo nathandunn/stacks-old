@@ -28,7 +28,6 @@ use constant true  => 1;
 use constant false => 0;
 
 my $dry_run      = false;
-my $gapped_alns  = false;
 my $exe_path     = "_BINDIR_";
 my $out_path     = "";
 my $popmap_path  = "";
@@ -493,12 +492,6 @@ sub parse_command_line {
             push(@_gstacks,     "-M " . $popmap_path);
             push(@_populations, "-M " . $popmap_path);
 
-        } elsif ($_ =~ /^--gapped$/) {
-            $gapped_alns = true;
-            push(@_ustacks, "--gapped ");
-            push(@_cstacks, "--gapped ");
-            push(@_sstacks, "--gapped ");
-
         } elsif ($_ =~ /^-t$/) {
             push(@_ustacks, "-d ");
 
@@ -625,7 +618,6 @@ denovo_map.pl --samples dir --popmap path -o dir [--paired] (assembly options) [
   Stack assembly options:
     M: number of mismatches allowed between stacks within individuals (for ustacks).
     n: number of mismatches allowed between stacks between individuals (for cstacks).
-    --gapped: perform gapped comparisons (for ustacks, cstacks, sstacks; default: off).
 
   SNP model options:
     --var-alpha: significance level at which to call variant sites (for gstacks; default: 0.05).
