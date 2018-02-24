@@ -81,10 +81,10 @@ touch "$o_fa" "$o_vcf"
 # ==========
 
 echo "Finding the highest current locus ID..."
-id=$(zcat "$fa" | tail -n2 | head -n1 | awk '{print $1}')
+id=$(gzip -cd "$fa" | tail -n2 | head -n1 | awk '{print $1}')
 if [[ ! "$id" =~ ^\>[0-9]+$ ]] ;then
     echo "Error: Unexpected format in '$fa'; the second to last line was:" >&2
-    zcat "$fa" | tail -n2 | head -n1
+    gzip -cd "$fa" | tail -n2 | head -n1
     exit 1
 fi
 id=$(echo "$id" | cut -c2-)
@@ -96,17 +96,18 @@ echo
 
 echo "Extracting locus coordinates..."
 samtools view -F 0x904 "$bam_f" |
-    # Convert the format to `LOCUS_ID \t CHR \t POS \t STRAND`.
+    # Convert SAM to `LOCUS_ID \t CHR \t POS \t STRAND`.
     awk -F '\t' -v OFS='\t' '{
-            if (!and($2, 0x10)) {
-                print $1, $3, $4, "+"
-            } else {
+            if (int( $2 % (2*16) / 16 )) {
+                # Negative strand.
                 pos = $4 - 1
                 gsub(/[0-9]+[ISH]/, "", $6)
                 gsub(/[A-Z]/, ",", $6)
                 n = split(substr($6, 1, length($6)-1), cig, ",")
                 for (i=1; i<=n; ++i) { pos += cig[i] }
                 print $1, $3, pos, "-"
+            } else {
+                print $1, $3, $4, "+"
             }
         }' |
     # Sort by chromosome.
@@ -135,7 +136,7 @@ echo
 # ==========
 
 echo "Rewriting locus sequences and information..."
-zcat "$fa" |
+gzip -cd "$fa" |
     tr -d '\r' | paste -d '\r' - - | sed 's/^>//' |
     awk -F' ' -v OFS=' ' '
         BEGIN{
@@ -166,10 +167,10 @@ echo
 echo "Rewriting variants..."
 {
 # Copy the header.
-{ zcat "$vcf" || true; } | sed '/^#CHROM/ q' # (zcat unhappy about the closed pipe).
+gzip -cd "$vcf" ||: | sed '/^#CHROM/ q' # (gzip unhappy about the closed pipe).
 
 # Update & resort the records.
-zcat "$vcf" | grep -v '^#' |
+gzip -cd "$vcf" | grep -v '^#' |
     awk -F'\t' -v OFS='\t' '
         BEGIN{
             while(getline < "'"$o_coords"'") {
