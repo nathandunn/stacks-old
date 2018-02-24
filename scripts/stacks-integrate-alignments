@@ -122,7 +122,7 @@ samtools view -F 0x904 "$bam_f" |
     # Sort by chromosome index, bp & strand, then remove the index.
     sort -k3,3n -k4,4n -k5,5r | cut -f 1,2,4,5 |
     # Create the new IDs (we start at the power of 10 above the current max).
-    awk 'BEGIN{id = '"$id"' + 1) + 1} {printf id++ "\t" $1 "\t" $2 ":" $3 ":" $4 "\n"}' |
+    awk 'BEGIN{id = '"$id"' + 1} {printf id++ "\t" $1 "\t" $2 ":" $3 ":" $4 "\n"}' |
     # Add a header.
     { echo -e 'id_new\tid_old\taln_pos'; cat; } \
     > "$o_coords"
