@@ -169,12 +169,12 @@ int main (int argc, char* argv[]) {
         calc_kmer_distance(merged, 1);
         assert(merged.size() == unique.size());
         n_high_cov = remove_repetitive_stacks(merged);
-        cerr << "Blacklisted " << n_high_cov << " stacks.\n";
+        cerr << "  Blacklisted " << n_high_cov << " stacks.\n";
 
         calc_coverage_distribution(merged, cov_mean, cov_stdev, cov_max, n_used_reads);
         cerr << "Coverage after repeat removal: ";
         report_cov();
-        cerr << "\n";
+        cerr << "\n\n";
     }
 
     //
@@ -184,24 +184,25 @@ int main (int argc, char* argv[]) {
     calc_kmer_distance(merged, max_utag_dist);
     size_t n_blacklisted;
     merge_stacks(merged, n_blacklisted);
-    cerr << "Assembled " << unique.size()-n_high_cov << " stacks into " << merged.size()
+    cerr << "  Assembled " << unique.size()-n_high_cov << " stacks into " << merged.size()
          << "; blacklisted " << n_blacklisted << " stacks.\n";
     calc_coverage_distribution(merged, cov_mean, cov_stdev, cov_max, n_used_reads);
     cerr << "Coverage after assembling stacks: ";
     report_cov();
-    cerr << "\n";
+    cerr << "\n\n";
 
     //
     // Merge secondary stacks.
     //
     cerr << "Merging secondary stacks (max. dist. N=" << max_rem_dist << " from consensus)...\n";
     call_consensus(merged, unique, remainders, false);
-    merge_remainders(merged, remainders);
+    size_t utilized = merge_remainders(merged, remainders);
+    cerr << "  Merged " << utilized << " out of " << n_r_reads << " secondary reads (" << as_percentage( (double)utilized / (double)n_r_reads) << ").\n";
 
     calc_coverage_distribution(merged, cov_mean, cov_stdev, cov_max, n_used_reads);
     cerr << "Coverage after merging secondary stacks: ";
     report_cov();
-    cerr << "\n";
+    cerr << "\n\n";
 
     //
     // Merge loci based on alignments.
@@ -212,18 +213,18 @@ int main (int argc, char* argv[]) {
         call_consensus(merged, unique, remainders, false);
         search_for_gaps(merged);
         merge_gapped_alns(unique, remainders, merged);
-        cerr << "Assembled " << n_ungapped_loci << " stacks into " << merged.size() << " stacks.\n";
+        cerr << "  Assembled " << n_ungapped_loci << " stacks into " << merged.size() << " stacks.\n";
 
         calc_coverage_distribution(merged, cov_mean, cov_stdev, cov_max, n_used_reads);
         cerr << "Coverage after gapped assembly: ";
         report_cov();
-        cerr << "\n";
+        cerr << "\n\n";
     }
 
     //
     // Report how many reads were used.
     //
-    cerr << "\n" << "Final coverage: ";
+    cerr << "Final coverage: ";
     report_cov();
     cerr << "\n";
 
@@ -401,7 +402,6 @@ edit_gapped_seqs(map<int, Stack *> &unique, map<int, Rem *> &rem, MergedStack *t
 
         r->seq->seq(buf);
         seq = apply_cigar_to_seq(buf, cigar);
-        // edit_gaps(cigar, buf);
 
         delete r->seq;
         r->seq = new DNANSeq(seq.length(), seq.c_str());
@@ -604,7 +604,7 @@ search_for_gaps(map<int, MergedStack *> &merged)
     return 0;
 }
 
-int
+size_t
 merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
 {
     map<int, Rem *>::iterator it;
@@ -638,7 +638,7 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
     KmerHashMap    kmer_map;
     vector<char *> kmer_map_keys;
     populate_kmer_hash(merged, kmer_map, kmer_map_keys, kmer_len);
-    int utilized = 0;
+    size_t utilized = 0;
 
     #pragma omp parallel private(it)
     {
@@ -740,7 +740,8 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
     }
 
     free_kmer_hash(kmer_map, kmer_map_keys);
-    return 0;
+
+    return utilized;
 }
 
 int
