@@ -85,6 +85,7 @@ int dist(MergedStack *, MergedStack *);
 int dist(MergedStack *, char *);
 int check_frameshift(MergedStack *, MergedStack *, size_t);
 int check_frameshift(const char *, Locus *, allele_type, size_t);
+int check_frameshift(MergedStack *, const char *, size_t);
 
 //
 // For sorting functions.
