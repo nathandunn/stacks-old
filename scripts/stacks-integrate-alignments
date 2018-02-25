@@ -167,7 +167,7 @@ echo
 echo "Rewriting variants..."
 {
 # Copy the header.
-gzip -cd "$vcf" ||: | sed '/^#CHROM/ q' # (gzip unhappy about the closed pipe).
+{ gzip -cd "$vcf" ||true; } | sed '/^#CHROM/ q' # (gzip unhappy about the closed pipe).
 
 # Update & resort the records.
 gzip -cd "$vcf" | grep -v '^#' |
