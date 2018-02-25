@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010-2016, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2010-2018, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -49,11 +49,6 @@ using std::queue;
 #include <set>
 #include <unistd.h>
 
-#ifdef HAVE_SPARSEHASH
-#include <sparsehash/sparse_hash_map>
-using google::sparse_hash_map;
-#endif
-
 #include "config.h"
 #include "kmers.h"
 #include "utils.h"
@@ -82,25 +77,21 @@ class HVal {
     }
 };
 
-#ifdef HAVE_SPARSEHASH
-typedef sparse_hash_map<DNANSeq, HVal> DNASeqHashMap;
-#else
 typedef unordered_map<DNANSeq, HVal> DNASeqHashMap;
-#endif
 
-void help( void );
-void version( void );
-int  parse_command_line(int, char**);
-void load_radtags(string, DNASeqHashMap &, size_t &);
-int  load_seq_ids(vector<char *> &);
-void reduce_radtags(DNASeqHashMap &, map<int, Stack *> &, map<int, Rem *> &, size_t &, size_t &);
-int  free_radtags_hash(DNASeqHashMap &, vector<DNANSeq *> &);
-int  populate_merged_tags(map<int, Stack *> &, map<int, MergedStack *> &);
-void merge_stacks(map<int, MergedStack *> &, size_t &);
-int  call_consensus(map<int, MergedStack *> &, map<int, Stack *> &, map<int, Rem *> &, bool);
-int  call_alleles(MergedStack *, vector<DNANSeq *> &, vector<read_type> &);
-int  merge_remainders(map<int, MergedStack *> &, map<int, Rem *> &);
-int  write_results(map<int, MergedStack *> &, map<int, Stack *> &, map<int, Rem *> &);
+void   help( void );
+void   version( void );
+int    parse_command_line(int, char**);
+void   load_radtags(string, DNASeqHashMap &, size_t &);
+int    load_seq_ids(vector<char *> &);
+void   reduce_radtags(DNASeqHashMap &, map<int, Stack *> &, map<int, Rem *> &, size_t &, size_t &);
+int    free_radtags_hash(DNASeqHashMap &, vector<DNANSeq *> &);
+int    populate_merged_tags(map<int, Stack *> &, map<int, MergedStack *> &);
+void   merge_stacks(map<int, MergedStack *> &, size_t &);
+int    call_consensus(map<int, MergedStack *> &, map<int, Stack *> &, map<int, Rem *> &, bool);
+int    call_alleles(MergedStack *, vector<DNANSeq *> &, vector<read_type> &);
+size_t merge_remainders(map<int, MergedStack *> &, map<int, Rem *> &);
+int    write_results(map<int, MergedStack *> &, map<int, Stack *> &, map<int, Rem *> &);
 
 //
 // Match MergedStacks using a k-mer hashing algorithm
