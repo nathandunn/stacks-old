@@ -649,6 +649,15 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
                             tag_1->id << " and " << tag_2->id << "; query allele: " << allele->first << "\n";
 
                     //
+                    // Check if any of the mismatches occur at the 3' end of the read. If they
+                    // do, they may indicate a frameshift is present at the 3' end of the read.
+                    // If found, do not merge these tags, leave them for the gapped alignmnet
+                    // algorithm.
+                    //
+                    if (d <= ctag_dist && check_frameshift(allele->second.c_str(), tag_2, cat_hit.first, (size_t) ctag_dist))
+                        continue;
+
+                    //
                     // Add a match to the query sequence: catalog ID, catalog allele, query allele, distance
                     //
                     if (d <= ctag_dist)

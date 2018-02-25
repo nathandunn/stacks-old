@@ -599,6 +599,110 @@ bool compare_dist(pair<int, int> a, pair<int, int> b) {
     return (a.second < b.second);
 }
 
+int
+check_frameshift(MergedStack *tag_1, MergedStack *tag_2, size_t mismatches)
+{
+    size_t cnt = 0;
+    char const* p     = tag_1->con;
+    char const* q     = tag_2->con;
+    char const* p_end = p + tag_1->len - 1;
+    char const* q_end = q + tag_2->len - 1;
+
+    //
+    // Set pointers to the common end of the sequences.
+    //
+    if (tag_1->len != tag_2->len) {
+        if (tag_1->len < tag_2->len)
+            p_end -= tag_2->len - tag_1->len;
+        else if (tag_1->len > tag_2->len)
+            q_end -= tag_1->len - tag_2->len;
+    }
+
+    //
+    // Count the number of characters that are different
+    // at the 3' end of the sequence to test for possible frameshifts.
+    //
+    size_t i = 0;
+    while (p_end >= p && q_end >= q && i < mismatches) {
+        cnt += (*p_end != *q_end) ? 1 : 0;
+        p_end--;
+        q_end--;
+        i++;
+    }
+
+    return cnt;
+}
+
+int
+check_frameshift(const char *tag_1, Locus *tag_2, allele_type allele, size_t mismatches)
+{
+    size_t cnt = 0;
+    const char *p     = tag_1;
+    const char *q     = NULL;
+    //
+    // Identify which matching string has the proper allele
+    //
+    vector<pair<allele_type, string> >::iterator it;
+
+    for (it = tag_2->strings.begin(); it != tag_2->strings.end(); it++)
+        if (it->first == allele)
+            q = it->second.c_str();
+    if (q == NULL) return -1;
+
+    const char *p_end = p + strlen(p) - 1;
+    const char *q_end = q + strlen(q) - 1;
+
+    //
+    // Count the number of characters that are different
+    // at the 3' end of the sequence to test for possible frameshifts.
+    //
+    size_t i = 0;
+    while (p_end >= p && q_end >= q && i < mismatches) {
+        cnt += (*p_end != *q_end) ? 1 : 0;
+        p_end--;
+        q_end--;
+        i++;
+    }
+
+    return cnt;
+}
+
+int
+check_frameshift(MergedStack *tag_1, const char *seq, size_t mismatches)
+{
+    int   cnt     = 0;
+    const char *p = tag_1->con;
+    const char *q = seq;
+    uint  q_len   = strlen(q);
+    const char *p_end = p + tag_1->len - 1;
+    const char *q_end = q + q_len - 1;
+
+    //
+    // If the sequences are of different lengths, count the missing
+    // nucleotides as mismatches.
+    //
+    if (tag_1->len != q_len) {
+        if (tag_1->len < q_len)
+            q_end -= q_len - tag_1->len;
+        else if (tag_1->len > q_len)
+            p_end -= tag_1->len - q_len;
+    }
+
+    //
+    // Count the number of characters that are different
+    // at the 3' end of the sequence to test for possible frameshifts.
+    //
+    size_t i = 0;
+    while (p_end >= p && q_end >= q && i < mismatches) {
+        cnt += (*p_end != *q_end) ? 1 : 0;
+        p_end--;
+        q_end--;
+        i++;
+    }
+
+    return cnt;
+}
+
 int dump_kmer_map(KmerHashMap &kmer_map) {
     KmerHashMap::iterator kit;
     vector<int>::iterator vit;

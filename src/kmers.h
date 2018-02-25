@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2018, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -104,6 +104,9 @@ int dist(const char *, Locus *, allele_type);
 int dist(Locus *, Locus *);
 int dist(MergedStack *, MergedStack *);
 int dist(MergedStack *, char *);
+int check_frameshift(MergedStack *, MergedStack *, size_t);
+int check_frameshift(const char *, Locus *, allele_type, size_t);
+int check_frameshift(MergedStack *, const char *, size_t);
 
 //
 // For sorting functions.

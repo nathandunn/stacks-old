@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010-2016, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2010-2018, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -651,7 +651,18 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
             for (hit_it = hits.begin(); hit_it != hits.end(); hit_it++) {
                 if (hit_it->second < min_hits) continue;
 
-                int d = dist(merged[hit_it->first], buf);
+                MergedStack *tag_1 = merged[hit_it->first];
+
+                int d = dist(tag_1, buf);
+
+                //
+                // The max_rem_dist distance allows for the possibility of a frameshift smaller
+                // or equal to max_rem_dist at the 3' end of the read. If we detect a possible
+                // frameshift, discard this read.
+                //
+                if (d <= max_rem_dist && check_frameshift(tag_1, buf, (size_t) max_rem_dist))
+                    continue;
+
                 //
                 // Store the distance between these two sequences if it is
                 // below the maximum distance
@@ -1578,6 +1589,16 @@ int calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist) {
                 d = dist(tag_1, tag_2);
 
                 //
+                // Check if any of the mismatches occur at the 3' end of the read. If they
+                // do, they may indicate a frameshift is present at the 3' end of the read,
+                // which will cause problems when we try to merge loci across samples.
+                // If found, do not merge these tags, leave them for the gapped alignmnet
+                // algorithm.
+                //
+                if (d <= utag_dist && check_frameshift(tag_1, tag_2, (size_t) utag_dist))
+                    continue;
+
+                //
                 // Store the distance between these two sequences if it is
                 // below the maximum distance (which governs those
                 // sequences to be merged in the following step of the
@@ -2361,9 +2382,10 @@ int load_radtags(string in_file, DNASeqHashMap &radtags) {
         cerr << "Error: Unable to load data from '" << in_file.c_str() << "'.\n";
         exit(1);
     }
-    if (len_mismatch)
-        cerr << "Warning: different sequence lengths detected, this will interfere with Stacks algorithms.\n";
-
+    if (len_mismatch) {
+        cerr << "Error: different sequence lengths detected, this will interfere with Stacks algorithms. Trim reads to uniform length.\n";
+        exit(1);
+    }
     cerr << "Loaded " << i << " RAD-Tags.\n"
             "  Inserted " << radtags.size() << " elements into the RAD-Tags hash map.\n"
             "  " << corrected << " reads contained uncalled nucleotides that were modified.\n";
