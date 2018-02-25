@@ -48,6 +48,7 @@ bool    remove_rep_stacks = true;
 double  removal_threshold = 2.0;
 int     max_utag_dist     = 2;
 int     max_rem_dist      = -1;
+bool    force_diff_len    = false;
 bool    gapped_alignments = true;
 double  min_match_len     = 0.80;
 double  max_gaps          = 2.0;
@@ -101,6 +102,8 @@ int main (int argc, char* argv[]) {
         break;
     }
     cerr << "  Alpha significance level for model: " << alpha << "\n";
+    if (force_diff_len)
+        cerr << "  Forcing the allowance of sequences of different length.\n";
     cerr << flush;
 
     //
@@ -2313,15 +2316,18 @@ void load_radtags(string in_file, DNASeqHashMap &radtags, size_t& n_reads) {
         element->second.add_id(i);
         i++;
     }
-    cerr << '\n';
+    cerr << "\n";
 
     if (i == 0) {
         cerr << "Error: Unable to load data from '" << in_file.c_str() << "'.\n";
         exit(1);
     }
-    if (len_mismatch) {
-        cerr << "Error: different sequence lengths detected, this will interfere with Stacks algorithms.\n";
-        //exit(1);
+    if (len_mismatch && !force_diff_len) {
+        cerr << "Error: different sequence lengths detected, this will interfere with Stacks "
+             << "algorithms, trim reads to uniform length (override this check with --force_diff_len).\n";
+        exit(1);
+    } else if (force_diff_len) {
+        cerr << "Warning: different sequence lengths detected, this could interfere with Stacks algorithms.\n";
     }
     if (corrected > 0)
         cerr << "Warning: Input reads contained " << corrected << " uncalled nucleotides.\n";
@@ -2410,6 +2416,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"bound_high",       required_argument, NULL, 'U'},
             {"alpha",            required_argument, NULL, 'A'},
             {"r-deprecated",     no_argument,       NULL, 'r'},
+            {"force_diff_len",   no_argument,       NULL, 1003},
             {0, 0, 0, 0}
         };
 
@@ -2528,6 +2535,9 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 'v':
             version();
+            break;
+        case 1003:
+            force_diff_len = true;
             break;
         case 'r': // deprecated Dec 2016, v1.45
             cerr << "Warning: Ignoring deprecated option -r (this has become the default).\n";
