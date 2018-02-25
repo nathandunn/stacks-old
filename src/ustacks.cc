@@ -34,7 +34,7 @@ FileT   in_file_type;
 string  in_file;
 string  prefix_path;
 int     num_threads       = 1;
-int     sql_id            = -1;
+int     sample_id         = -1;
 bool    call_sec_hapl     = true;
 bool    set_kmer_len      = true;
 int     kmer_len          = 0;
@@ -71,8 +71,8 @@ int main (int argc, char* argv[]) {
     if (max_rem_dist == -1) max_rem_dist = max_utag_dist + 2;
 
     cerr << "ustacks parameters selected:\n"
-         << "  Input file: '" << in_file << "'\n"
-         << "  Sample ID: " << sql_id << "\n"
+         << "  Input file: '" << in_file   << "'\n"
+         << "  Sample ID: "   << sample_id << "\n"
          << "  Min depth of coverage to create a stack (m): " << min_merge_cov << "\n"
          << "  Repeat removal algorithm: " << (remove_rep_stacks ? "enabled" : "disabled") << "\n"
          << "  Max distance allowed between stacks (M): " << max_utag_dist << "\n"
@@ -676,7 +676,18 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
             for (hit_it = hits.begin(); hit_it != hits.end(); hit_it++) {
                 if (hit_it->second < min_hits) continue;
 
-                int d = dist(merged[hit_it->first], buf);
+                MergedStack *tag_1 = merged[hit_it->first];
+    
+                int d = dist(tag_1, buf);
+
+                //
+                // The max_rem_dist distance allows for the possibility of a frameshift smaller
+                // or equal to max_rem_dist at the 3' end of the read. If we detect a possible
+                // frameshift, discard this read.
+                //
+                if (d <= max_rem_dist && check_frameshift(tag_1, buf, (size_t) max_rem_dist))
+                    continue;
+
                 //
                 // Store the distance between these two sequences if it is
                 // below the maximum distance
@@ -1895,7 +1906,7 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
         tag_1->calc_likelihood();
 
         // First write the consensus sequence
-        sstr << sql_id             << "\t"
+        sstr << sample_id          << "\t"
              << tag_1->id          << "\t"
              << "consensus\t"      << "\t"
              << "\t"
@@ -1907,7 +1918,7 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
         //
         // Write a sequence recording the output of the SNP model for each nucleotide.
         //
-        sstr << sql_id << "\t"
+        sstr << sample_id << "\t"
              << tag_1->id << "\t"
              << "model\t" << "\t"
              << "\t";
@@ -1941,7 +1952,7 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
             total += tag_2->count();
 
             for (uint j = 0; j < tag_2->map.size(); j++) {
-                sstr << sql_id    << "\t"
+                sstr << sample_id << "\t"
                      << tag_1->id << "\t"
                      << "primary\t"
                      << id << "\t"
@@ -1964,7 +1975,7 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
             total += rem->map.size();
 
             for (uint j = 0; j < rem->map.size(); j++)
-                sstr << sql_id    << "\t"
+                sstr << sample_id << "\t"
                      << tag_1->id << "\t"
                      << "secondary\t"
                      << "\t"
@@ -1980,9 +1991,9 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
         // Write out the model calls for each nucleotide in this locus.
         //
         for (s = tag_1->snps.begin(); s != tag_1->snps.end(); s++) {
-            sstr << sql_id       << "\t"
-                 << tag_1->id    << "\t"
-                 << (*s)->col    << "\t";
+            sstr << sample_id << "\t"
+                 << tag_1->id << "\t"
+                 << (*s)->col << "\t";
 
             switch((*s)->type) {
             case snp_type_het:
@@ -2010,7 +2021,7 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
         // the percentage of tags a particular allele occupies.
         //
         for (t = tag_1->alleles.begin(); t != tag_1->alleles.end(); t++) {
-            sstr << sql_id      << "\t"
+            sstr << sample_id   << "\t"
                  << tag_1->id   << "\t"
                  << (*t).first  << "\t"
                  << (((*t).second/total) * 100) << "\t"
@@ -2418,7 +2429,7 @@ int parse_command_line(int argc, char* argv[]) {
             sample_name = optarg;
             break;
         case 'i':
-            sql_id = is_integer(optarg);
+            sample_id = is_integer(optarg);
             break;
         case 'm':
             min_merge_cov = is_integer(optarg);
@@ -2572,8 +2583,8 @@ int parse_command_line(int argc, char* argv[]) {
     }
     prefix_path = out_path + sample_name;
 
-    if (sql_id < 0) {
-        cerr << "A sample ID must be provided.\n";
+    if (sample_id < 0) {
+        cerr << "A unique sample ID must be provided (a positive integer).\n";
         help();
     }
 
