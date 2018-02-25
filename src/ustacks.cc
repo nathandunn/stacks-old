@@ -503,7 +503,9 @@ search_for_gaps(map<int, MergedStack *> &merged)
     // Calculate the number of k-mers we will generate. If kmer_len == 0,
     // determine the optimal length for k-mers.
     //
-    int con_len   = strlen(merged[keys[0]]->con);
+    int con_len = 0;
+    for (auto miter = merged.begin(); miter != merged.end(); miter++)
+        con_len = miter->second->len > con_len ? miter->second->len : con_len;
     int kmer_len  = 19;
     int num_kmers = con_len - kmer_len + 1;
 
@@ -541,6 +543,8 @@ search_for_gaps(map<int, MergedStack *> &merged)
             if (tag_1->utags.size() >= max_subgraph)
                 continue;
 
+            if (tag_1->len < kmer_len) continue;
+            num_kmers = tag_1->len - kmer_len + 1;
             generate_kmers_lazily(tag_1->con, kmer_len, num_kmers, query_kmers);
 
             uniq_kmers.clear();
@@ -612,19 +616,24 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
     // OpenMP can't parallelize random access iterators, so we convert
     // our map to a vector of integer keys.
     vector<int> keys;
-    uint tot = 0;
+    size_t tot = 0;
+    size_t max_rem_len = 0;
     for (it = rem.begin(); it != rem.end(); it++) {
         keys.push_back(it->first);
         tot += it->second->count();
+        max_rem_len = it->second->seq->size() > max_rem_len ? it->second->seq->size() : max_rem_len;
     }
 
     //
-    // Calculate the number of k-mers we will generate. If kmer_len == 0,
-    // determine the optimal length for k-mers.
+    // Calculate the number of k-mers we will generate based on the longest sequence present.
+    // If kmer_len == 0, determine the optimal length for k-mers.
     //
-    int con_len   = strlen(merged.begin()->second->con);
-    if (set_kmer_len) kmer_len = determine_kmer_length(con_len, max_rem_dist);
-    int num_kmers = con_len - kmer_len + 1;
+    size_t kmer_len = 0;
+    size_t con_len  = 0;
+    for (auto miter = merged.begin(); miter != merged.end(); miter++)
+        con_len = miter->second->len > con_len ? miter->second->len : con_len;
+    if (set_kmer_len)
+        kmer_len = determine_kmer_length(con_len, max_rem_dist);
 
     //
     // Calculate the minimum number of matching k-mers required for a possible sequence match.
@@ -644,24 +653,27 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
     {
         KmerHashMap::iterator h;
         vector<char *> rem_kmers;
-        char *buf = new char[con_len + 1];
+        char  *buf       = new char[max_rem_len + 1];
+        size_t num_kmers = 0;
 
         #pragma omp for schedule(dynamic)
         for (uint j = 0; j < keys.size(); j++) {
             it = rem.find(keys[j]);
-            Rem  *r = it->second;
+            Rem *r = it->second;
 
             //
             // Generate the k-mers for this remainder sequence
             //
             r->seq->seq(buf);
+            if (r->seq->size() < kmer_len) continue;
+            num_kmers = r->seq->size() - kmer_len + 1;
             generate_kmers_lazily(buf, kmer_len, num_kmers, rem_kmers);
 
             map<int, int> hits;
             //
             // Lookup the occurances of each remainder k-mer in the MergedStack k-mer map
             //
-            for (int k = 0; k < num_kmers; k++) {
+            for (uint k = 0; k < num_kmers; k++) {
                 h = kmer_map.find(rem_kmers[k]);
 
                 if (h != kmer_map.end())
@@ -1525,7 +1537,9 @@ int deleverage(map<int, MergedStack *> &merged,
     return 0;
 }
 
-int calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist) {
+int
+calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist)
+{
     //
     // Calculate the distance (number of mismatches) between each pair
     // of Radtags. We expect all radtags to be the same length;
@@ -1545,10 +1559,12 @@ int calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist) {
     // Calculate the number of k-mers we will generate. If kmer_len == 0,
     // determine the optimal length for k-mers.
     //
-    int con_len   = strlen(merged[keys[0]]->con);
+    size_t con_len = 0;
+    for (auto miter = merged.begin(); miter != merged.end(); miter++)
+        con_len = miter->second->len > con_len ? miter->second->len : con_len;
     if (set_kmer_len)
         kmer_len = determine_kmer_length(con_len, utag_dist);
-    int num_kmers = con_len - kmer_len + 1;
+    size_t num_kmers = con_len - kmer_len + 1;
 
     //
     // Calculate the minimum number of matching k-mers required for a possible sequence match.
@@ -1575,6 +1591,8 @@ int calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist) {
             // Don't compute distances for masked tags
             if (tag_1->masked) continue;
 
+            if (tag_1->len < kmer_len) continue;
+            num_kmers = tag_1->len - kmer_len + 1;
             generate_kmers_lazily(tag_1->con, kmer_len, num_kmers, query_kmers);
 
             map<int, int> hits;
@@ -2303,7 +2321,7 @@ void load_radtags(string in_file, DNASeqHashMap &radtags, size_t& n_reads) {
     }
     if (len_mismatch) {
         cerr << "Error: different sequence lengths detected, this will interfere with Stacks algorithms.\n";
-        exit(1);
+        //exit(1);
     }
     if (corrected > 0)
         cerr << "Warning: Input reads contained " << corrected << " uncalled nucleotides.\n";
