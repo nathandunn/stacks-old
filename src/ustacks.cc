@@ -382,16 +382,17 @@ edit_gapped_seqs(map<int, Stack *> &unique, map<int, Rem *> &rem, MergedStack *t
     Stack *s;
     Rem   *r;
     char  *buf = new char[tag->len + 1];
-
+    string seq;
+    
     for (uint i = 0; i < tag->utags.size(); i++) {
         stack_id = tag->utags[i];
         s = unique[stack_id];
 
         s->seq->seq(buf);
-        edit_gaps(cigar, buf);
+        seq = apply_cigar_to_seq(buf, cigar);
 
         delete s->seq;
-        s->seq = new DNANSeq(tag->len, buf);
+        s->seq = new DNANSeq(seq.length(), seq.c_str());
     }
 
     for (uint i = 0; i < tag->remtags.size(); i++) {
@@ -399,10 +400,11 @@ edit_gapped_seqs(map<int, Stack *> &unique, map<int, Rem *> &rem, MergedStack *t
         r = rem[stack_id];
 
         r->seq->seq(buf);
-        edit_gaps(cigar, buf);
+        seq = apply_cigar_to_seq(buf, cigar);
+        // edit_gaps(cigar, buf);
 
         delete r->seq;
-        r->seq = new DNANSeq(tag->len, buf);
+        r->seq = new DNANSeq(seq.length(), seq.c_str());
     }
 
     delete [] buf;
