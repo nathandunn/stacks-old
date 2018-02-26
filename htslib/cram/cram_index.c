@@ -59,13 +59,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <math.h>
-#include <ctype.h>
 
+#include "htslib/bgzf.h"
 #include "htslib/hfile.h"
 #include "hts_internal.h"
 #include "cram/cram.h"
 #include "cram/os.h"
-#include "cram/zfio.h"
 
 #if 0
 static void dump_index_(cram_index *e, int level) {
@@ -142,7 +141,7 @@ int cram_index_load(cram_fd *fd, const char *fn, const char *fn_idx) {
     char buf[65536];
     ssize_t len;
     kstring_t kstr = {0};
-    FILE *fp;
+    hFILE *fp;
     cram_index *idx;
     cram_index **idx_stack = NULL, *ep, e;
     int idx_stack_alloc = 0, idx_stack_ptr = 0;
@@ -162,100 +161,93 @@ int cram_index_load(cram_fd *fd, const char *fn, const char *fn_idx) {
     idx->end   = INT_MAX;
 
     idx_stack = calloc(++idx_stack_alloc, sizeof(*idx_stack));
+    if (!idx_stack)
+        goto fail;
+
     idx_stack[idx_stack_ptr] = idx;
 
     if (!fn_idx) {
 	fn2 = hts_idx_getfn(fn, ".crai");
-	if (!fn2) {
-	    free(idx_stack);
-	    return -1;
-	}
+	if (!fn2)
+            goto fail;
+
 	fn_idx = fn2;
     }
 
-    if (!(fp = fopen(fn_idx, "r"))) {
+    if (!(fp = hopen(fn_idx, "r"))) {
 	perror(fn_idx);
-	free(idx_stack);
-	free(fn2);
-	return -1;
+        goto fail;
     }
 
     // Load the file into memory
-    while ((len = fread(buf, 1, 65536, fp)) > 0)
-	kputsn(buf, len, &kstr);
-    if (len < 0 || kstr.l < 2) {
-	if (kstr.s)
-	    free(kstr.s);
-	free(idx_stack);
-	free(fn2);
-	return -1;
+    while ((len = hread(fp, buf, sizeof(buf))) > 0) {
+	if (kputsn(buf, len, &kstr) < 0)
+            goto fail;
     }
 
-    if (fclose(fp)) {
-	if (kstr.s)
-	    free(kstr.s);
-	free(idx_stack);
-	free(fn2);
-	return -1;
-    }
-	
+    if (len < 0 || kstr.l < 2)
+        goto fail;
+
+    if (hclose(fp) < 0)
+        goto fail;
 
     // Uncompress if required
     if (kstr.s[0] == 31 && (uc)kstr.s[1] == 139) {
 	size_t l;
 	char *s = zlib_mem_inflate(kstr.s, kstr.l, &l);
+	if (!s)
+            goto fail;
+
 	free(kstr.s);
-	if (!s) {
-	    free(idx_stack);
-	    free(fn2);
-	    return -1;
-	}
 	kstr.s = s;
 	kstr.l = l;
 	kstr.m = l; // conservative estimate of the size allocated
-	kputsn("", 0, &kstr); // ensure kstr.s is NUL-terminated
+	if (kputsn("", 0, &kstr) < 0) // ensure kstr.s is NUL-terminated
+            goto fail;
     }
 
 
     // Parse it line at a time
-    do {
+    while (pos < kstr.l) {
 	/* 1.1 layout */
-	if (kget_int32(&kstr, &pos, &e.refid) == -1) {
-	    free(kstr.s); free(idx_stack); free(fn2); return -1;
-	}
-	if (kget_int32(&kstr, &pos, &e.start) == -1) {
-	    free(kstr.s); free(idx_stack); free(fn2); return -1;
-	}
-	if (kget_int32(&kstr, &pos, &e.end) == -1) {
-	    free(kstr.s); free(idx_stack); free(fn2); return -1;
-	}
-	if (kget_int64(&kstr, &pos, &e.offset) == -1) {
-	    free(kstr.s); free(idx_stack); free(fn2); return -1;
-	}
-	if (kget_int32(&kstr, &pos, &e.slice) == -1) {
-	    free(kstr.s); free(idx_stack); free(fn2); return -1;
-	}
-	if (kget_int32(&kstr, &pos, &e.len) == -1) {
-	    free(kstr.s); free(idx_stack); free(fn2); return -1;
-	}
+	if (kget_int32(&kstr, &pos, &e.refid) == -1)
+            goto fail;
+
+	if (kget_int32(&kstr, &pos, &e.start) == -1)
+            goto fail;
+
+	if (kget_int32(&kstr, &pos, &e.end) == -1)
+            goto fail;
+
+	if (kget_int64(&kstr, &pos, &e.offset) == -1)
+            goto fail;
+
+	if (kget_int32(&kstr, &pos, &e.slice) == -1)
+            goto fail;
+
+	if (kget_int32(&kstr, &pos, &e.len) == -1)
+            goto fail;
 
 	e.end += e.start-1;
 	//printf("%d/%d..%d\n", e.refid, e.start, e.end);
 
 	if (e.refid < -1) {
-	    free(kstr.s);
-	    free(idx_stack);
-	    free(fn2);
-	    fprintf(stderr, "Malformed index file, refid %d\n", e.refid);
-	    return -1;
+	    hts_log_error("Malformed index file, refid %d", e.refid);
+            goto fail;
 	}
 
 	if (e.refid != idx->refid) {
 	    if (fd->index_sz < e.refid+2) {
+                cram_index *new_idx;
+                int new_sz = e.refid+2;
 		size_t index_end = fd->index_sz * sizeof(*fd->index);
-		fd->index_sz = e.refid+2;
-		fd->index = realloc(fd->index,
-				    fd->index_sz * sizeof(*fd->index));
+                new_idx = realloc(fd->index,
+                                  new_sz * sizeof(*fd->index));
+                if (!new_idx)
+                    goto fail;
+
+                fd->index = new_idx;
+                fd->index_sz = new_sz;
 		memset(((char *)fd->index) + index_end, 0,
 		       fd->index_sz * sizeof(*fd->index) - index_end);
 	    }
@@ -274,8 +266,13 @@ int cram_index_load(cram_fd *fd, const char *fn, const char *fn_idx) {
 
 	// Now contains, so append
 	if (idx->nslice+1 >= idx->nalloc) {
+            cram_index *new_e;
 	    idx->nalloc = idx->nalloc ? idx->nalloc*2 : 16;
-	    idx->e = realloc(idx->e, idx->nalloc * sizeof(*idx->e));
+	    new_e = realloc(idx->e, idx->nalloc * sizeof(*idx->e));
+            if (!new_e)
+                goto fail;
+
+            idx->e = new_e;
 	}
 
 	e.nalloc = e.nslice = 0; e.e = NULL;
@@ -283,15 +280,19 @@ int cram_index_load(cram_fd *fd, const char *fn, const char *fn_idx) {
 	idx = ep;
 
 	if (++idx_stack_ptr >= idx_stack_alloc) {
+            cram_index **new_stack;
 	    idx_stack_alloc *= 2;
-	    idx_stack = realloc(idx_stack, idx_stack_alloc*sizeof(*idx_stack));
+	    new_stack = realloc(idx_stack, idx_stack_alloc*sizeof(*idx_stack));
+            if (!new_stack)
+                goto fail;
+            idx_stack = new_stack;
 	}
 	idx_stack[idx_stack_ptr] = idx;
 
 	while (pos < kstr.l && kstr.s[pos] != '\n')
 	    pos++;
 	pos++;
-    } while (pos < kstr.l);
+    }
 
     free(idx_stack);
     free(kstr.s);
@@ -300,6 +301,13 @@ int cram_index_load(cram_fd *fd, const char *fn, const char *fn_idx) {
     // dump_index(fd);
 
     return 0;
+
+ fail:
+    free(kstr.s);
+    free(idx_stack);
+    free(fn2);
+    cram_index_free(fd); // Also sets fd->index = NULL
+    return -1;
 }
 
 static void cram_index_free_recurse(cram_index *e) {
@@ -337,7 +345,10 @@ void cram_index_free(cram_fd *fd) {
  * "from" as the last slice we checked to find the next one. Otherwise
  * set "from" to be NULL to find the first one.
  *
- * Returns the cram_index pointer on sucess
+ * Refid can also be any of the special HTS_IDX_ values.
+ * For backwards compatibility, refid -1 is equivalent to HTS_IDX_NOCOOR.
+ *
+ * Returns the cram_index pointer on success
  *         NULL on failure
  */
 cram_index *cram_index_query(cram_fd *fd, int refid, int pos, 
@@ -345,8 +356,33 @@ cram_index *cram_index_query(cram_fd *fd, int refid, int pos,
     int i, j, k;
     cram_index *e;
 
-    if (refid+1 < 0 || refid+1 >= fd->index_sz)
+    switch(refid) {
+    case HTS_IDX_NONE:
+    case HTS_IDX_REST:
+	// fail, or already there, dealt with elsewhere.
 	return NULL;
+
+    case HTS_IDX_NOCOOR:
+	refid = -1;
+	break;
+
+    case HTS_IDX_START: {
+	int64_t min_idx = INT64_MAX;
+	for (i = 0, j = -1; i < fd->index_sz; i++) {
+	    if (fd->index[i].e && fd->index[i].e[0].offset < min_idx) {
+		min_idx = fd->index[i].e[0].offset;
+		j = i;
+	    }
+	}
+	if (j < 0)
+	    return NULL;
+	return fd->index[j].e;
+    }
+
+    default:
+	if (refid < HTS_IDX_NONE || refid+1 >= fd->index_sz)
+	    return NULL;
+    }
 
     if (!from)
 	from = &fd->index[refid+1];
@@ -398,6 +434,24 @@ cram_index *cram_index_query(cram_fd *fd, int refid, int pos,
     return e;
 }
 
+// Return the index entry for last slice on a specific reference.
+cram_index *cram_index_last(cram_fd *fd, int refid, cram_index *from) {
+    int slice;
+
+    if (refid+1 < 0 || refid+1 >= fd->index_sz)
+        return NULL;
+
+    if (!from)
+        from = &fd->index[refid+1];
+
+    // Ref with nothing aligned against it.
+    if (!from->e)
+        return NULL;
+
+    slice = fd->index[refid+1].nslice - 1;
+
+    return &from->e[slice];
+}
 
 /*
  * Skips to a container overlapping the start coordinate listed in
@@ -416,6 +470,9 @@ cram_index *cram_index_query(cram_fd *fd, int refid, int pos,
 int cram_seek_to_refpos(cram_fd *fd, cram_range *r) {
     cram_index *e;
 
+    if (r->refid == HTS_IDX_NONE)
+	return -2;
+
     // Ideally use an index, so see if we have one.
     if ((e = cram_index_query(fd, r->refid, r->start, NULL))) {
 	if (0 != cram_seek(fd, e->offset, SEEK_SET))
@@ -425,6 +482,9 @@ int cram_seek_to_refpos(cram_fd *fd, cram_range *r) {
 	// Absent from index, but this most likely means it simply has no data.
 	return -2;
     }
+
+    if (r->refid == HTS_IDX_START || r->refid == HTS_IDX_REST)
+	fd->range.refid = -2; // special case in cram_next_slice
 
     if (fd->ctr) {
 	cram_free_container(fd->ctr);
@@ -442,12 +502,13 @@ int cram_seek_to_refpos(cram_fd *fd, cram_range *r) {
  * decode the slice to look at the RI data series instead.
  *
  * Returns 0 on success
- *        -1 on failure
+ *        -1 on read failure
+ *        -4 on write failure
  */
 static int cram_index_build_multiref(cram_fd *fd,
 				     cram_container *c,
 				     cram_slice *s,
-				     zfp *fp,
+				     BGZF *fp,
 				     off_t cpos,
 				     int32_t landmark,
 				     int sz) {
@@ -469,19 +530,21 @@ static int cram_index_build_multiref(cram_fd *fd,
 	    sprintf(buf, "%d\t%d\t%d\t%"PRId64"\t%d\t%d\n",
 		    ref, ref_start, ref_end - ref_start + 1,
 		    (int64_t)cpos, landmark, sz);
-	    zfputs(buf, fp);
+	    if (bgzf_write(fp, buf, strlen(buf)) < 0)
+		return -4;
 	}
 
 	ref = s->crecs[i].ref_id;
 	ref_start = s->crecs[i].apos;
-	ref_end = INT_MIN;
+	ref_end   = s->crecs[i].aend;
     }
 
     if (ref != -2) {
 	sprintf(buf, "%d\t%d\t%d\t%"PRId64"\t%d\t%d\n",
 		ref, ref_start, ref_end - ref_start + 1,
 		(int64_t)cpos, landmark, sz);
-	zfputs(buf, fp);
+	if (bgzf_write(fp, buf, strlen(buf)) < 0)
+	    return -4;
     }
 
     return 0;
@@ -495,13 +558,13 @@ static int cram_index_build_multiref(cram_fd *fd,
  * fn_idx is the filename of the index file to be written;
  * if NULL, we add ".crai" to fn_base to get the index filename.
  *
- * Returns 0 on success
- *        -1 on failure
+ * Returns 0 on success,
+ *         negative on failure (-1 for read failure, -4 for write failure)
  */
 int cram_index_build(cram_fd *fd, const char *fn_base, const char *fn_idx) {
     cram_container *c;
     off_t cpos, spos, hpos;
-    zfp *fp;
+    BGZF *fp;
     kstring_t fn_idx_str = {0};
 
     if (! fn_idx) {
@@ -510,10 +573,10 @@ int cram_index_build(cram_fd *fd, const char *fn_base, const char *fn_idx) {
         fn_idx = fn_idx_str.s;
     }
 
-    if (!(fp = zfopen(fn_idx, "wz"))) {
+    if (!(fp = bgzf_open(fn_idx, "wg"))) {
         perror(fn_idx);
         free(fn_idx_str.s);
-        return -1;
+        return -4;
     }
 
     free(fn_idx_str.s);
@@ -541,30 +604,35 @@ int cram_index_build(cram_fd *fd, const char *fn_base, const char *fn_idx) {
         for (j = 0; j < c->num_landmarks; j++) {
             char buf[1024];
             cram_slice *s;
-            int sz;
+            int sz, ret;
 
             spos = htell(fd->fp);
             assert(spos - cpos - c->offset == c->landmark[j]);
 
             if (!(s = cram_read_slice(fd))) {
-		zfclose(fp);
+		bgzf_close(fp);
 		return -1;
 	    }
 
             sz = (int)(htell(fd->fp) - spos);
 
 	    if (s->hdr->ref_seq_id == -2) {
-		cram_index_build_multiref(fd, c, s, fp,
-					  cpos, c->landmark[j], sz);
+		ret = cram_index_build_multiref(fd, c, s, fp,
+						cpos, c->landmark[j], sz);
 	    } else {
 		sprintf(buf, "%d\t%d\t%d\t%"PRId64"\t%d\t%d\n",
 			s->hdr->ref_seq_id, s->hdr->ref_seq_start,
 			s->hdr->ref_seq_span, (int64_t)cpos,
 			c->landmark[j], sz);
-		zfputs(buf, fp);
+		ret = (bgzf_write(fp, buf, strlen(buf)) >= 0)? 0 : -4;
 	    }
 
             cram_free_slice(s);
+
+	    if (ret < 0) {
+		bgzf_close(fp);
+		return ret;
+	    }
         }
 
         cpos = htell(fd->fp);
@@ -573,10 +641,9 @@ int cram_index_build(cram_fd *fd, const char *fn_base, const char *fn_idx) {
         cram_free_container(c);
     }
     if (fd->err) {
-	zfclose(fp);
+	bgzf_close(fp);
 	return -1;
     }
-	
 
-    return (zfclose(fp) >= 0)? 0 : -1;
+    return (bgzf_close(fp) >= 0)? 0 : -4;
 }

@@ -33,6 +33,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string.h>
 #include <assert.h>
 
+#include "hts_internal.h"
 #include "cram/sam_header.h"
 #include "cram/string_alloc.h"
 
@@ -41,7 +42,7 @@ static void sam_hdr_error(char *msg, char *line, int len, int lno) {
     
     for (j = 0; j < len && line[j] != '\n'; j++)
 	;
-    fprintf(stderr, "%s at line %d: \"%.*s\"\n", msg, lno, j, line);
+    hts_log_error("%s at line %d: \"%.*s\"", msg, lno, j, line);
 }
 
 void sam_hdr_dump(SAM_hdr *hdr) {
@@ -775,8 +776,7 @@ static enum sam_sort_order sam_hdr_parse_sort_order(SAM_hdr *hdr) {
 		else if (strcmp(tag->str+3, "coordinate") == 0)
 		    so = ORDER_COORD;
 		else if (strcmp(tag->str+3, "unknown") != 0)
-		    fprintf(stderr, "Unknown sort order field: %s\n",
-			    tag->str+3);
+		    hts_log_error("Unknown sort order field: %s", tag->str+3);
 	    }
 	}
     }
@@ -1244,7 +1244,8 @@ char *stringify_argv(int argc, char *argv[]) {
 
     /* Allocate */
     for (i = 0; i < argc; i++) {
-	nbytes += strlen(argv[i]) + 1;
+	if (i > 0) nbytes += 1;
+	nbytes += strlen(argv[i]);
     }
     if (!(str = malloc(nbytes)))
 	return NULL;
@@ -1252,6 +1253,7 @@ char *stringify_argv(int argc, char *argv[]) {
     /* Copy */
     cp = str;
     for (i = 0; i < argc; i++) {
+	if (i > 0) *cp++ = ' ';
 	j = 0;
 	while (argv[i][j]) {
 	    if (argv[i][j] == '\t')
@@ -1260,7 +1262,6 @@ char *stringify_argv(int argc, char *argv[]) {
 		*cp++ = argv[i][j];
 	    j++;
 	}
-	*cp++ = ' ';
     }
     *cp++ = 0;
 
