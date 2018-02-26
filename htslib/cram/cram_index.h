@@ -52,6 +52,7 @@ void cram_index_free(cram_fd *fd);
  *         NULL on failure
  */
 cram_index *cram_index_query(cram_fd *fd, int refid, int pos, cram_index *frm);
+cram_index *cram_index_last(cram_fd *fd, int refid, cram_index *from);
 
 /*
  * Skips to a container overlapping the start coordinate listed in
@@ -87,8 +88,8 @@ int cram_seek_to_refpos(cram_fd *fd, cram_range *r);
  * fn_idx is the filename of the index file to be written;
  * if NULL, we add ".crai" to fn_base to get the index filename.
  *
- * Returns 0 on success
- *        -1 on failure
+ * Returns 0 on success,
+ *         negative on failure (-1 for read failure, -4 for write failure)
  */
 int cram_index_build(cram_fd *fd, const char *fn_base, const char *fn_idx);
 
