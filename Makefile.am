@@ -1,8 +1,14 @@
+SUBDIRS = htslib
+HTSLIB = htslib/libhts.a
+
+AM_CPPFLAGS = $(OPENMP_CFLAGS) -I$(top_srcdir)/htslib
+AM_LDFLAGS = $(OPENMP_CFLAGS)
+LDADD = $(HTSLIB) libcore.a
+
+noinst_LIBRARIES = libcore.a libclean.a libpop.a
 bin_PROGRAMS = ustacks cstacks sstacks process_radtags process_shortreads \
 	kmer_filter clone_filter populations phasedstacks \
 	tsv2bam gstacks
-
-noinst_LIBRARIES = libcore.a libclean.a libpop.a
 
 libcore_a_SOURCES = \
 	src/aln_utils.h src/aln_utils.cc \
@@ -38,7 +44,8 @@ libcore_a_SOURCES = \
 	src/stacks.h src/stacks.cc \
 	src/Tsv.h \
 	src/utils.h src/utils.cc \
-	src/Vcf.h src/Vcf.cc
+	src/Vcf.h src/Vcf.cc \
+	$(HTSLIB)
 
 libclean_a_SOURCES = \
 	src/clean.h src/clean.cc \
@@ -56,9 +63,6 @@ libpop_a_SOURCES = \
 	src/smoothing_utils.h \
 	src/Hwp.h src/Hwp.cc
 
-libcore_a_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
-libpop_a_CXXFLAGS  = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
-
 phasedstacks_SOURCES = libcore.a src/phasedstacks.h src/phasedstacks.cc
 
 process_radtags_SOURCES    = libcore.a libclean.a src/process_radtags.h src/process_radtags.cc
@@ -69,51 +73,15 @@ clone_filter_SOURCES       = libcore.a libclean.a src/clone_filter.h src/clone_f
 ustacks_SOURCES = libcore.a src/ustacks.h src/ustacks.cc
 cstacks_SOURCES = libcore.a src/cstacks.h src/cstacks.cc
 sstacks_SOURCES = libcore.a src/sstacks.h src/sstacks.cc
-
-populations_SOURCES = libcore.a libpop.a src/populations.h src/populations.cc
-
-# tsv2bam & gstacks
 tsv2bam_SOURCES = libcore.a src/tsv2bam.cc
 gstacks_SOURCES = libcore.a src/gstacks.h src/gstacks.cc src/debruijn.h src/debruijn.cc src/Alignment.h src/SuffixTree.h src/SuffixTree.cc
+populations_SOURCES = libcore.a libpop.a src/populations.h src/populations.cc
 
-phasedstacks_CXXFLAGS = $(OPENMP_CFLAGS)
-phasedstacks_LDFLAGS  = $(OPENMP_CFLAGS)
-phasedstacks_LDADD    = libcore.a $(BAM_LIBS)
-
-ustacks_CXXFLAGS = $(OPENMP_CFLAGS)
-ustacks_LDFLAGS  = $(OPENMP_CFLAGS)
-ustacks_LDADD    = libcore.a $(BAM_LIBS)
-cstacks_CXXFLAGS = $(OPENMP_CFLAGS)
-cstacks_LDFLAGS  = $(OPENMP_CFLAGS)
-cstacks_LDADD    = libcore.a $(BAM_LIBS)
-sstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
-sstacks_LDFLAGS  = $(OPENMP_CFLAGS)
-sstacks_LDADD    = libcore.a $(BAM_LIBS)
-
-process_radtags_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
-process_radtags_LDFLAGS  = $(OPENMP_CFLAGS)
-process_radtags_LDADD    =  libcore.a libclean.a $(BAM_LIBS)
-process_shortreads_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
-process_shortreads_LDFLAGS  = $(OPENMP_CFLAGS)
-process_shortreads_LDADD    =  libcore.a libclean.a $(BAM_LIBS)
-clone_filter_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
-clone_filter_LDFLAGS  = $(OPENMP_CFLAGS)
-clone_filter_LDADD    = libcore.a libclean.a $(BAM_LIBS)
-kmer_filter_CXXFLAGS = $(OPENMP_CFLAGS)
-kmer_filter_LDFLAGS  = $(OPENMP_CFLAGS)
-kmer_filter_LDADD    = libcore.a libclean.a $(BAM_LIBS)
-
-populations_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
-populations_LDFLAGS  = $(OPENMP_CFLAGS)
-populations_LDADD    = libcore.a libpop.a $(BAM_LIBS)
-
-# tsv2bam & gstacks
-tsv2bam_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
-tsv2bam_LDFLAGS  = $(OPENMP_CFLAGS)
-tsv2bam_LDADD    = libcore.a $(BAM_LIBS)
-gstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
-gstacks_LDFLAGS  = $(OPENMP_CFLAGS)
-gstacks_LDADD    = libcore.a $(BAM_LIBS)
+process_radtags_LDADD    = $(LDADD) libclean.a
+process_shortreads_LDADD = $(LDADD) libclean.a
+clone_filter_LDADD       = $(LDADD) libclean.a
+kmer_filter_LDADD        = $(LDADD) libclean.a
+populations_LDADD        = $(LDADD) libpop.a
 
 dist_bin_SCRIPTS = scripts/denovo_map.pl scripts/ref_map.pl \
 	scripts/integrate_alignments.py scripts/count_fixed_catalog_snps.py \
@@ -139,8 +107,6 @@ TESTS = tests/process_radtags.t tests/kmer_filter.t tests/ustacks.t tests/pstack
 EXTRA_DIST = $(nobase_pkgdata_DATA) LICENSE INSTALL README ChangeLog $(TESTS)
 
 pkglocalstatedir = $(localstatedir)/$(PACKAGE)
-
-SUBDIRS = htslib .
 
 debug:
 	$(MAKE) all "CXXFLAGS=-g -Wall -DDEBUG -std=gnu++11"

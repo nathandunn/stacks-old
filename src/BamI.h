@@ -31,7 +31,7 @@
 #include <vector>
 #include <utility>
 
-#include "sam.h" //htslib
+#include "htslib/sam.h"
 
 #include "stacks.h"
 #include "input.h"
