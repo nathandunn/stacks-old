@@ -6,24 +6,22 @@ AC_INIT([Stacks], [2.0])
 AC_CONFIG_AUX_DIR([config])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign parallel-tests subdir-objects])
 AC_CONFIG_SRCDIR([src/ustacks.cc])
+AC_CONFIG_SRCDIR([htslib/hts.c])
 AC_CONFIG_HEADERS([config.h])
 m4_pattern_allow([AC_OPENMP])
 
 #
 # Get BAM, aka HTSLib library and include locations if requested
 #
-AC_ARG_ENABLE([bam],
-    AS_HELP_STRING([--disable-bam], [Disable use of BAM files through HTSLib.]))
-
-AS_IF([test "x$enable_bam" != "xno"], [
-AC_DEFINE([HAVE_BAM], [1], [Enable compilation with Samtools BAM library])
-
-BAM_CFLAGS='-I./htslib/htslib'
-AC_SUBST([BAM_CFLAGS])
-BAM_LIBS='./htslib/libhts.a'
-AC_SUBST([BAM_LIBS])
-
-])
+#AC_ARG_ENABLE([bam],
+#    AS_HELP_STRING([--disable-bam], [Disable use of BAM files through HTSLib.]))
+#AS_IF([test "x$enable_bam" != "xno"], [
+#AC_DEFINE([HAVE_BAM], [1], [Enable compilation with Samtools BAM library])
+#BAM_CFLAGS='-I./htslib/htslib'
+#AC_SUBST([BAM_CFLAGS])
+#BAM_LIBS='./htslib/libhts.a'
+#AC_SUBST([BAM_LIBS])
+#])
 
 # Checks for programs.
 AC_PROG_CXX
@@ -99,5 +97,5 @@ AC_REGEX_FUNC
 # For test harness
 AC_PROG_AWK
 
-AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([Makefile htslib/Makefile])
 AC_OUTPUT

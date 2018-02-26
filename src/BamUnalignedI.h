@@ -29,7 +29,7 @@
 #ifdef HAVE_BAM
 
 #include "input.h"
-#include "sam.h"
+#include "htslib/sam.h"
 
 class BamUnAln: public Input {
     htsFile   *bam_fh;
