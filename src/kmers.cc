@@ -37,7 +37,7 @@ int determine_kmer_length(int read_len, int dist) {
     // Increase the kmer_len until we start to miss hits at the given distance. Then
     // back the kmer_len off one unit to get the final value.
     //
-    for (kmer_len = 5; kmer_len < read_len; kmer_len += 2) {
+    for (kmer_len = 7; kmer_len < read_len; kmer_len += 2) {
         span = (kmer_len * (dist + 1)) - 1;
 
         min_matches = read_len - span;

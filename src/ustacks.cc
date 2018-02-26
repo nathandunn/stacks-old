@@ -37,8 +37,7 @@ int     num_threads       = 1;
 int     sample_id         = -1;
 bool    call_sec_hapl     = true;
 bool    set_kmer_len      = true;
-int     kmer_len          = 0;
-int     max_kmer_len      = 19;
+int     global_kmer_len   = 0;
 int     min_merge_cov     = 3;
 uint    max_subgraph      = 3;
 int     dump_graph        = 0;
@@ -503,14 +502,13 @@ search_for_gaps(map<int, MergedStack *> &merged)
         keys.push_back(it->first);
 
     //
-    // Calculate the number of k-mers we will generate. If kmer_len == 0,
-    // determine the optimal length for k-mers.
+    // Calculate the number of k-mers we will generate.
     //
-    int con_len = 0;
+    size_t con_len = 0;
     for (auto miter = merged.begin(); miter != merged.end(); miter++)
         con_len = miter->second->len > con_len ? miter->second->len : con_len;
-    int kmer_len  = 19;
-    int num_kmers = con_len - kmer_len + 1;
+    size_t kmer_len  =  set_kmer_len ? 19 : global_kmer_len;
+    size_t num_kmers = con_len - kmer_len + 1;
 
     //
     // Calculate the minimum number of matching k-mers required for a possible sequence match.
@@ -551,7 +549,7 @@ search_for_gaps(map<int, MergedStack *> &merged)
             generate_kmers_lazily(tag_1->con, kmer_len, num_kmers, query_kmers);
 
             uniq_kmers.clear();
-            for (int j = 0; j < num_kmers; j++)
+            for (uint j = 0; j < num_kmers; j++)
                 uniq_kmers.insert(query_kmers[j]);
 
             map<int, int> hits;
@@ -631,12 +629,10 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
     // Calculate the number of k-mers we will generate based on the longest sequence present.
     // If kmer_len == 0, determine the optimal length for k-mers.
     //
-    size_t kmer_len = 0;
     size_t con_len  = 0;
     for (auto miter = merged.begin(); miter != merged.end(); miter++)
         con_len = miter->second->len > con_len ? miter->second->len : con_len;
-    if (set_kmer_len)
-        kmer_len = determine_kmer_length(con_len, max_rem_dist);
+    size_t kmer_len = set_kmer_len ? determine_kmer_length(con_len, max_rem_dist) : global_kmer_len;
 
     //
     // Calculate the minimum number of matching k-mers required for a possible sequence match.
@@ -652,13 +648,18 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
     populate_kmer_hash(merged, kmer_map, kmer_map_keys, kmer_len);
     size_t utilized = 0;
 
-    #pragma omp parallel private(it)
+    #pragma omp parallel private(it), reduction(+: utilized)
     {
         KmerHashMap::iterator h;
         vector<char *> rem_kmers;
-        char  *buf       = new char[max_rem_len + 1];
-        size_t num_kmers = 0;
-
+        vector<pair<char, uint>> cigar;
+        string     seq;
+        GappedAln *aln = new GappedAln(max_rem_len);
+        AlignRes   a;
+        size_t     q_start, q_end, s_start, s_end;
+        char      *buf = new char[max_rem_len + 1];
+        size_t     num_kmers = 0;
+        
         #pragma omp for schedule(dynamic)
         for (uint j = 0; j < keys.size(); j++) {
             it = rem.find(keys[j]);
@@ -698,14 +699,6 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
                 int d = dist(tag_1, buf);
 
                 //
-                // The max_rem_dist distance allows for the possibility of a frameshift smaller
-                // or equal to max_rem_dist at the 3' end of the read. If we detect a possible
-                // frameshift, discard this read.
-                //
-                if (d <= max_rem_dist && check_frameshift(tag_1, buf, (size_t) max_rem_dist))
-                    continue;
-
-                //
                 // Store the distance between these two sequences if it is
                 // below the maximum distance
                 //
@@ -714,9 +707,11 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
                 }
             }
 
+            //
             // Check to see if there is a uniquely low distance, if so,
             // merge this remainder tag. If not, discard it, since we
             // can't locate a single best-fitting Stack to merge it into.
+            //
             map<int, int>::iterator s;
             int min_id = -1;
             int count  =  0;
@@ -732,19 +727,49 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
                 }
             }
 
+            //
             // Found a merge partner.
+            //
             if (min_id >= 0 && count == 1) {
                 r->utilized = true;
+                MergedStack *tag_1 = merged[min_id];
+
+                //
+                // The max_rem_dist distance allows for the possibility of a frameshift smaller
+                // or equal to max_rem_dist at the 3' end of the read. If we detect a possible
+                // frameshift, re-align just the tail of the read using the gapped alignment algorithm.
+                //
+                if (check_frameshift(tag_1, buf, max_rem_dist)) {
+
+                    q_start = tag_1->len - (max_rem_dist * 2) - 1;
+                    q_end   = tag_1->len - 1;
+                    s_start = r->seq->size() - (max_rem_dist * 2) - 1;
+                    s_end   = r->seq->size() - 1;
+
+                    aln->init(tag_1->len, r->seq->size(), true);
+
+                    if (aln->align_region(tag_1->con, buf, q_start, q_end, s_start, s_end)) {
+                        a = aln->result();
+                        parse_cigar(invert_cigar(a.cigar).c_str(), cigar);
+
+                        // Since we only aligned the tail region, adjust the CIGAR to keep the remaining sequence.
+                        if (cigar.size() > 0 && cigar[0].first == 'S') cigar[0].first = 'M';
+  
+                        seq = apply_cigar_to_seq(buf, cigar);
+                        r->add_seq(seq.c_str());
+                    }
+                }
+                utilized += r->count();
+
                 #pragma omp critical
                 {
-                    MergedStack* mtag = merged[min_id];
-                    mtag->remtags.push_back(it->first);
-                    mtag->count += it->second->count();
-                    utilized += it->second->count();
+                    tag_1->remtags.push_back(r->id);
+                    tag_1->count += r->count();
+                    cerr << "Merging remainder " << r->id << " into tag " << tag_1->id << "\n";
                 }
             }
         }
-
+        
         //
         // Free the k-mers we generated for this remainder read
         //
@@ -1562,11 +1587,10 @@ calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist)
     // Calculate the number of k-mers we will generate. If kmer_len == 0,
     // determine the optimal length for k-mers.
     //
-    size_t con_len = 0;
+    size_t con_len   = 0;
     for (auto miter = merged.begin(); miter != merged.end(); miter++)
         con_len = miter->second->len > con_len ? miter->second->len : con_len;
-    if (set_kmer_len)
-        kmer_len = determine_kmer_length(con_len, utag_dist);
+    size_t kmer_len  = set_kmer_len ? determine_kmer_length(con_len, utag_dist) : global_kmer_len;
     size_t num_kmers = con_len - kmer_len + 1;
 
     //
@@ -1603,7 +1627,7 @@ calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist)
             //
             // Lookup the occurances of each k-mer in the kmer_map
             //
-            for (int j = 0; j < num_kmers; j++) {
+            for (uint j = 0; j < num_kmers; j++) {
                 h = kmer_map.find(query_kmers[j]);
 
                 if (h != kmer_map.end())
@@ -1997,7 +2021,6 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
         for (k = tag_1->remtags.begin(); k != tag_1->remtags.end(); k++) {
             rem    = r[*k];
             total += rem->map.size();
-
             for (uint j = 0; j < rem->map.size(); j++)
                 sstr << sample_id << "\t"
                      << tag_1->id << "\t"
@@ -2485,8 +2508,8 @@ int parse_command_line(int argc, char* argv[]) {
             max_subgraph = is_integer(optarg);
             break;
         case 'k':
-            set_kmer_len = false;
-            kmer_len     = is_integer(optarg);
+            set_kmer_len    = false;
+            global_kmer_len = is_integer(optarg);
             break;
         case 'R':
             retain_rem_reads = true;
@@ -2559,8 +2582,8 @@ int parse_command_line(int argc, char* argv[]) {
         help();
     }
 
-    if (set_kmer_len == false && (kmer_len < 5 || kmer_len > 31)) {
-        cerr << "Kmer length must be between 5 and 31bp.\n";
+    if (set_kmer_len == false && (global_kmer_len < 7 || global_kmer_len > 31)) {
+        cerr << "Kmer length must be between 7 and 31bp.\n";
         help();
     }
 
