@@ -791,7 +791,7 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
     //
     int min_hits = (round((double) con_len * min_match_len) - (gapped_kmer_len * max_gaps)) - gapped_kmer_len + 1;
 
-    cerr << "  Searching with a k-mer length of " << gapped_kmer_len << " (" << num_kmers << " k-mers per read); " << min_hits << " k-mer hits required.\n";
+    // cerr << "  Searching with a k-mer length of " << gapped_kmer_len << " (" << num_kmers << " k-mers per read); " << min_hits << " k-mer hits required.\n";
 
     uint gapped_aln = 0;
     uint matches    = 0;

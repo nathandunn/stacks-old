@@ -765,7 +765,6 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
                 {
                     tag_1->remtags.push_back(r->id);
                     tag_1->count += r->count();
-                    cerr << "Merging remainder " << r->id << " into tag " << tag_1->id << "\n";
                 }
             }
         }
