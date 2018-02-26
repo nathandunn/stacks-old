@@ -812,6 +812,10 @@ SiteCall MarukiLowModel::call(const SiteCounts& depths) const {
     // prior.
     double e = 3.0 / 2.0 * (dp_tot - n_M_tot - n_m_tot + 0.1) / double(dp_tot + 0.1);
     assert(e > 0.0 && e < 1.0);
+    #pragma omp atomic
+    ++n_called_sites_;
+    #pragma omp atomic
+    sum_site_err_rates_ += e;
 
     // 2. Base likelihoods.
     vector<LikData> liks;

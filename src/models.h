@@ -196,12 +196,14 @@ class MarukiLowModel : public Model {
 
     mutable size_t n_wsum_tot_;
     mutable size_t n_wsum_underflows_;
+    mutable size_t n_called_sites_;
+    mutable double sum_site_err_rates_;
 
 public:
     MarukiLowModel(double gt_alpha, double var_alpha)
         : gt_alpha_(gt_alpha), gt_threshold_(qchisq(gt_alpha_,1)),
           var_alpha_(var_alpha), var_threshold_(qchisq(var_alpha_,2)), // df=2
-          n_wsum_tot_(0), n_wsum_underflows_(0)
+          n_wsum_tot_(0), n_wsum_underflows_(0), n_called_sites_(0), sum_site_err_rates_(0.0)
         {}
 
     SiteCall call(const SiteCounts& depths) const;
@@ -209,6 +211,7 @@ public:
         {os << to_string(modelt::marukilow) << " (var_alpha: "  << var_alpha_ << ", gt_alpha: " << gt_alpha_ << ")";}
     size_t n_wsum_tot() const {return n_wsum_tot_;}
     size_t n_wsum_underflows() const {return n_wsum_underflows_;}
+    double mean_err_rate() const {return sum_site_err_rates_ / n_called_sites_;}
 };
 
 //
