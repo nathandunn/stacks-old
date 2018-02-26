@@ -639,13 +639,17 @@ try {
 
     #ifdef DEBUG
     const MarukiLowModel* m = dynamic_cast<const MarukiLowModel*>(model.get());
-    if (m != NULL)
+    if (m != NULL) {
         // Report how often the "underflow" likelihood equations were used
-        cout << "\nDEBUG: marukilow: calc_ln_weighted_sums: "
+        cout << "\n"
+             << "DEBUG: marukilow: calc_ln_weighted_sums: "
              << m->n_wsum_tot() << " calls, "
              << m->n_wsum_underflows() << " underflows ("
              << as_percentage(m->n_wsum_underflows(), m->n_wsum_tot())
              << ").\n";
+        cout << "DEBUG: marukilow: mean_err_rate: "
+             << m->mean_err_rate() << '\n';
+    }
     #endif
 
     //
