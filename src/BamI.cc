@@ -55,7 +55,7 @@ void BamRecord::assign(
     // Determine the length of `data`.
     size_t l_aux = rg.length() + 1;
     r_->l_data = r_->core.l_qname + r_->core.n_cigar*sizeof(uint32_t) + seq.nbytes() + seq.length() + l_aux;
-    if (r_->l_data > r_->m_data) {
+    if ((uint)r_->l_data > r_->m_data) {
         if (r_->data != NULL)
             free(r_->data);
         r_->m_data = r_->l_data;
