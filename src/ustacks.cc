@@ -385,9 +385,9 @@ edit_gapped_seqs(map<int, Stack *> &unique, map<int, Rem *> &rem, MergedStack *t
     int    stack_id;
     Stack *s;
     Rem   *r;
-    char  *buf = new char[tag->len + 1];
+    char  *buf = new char[cigar_length_padded(cigar) + 1];
     string seq;
-    
+
     for (uint i = 0; i < tag->utags.size(); i++) {
         stack_id = tag->utags[i];
         s = unique[stack_id];
@@ -761,7 +761,7 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map
                         // the cigar will be a single match element, e.g. 150M.
                         //
                         if (cigar.size() > 1) {
-                            frameshift_found == true;
+                            frameshift_found = true;
                         
                             invert_cigar(cigar);
                         
