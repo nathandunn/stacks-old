@@ -611,7 +611,7 @@ find_matches_by_sequence(map<int, Locus *> &sample_1, map<int, QLocus *> &sample
             set<int> loci_hit;
 
             for (q = query->strings.begin(); q != query->strings.end(); q++) {
-                // cerr << "  Looking for haplotype: " << q->first << " with sequence " << q->second.substr(0, min_tag_len) << "\n";
+                cerr << "  Looking for haplotype: " << q->first << " with sequence " << q->second.substr(0, min_tag_len) << "\n";
 
                 hit = sample_1_map.find(q->second.substr(0, min_tag_len).c_str());
 
@@ -950,7 +950,7 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
                         aln->parse_cigar(cigar);
 
                         aln_res = aln->result();
-
+                        cerr << "CIGAR: " << aln_res.cigar << "; pct_id: " << aln_res.pct_id << "\n";
                         //
                         // At this point in the analysis, all possible alleles we want to detect must already
                         // be present in the catalog. Therefore, we should reject any alignment that implies a
@@ -967,7 +967,7 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
                         if (aln_res.gap_cnt <= (max_gaps + 1) &&
                             aln_res.pct_id  >= min_match_len  &&
                             dist(cat_seq.c_str(), query_seq.c_str(), cigar) == 0) {
-                            // cerr << "Adding match: " << aln_res.cigar << "\n";
+                            cerr << "Adding match: " << aln_res.cigar << "\n";
                             loci_hit.insert(tag_2->id);
                             query_hits[query_allele][cat_allele] = aln_res;
                         }

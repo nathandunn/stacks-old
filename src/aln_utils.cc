@@ -75,6 +75,75 @@ invert_cigar(string cigar)
 }
 
 int
+invert_cigar(Cigar &cigar)
+{
+    for (uint i = 0; i < cigar.size(); i++) {
+        if (cigar[i].first == 'I')
+            cigar[i].first = 'D';
+        else if (cigar[i].first == 'D')
+            cigar[i].first = 'I';
+    }
+
+    return 0;
+}
+
+int
+convert_local_cigar_to_global(Cigar &cigar)
+{
+    int diff;
+    uint i   = 0;
+    uint len = cigar.size();
+    if (cigar.front().first == 'S') {
+        cigar.front().first = 'M';
+        i++;
+    }
+    for (; i < len - 1; i++) {
+        switch(cigar[i].first) {
+        case 'D':
+            if (cigar.back().first == 'S') {
+                cigar.back().first = 'I';
+                if ( (diff = cigar.back().second - cigar[i].second) > 0 )
+                    cigar.push_back({'S', diff});
+            }
+            break;
+        case 'I':
+            break;
+        }
+    }
+
+    Cigar consolidated_cigar;
+    i = 0;
+    uint msum = 0;
+    while (i < cigar.size() && cigar[i].first == 'M') {
+        msum += cigar[i].second;
+        i++;
+    }
+    uint  j    = cigar.size() - 1;
+    uint  dsum = 0;
+    while (j > 0 && cigar[j].first == 'D') {
+        dsum += cigar[j].second;
+        j--;
+    }
+
+    if (msum > 0)
+        consolidated_cigar.push_back({'M', msum});
+    for (uint k = i; k < cigar.size() && k <= j; k++)
+        consolidated_cigar.push_back(cigar[k]);
+    if (dsum > 0)
+        consolidated_cigar.push_back({'D', dsum});
+
+    //
+    // Convert any remaining 3' softmasked sequence to matches.
+    //
+    if (consolidated_cigar.back().first == 'S')
+        consolidated_cigar.back().first = 'M';
+    
+    cigar = consolidated_cigar;
+
+    return 0;
+}
+
+int
 parse_cigar(const char *cigar_str, Cigar &cigar, bool check_correctness)
 {
     assert(cigar_str && *cigar_str);
