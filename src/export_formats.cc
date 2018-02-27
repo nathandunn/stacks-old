@@ -2326,7 +2326,7 @@ VcfExport::write_site(const CSLocus* cloc,
             else
                 sample << ":.";
             // GQ.
-            assert(d[s]->snpdata[index].gq != -1);
+            assert(d[s]->snpdata[index].gq != UINT8_MAX);
             sample << ':' << int(d[s]->snpdata[index].gq);
             // GL.
             sample << ':' << VcfRecord::util::fmt_gt_gl(alleles, d[s]->snpdata[index].gtliks);
