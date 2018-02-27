@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2016, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2016-2018, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -32,6 +32,8 @@ extern const bool is_cigar_char[256];
 ostream& operator<< (ostream&, const Cigar&);
 
 string invert_cigar(string);
+int    invert_cigar(Cigar &cigar);
+int    convert_local_cigar_to_global(Cigar &cigar);
 int    parse_cigar(const char*, Cigar&, bool check_correctness = false);
 string apply_cigar_to_seq(const char*, const Cigar&);
 string remove_cigar_from_seq(const char*, const Cigar&);
