@@ -186,6 +186,7 @@ int main (int argc, char* argv[]) {
     calc_kmer_distance(merged, max_utag_dist);
     size_t n_blacklisted;
     merge_stacks(merged, n_blacklisted);
+    call_consensus(merged, unique, remainders, false);
     cerr << "  Assembled " << unique.size()-n_high_cov << " stacks into " << merged.size()
          << "; blacklisted " << n_blacklisted << " stacks.\n";
     calc_coverage_distribution(merged, cov_mean, cov_stdev, cov_max, n_used_reads);
@@ -197,8 +198,8 @@ int main (int argc, char* argv[]) {
     // Merge secondary stacks.
     //
     cerr << "Merging secondary stacks (max. dist. N=" << max_rem_dist << " from consensus)...\n";
+    size_t utilized = merge_remainders(merged, unique, remainders);
     call_consensus(merged, unique, remainders, false);
-    size_t utilized = merge_remainders(merged, remainders);
     cerr << "  Merged " << utilized << " out of " << n_r_reads << " secondary reads (" << as_percentage( (double)utilized / (double)n_r_reads) << ").\n";
 
     calc_coverage_distribution(merged, cov_mean, cov_stdev, cov_max, n_used_reads);
@@ -610,7 +611,7 @@ search_for_gaps(map<int, MergedStack *> &merged)
 }
 
 size_t
-merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
+merge_remainders(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map<int, Rem *> &rem)
 {
     map<int, Rem *>::iterator it;
 
@@ -733,12 +734,14 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
             if (min_id >= 0 && count == 1) {
                 r->utilized = true;
                 MergedStack *tag_1 = merged[min_id];
-
+                
                 //
                 // The max_rem_dist distance allows for the possibility of a frameshift smaller
                 // or equal to max_rem_dist at the 3' end of the read. If we detect a possible
                 // frameshift, re-align just the tail of the read using the gapped alignment algorithm.
                 //
+                bool frameshift_found = false;
+
                 if (check_frameshift(tag_1, buf, max_rem_dist)) {
 
                     q_start = tag_1->len - (max_rem_dist * 2) - 1;
@@ -750,12 +753,36 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
 
                     if (aln->align_region(tag_1->con, buf, q_start, q_end, s_start, s_end)) {
                         a = aln->result();
-                        parse_cigar(invert_cigar(a.cigar).c_str(), cigar);
+                        parse_cigar(a.cigar.c_str(), cigar);
+                        convert_local_cigar_to_global(cigar);
 
-                        // Since we only aligned the tail region, adjust the CIGAR to keep the remaining sequence.
-                        if (cigar.size() > 0 && cigar[0].first == 'S') cigar[0].first = 'M';
-  
-                        seq = apply_cigar_to_seq(buf, cigar);
+                        //
+                        // If, in the end, the gapped alignment did not yield a frameshit,
+                        // the cigar will be a single match element, e.g. 150M.
+                        //
+                        if (cigar.size() > 1) {
+                            frameshift_found == true;
+                        
+                            invert_cigar(cigar);
+                        
+                            seq = apply_cigar_to_seq(buf, cigar);
+                            r->add_seq(seq.c_str());
+
+                            invert_cigar(cigar);
+                            seq = apply_cigar_to_seq(tag_1->con, cigar);
+                        }
+                    }
+
+                } else {
+                    //
+                    // Check to make sure the remainder read has been corrected for length (as a previous
+                    // remainder read may have extended the length of the locus).
+                    //
+                    cigar.clear();
+                    cigar.push_back({'M', r->seq->size()});
+                    if (r->seq->size() < tag_1->len) {
+                        cigar_extend_right(cigar, tag_1->len - r->seq->size());
+                        seq = apply_cigar_to_seq(r->seq->seq().c_str(), cigar);
                         r->add_seq(seq.c_str());
                     }
                 }
@@ -763,6 +790,19 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
 
                 #pragma omp critical
                 {
+                    if (frameshift_found) {
+                        edit_gapped_seqs(unique, rem, tag_1, cigar);
+                        update_consensus(tag_1, unique, rem);
+                        //
+                        // Record the gaps.
+                        //
+                        uint pos = 0;
+                        for (uint j = 0; j < cigar.size(); j++) {
+                            if (cigar[j].first == 'I' || cigar[j].first == 'D')
+                                tag_1->gaps.push_back(Gap(pos, pos + cigar[j].second));
+                            pos += cigar[j].second;
+                        }
+                    }
                     tag_1->remtags.push_back(r->id);
                     tag_1->count += r->count();
                 }
@@ -893,25 +933,6 @@ call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map<i
             uint cur_gap = mtag->gaps.size() > 0 ? 0 : 1;
 
             for (col = 0; col < length; col++) {
-                //
-                // Don't invoke the model within gaps.
-                //
-                if (cur_gap < mtag->gaps.size() && col == mtag->gaps[cur_gap].start) {
-                    do {
-                        con += 'N';
-                        SNP *snp    = new SNP;
-                        snp->type   = snp_type_unk;
-                        snp->col    = col;
-                        snp->rank_1 = '-';
-                        snp->rank_2 = '-';
-                        mtag->snps.push_back(snp);
-                        col++;
-                    } while (col < mtag->gaps[cur_gap].end && col < length);
-                    col--;
-                    cur_gap++;
-                    continue;
-                }
-
                 nuc['A'] = 0;
                 nuc['G'] = 0;
                 nuc['C'] = 0;
@@ -938,7 +959,25 @@ call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map<i
                 //
                 // Search this column for the presence of a SNP
                 //
-                if (invoke_model)
+                if (invoke_model) {
+                    //
+                    // Don't invoke the model within gaps.
+                    //
+                    if (cur_gap < mtag->gaps.size() && col == mtag->gaps[cur_gap].start) {
+                        do {
+                            SNP *snp    = new SNP;
+                            snp->type   = snp_type_unk;
+                            snp->col    = col;
+                            snp->rank_1 = '-';
+                            snp->rank_2 = '-';
+                            mtag->snps.push_back(snp);
+                            col++;
+                        } while (col < mtag->gaps[cur_gap].end && col < length);
+                        col--;
+                        cur_gap++;
+                        continue;
+                    }
+                    
                     switch(model_type) {
                     case snp:
                         call_multinomial_snp(mtag, col, nuc, true);
@@ -953,6 +992,7 @@ call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map<i
                         DOES_NOT_HAPPEN;
                         break;
                     }
+                }
             }
 
             if (invoke_model) {
@@ -973,6 +1013,76 @@ call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map<i
             mtag->add_consensus(con.c_str());
         }
     }
+
+    return 0;
+}
+
+int
+update_consensus(MergedStack *mtag, map<int, Stack *> &unique, map<int, Rem *> &rem)
+{
+    Stack *utag;
+    Rem   *r;
+    //
+    // Create a two-dimensional array, each row containing one read. For
+    // each unique tag that has been merged together, add the sequence for
+    // that tag into our array as many times as it originally occurred.
+    //
+    vector<DNANSeq *> reads;
+
+    for (auto j = mtag->utags.begin(); j != mtag->utags.end(); j++) {
+        utag = unique[*j];
+
+        for (uint k = 0; k < utag->count(); k++)
+            reads.push_back(utag->seq);
+    }
+
+    // For each remainder tag that has been merged into this Stack, add the sequence.
+    for (auto j = mtag->remtags.begin(); j != mtag->remtags.end(); j++) {
+        r = rem[*j];
+
+        for (uint k = 0; k < r->count(); k++)
+            reads.push_back(r->seq);
+    }
+
+    //
+    // Iterate over each column of the array and call the consensus base.
+    //
+    string con;
+    uint   row, col;
+    uint   length = reads[0]->size();
+    uint   height = reads.size();
+    map<char, int> nuc;
+    map<char, int>::iterator max, n;
+    DNANSeq *d;
+
+    con.reserve(length);
+
+    for (col = 0; col < length; col++) {
+        nuc['A'] = 0;
+        nuc['G'] = 0;
+        nuc['C'] = 0;
+        nuc['T'] = 0;
+
+        for (row = 0; row < height; row++) {
+            d = reads[row];
+            if (nuc.count((*d)[col]))
+                nuc[(*d)[col]]++;
+        }
+
+        //
+        // Find the base with a plurality of occurances and call it.
+        //
+        max = nuc.end();
+
+        for (n = nuc.begin(); n != nuc.end(); n++) {
+
+            if (max == nuc.end() || n->second > max->second)
+                max = n;
+        }
+        con += max->first;
+    }
+
+    mtag->add_consensus(con.c_str());
 
     return 0;
 }
@@ -1211,6 +1321,9 @@ merge_tags(MergedStack *tag_1, MergedStack *tag_2, int id)
     for (uint i = 0; i < tag_1->remtags.size(); i++)
         new_tag->remtags.push_back(tag_1->remtags[i]);
 
+    for (uint i = 0; i < tag_1->gaps.size(); i++)
+        new_tag->gaps.push_back(tag_1->gaps[i]);
+
     new_tag->count = tag_1->count;
 
     for (uint i = 0; i < tag_2->utags.size(); i++)
@@ -1219,20 +1332,21 @@ merge_tags(MergedStack *tag_1, MergedStack *tag_2, int id)
     for (uint i = 0; i < tag_2->remtags.size(); i++)
         new_tag->remtags.push_back(tag_2->remtags[i]);
 
+    for (uint i = 0; i < tag_2->gaps.size(); i++)
+        new_tag->gaps.push_back(tag_2->gaps[i]);
+
     new_tag->count += tag_2->count;
 
     return new_tag;
 }
 
 MergedStack *merge_tags(map<int, MergedStack *> &merged, set<int> &merge_list, int id) {
-    set<int>::iterator    i;
-    vector<int>::iterator j;
     MergedStack *tag_1, *tag_2;
 
     tag_1     = new MergedStack;
     tag_1->id = id;
 
-    for (i = merge_list.begin(); i != merge_list.end(); i++) {
+    for (auto i = merge_list.begin(); i != merge_list.end(); i++) {
         tag_2 = merged[(*i)];
 
         tag_1->deleveraged     = tag_2->deleveraged     ? true : tag_1->deleveraged;
@@ -1240,11 +1354,14 @@ MergedStack *merge_tags(map<int, MergedStack *> &merged, set<int> &merge_list, i
         tag_1->blacklisted     = tag_2->blacklisted     ? true : tag_1->blacklisted;
         tag_1->lumberjackstack = tag_2->lumberjackstack ? true : tag_1->lumberjackstack;
 
-        for (j = tag_2->utags.begin(); j != tag_2->utags.end(); j++)
+        for (auto j = tag_2->utags.begin(); j != tag_2->utags.end(); j++)
             tag_1->utags.push_back(*j);
 
-        for (j = tag_2->remtags.begin(); j != tag_2->remtags.end(); j++)
+        for (auto j = tag_2->remtags.begin(); j != tag_2->remtags.end(); j++)
             tag_1->remtags.push_back(*j);
+
+        for (auto j = tag_2->gaps.begin(); j != tag_2->gaps.end(); j++)
+            tag_1->gaps.push_back(*j);
 
         tag_1->count += tag_2->count;
     }
@@ -1273,6 +1390,9 @@ MergedStack *merge_tags(map<int, MergedStack *> &merged, int *merge_list, int me
 
         for (j = tag_2->remtags.begin(); j != tag_2->remtags.end(); j++)
             tag_1->remtags.push_back(*j);
+
+        for (auto j = tag_2->gaps.begin(); j != tag_2->gaps.end(); j++)
+            tag_1->gaps.push_back(*j);
 
         tag_1->count += tag_2->count;
     }
