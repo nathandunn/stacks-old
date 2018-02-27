@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2018, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -20,12 +20,6 @@
 
 //
 // mstack.cc -- implementation of the MergedStack Class
-//
-// Julian Catchen
-// jcatchen@uoregon.edu
-// University of Oregon
-//
-// $Id: mstack.cc 1987 2010-11-01 05:43:50Z catchen $
 //
 
 #include "mstack.h"

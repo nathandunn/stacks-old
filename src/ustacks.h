@@ -90,7 +90,8 @@ int    populate_merged_tags(map<int, Stack *> &, map<int, MergedStack *> &);
 void   merge_stacks(map<int, MergedStack *> &, size_t &);
 int    call_consensus(map<int, MergedStack *> &, map<int, Stack *> &, map<int, Rem *> &, bool);
 int    call_alleles(MergedStack *, vector<DNANSeq *> &, vector<read_type> &);
-size_t merge_remainders(map<int, MergedStack *> &, map<int, Rem *> &);
+int    update_consensus(MergedStack *, map<int, Stack *> &, map<int, Rem *> &);
+size_t merge_remainders(map<int, MergedStack *> &, map<int, Stack *> &, map<int, Rem *> &);
 int    write_results(map<int, MergedStack *> &, map<int, Stack *> &, map<int, Rem *> &);
 
 //
