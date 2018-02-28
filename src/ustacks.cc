@@ -213,9 +213,9 @@ int main (int argc, char* argv[]) {
     if (gapped_alignments) {
         cerr << "Assembling stacks, allowing for gaps (min. match length " << as_percentage(min_match_len) << ")...\n";
         const size_t n_ungapped_loci = merged.size();
-        call_consensus(merged, unique, remainders, false);
         search_for_gaps(merged);
         merge_gapped_alns(unique, remainders, merged);
+        call_consensus(merged, unique, remainders, false);
         cerr << "  Assembled " << n_ungapped_loci << " stacks into " << merged.size() << " stacks.\n";
 
         calc_coverage_distribution(merged, cov_mean, cov_stdev, cov_max, n_used_reads);
@@ -509,7 +509,6 @@ search_for_gaps(map<int, MergedStack *> &merged)
     for (auto miter = merged.begin(); miter != merged.end(); miter++)
         con_len = miter->second->len > con_len ? miter->second->len : con_len;
     size_t kmer_len  = set_kmer_len ? 19 : global_kmer_len;
-    size_t num_kmers = con_len - kmer_len + 1;
 
     //
     // Calculate the minimum number of matching k-mers required for a possible sequence match.
@@ -520,7 +519,7 @@ search_for_gaps(map<int, MergedStack *> &merged)
 
     populate_kmer_hash(merged, kmer_map, kmer_map_keys, kmer_len);
 
-    #pragma omp parallel private(tag_1, tag_2, num_kmers)
+    #pragma omp parallel private(tag_1, tag_2)
     {
         KmerHashMap::iterator h;
         vector<char *> query_kmers;
@@ -528,6 +527,7 @@ search_for_gaps(map<int, MergedStack *> &merged)
         GappedAln     *aln = new GappedAln(con_len);
         AlignRes       a;
 
+        size_t num_kmers = con_len - kmer_len + 1;
         initialize_kmers(kmer_len, num_kmers, query_kmers);
 
         #pragma omp for schedule(dynamic)
@@ -929,7 +929,7 @@ call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map<i
             uint height = reads.size();
             string con;
             map<char, int> nuc;
-            map<char, int>::iterator max, n;
+            map<char, int>::iterator max;
             DNANSeq *d;
 
             uint cur_gap = mtag->gaps.size() > 0 ? 0 : 1;
@@ -951,8 +951,7 @@ call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map<i
                 //
                 max = nuc.end();
 
-                for (n = nuc.begin(); n != nuc.end(); n++) {
-
+                for (auto n = nuc.begin(); n != nuc.end(); n++) {
                     if (max == nuc.end() || n->second > max->second)
                         max = n;
                 }
@@ -965,21 +964,20 @@ call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map<i
                     //
                     // Don't invoke the model within gaps.
                     //
-                    if (cur_gap < mtag->gaps.size() && col == mtag->gaps[cur_gap].start) {
-                        do {
-                            SNP *snp    = new SNP;
-                            snp->type   = snp_type_unk;
-                            snp->col    = col;
-                            snp->rank_1 = '-';
-                            snp->rank_2 = '-';
-                            mtag->snps.push_back(snp);
-                            col++;
-                        } while (col < mtag->gaps[cur_gap].end && col < length);
-                        col--;
-                        cur_gap++;
+                    if (cur_gap < mtag->gaps.size() &&
+                        col >= mtag->gaps[cur_gap].start && col <= mtag->gaps[cur_gap].end) {
+                        SNP *snp    = new SNP;
+                        snp->type   = snp_type_unk;
+                        snp->col    = col;
+                        snp->rank_1 = '-';
+                        snp->rank_2 = '-';
+                        mtag->snps.push_back(snp);
+
+                        if (col == mtag->gaps[cur_gap].end)
+                            cur_gap++;
                         continue;
                     }
-                    
+
                     switch(model_type) {
                     case snp:
                         call_multinomial_snp(mtag, col, nuc, true);
@@ -997,7 +995,11 @@ call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map<i
                 }
             }
 
+            assert(con.length() == length);
+
             if (invoke_model) {
+                assert(mtag->snps.size() == length);
+
                 call_alleles(mtag, reads, read_types);
 
                 if (model_type == ::fixed) {
@@ -1712,7 +1714,6 @@ calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist)
     for (auto miter = merged.begin(); miter != merged.end(); miter++)
         con_len = miter->second->len > con_len ? miter->second->len : con_len;
     size_t kmer_len  = set_kmer_len ? determine_kmer_length(con_len, utag_dist) : global_kmer_len;
-    size_t num_kmers = con_len - kmer_len + 1;
 
     //
     // Calculate the minimum number of matching k-mers required for a possible sequence match.
@@ -1725,11 +1726,12 @@ calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist)
 
     populate_kmer_hash(merged, kmer_map, kmer_map_keys, kmer_len);
 
-    #pragma omp parallel private(tag_1, tag_2, num_kmers)
+    #pragma omp parallel private(tag_1, tag_2)
     {
         KmerHashMap::iterator h;
         vector<char *>        query_kmers;
 
+        size_t num_kmers = con_len - kmer_len + 1;
         initialize_kmers(kmer_len, num_kmers, query_kmers);
 
         #pragma omp for schedule(dynamic)
