@@ -461,8 +461,8 @@ BatchLocusProcessor::init_stacks_loci(string in_path, string pmap_path)
     //
     // Open the files.
     //
-    string catalog_fa_path  = in_path + "gstacks.fa.gz";
-    string catalog_vcf_path = in_path + "gstacks.vcf.gz";
+    string catalog_fa_path  = in_path + "catalog.fa.gz";
+    string catalog_vcf_path = in_path + "catalog.calls";
 
     this->_fasta_reader.open(catalog_fa_path);
     this->_cloc_reader.open(catalog_vcf_path);
