@@ -436,6 +436,9 @@ VersatileLineReader::open(string &path)
     std::regex_search(this->path_, m, std::regex("\\.[Gg][Zz]$"));
     this->is_gzipped_ = !m.empty();
 
+    if (path.compare(path.length()-strlen("gstacks.calls"), string::npos, "gstacks.calls") == 0)
+        is_gzipped_ = true;
+
     if (!this->is_gzipped_) {
         this->ifs_.open(this->path_);
         check_open(this->ifs_, this->path_);
@@ -525,6 +528,9 @@ VersatileWriter::VersatileWriter(const string& path)
     std::smatch m;
     std::regex_search(path, m, std::regex("\\.[Gg][Zz]$"));
     is_gzipped_ = !m.empty();
+
+    if (path.compare(path.length()-strlen("gstacks.calls"), string::npos, "gstacks.calls") == 0)
+        is_gzipped_ = true;
 
     if (!is_gzipped_) {
         ofs_.open(path_);
