@@ -521,16 +521,15 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
     //
     int con_len   = strlen(sample[keys[0]]->con);
     if (set_kmer_len) kmer_len = determine_kmer_length(con_len, ctag_dist);
-    int num_kmers = con_len - kmer_len + 1;
 
     //
     // Calculate the minimum number of matching k-mers required for a possible sequence match.
     //
     int min_hits = calc_min_kmer_matches(kmer_len, ctag_dist, con_len, set_kmer_len ? true : false);
 
-    cerr << "  Distance allowed between stacks: " << ctag_dist
-         << "; searching with a k-mer length of " << kmer_len << " (" << num_kmers << " k-mers per read); "
-         << min_hits << " k-mer hits required.\n";
+    // cerr << "  Distance allowed between stacks: " << ctag_dist
+    //      << "; searching with a k-mer length of " << kmer_len << " (" << num_kmers << " k-mers per read); "
+    //      << min_hits << " k-mer hits required.\n";
 
     // clock_t time_1, time_2, time_3, time_4;
     // double  per_locus = 0.0;
@@ -551,6 +550,7 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
         uint                    hit_cnt, index, prev_id, allele_id, hits_size;
         int                     d;
         pair<allele_type, int>  cat_hit;
+        int                     num_kmers = con_len - kmer_len + 1;
 
         initialize_kmers(kmer_len, num_kmers, kmers);
 
@@ -562,6 +562,7 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
 
             for (allele = tag_1->strings.begin(); allele != tag_1->strings.end(); allele++) {
 
+                num_kmers = allele->second.length() - kmer_len + 1;
                 generate_kmers_lazily(allele->second.c_str(), kmer_len, num_kmers, kmers);
 
                 //
@@ -698,14 +699,13 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
     //
     int con_len   = strlen(sample[keys[0]]->con);
     int kmer_len  = 19;
-    int num_kmers = con_len - kmer_len + 1;
 
     //
     // Calculate the minimum number of matching k-mers required for a possible sequence match.
     //
     int min_hits = (round((double) con_len * min_match_len) - (kmer_len * max_gaps)) - kmer_len + 1;
 
-    cerr << "  Searching with a k-mer length of " << kmer_len << " (" << num_kmers << " k-mers per read); " << min_hits << " k-mer hits required.\n";
+    // cerr << "  Searching with a k-mer length of " << kmer_len << " (" << num_kmers << " k-mers per read); " << min_hits << " k-mer hits required.\n";
 
     // clock_t time_1, time_2, time_3, time_4;
     // double  per_locus = 0.0;
@@ -727,6 +727,7 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
         vector<pair<char, uint> > cigar;
         pair<allele_type, int>    cat_hit;
         string                    cat_seq;
+        int                       num_kmers = con_len - kmer_len + 1;
 
         GappedAln *aln = new GappedAln();
 
@@ -744,8 +745,9 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
 
             // time_3 = clock();
 
-            for (vector<pair<allele_type, string> >::iterator allele = tag_1->strings.begin(); allele != tag_1->strings.end(); allele++) {
+            for (auto allele = tag_1->strings.begin(); allele != tag_1->strings.end(); allele++) {
 
+                num_kmers = allele->second.length() - kmer_len + 1;
                 generate_kmers_lazily(allele->second.c_str(), kmer_len, num_kmers, kmers);
 
                 //
@@ -762,7 +764,7 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
                 //
                 // Lookup the occurances of each k-mer in the kmer_map
                 //
-                for (set<string>::iterator j = uniq_kmers.begin(); j != uniq_kmers.end(); j++) {
+                for (auto j = uniq_kmers.begin(); j != uniq_kmers.end(); j++) {
 
                     h = kmer_map.find(j->c_str());
 
@@ -785,8 +787,8 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
                 if (hits_size == 0)
                     continue;
 
-                prev_id   = hits[0];
-                index     = 0;
+                prev_id = hits[0];
+                index   = 0;
 
                 do {
                     hit_cnt   = 0;
