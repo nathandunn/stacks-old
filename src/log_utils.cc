@@ -190,7 +190,7 @@ void ProgressMeter::done()
 
 LogAlterator::LogAlterator(const string& prefix, bool distribs, bool quiet, int argc, char** argv)
     : log_path(prefix + ".log")
-    , distribs_path(prefix + ".distribs")
+    , distribs_path(prefix + ".log.distribs")
     , l(log_path)
     , o(cout.rdbuf())
     , e(cerr.rdbuf())

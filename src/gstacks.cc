@@ -41,7 +41,7 @@ string         popmap_path;  // Set if --popmap is given. For logging purposes.
 vector<string> sample_names; // Set if --popmap is given.
 vector<string> in_bams;      // Set if -B is given, or if -P is given without -M.
 
-string o_prefix;
+string out_dir;
 
 BamCLocBuilder::Config refbased_cfg {true, 1000, 10, 0.20, 1, false, 1};
 
@@ -90,7 +90,7 @@ ofstream o_hapgraphs_f;
 const char o_aln_header[] =
     "# This prints observed read haplotypes:\n"
     "# show_loc() { loc=$1; cat ./gstacks.alns | sed -n \"/^END $loc\\b/ q; /^BEGIN $loc\\b/,$ p\" | tail -n+2; }\n"
-    "# snp_cols() { loc=$1; zcat ./gstacks.vcf.gz | awk \"\\$1==$loc; \\$1>$loc {exit}\" | awk '$5!=\".\"' | cut -f2 | paste -sd ','; }\n"
+    "# snp_cols() { loc=$1; zcat ./gstacks.calls | awk \"\\$1==$loc; \\$1>$loc {exit}\" | awk '$5!=\".\"' | cut -f2 | paste -sd ','; }\n"
     "# show_haps() { loc=$1; cols=$2; spl=$3; show_loc $loc | grep \"\\b$spl\\b\" | cut -f3 | cut -c \"${cols//./,}\" | sort; }\n"
     "# format_haps() { loc=$1; cols=$2; spl=$3; show_haps $loc $cols $spl | transpose-ch | paste <(echo $cols | tr ,. '\\n' | xargs printf '% 4s\\n') - | sed 's/\\t/  /' | seq.color | { echo; echo $loc/$spl; echo; cat; echo; }; }\n"
     "# true_loci() { loc=$1; spl=$2; show_loc $loc | grep \"\\b$spl\\b\" | grep -v ref | cut -d: -f1 | sort -u; }\n"
@@ -127,7 +127,7 @@ try {
     //
     // Open the log.
     //
-    logger.reset(new LogAlterator(o_prefix, true, quiet, argc, argv));
+    logger.reset(new LogAlterator(out_dir + "gstacks", true, quiet, argc, argv));
     report_options(cout);
     cout << "\n" << flush;
 
@@ -154,7 +154,7 @@ try {
     //
     // Open the output files.
     //
-    string o_gzfasta_path = o_prefix + ".fa.gz";
+    string o_gzfasta_path = out_dir + "catalog.fa.gz";
     o_gzfasta_f = gzopen(o_gzfasta_path.c_str(), "wb");
     check_open(o_gzfasta_f, o_gzfasta_path);
 
@@ -162,22 +162,22 @@ try {
     vcf_header.add_std_meta();
     for(size_t s : bam_mpopi->sample_indexes_orig_order())
         vcf_header.add_sample(bam_mpopi->samples()[s].name);
-    o_vcf_f.reset(new VcfWriter(o_prefix + ".vcf.gz", move(vcf_header)));
+    o_vcf_f.reset(new VcfWriter(out_dir + "catalog.calls", move(vcf_header)));
 
     if (detailed_output) {
-        o_details_f.reset(new VersatileWriter(o_prefix + ".details.gz"));
+        o_details_f.reset(new VersatileWriter(out_dir + "gstacks.details.gz"));
         *o_details_f << "# show_loc() { loc=$1; zcat ./gstacks.details.gz | sed -rn \"/^BEGIN locus $loc\\b/,\\$ p; /^END locus $loc\\b/ q;\"; }\n";
     }
 
     if (dbg_write_alns) {
-        string o_aln_path = o_prefix + ".alns";
+        string o_aln_path = out_dir + "gstacks.alns";
         o_aln_f.open(o_aln_path);
         check_open(o_aln_f, o_aln_path);
         o_aln_f << o_aln_header;
     }
 
     if (dbg_write_hapgraphs) {
-        string o_hapgraphs_path = o_prefix + ".hapgraphs.dot";
+        string o_hapgraphs_path = out_dir + "gstacks.hapgraphs.dot";
         o_hapgraphs_f.open(o_hapgraphs_path);
         check_open(o_hapgraphs_f, o_hapgraphs_path);
         o_hapgraphs_f << o_hapgraphs_header;
@@ -1348,8 +1348,8 @@ LocusProcessor::assemble_contig(const vector<const DNASeq4*>& seqs)
     }
 
     if (dbg_write_gfa) {
-        graph.dump_gfa(o_prefix + "." + to_string(loc_.id) + ".spaths.gfa");
-        graph.dump_gfa(o_prefix + "." + to_string(loc_.id) + ".nodes.gfa", true);
+        graph.dump_gfa(out_dir + "gstacks." + to_string(loc_.id) + ".spaths.gfa");
+        graph.dump_gfa(out_dir + "gstacks." + to_string(loc_.id) + ".nodes.gfa", true);
     }
 
     vector<const SPath*> best_path;
@@ -2461,7 +2461,6 @@ try {
 
     string stacks_dir;
     string in_dir;
-    string out_dir;
     string suffix = ".bam";
 
     double gt_alpha = 0.05;
@@ -2746,7 +2745,6 @@ try {
         assert(input_type == In::refbased_list);
     }
 
-    o_prefix = out_dir + prog_name;
     check_or_mk_dir(out_dir);
 
     if (in_bams.empty())
@@ -2782,7 +2780,7 @@ void report_options(ostream& os) {
         os << "  Population map: '" << popmap_path << "'\n";
 
     os << "  Input files: " << in_bams.size() << ", e.g. '" << in_bams.front()<< "'\n"
-       << "  Output to: '" << o_prefix << ".*'\n"
+       << "  Output to: '" << out_dir << "'\n"
        << "  Model: " << *model << "\n";
 
     if (ignore_pe_reads)

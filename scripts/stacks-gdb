@@ -47,5 +47,5 @@ exec &> >(tee stacks-gdb.log)
 gdb --quiet --args "$@" <<EOF
     catch throw
     run
-    backtrace
+    backtrace full
 EOF
