@@ -71,6 +71,7 @@ bool      filter_lnl        = false;
 double    lnl_limit         = 0.0;
 double    merge_prune_lim   = 1.0;
 double    minor_allele_freq = 0.0;
+long      minor_allele_cnt  = 0;
 double    max_obs_het       = 1.0;
 double    p_value_cutoff    = 0.05;
 corr_type fst_correction    = no_correction;
@@ -461,8 +462,8 @@ BatchLocusProcessor::init_stacks_loci(string in_path, string pmap_path)
     //
     // Open the files.
     //
-    string catalog_fa_path  = in_path + "gstacks.fa.gz";
-    string catalog_vcf_path = in_path + "gstacks.vcf.gz";
+    string catalog_fa_path  = in_path + "catalog.fa.gz";
+    string catalog_vcf_path = in_path + "catalog.calls";
 
     this->_fasta_reader.open(catalog_fa_path);
     this->_cloc_reader.open(catalog_vcf_path);
@@ -1356,6 +1357,7 @@ LocusFilter::prune_sites_with_filters(MetaPopInfo *mpopi, CSLocus *cloc, Datum *
 
     t = s->meta_pop();
     for (uint i = 0; i < cloc->snps.size(); i++) {
+        NucTally& nuct = t->nucs[cloc->snps[i]->col];
         //
         // If the site is fixed, ignore it.
         //
@@ -1405,7 +1407,8 @@ LocusFilter::prune_sites_with_filters(MetaPopInfo *mpopi, CSLocus *cloc, Datum *
             //
             // Test for minor allele frequency.
             //
-            if ((1 - t->nucs[cloc->snps[i]->col].p_freq) < minor_allele_freq)
+            if ((1 - nuct.p_freq) < minor_allele_freq
+                    || long(std::round((1 - nuct.p_freq) * 2.0 * nuct.num_indv)) < minor_allele_cnt)
                 maf_prune = true;
             //
             // Test for observed heterozygosity.
@@ -3808,7 +3811,7 @@ int
 parse_command_line(int argc, char* argv[])
 {
     bool no_hap_exports = false;
-
+    char* tmp_str;
     while (1) {
         static struct option long_options[] = {
             {"help",           no_argument,       NULL, 'h'},
@@ -3867,6 +3870,7 @@ parse_command_line(int argc, char* argv[])
             {"bootstrap_pifis",   no_argument,       NULL, '5'},
             {"min_populations",   required_argument, NULL, 'p'},
             {"min_maf",           required_argument, NULL, 'a'},
+            {"min_mac",           required_argument, NULL, 1016},
             {"max_obs_het",       required_argument, NULL, 1013},
             {"lnl_lim",           required_argument, NULL, 'c'},
             {"merge_prune_lim",   required_argument, NULL, 'i'},
@@ -4112,6 +4116,13 @@ parse_command_line(int argc, char* argv[])
                 help();
             }
             break;
+        case 1016:
+            minor_allele_cnt = strtol(optarg, &tmp_str, 10);
+            if (tmp_str == optarg || *tmp_str != '\0' || minor_allele_cnt < 0) {
+                cerr << "Error: Unable to parse the minor allele count from '" << optarg << "'.\n";
+                help();
+            }
+            break;
         case 'f':
             if (strcasecmp(optarg, "p_value") == 0)
                 fst_correction = p_value;
@@ -4266,6 +4277,7 @@ void help() {
          << "  -p [int]: minimum number of populations a locus must be present in to process a locus.\n"
          << "  -r [float]: minimum percentage of individuals in a population required to process a locus for that population.\n"
          << "  --min_maf [float]: specify a minimum minor allele frequency required to process a nucleotide site at a locus (0 < min_maf < 0.5).\n"
+         << "  --min_mac [int]: specify a minimum minor allele count required to process a nucleotide site at a locus.\n"
          << "  --max_obs_het [float]: specify a maximum observed heterozygosity required to process a nucleotide site at a locus.\n"
          << "  --lnl_lim [float]: filter loci with log likelihood values below this threshold.\n"
          << "  --write_single_snp: restrict data analysis to only the first SNP per locus (implies --no-haps).\n"

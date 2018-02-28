@@ -46,7 +46,7 @@ public:
         uint8_t gq;
         GtLiks gtliks;
 
-        SNPData() : tot_depth(0), gq(-1) {}
+        SNPData() : tot_depth(0), gq(UINT8_MAX) {}
     };
 
     int            id;            // Stack ID
