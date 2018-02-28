@@ -84,8 +84,17 @@ void tally_complete_haplotypes(
                     // Decreasing freq.
                     return a1.second > a2.second;
                 // Alphabetic (with strand correction).
-                // (rem. The hap strings are always different.)
-                return (strcmp(a1.first, a2.first) < 0) == (loc_strand == strand_plus);
+                if (loc_strand == strand_plus) {
+                    return strcmp(a1.first, a2.first) < 0;
+                } else {
+                    for (const char *s1 = a1.first + strlen(a1.first), *s2 = a2.first + strlen(a2.first);
+                            s1 > a1.first && s2 > a2.first;) {
+                        --s1; --s2;
+                        if (*s1 != *s2)
+                            return *s1 > *s2;
+                    }
+                    return false;
+                }
             });
 
     // Record the indexes.
