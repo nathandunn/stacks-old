@@ -224,7 +224,7 @@ characterize_mismatch_snps(CLocus *catalog_tag, QLocus *query_tag)
         if (snp_cols.count(i) == 0 &&
             (*c != *q) && (*c != 'N' && *q != 'N')) {
 
-            cerr << "Adding a new SNP at position " << c - c_beg << ", " << *c << "/" << *q << "\n";
+            // cerr << "Adding a new SNP at position " << c - c_beg << ", " << *c << "/" << *q << "\n";
             SNP *s = new SNP;
             s->type   = snp_type_het;
             s->col    = c - c_beg;
