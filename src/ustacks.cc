@@ -508,7 +508,7 @@ search_for_gaps(map<int, MergedStack *> &merged)
     size_t con_len = 0;
     for (auto miter = merged.begin(); miter != merged.end(); miter++)
         con_len = miter->second->len > con_len ? miter->second->len : con_len;
-    size_t kmer_len  =  set_kmer_len ? 19 : global_kmer_len;
+    size_t kmer_len  = set_kmer_len ? 19 : global_kmer_len;
     size_t num_kmers = con_len - kmer_len + 1;
 
     //
@@ -520,7 +520,7 @@ search_for_gaps(map<int, MergedStack *> &merged)
 
     populate_kmer_hash(merged, kmer_map, kmer_map_keys, kmer_len);
 
-    #pragma omp parallel private(tag_1, tag_2)
+    #pragma omp parallel private(tag_1, tag_2, num_kmers)
     {
         KmerHashMap::iterator h;
         vector<char *> query_kmers;
@@ -549,6 +549,8 @@ search_for_gaps(map<int, MergedStack *> &merged)
             num_kmers = tag_1->len - kmer_len + 1;
             generate_kmers_lazily(tag_1->con, kmer_len, num_kmers, query_kmers);
 
+            assert(num_kmers > 0);
+            
             uniq_kmers.clear();
             for (uint j = 0; j < num_kmers; j++)
                 uniq_kmers.insert(query_kmers[j]);
@@ -1723,7 +1725,7 @@ calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist)
 
     populate_kmer_hash(merged, kmer_map, kmer_map_keys, kmer_len);
 
-    #pragma omp parallel private(tag_1, tag_2)
+    #pragma omp parallel private(tag_1, tag_2, num_kmers)
     {
         KmerHashMap::iterator h;
         vector<char *>        query_kmers;
