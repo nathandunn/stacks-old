@@ -751,16 +751,12 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map
                     s_start = r->seq->size() - (max_rem_dist * 2) - 1;
                     s_end   = r->seq->size() - 1;
 
-                    aln->init(tag_1->len, r->seq->size(), true);
+                    aln->init(tag_1->len, r->seq->size());
 
-                    // cerr << "Aligning remainder: " << r->seq->seq() << "\n"
-                    //      << " against consensus: " << tag_1->con << "\n";
                     if (aln->align_region(tag_1->con, buf, q_start, q_end, s_start, s_end)) {
                         a = aln->result();
                         parse_cigar(a.cigar.c_str(), cigar);
-                        // cerr << "  raw cigar for rem: " << cigar << "\n";
                         convert_local_cigar_to_global(cigar);
-                        // cerr << "  conv cigar for rem: " << cigar << "\n";
                         //
                         // If, in the end, the gapped alignment did not yield a frameshit,
                         // the cigar will be a single match element, e.g. 150M.
@@ -772,10 +768,6 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map
                         
                             seq = apply_cigar_to_seq(buf, cigar);
                             r->add_seq(seq.c_str());
-                            // cerr << "  applied cigar: " << r->seq->seq() << "\n";
-
-                            invert_cigar(cigar);
-                            seq = apply_cigar_to_seq(tag_1->con, cigar);
                         }
                     }
 
@@ -932,10 +924,7 @@ call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map<i
                     reads.push_back(r->seq);
                     read_types.push_back(secondary);
 
-                    if (r->seq->size() != length) {
-                        cerr << "ID: " << mtag->id << "; Size: " << r->seq->size() << "; length: " << length << ".\nconsensus: " << mtag->con << "\n";
-                    }
-                    // assert(r->seq->size() == length);
+                    assert(r->seq->size() == length);
                 }
             }
 
