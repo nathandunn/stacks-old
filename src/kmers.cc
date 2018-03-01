@@ -608,7 +608,8 @@ bool compare_dist(pair<int, int> a, pair<int, int> b) {
 int
 check_frameshift(MergedStack *tag_1, MergedStack *tag_2, size_t mismatches)
 {
-    size_t cnt = 0;
+    size_t cnt  = 0;
+    size_t diff = 0;
     char const* p     = tag_1->con;
     char const* q     = tag_2->con;
     char const* p_end = p + tag_1->len - 1;
@@ -618,17 +619,20 @@ check_frameshift(MergedStack *tag_1, MergedStack *tag_2, size_t mismatches)
     // Set pointers to the common end of the sequences.
     //
     if (tag_1->len != tag_2->len) {
-        if (tag_1->len < tag_2->len)
-            p_end -= tag_2->len - tag_1->len;
-        else if (tag_1->len > tag_2->len)
-            q_end -= tag_1->len - tag_2->len;
+        if (tag_1->len < tag_2->len) {
+            diff = tag_2->len - tag_1->len;
+            p_end -= diff;
+        } else if (tag_1->len > tag_2->len) {
+            diff   = tag_1->len - tag_2->len;
+            q_end -= diff;
+        }
     }
 
     //
     // Count the number of characters that are different
     // at the 3' end of the sequence to test for possible frameshifts.
     //
-    size_t i = 0;
+    size_t i = diff;
     while (p_end >= p && q_end >= q && i < mismatches) {
         cnt += (*p_end != *q_end) ? 1 : 0;
         p_end--;
