@@ -213,7 +213,6 @@ int main (int argc, char* argv[]) {
     if (gapped_alignments) {
         cerr << "Assembling stacks, allowing for gaps (min. match length " << as_percentage(min_match_len) << ")...\n";
         const size_t n_ungapped_loci = merged.size(); 
-        call_consensus(merged, unique, remainders, false);
         search_for_gaps(merged);
         merge_gapped_alns(unique, remainders, merged);
         cerr << "  Assembled " << n_ungapped_loci << " stacks into " << merged.size() << " stacks.\n";
@@ -754,11 +753,14 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map
 
                     aln->init(tag_1->len, r->seq->size(), true);
 
+                    // cerr << "Aligning remainder: " << r->seq->seq() << "\n"
+                    //      << " against consensus: " << tag_1->con << "\n";
                     if (aln->align_region(tag_1->con, buf, q_start, q_end, s_start, s_end)) {
                         a = aln->result();
                         parse_cigar(a.cigar.c_str(), cigar);
+                        // cerr << "  raw cigar for rem: " << cigar << "\n";
                         convert_local_cigar_to_global(cigar);
-
+                        // cerr << "  conv cigar for rem: " << cigar << "\n";
                         //
                         // If, in the end, the gapped alignment did not yield a frameshit,
                         // the cigar will be a single match element, e.g. 150M.
@@ -770,6 +772,7 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map
                         
                             seq = apply_cigar_to_seq(buf, cigar);
                             r->add_seq(seq.c_str());
+                            // cerr << "  applied cigar: " << r->seq->seq() << "\n";
 
                             invert_cigar(cigar);
                             seq = apply_cigar_to_seq(tag_1->con, cigar);
@@ -793,21 +796,27 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map
 
                 #pragma omp critical
                 {
-                    if (frameshift_found) {
-                        edit_gapped_seqs(unique, rem, tag_1, cigar);
-                        update_consensus(tag_1, unique, rem);
-                        //
-                        // Record the gaps.
-                        //
-                        uint pos = 0;
-                        for (uint j = 0; j < cigar.size(); j++) {
-                            if (cigar[j].first == 'I' || cigar[j].first == 'D')
-                                tag_1->gaps.push_back(Gap(pos, pos + cigar[j].second - 1));
-                            pos += cigar[j].second;
-                        }
-                    }
                     tag_1->remtags.push_back(r->id);
                     tag_1->count += r->count();
+
+                    if (frameshift_found) {
+                        //
+                        // Record the gaps (but not soft-masked 3' regions.
+                        //
+                        bool gap_inserted = false;
+                        uint pos = 0;
+                        for (uint j = 0; j < cigar.size(); j++) {
+                            if (cigar[j].first == 'I' || cigar[j].first == 'D') {
+                                gap_inserted = true;
+                                tag_1->gaps.push_back(Gap(pos, pos + cigar[j].second - 1));
+                            }
+                            pos += cigar[j].second;
+                        }
+                        if (gap_inserted) {
+                            edit_gapped_seqs(unique, rem, tag_1, cigar);
+                            update_consensus(tag_1, unique, rem);
+                        }
+                    }
                 }
             }
         }
