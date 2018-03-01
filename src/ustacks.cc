@@ -924,7 +924,10 @@ call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map<i
                     reads.push_back(r->seq);
                     read_types.push_back(secondary);
 
-                    assert(r->seq->size() == length);
+                    // assert(r->seq->size() == length);
+                    if (r->seq->size() != length) {
+                        cerr << "ID: " << mtag->id << "; rem size: " << r->seq->size() << "; locus length: " << length << "\n" << "  rem seq: " << r->seq->seq() << "\n   con seq: " << mtag->con << "\n";
+                    }
                 }
             }
 
