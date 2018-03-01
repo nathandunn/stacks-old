@@ -101,8 +101,10 @@ convert_local_cigar_to_global(Cigar &cigar)
         switch(cigar[i].first) {
         case 'D':
             if (cigar.back().first == 'S') {
-                cigar.back().first = 'I';
-                if ( (diff = cigar.back().second - cigar[i].second) > 0 )
+                diff = cigar.back().second - cigar[i].second;
+                cigar.back().first  = 'I';
+                cigar.back().second = cigar.back().second - diff;
+                if (diff > 0)
                     cigar.push_back({'S', diff});
             }
             break;
@@ -131,12 +133,6 @@ convert_local_cigar_to_global(Cigar &cigar)
         consolidated_cigar.push_back(cigar[k]);
     if (dsum > 0)
         consolidated_cigar.push_back({'D', dsum});
-
-    //
-    // Convert any remaining 3' softmasked sequence to matches.
-    //
-    if (consolidated_cigar.back().first == 'S')
-        consolidated_cigar.back().first = 'M';
     
     cigar = consolidated_cigar;
 
