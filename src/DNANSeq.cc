@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2011, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2011-2018, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -16,16 +16,6 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Stacks.  If not, see <http://www.gnu.org/licenses/>.
-//
-
-//
-// DNANSeq.cc
-//
-// Julian Catchen
-// jcatchen@uoregon.edu
-// University of Oregon
-//
-// $Id: DNANSeq.cc 2133 2011-06-07 04:07:41Z catchen $
 //
 
 #include <iostream>

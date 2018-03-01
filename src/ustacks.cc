@@ -212,10 +212,10 @@ int main (int argc, char* argv[]) {
     //
     if (gapped_alignments) {
         cerr << "Assembling stacks, allowing for gaps (min. match length " << as_percentage(min_match_len) << ")...\n";
-        const size_t n_ungapped_loci = merged.size();
+        const size_t n_ungapped_loci = merged.size(); 
+        call_consensus(merged, unique, remainders, false);
         search_for_gaps(merged);
         merge_gapped_alns(unique, remainders, merged);
-        call_consensus(merged, unique, remainders, false);
         cerr << "  Assembled " << n_ungapped_loci << " stacks into " << merged.size() << " stacks.\n";
 
         calc_coverage_distribution(merged, cov_mean, cov_stdev, cov_max, n_used_reads);
@@ -253,7 +253,6 @@ int
 merge_gapped_alns(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, MergedStack *> &merged)
 {
     map<int, MergedStack *> new_merged;
-    map<int, MergedStack *>::iterator it;
     MergedStack *tag_1, *tag_2, *merged_tag;
 
     int  id        = 1;
@@ -263,7 +262,7 @@ merge_gapped_alns(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, Merg
     string   cigar_1, cigar_2;
     vector<pair<char, uint> > cigar;
 
-    for (it = merged.begin(); it != merged.end(); it++) {
+    for (auto it = merged.begin(); it != merged.end(); it++) {
         if (processed.count(it->first) > 0)
             continue;
 
@@ -352,7 +351,7 @@ merge_gapped_alns(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, Merg
     }
 
     set<int> merge_set;
-    for (it = merged.begin(); it != merged.end(); it++) {
+    for (auto it = merged.begin(); it != merged.end(); it++) {
         if (processed.count(it->first))
             continue;
         tag_1          = it->second;
@@ -366,7 +365,7 @@ merge_gapped_alns(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, Merg
     //
     // Free the memory from the old map of merged tags.
     //
-    for (it = merged.begin(); it != merged.end(); it++)
+    for (auto it = merged.begin(); it != merged.end(); it++)
         delete it->second;
 
     merged = new_merged;
@@ -590,6 +589,8 @@ search_for_gaps(map<int, MergedStack *> &merged)
                 if (tag_2->utags.size() >= max_subgraph)
                     continue;
 
+                aln->init(tag_1->len, tag_2->len);
+
                 if (aln->align(tag_1->con, tag_2->con)) {
                     a = aln->result();
                     tag_1->alns.push_back(Aln(tag_2->id, a.cigar, a.pct_id, a.gap_cnt));
@@ -801,7 +802,7 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map
                         uint pos = 0;
                         for (uint j = 0; j < cigar.size(); j++) {
                             if (cigar[j].first == 'I' || cigar[j].first == 'D')
-                                tag_1->gaps.push_back(Gap(pos, pos + cigar[j].second));
+                                tag_1->gaps.push_back(Gap(pos, pos + cigar[j].second - 1));
                             pos += cigar[j].second;
                         }
                     }
@@ -899,8 +900,9 @@ call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map<i
             // that tag into our array as many times as it originally occurred.
             //
             vector<int>::iterator j;
-            vector<DNANSeq *>  reads;
+            vector<DNANSeq *> reads;
             vector<read_type> read_types;
+            uint length = unique[mtag->utags.front()]->seq->size();
 
             for (j = mtag->utags.begin(); j != mtag->utags.end(); j++) {
                 utag = unique[*j];
@@ -908,6 +910,8 @@ call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map<i
                 for (uint k = 0; k < utag->count(); k++) {
                     reads.push_back(utag->seq);
                     read_types.push_back(primary);
+
+                    assert(utag->seq->size() == length);
                 }
             }
 
@@ -918,6 +922,11 @@ call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map<i
                 for (uint k = 0; k < r->count(); k++) {
                     reads.push_back(r->seq);
                     read_types.push_back(secondary);
+
+                    if (r->seq->size() != length) {
+                        cerr << "ID: " << mtag->id << "; Size: " << r->seq->size() << "; length: " << length << ".\nconsensus: " << mtag->con << "\n";
+                    }
+                    // assert(r->seq->size() == length);
                 }
             }
 
@@ -925,7 +934,6 @@ call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map<i
             // Iterate over each column of the array and call the consensus base.
             //
             uint row, col;
-            uint length = reads[0]->size();
             uint height = reads.size();
             string con;
             map<char, int> nuc;
