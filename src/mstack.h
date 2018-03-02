@@ -44,7 +44,8 @@ class MergedStack {
     DNANSeq                **matrix; // Two-dimensional array for iterating over the combined stack (stacks and remainders).
     vector<pair<int, int> >    dist; // Vector describing the distance between this stack and other stacks.
     vector<Aln>                alns; // Vector describing gapped alignments between this stack and other stacks.
-
+    vector<size_t>        rem_queue; // Temporary list of Remainder reads that are queue for merging.
+    
     int cohort_id; // Group ID of all stacks that were originally part of the same subgraph
     double    lnl; // Log likelihood of this stack
 
