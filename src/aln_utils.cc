@@ -90,28 +90,56 @@ invert_cigar(Cigar &cigar)
 int
 convert_local_cigar_to_global(Cigar &cigar)
 {
-    int diff;
+    int  diff;
     uint i   = 0;
     uint len = cigar.size();
     if (cigar.front().first == 'S') {
         cigar.front().first = 'M';
         i++;
     }
-    for (; i < len - 1; i++) {
-        switch(cigar[i].first) {
-        case 'D':
-            if (cigar.back().first == 'S') {
-                diff = cigar.back().second - cigar[i].second;
-                cigar.back().first  = 'I';
-                cigar.back().second = cigar.back().second - diff;
-                if (diff > 0)
-                    cigar.push_back({'S', diff});
-            }
-            break;
-        case 'I':
-            break;
+
+    int indel_cnt = 0;
+
+    for (; i < len; i++)
+        if (cigar[i].first == 'I')
+            indel_cnt += cigar[i].second;
+        else if (cigar[i].first == 'D')
+            indel_cnt -= cigar[i].second;
+
+    if (indel_cnt != 0) {
+        if (cigar.back().first == 'S') {
+            diff = abs(indel_cnt) - cigar.back().second;
+            cigar.back().first = indel_cnt < 0 ? 'I' : 'D';
+            cigar.back().second = cigar.back().second - diff;
+            if (diff > 0)
+                cigar.push_back({'S', diff});
+        } else {
+            diff = abs(indel_cnt);
+            cigar.push_back({indel_cnt < 0 ? 'I' : 'D', diff});
         }
-    }
+    }        
+    // for (; i < len - 1; i++) {
+    //     switch(cigar[i].first) {
+    //     case 'D':
+    //         if (cigar.back().first == 'S') {
+    //             diff = cigar.back().second - cigar[i].second;
+    //             cigar.back().first  = 'I';
+    //             cigar.back().second = cigar.back().second - diff;
+    //             if (diff > 0)
+    //                 cigar.push_back({'S', diff});
+    //         }
+    //         break;
+    //     case 'I':
+    //         if (cigar.back().first == 'S') {
+    //             diff = cigar.back().second - cigar[i].second;
+    //             cigar.back().first  = 'D';
+    //             cigar.back().second = cigar.back().second - diff;
+    //             if (diff > 0)
+    //                 cigar.push_back({'S', diff});
+    //         }
+    //         break;
+    //     }
+    // }
 
     Cigar consolidated_cigar;
     i = 0;
@@ -120,19 +148,31 @@ convert_local_cigar_to_global(Cigar &cigar)
         msum += cigar[i].second;
         i++;
     }
-    uint  j    = cigar.size() - 1;
-    uint  dsum = 0;
+
+    uint j    = cigar.size() - 1;
+    uint dsum = 0;
+    uint isum = 0;
     while (j > 0 && cigar[j].first == 'D') {
         dsum += cigar[j].second;
         j--;
+    }
+    if (dsum == 0) {
+        j = cigar.size() - 1;
+        while (j > 0 && cigar[j].first == 'D') {
+            isum += cigar[j].second;
+            j--;
+        }
     }
 
     if (msum > 0)
         consolidated_cigar.push_back({'M', msum});
     for (uint k = i; k < cigar.size() && k <= j; k++)
         consolidated_cigar.push_back(cigar[k]);
+
     if (dsum > 0)
         consolidated_cigar.push_back({'D', dsum});
+    else if (isum > 0)
+        consolidated_cigar.push_back({'I', dsum});
     
     cigar = consolidated_cigar;
 
