@@ -60,6 +60,7 @@ unique_ptr<const Model> model;
 
 size_t km_length         = 31;
 size_t min_km_count      = 2;
+double min_km_freq       = 0.05;
 size_t max_fragment_alns = 2;
 
 pair<size_t,size_t> phasing_cooccurrences_thr_range = {2, 2};
@@ -390,7 +391,7 @@ try {
              << "  kept " << bam_stats.n_primary_kept() << " primary alignments ("
              << as_percentage(bam_stats.n_primary_kept(), tot) << ")";
         if (refbased_cfg.paired)
-            cout << ", of which " << bam_stats.n_primary_kept_read2 << " paired-end reads";
+            cout << ", of which " << bam_stats.n_primary_kept_read2 << " reverse reads";
         cout << "\n"
              << "  skipped " << bam_stats.n_primary_mapq << " primary alignments with insufficient mapping qualities ("
              << as_percentage((double) bam_stats.n_primary_mapq / tot) << ")\n"
@@ -1341,7 +1342,8 @@ LocusProcessor::assemble_contig(const vector<const DNASeq4*>& seqs)
 {
     Graph graph (km_length);
 
-    graph.rebuild(seqs, min_km_count);
+    size_t min_cov = std::max(min_km_count, size_t(std::ceil( min_km_freq * seqs.size() )));
+    graph.rebuild(seqs, min_cov);
     if (graph.empty()) {
         ++ctg_stats_.n_loci_almost_no_pe_reads;
         return string();
@@ -2375,6 +2377,7 @@ const string help_string = string() +
         "  (De novo mode)\n"
         "  --kmer-length: kmer length for the de Bruijn graph (default: 31, max. 31)\n"
         "  --min-kmer-cov: minimum coverage to consider a kmer (default: 2)\n"
+        "  --min-kmer-freq: minimum frequency (in %reads) to consider a kmer (default: 0.05) \n"
         "  --rm-unpaired-reads: discard unpaired reads\n"
         "  --rm-pcr-duplicates: remove read pairs of the same insert length (implies --rm-unpaired-reads)\n"
         "\n"
@@ -2435,6 +2438,7 @@ try {
         {"var-alpha",    required_argument, NULL,  1008},
         {"kmer-length",  required_argument, NULL,  1001},
         {"min-kmer-cov", required_argument, NULL,  1002},
+        {"min-kmer-freq", required_argument, NULL, 1021},
         {"ignore-pe-reads", no_argument,    NULL,  1012},
         {"details",      no_argument,       NULL,  1013},
         {"min-mapq",     required_argument, NULL,  1014},
@@ -2469,6 +2473,7 @@ try {
     int c;
     int long_options_i;
     std::cmatch tmp_cmatch;
+    char* tmp_str;
     while (true) {
 
         c = getopt_long(argc, argv, "hqP:I:B:S:s:M:O:W:t:m:", long_options, &long_options_i);
@@ -2549,8 +2554,16 @@ try {
                 bad_args();
             }
             break;
-        case 1002://min-cov
+        case 1002://min-kmer-cov
             min_km_count = atoi(optarg);
+            break;
+        case 1021://min-kmer-freq
+            min_km_freq = strtod(optarg, &tmp_str);
+            if (tmp_str == optarg || *tmp_str != '\0'
+                    || !std::isfinite(min_km_freq) || min_km_freq < 0.0 || min_km_freq > 1.0) {
+                cerr << "Error: Unable to parse the minimum kmer frequency from '" << optarg << "'.\n";
+                bad_args();
+            }
             break;
         case 1013://details
             detailed_output = true;
@@ -2700,6 +2713,10 @@ try {
             cerr << "Error: Please specify an output directory (-O).\n";
             bad_args();
         }
+        if (min_km_count != 2 || min_km_freq != 0.05) {
+            cerr << "Error: --min-kmer-count, --min-kmer-freq are for the denovo mode.\n";
+            bad_args();
+        }
     } else {
         DOES_NOT_HAPPEN;
     }
@@ -2794,5 +2811,7 @@ void report_options(ostream& os) {
     if (km_length != 31)
         os << "  Kmer length: " << km_length << "\n";
     if (min_km_count != 2)
-        os << "  Min coverage: " << min_km_count << "\n";
+        os << "  Minimum kmer count: " << min_km_count << "\n";
+    if (min_km_freq != 0.05)
+        os << "  Mininimum kmer freq: " << min_km_freq << "\n";
 }
