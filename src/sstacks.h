@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010-2013, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2018, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -46,11 +46,6 @@ using std::queue;
 
 #include <unordered_map>
 
-#ifdef HAVE_SPARSEHASH
-#include <sparsehash/sparse_hash_map>
-using google::sparse_hash_map;
-#endif
-
 #include "constants.h"
 #include "kmers.h"
 #include "stacks.h"
@@ -61,19 +56,15 @@ using google::sparse_hash_map;
 #include "utils.h"
 #include "aln_utils.h"
 
-#ifdef HAVE_SPARSEHASH
-typedef sparse_hash_map<const char *, vector<pair<int, allele_type> >, hash_charptr, eqstr> HashMap;
-#else
 typedef unordered_map<const char *, vector<pair<int, allele_type> >, hash_charptr, eqstr> HashMap;
-#endif
 
 void   help( void );
 void   version( void );
 int    parse_command_line(int, char**);
-int    populate_hash(map<int, Locus *> &, HashMap &, vector<char *> &, int);
-int    find_matches_by_sequence(map<int, Locus *> &, map<int, QLocus *> &);
+int    populate_hash(map<int, Locus *> &, HashMap &, vector<char *> &);
+int    find_matches_by_sequence(map<int, Locus *> &, HashMap &, map<int, QLocus *> &);
 int    find_matches_by_genomic_loc(map<int, Locus *> &, map<int, QLocus *> &);
-int    verify_sequence_match(map<int, Locus *> &, QLocus *, set<int> &, map<string, vector<string> > &, uint, unsigned long &, unsigned long &);
+int    verify_sequence_match(map<int, Locus *> &, QLocus *, set<int> &, map<string, vector<string> > &, unsigned long &, unsigned long &);
 int    search_for_gaps(map<int, Locus *> &, map<int, QLocus *> &, KmerHashMap &, map<int, pair<allele_type, int> > &, double);
 bool   verify_gapped_match(map<int, Locus *> &, QLocus *, set<int> &, map<allele_type, map<allele_type, AlignRes> > &, uint &, uint &, uint &, uint &, uint &);
 int    verify_genomic_loc_match(Locus *, QLocus *, set<string> &, unsigned long &);

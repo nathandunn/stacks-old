@@ -628,6 +628,13 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
 
                     tag_2 = catalog[cat_hit.second];
 
+                    //
+                    // If the sequences are not the same length then they have to be reconciled by
+                    // the gapped alignment algorithm.
+                    //
+                    if (tag_1->len != tag_2->len)
+                        continue;
+
                     d = dist(allele->second.c_str(), tag_2, cat_hit.first);
 
                     assert(d >= 0);
@@ -1555,19 +1562,16 @@ write_simple_output(CLocus *tag, ofstream &cat_file, ofstream &snp_file, ofstrea
     }
     sources = sources.substr(0, sources.length() - 1);
 
-    cat_file <<
-        tag->id      << "\t" <<
-        tag->loc.chr() << "\t" <<
-        tag->loc.bp  << "\t" <<
-        (tag->loc.strand == strand_plus ? "+" : "-") << "\t" <<
-        "consensus"  << "\t" <<
-        "0"          << "\t" <<
-        sources      << "\t" <<
-        tag->con     << "\t" <<
-        0            << "\t" <<  // These flags are unused in cstacks, but important in ustacks
-        0            << "\t" <<
-        0            << "\t" <<
-        0            << "\n";
+    cat_file << 0           << "\t" // Catalog has no sample ID.
+             << tag->id     << "\t"
+             << "consensus" << "\t"
+             << "0"         << "\t" // Catalog has no component number for stacks since only consensus sequences are stored.
+             << sources     << "\t"
+             << tag->con    << "\t"
+             << 0           << "\t" // These flags are unused in cstacks, but important in ustacks
+             << 0           << "\t"
+             << 0           << "\t"
+             << 0           << "\n";
 
     //
     // Output the SNPs associated with the catalog tag
@@ -1626,10 +1630,10 @@ write_gzip_output(CLocus *tag, gzFile &cat_file, gzFile &snp_file, gzFile &all_f
 
     sstr.str("");
 
-    sstr << "0"         << "\t"
+    sstr << 0           << "\t" // Catalog has no sample ID.
          << tag->id     << "\t"
          << "consensus" << "\t"
-         << "0"         << "\t"
+         << "0"         << "\t" // Catalog has no component number for stacks since only consensus sequences are stored.
          << sources     << "\t"
          << tag->con    << "\t"
          << 0           << "\t" // These flags are unused in cstacks, but important in ustacks
