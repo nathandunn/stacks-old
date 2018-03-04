@@ -243,6 +243,12 @@ void run(const vector<int>& cloc_ids,
         // principle not contain them. (But what happens when read lengths
         // are variable, especially if not all individuals are in the catalog?)
         size_t cloc_len = cloc_lengths.at(m->cat_id);
+
+        if (sloc->len > cloc_len) {
+            cerr << "Comparing catalog locus " << m->cat_id << " to sample " << m->sample_id << ", locus " << m->tag_id
+                 << "; sample len: " << sloc->len << ", catalog locus len: " << cloc_len << "\n";
+        }
+        
         assert(sloc->len <= cloc_len);
         assert(m->cigar == NULL || (cigar_is_MDI(c) && strchr(m->cigar, 'I') == NULL));
 
