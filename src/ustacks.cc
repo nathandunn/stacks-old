@@ -829,12 +829,12 @@ merge_gapped_remainders(map<int, MergedStack *> &merged, map<int, Stack *> &uniq
                 
                 aln->init(r->seq->size(), tag_1->len);
 
-                if (aln->align_region(r->seq->seq().c_str(), tag_1->con, q_start, q_end, s_start, s_end)) {
-                //if (aln->align(tag_1->con, r->seq->seq().c_str())) {
+                //if (aln->align_region(r->seq->seq().c_str(), tag_1->con, q_start, q_end, s_start, s_end)) {
+                if (aln->align(tag_1->con, r->seq->seq().c_str())) {
                     a = aln->result();
                     parse_cigar(a.cigar.c_str(), cigar);
                     // cerr << "Aligned cigar:   " << cigar << "; padded len: " << cigar_length_padded(cigar) << "\n";
-                    convert_local_cigar_to_global(cigar);
+                    // convert_local_cigar_to_global(cigar);
                     // cerr << "Converted cigar: " << cigar << "; padded len: " << cigar_length_padded(cigar) << "\n";
 
                     tag_1->count += r->count();
