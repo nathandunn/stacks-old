@@ -618,6 +618,16 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
         loc->s->tally_metapop(loc->cloc);
 
         //
+        // Identify individual SNPs that are below the -r threshold or the minor allele
+        // frequency threshold (-a). In these cases we will remove the SNP, but keep the locus.
+        // If all SNPs are filtered, delete the locus.
+        //
+        if (this->_loc_filter.prune_sites_with_filters(this->_mpopi, loc->cloc, loc->d, loc->s, log_fh)) {
+            delete loc;
+            continue;
+        }
+
+        //
         // If write_single_snp or write_random_snp has been specified, mark sites to be pruned using the whitelist.
         //
         if (write_single_snp)
@@ -628,16 +638,6 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
         // Prune the sites according to the whitelist.
         //
         this->_loc_filter.prune_sites_with_whitelist(this->_mpopi, loc->cloc, loc->d, this->_user_supplied_whitelist);
-
-        //
-        // Identify individual SNPs that are below the -r threshold or the minor allele
-        // frequency threshold (-a). In these cases we will remove the SNP, but keep the locus.
-        // If all SNPs are filtered, delete the locus.
-        //
-        if (this->_loc_filter.prune_sites_with_filters(this->_mpopi, loc->cloc, loc->d, loc->s, log_fh)) {
-            delete loc;
-            continue;
-        }
 
         //
         // If these data are unordered, provide an arbitrary ordering.
@@ -1332,7 +1332,7 @@ LocusFilter::prune_sites(CSLocus *cloc, Datum **d, set<int> &keep)
     vector<pair<string,int>> alleles (cloc->alleles.begin(), cloc->alleles.end());
     for (pair<string,int>& allele : alleles)
         for (pair<size_t,size_t> snp : rm)
-            allele.first.erase(snp.first);
+            allele.first.erase(snp.first, 1);
     cloc->alleles.clear();
     cloc->alleles.insert(std::make_move_iterator(alleles.begin()), std::make_move_iterator(alleles.end()));
 
