@@ -658,9 +658,6 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map
         vector<char *> rem_kmers;
         vector<pair<char, uint>> cigar;
         string     seq;
-        // GappedAln *aln = new GappedAln(max_rem_len);
-        // AlignRes   a;
-        // size_t     q_start, q_end, s_start, s_end;
         char      *buf = new char[max_rem_len + 1];
         size_t     num_kmers = 0;
         
@@ -830,7 +827,7 @@ merge_gapped_remainders(map<int, MergedStack *> &merged, map<int, Stack *> &uniq
                 aln->init(r->seq->size(), tag_1->len);
 
                 //if (aln->align_region(r->seq->seq().c_str(), tag_1->con, q_start, q_end, s_start, s_end)) {
-                if (aln->align(tag_1->con, r->seq->seq().c_str())) {
+                if (aln->align(r->seq->seq().c_str(), tag_1->con)) {
                     a = aln->result();
                     parse_cigar(a.cigar.c_str(), cigar);
                     // cerr << "Aligned cigar:   " << cigar << "; padded len: " << cigar_length_padded(cigar) << "\n";
@@ -849,14 +846,12 @@ merge_gapped_remainders(map<int, MergedStack *> &merged, map<int, Stack *> &uniq
                         continue;
                     }
 
-                    invert_cigar(cigar);
-                    // cerr << "Inverted cigar:  " << cigar << "\n";
                     buf = r->seq->seq();
                     seq = apply_cigar_to_seq(buf.c_str(), cigar);
                     r->add_seq(seq.c_str());
                     // cerr << "Applied cigar:   " << r->seq->seq() << "\n";
                     invert_cigar(cigar);
-                        
+
                     //
                     // Record the gaps (but not soft-masked 3' regions.
                     //
@@ -876,6 +871,7 @@ merge_gapped_remainders(map<int, MergedStack *> &merged, map<int, Stack *> &uniq
                         //
                         tag_1->remtags.push_back(r->id);
                         update_consensus(tag_1, unique, rem);
+                        // cerr << "Updated consensus: " << tag_1->con << "\n";
                     }
                 }
             }
@@ -1120,39 +1116,79 @@ update_consensus(MergedStack *mtag, map<int, Stack *> &unique, map<int, Rem *> &
     //
     // Iterate over each column of the array and call the consensus base.
     //
-    string con;
-    uint   row, col;
-    uint   length = reads[0]->size();
-    uint   height = reads.size();
-    map<char, int> nuc;
-    map<char, int>::iterator max, n;
+    string   con;
+    uint     row, col;
+    uint     length = reads[0]->size();
+    uint     height = reads.size();
     DNANSeq *d;
+
+    vector<uint> nucs = {0,  // A
+                         0,  // C
+                         0,  // G
+                         0,  // T
+                         0}; // N
 
     con.reserve(length);
 
     for (col = 0; col < length; col++) {
-        nuc['A'] = 0;
-        nuc['G'] = 0;
-        nuc['C'] = 0;
-        nuc['T'] = 0;
-
+        nucs.assign(5, 0);
+        
         for (row = 0; row < height; row++) {
             d = reads[row];
-            if (nuc.count((*d)[col]))
-                nuc[(*d)[col]]++;
+            switch ((*d)[col]) {
+            case 'A':
+                nucs[0]++;
+                break;
+            case 'C':
+                nucs[1]++;
+                break;
+            case 'G':
+                nucs[2]++;
+                break;
+            case 'T':
+                nucs[3]++;
+                break;
+            case 'N':
+                nucs[4]++;
+                break;
+            }
         }
 
         //
-        // Find the base with a plurality of occurances and call it.
+        // Call the base with a plurality of occurances. Only call 'N' if there is no other information.
         //
-        max = nuc.end();
+        uint max = 0;
+        char nuc = 'N';
 
-        for (n = nuc.begin(); n != nuc.end(); n++) {
-
-            if (max == nuc.end() || n->second > max->second)
-                max = n;
+        for (uint i = 0; i < 4; i++) {
+            switch (i) {
+            case 0:
+                if (nucs[i] > max) {
+                    max = nucs[i];
+                    nuc = 'A';
+                }
+                break;
+            case 1:
+                if (nucs[i] > max) {
+                    max = nucs[i];
+                    nuc = 'C';
+                }
+                break;
+            case 2:
+                if (nucs[i] > max) {
+                    max = nucs[i];
+                    nuc = 'G';
+                }
+                break;
+            case 3:
+                if (nucs[i] > max) {
+                    max = nucs[i];
+                    nuc = 'T';
+                }
+                break;
+            }
         }
-        con += max->first;
+        con += nuc;
     }
 
     mtag->add_consensus(con.c_str());
