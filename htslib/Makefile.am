@@ -41,6 +41,7 @@ noinst_LIBRARIES = libhts.a
 #htslib/hfile_s3.c
 #plugin.c
 libhts_a_SOURCES = config.h \
+	LICENSE \
 	\
 	htslib/bgzf.h \
 	htslib/cram.h \
@@ -50,6 +51,7 @@ libhts_a_SOURCES = config.h \
 	htslib/hts_defs.h \
 	htslib/hts_endian.h \
 	htslib/hts_log.h \
+	htslib/hts_os.h \
 	htslib/kbitset.h \
 	htslib/kfunc.h \
 	htslib/khash.h \
@@ -91,11 +93,14 @@ libhts_a_SOURCES = config.h \
 	synced_bcf_reader.c \
 	tbx.c \
 	textutils.c \
+	textutils_internal.h \
 	thread_pool.c \
 	thread_pool_internal.h \
 	vcf.c \
 	vcf_sweep.c \
 	vcfutils.c \
+	version.h \
+	os/rand.c \
 	cram/cram.h \
 	cram/cram_codecs.c \
 	cram/cram_codecs.h \
