@@ -5,8 +5,8 @@ Usage:
   $(basename "$0") -P stacks_dir -B bam_file -O out_dir
 
 Extracts the coordinates of the RAD loci from the given BAM file into a
-'locus_coordinates.tsv' table, then rewrites the 'gstacks.fa.gz' and
-'gstacks.vcf.gz' files so that they include the genomic coordinates given in the
+'locus_coordinates.tsv' table, then rewrites the 'catalog.fa.gz' and
+'catalog.calls' files so that they include the genomic coordinates given in the
 input BAM file.
 "
 
@@ -57,14 +57,14 @@ fi
 [[ -e "$stacks_d" ]] || { ls -- "$stacks_d"; exit 1; }
 [[ -e "$bam_f" ]]    || { ls -- "$bam_f"; exit 1; }
 
-fa="$stacks_d/gstacks.fa.gz"
-vcf="$stacks_d/gstacks.vcf.gz"
+fa="$stacks_d/catalog.fa.gz"
+vcf="$stacks_d/catalog.calls"
 [[ -e "$fa" ]]  || { ls -- "$fa"; exit 1; }
 [[ -e "$vcf" ]] || { ls -- "$vcf"; exit 1; }
 
 o_coords="$out_d/locus_coordinates.tsv"
-o_fa="$out_d/gstacks.fa.gz"
-o_vcf="$out_d/gstacks.vcf.gz"
+o_fa="$out_d/catalog.fa.gz"
+o_vcf="$out_d/catalog.calls"
 [[ ! -e "$o_coords" ]]  || { echo "Error: Refusing to overwrite '$o_coords'." >&2; exit 1; }
 [[ ! -e "$o_fa" ]]  || { echo "Error: Refusing to overwrite '$o_fa'." >&2; exit 1; }
 [[ ! -e "$o_vcf" ]] || { echo "Error: Refusing to overwrite '$o_vcf'." >&2; exit 1; }
@@ -167,7 +167,7 @@ echo
 echo "Rewriting variants..."
 {
 # Copy the header.
-{ gzip -cd "$vcf" ||true; } | sed '/^#CHROM/ q' # (gzip unhappy about the closed pipe).
+{ gzip -cd "$vcf" 2>/dev/null || true; } | sed '/^#CHROM/ q' # (gzip unhappy about the closed pipe).
 
 # Update & resort the records.
 gzip -cd "$vcf" | grep -v '^#' |
