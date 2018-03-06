@@ -737,8 +737,8 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map
                 //
                 // The max_rem_dist distance allows for the possibility of a frameshift smaller
                 // or equal to max_rem_dist at the 3' end of the read. If we detect a possible
-                // frameshift, queue the remainder read to re-align just the tail of the read
-                // using the gapped alignment algorithm.
+                // frameshift, queue the remainder read to re-align the read using the gapped
+                // alignment algorithm.
                 //
                 if (check_frameshift(tag_1, buf, max_rem_dist)) {
                     #pragma omp critical
@@ -789,8 +789,8 @@ merge_gapped_remainders(map<int, MergedStack *> &merged, map<int, Stack *> &uniq
         Cigar      cigar;
         GappedAln *aln = new GappedAln(merged[keys[0]]->len);
         AlignRes   a;
-        int        diff;
-        size_t     q_start, q_end, s_start, s_end;
+        // int        diff;
+        // size_t     q_start, q_end, s_start, s_end;
         string     buf, seq;
 
         #pragma omp for schedule(dynamic)
@@ -806,18 +806,18 @@ merge_gapped_remainders(map<int, MergedStack *> &merged, map<int, Stack *> &uniq
                 // cerr << "  Remainder " << i << "\n";
                 Rem *r = rem.at(tag_1->rem_queue[i]);
 
-                //
-                // We want to align the last max_rem_dist * 2 nucleotides. If sequences are already the wrong length,
-                // adjust so the 3' ends are lined up properly in the alignment matrix.
-                //
-                diff    = tag_1->len - r->seq->size();
-                q_start = r->seq->size() - (max_rem_dist * 2) - 1;
-                q_end   = r->seq->size() - 1;
-                s_start = tag_1->len - (max_rem_dist * 2) - 1;
-                s_end   = tag_1->len - 1;
+                // //
+                // // We want to align the last max_rem_dist * 2 nucleotides. If sequences are already the wrong length,
+                // // adjust so the 3' ends are lined up properly in the alignment matrix.
+                // //
+                // diff    = tag_1->len - r->seq->size();
+                // q_start = r->seq->size() - (max_rem_dist * 2) - 1;
+                // q_end   = r->seq->size() - 1;
+                // s_start = tag_1->len - (max_rem_dist * 2) - 1;
+                // s_end   = tag_1->len - 1;
 
-                q_start = diff > 0 ? q_start + diff : q_start;
-                s_start = diff < 0 ? s_start + abs(diff) : s_start;
+                // q_start = diff > 0 ? q_start + diff : q_start;
+                // s_start = diff < 0 ? s_start + abs(diff) : s_start;
                 
                 // cerr << "Consensus size: " << tag_1->len << "; remainder size: " << r->seq->size() << "\n"
                 //      << "Con seq: " << tag_1->con << " (" << strlen(tag_1->con) << ")\n"
@@ -980,10 +980,7 @@ call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map<i
                     reads.push_back(r->seq);
                     read_types.push_back(secondary);
 
-                    // assert(r->seq->size() == length);
-                    if (r->seq->size() != length) {
-                        cerr << "ID: " << mtag->id << "; rem size: " << r->seq->size() << "; locus length: " << length << "\n" << "  rem seq: " << r->seq->seq() << "\n  con seq: " << mtag->con << "\n";
-                    }
+                    assert(r->seq->size() == length);
                 }
             }
 
