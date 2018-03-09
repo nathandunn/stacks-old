@@ -127,11 +127,10 @@ private:
     };
 
     Config cfg_;
-    vector<BamStats> bam_stats_;
-    LocStats loc_stats_;
-
     vector<Bam*> bam_fs_;
     BamPopInfo bpopi_;
+    vector<BamStats> bam_stats_;
+    LocStats loc_stats_;
 
     bool next_record(size_t bam_f_i);
     bool next_record() {return next_record(0);}
@@ -493,10 +492,10 @@ BamCLocBuilder::BamCLocBuilder(
         const vector<string>& samples
 ) :
     cfg_(cfg),
-    bam_stats_(samples.size()),
-    loc_stats_(),
     bam_fs_(move(bam_fs)),
     bpopi_(samples.empty() ? BamPopInfo(bam_fs_) : BamPopInfo(bam_fs_, samples)),
+    bam_stats_(bpopi_.mpopi().samples().size()),
+    loc_stats_(),
     next_records_(bam_fs_.size()),
     treat_next_records_as_fw_(bam_fs_.size())
 {
