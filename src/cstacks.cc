@@ -1570,7 +1570,6 @@ write_simple_output(CLocus *tag, ofstream &cat_file, ofstream &snp_file, ofstrea
              << tag->con    << "\t"
              << 0           << "\t" // These flags are unused in cstacks, but important in ustacks
              << 0           << "\t"
-             << 0           << "\t"
              << 0           << "\n";
 
     //
