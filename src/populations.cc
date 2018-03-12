@@ -3826,10 +3826,7 @@ parse_command_line(int argc, char* argv[])
             {"finestructure",  no_argument,       NULL, 1015},
             {"fastphase",      no_argument,       NULL, 'A'},
             {"phase",          no_argument,       NULL, 'C'},
-            {"beagle",         no_argument,       NULL, 'E'},
-            {"beagle_phased",  no_argument,       NULL, 'H'},
             {"plink",          no_argument,       NULL, 'K'},
-            {"genomic",        no_argument,       NULL, 'g'},
             {"genepop",        no_argument,       NULL, 1010},
             {"genepop-haps-3digits", no_argument, NULL, 1011},
             {"phylip",         no_argument,       NULL, 'Y'},
@@ -3881,7 +3878,7 @@ parse_command_line(int argc, char* argv[])
         };
 
         // getopt_long stores the option index here.
-        int c = getopt_long(argc, argv, "ACDEFHJKLNSTUV:YZ123456dghjklnqa:c:e:f:i:o:p:r:t:u:w:B:I:M:O:P:R:Q:W:", long_options, NULL);
+        int c = getopt_long(argc, argv, "ACDFJKLNSTUV:YZ123456dhjklnqa:c:e:f:i:o:p:r:t:u:w:B:I:M:O:P:R:Q:W:", long_options, NULL);
 
         // Detect the end of the options.
         if (c == -1)
@@ -4073,14 +4070,8 @@ parse_command_line(int argc, char* argv[])
         case 'C':
             cerr << "BETA: Ignoring --phase output request, which is not currently implemented.\n";
             break;
-        case 'E':
-            cerr << "BETA: Ignoring --beagle output request, which is not currently implemented.\n";
-            break;
-        case 'H':
-            cerr << "BETA: Ignoring --beagle_phased output request, which is not currently implemented.\n";
-            break;
-        case 'K':
-            cerr << "BETA: Ignoring --plink output request, which is not currently implemented.\n";
+        case 'K': // --plink
+            add_export<PlinkExport>();
             break;
         case 'Z':
             cerr << "BETA: Ignoring --hzar output request, which is not currently implemented.\n";
@@ -4096,9 +4087,6 @@ parse_command_line(int argc, char* argv[])
             break;
         case 'U':
             cerr << "BETA: Ignoring --treemix output request, which is not currently implemented.\n";
-            break;
-        case 'g':
-            cerr << "BETA: Ignoring --genomic output request, which is not currently implemented.\n";
             break;
         case 'W':
             wl_file = optarg;
@@ -4314,7 +4302,6 @@ void help() {
          << "\n"
          << "File output options:\n"
          << "  --ordered_export: if data is reference aligned, exports will be ordered; only a single representative of each overlapping site.\n"
-         << "  --genomic*: output each nucleotide position (fixed or polymorphic) in all population members to a file (requires --renz).\n"
          << "  --fasta_loci: output locus consensus sequences in FASTA format.\n"
          << "  --fasta_samples: output the sequences of the two haplotypes of each (diploid) sample, for each locus, in FASTA format.\n"
          << "  --vcf: output SNPs and haplotypes in Variant Call Format (VCF).\n"
@@ -4323,9 +4310,7 @@ void help() {
          << "  --finestructure: output results in FineStructure format.\n"
          << "  --phase*: output genotypes in PHASE format.\n"
          << "  --fastphase*: output genotypes in fastPHASE format.\n"
-         << "  --beagle*: output genotypes in Beagle format.\n"
-         << "  --beagle_phased*: output haplotypes in Beagle format.\n"
-         << "  --plink*: output genotypes in PLINK format.\n"
+         << "  --plink: output genotypes in PLINK format.\n"
          << "  --hzar*: output genotypes in Hybrid Zone Analysis using R (HZAR) format.\n"
          << "  --phylip: output nucleotides that are fixed-within, and variant among populations in Phylip format for phylogenetic tree construction.\n"
          << "  --phylip_var: include variable sites in the phylip output encoded using IUPAC notation.\n"

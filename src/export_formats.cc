@@ -1229,129 +1229,9 @@ FastaSamplesExport::write_batch(const vector<LocBin *> &loci)
     return 0;
 }
 
-/*
-int
-write_vcf_haplotypes(map<int, CSLocus *> &catalog,
-                     PopMap<CSLocus> *pmap,
-                     PopSum<CSLocus> *psum)
-{
-    //
-    // Write a VCF file as defined here: http://samtools.github.io/hts-specs/
-    //XXX Datum::obshap *is not* ordered, I think. See Bitbucket. @Nick (June 2016)
-    //
-
-    string path = out_path + out_prefix + ".haplotypes.vcf";
-    cout << "Writing population data haplotypes to VCF file '" << path << "'\n";
-
-    VcfHeader header;
-    header.add_std_meta();
-    for(auto& s : mpopi.samples())
-        header.add_sample(s.name);
-    VcfWriter writer (path, move(header));
-
-    CSLocus  *loc;
-    Datum   **d;
-    char      allele[id_len];
-
-    for (auto chr = pmap->ordered_loci().begin(); chr != pmap->ordered_loci().end(); chr++) {
-        for (uint pos = 0; pos < chr->second.size(); pos++) {
-            loc = chr->second[pos];
-            d   = pmap->locus(loc->id);
-
-            map<string, double> hap_freq;
-            const double n_alleles = count_haplotypes_at_locus(0, pmap->sample_cnt() - 1, (const Datum **) d, hap_freq);
-            if (hap_freq.size() <= 1)
-                // Monomorphic locus.
-                // XXX What does [hap_freq.size()==1] mean ? @Nick (July 2016)
-                continue;
-            for(auto& h : hap_freq)
-                // Convert counts to freqs.
-                h.second /= n_alleles;
-
-            //
-            // Order the haplotypes according to most frequent. Record the ordered position or each
-            // haplotype and convert them from counts to frequencies.
-            //
-
-            VcfRecord rec;
-            rec.append_chrom(string(loc->loc.chr()));
-            rec.append_pos(loc->sort_bp() + 1);
-            rec.append_id(to_string(loc->id));
-
-            //alleles
-            vector<pair<string, double> > ordered_hap (hap_freq.begin(), hap_freq.end());
-            sort(ordered_hap.begin(), ordered_hap.end(), compare_pair_haplotype);
-            map<string, int> hap_index;
-            for (size_t i = 0; i < ordered_hap.size(); i++) {
-                string h = ordered_hap[i].first;
-                rec.append_allele(loc->loc.strand == strand_plus ? h : rev_comp(h));
-                hap_index[h] = i;
-            }
-
-            rec.append_qual(".");
-            rec.append_filters("PASS");
-
-            //info
-            rec.append_info(string("locori=") + (loc->loc.strand == strand_plus ? "p" : "m"));
-            stringstream ss;
-            ss << n_alleles/2;
-            rec.append_info(string("NS=") + ss.str());
-            string af = "AF=";
-            sprintf(allele, "%0.3f", ordered_hap[1].second); //NB. hap_freq.size() >= 2
-            af += allele;
-            for (auto h=ordered_hap.begin()+2; h!=ordered_hap.end(); ++h) {
-                sprintf(allele, "%0.3f", h->second);
-                af += string(",") + allele;
-            }
-            rec.append_info(af);
-
-            //format
-            rec.append_format("GT");
-            rec.append_format("DP");
-
-            for (int j = 0; j < pmap->sample_cnt(); j++) {
-                stringstream sample;
-
-                if (d[j] == NULL) {
-                    // Data does not exist.
-                    sample << "./.:0";
-                } else if (d[j]->obshap.size() > 2) {
-                    // More than two alleles in this sample
-                    sample << "./.:" << d[j]->tot_depth;
-                } else if (d[j]->obshap.size() == 1) {
-                    // Homozygote.
-                    char* h = d[j]->obshap[0];
-                    int i = uncalled_haplotype(h) ? -1 : hap_index.at(h);
-                    if(i >= 0)
-                        sample << i << "/" << i << ":" << d[j]->tot_depth;
-                    else
-                        sample << "./.:" << d[j]->tot_depth;
-                } else {
-                    // Heterozygote.
-                    char* h1 = d[j]->obshap[0];
-                    char* h2 = d[j]->obshap[1];
-                    int i1 = uncalled_haplotype(h1) ? -1 : hap_index.at(h1);
-                    int i2 = uncalled_haplotype(h2) ? -1 : hap_index.at(h2);
-                    if(i1 >= 0 && i2 >= 0)
-                        sample << (i1 < i2 ? i1 : i2) << "/" << (i1 < i2 ? i2 : i1) << ":" << d[j]->tot_depth;
-                    else if (i1 >= 0)
-                        sample << i1 << "/.:" << d[j]->tot_depth;
-                    else if (i2 >= 0)
-                        sample << i2 << "/.:" << d[j]->tot_depth;
-                }
-                rec.append_sample(sample.str());
-            }
-            writer.write_record(rec);
-        }
-    }
-    return 0;
-}
-*/
-
 int
 OrderableExport::write_batch(const vector<LocBin*> &loci)
 {
-
     if (ordered_export) {
         //
         // We need to order the SNPs to take into account overlapping loci.
@@ -2432,6 +2312,317 @@ int VcfHapsExport::write_batch(const vector<LocBin*>& loci){
     return 0;
 }
 
+int
+PlinkExport::open(const MetaPopInfo *mpopi)
+{
+    this->_mpopi = mpopi;
+
+    //
+    // Write a GenePop file as defined here: http://kimura.univ-montp2.fr/~rousset/Genepop.htm
+    //
+
+    //
+    // Write a markers file containing each marker, the chromosome it falls on,
+    // an empty centiMorgan field, and finally its genomic position in basepairs.
+    //
+    this->_markers_path = out_path + out_prefix + ".plink.map";
+    this->_markers_fh.open(this->_markers_path);
+    check_open(this->_markers_fh, this->_markers_path);
+    
+    //
+    // Write the genotypes in a separate file.
+    //
+    this->_path = out_path + out_prefix + ".plink.ped";
+    //
+    // Open a temporary file.
+    //
+    this->_tmpfh.open(this->tmp_path());
+    check_open(this->_tmpfh, this->tmp_path());
+
+    cout << "Polymorphic sites in PLINK format will be written to '" << this->_path << "'\n";
+
+    return 0;
+}
+
+int
+PlinkExport::write_header()
+{
+    //
+    // Obtain the current date.
+    //
+    time_t     rawtime;
+    struct tm *timeinfo;
+    char       date[32];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date, 32, "%B %d, %Y", timeinfo);
+    this->_markers_fh << "# Stacks v" << VERSION << "; " << " PLINK v1.07; " << date << "\n";
+
+    for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
+        const Pop& pop = this->_mpopi->pops()[p];
+        for (size_t j = pop.first_sample; j <= pop.last_sample; j++)
+            this->_tmpfh << "\t" << pop.name;
+    }
+    this->_tmpfh << "\n";
+
+    for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
+        const Pop& pop = this->_mpopi->pops()[p];
+        for (size_t j = pop.first_sample; j <= pop.last_sample; j++)
+            this->_tmpfh << "\t" << mpopi.samples()[j].name;
+    }
+    this->_tmpfh << "\n";
+
+    for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
+        const Pop& pop = this->_mpopi->pops()[p];
+        for (size_t j = pop.first_sample; j <= pop.last_sample; j++)
+            this->_tmpfh << "\t" << 0;  // Paternal ID
+    }
+    this->_tmpfh << "\n";
+
+    for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
+        const Pop& pop = this->_mpopi->pops()[p];
+        for (size_t j = pop.first_sample; j <= pop.last_sample; j++)
+            this->_tmpfh << "\t" << 0;  // Maternal ID
+    }
+    this->_tmpfh << "\n";
+
+    for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
+        const Pop& pop = this->_mpopi->pops()[p];
+        for (size_t j = pop.first_sample; j <= pop.last_sample; j++)
+            this->_tmpfh << "\t" << 0;  // Sex
+    }
+    this->_tmpfh << "\n";
+
+    for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
+        const Pop& pop = this->_mpopi->pops()[p];
+        for (size_t j = pop.first_sample; j <= pop.last_sample; j++)
+            this->_tmpfh << "\t" << 0;  // Phenotype
+    }
+    this->_tmpfh << "\n";
+
+    return 0;
+}
+
+int
+PlinkExport::write_batch(const vector<LocBin*> &loci)
+{
+    if (ordered_export) {
+        //
+        // We need to order the SNPs to take into account overlapping loci.
+        //
+        vector<const NucTally *> sites;
+        OLocTally<NucTally> ord;
+        ord.order(sites, loci);
+
+        map<size_t, size_t> key;
+        map<size_t, size_t>::iterator key_it = key.begin();
+
+        for (size_t k = 0; k < loci.size(); k++)
+            key_it = key.insert(key_it, pair<size_t, size_t>(loci[k]->cloc->id, k));
+
+        for (uint pos = 0; pos < sites.size(); pos++) {
+            int loc_id = sites[pos]->loc_id;
+
+            const LocBin* loc = loci[key[loc_id]];
+            size_t        col = sites[pos]->col;
+            size_t  snp_index = loc->cloc->snp_index(col);
+            
+            this->_markers_fh << loc->cloc->loc.chr() << "\t"
+                              << loc->cloc->id << "_" << col << "\t"
+                              << "0\t"
+                              << loc->cloc->sort_bp(col) + 1 << "\n";
+        }
+
+    } else {
+        for (uint k = 0; k < loci.size(); k++) {
+            const LocBin*    loc = loci[k];
+            const CSLocus*  cloc = loc->cloc;
+            const LocTally*    t = loc->s->meta_pop();
+
+            for (uint snp_index = 0; snp_index < cloc->snps.size(); snp_index++) {
+                uint col = cloc->snps[snp_index]->col;
+
+                if (t->nucs[col].allele_cnt != 2)
+                    continue;
+                
+                this->_markers_fh << cloc->loc.chr() << "\t"
+                                  << cloc->id << "_" << col << "\t"
+                                  << "0\t"
+                                  << cloc->sort_bp(col) + 1 << "\n";
+            }
+        }
+    }
+
+    return OrderableExport::write_batch(loci);
+}
+
+int
+PlinkExport::write_site(const CSLocus *loc, const LocPopSum *lps, Datum const*const* d, size_t col, size_t snp_index)
+{
+    const LocSum *s;
+    char p_allele, q_allele;
+
+    this->_tmpfh << loc->id << "_" << col;
+
+    for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
+        const Pop& pop = this->_mpopi->pops()[p];
+        s = lps->per_pop(p);
+
+        for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
+
+            if (s->nucs[col].incompatible_site ||
+                s->nucs[col].filtered_site) {
+                //
+                // This site contains more than two alleles in this population or was filtered
+                // due to a minor allele frequency that is too low.
+                //
+                this->_tmpfh << "\t" << "0";
+            } else if (d[j] == NULL || col >= uint(d[j]->len)) {
+                //
+                // Data does not exist.
+                //
+                this->_tmpfh << "\t" << "0";
+            } else if (d[j]->model[col] == 'U') {
+                //
+                // Data exists, but the model call was uncertain.
+                //
+                this->_tmpfh << "\t" << "0";
+            } else {
+                //
+                // Tally up the nucleotide calls.
+                //
+                tally_observed_haplotypes(d[j]->obshap, snp_index, p_allele, q_allele);
+
+                if (p_allele == 0 && q_allele == 0)
+                    this->_tmpfh << "\t" << "0";
+                else if (p_allele == 0)
+                    this->_tmpfh << "\t" << q_allele;
+                else if (q_allele == 0)
+                    this->_tmpfh << "\t" << p_allele;
+                else
+                    this->_tmpfh << "\t" << p_allele;
+            }
+        }
+    }
+    this->_tmpfh << "\n";
+    
+    this->_tmpfh << loc->id << "_" << col;
+
+    for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
+        const Pop& pop = this->_mpopi->pops()[p];
+        s = lps->per_pop(p);
+
+        for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
+
+            if (s->nucs[col].incompatible_site ||
+                s->nucs[col].filtered_site) {
+                //
+                // This site contains more than two alleles in this population or was filtered
+                // due to a minor allele frequency that is too low.
+                //
+                this->_tmpfh << "\t" << "0";
+            } else if (d[j] == NULL || col >= uint(d[j]->len)) {
+                //
+                // Data does not exist.
+                //
+                this->_tmpfh << "\t" << "0";
+            } else if (d[j]->model[col] == 'U') {
+                //
+                // Data exists, but the model call was uncertain.
+                //
+                this->_tmpfh << "\t" << "0";
+            } else {
+                //
+                // Tally up the nucleotide calls.
+                //
+                tally_observed_haplotypes(d[j]->obshap, snp_index, p_allele, q_allele);
+
+                if (p_allele == 0 && q_allele == 0)
+                    this->_tmpfh << "\t" << "0";
+                else if (p_allele == 0)
+                    this->_tmpfh << "\t" << q_allele;
+                else if (q_allele == 0)
+                    this->_tmpfh << "\t" << p_allele;
+                else
+                    this->_tmpfh << "\t" << q_allele;
+            }
+        }
+    }
+    this->_tmpfh << "\n";
+    
+    return 0;
+}
+
+int
+PlinkExport::post_processing()
+{
+    //
+    // Close the temporary output file.
+    //
+    this->_tmpfh.close();
+
+    //
+    // Obtain the current date.
+    //
+    time_t     rawtime;
+    struct tm *timeinfo;
+    char       date[32];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date, 32, "%B %d, %Y", timeinfo);
+
+    this->_fh.open(this->_path.c_str());
+    check_open(this->_fh, this->_path);
+
+    //
+    // Output the header line.
+    //
+    this->_fh << "# Stacks v" << VERSION << "; " << " PLINK v1.07; " << date << "\n";
+
+    ifstream intmpfh (this->tmp_path());
+    check_open(intmpfh, this->tmp_path());
+
+    vector<string> transposed_lines;
+
+    Export::transpose(intmpfh, transposed_lines);
+
+    assert(transposed_lines.size() == this->_mpopi->samples().size() + 1);
+
+    size_t line_cnt = 0;
+    size_t pos;
+    //
+    // The first line has a list of locus IDs, they are unnecessary in this format, so ignore them.
+    //
+    line_cnt++;
+
+    for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
+        const Pop& pop = this->_mpopi->pops()[p];
+
+        for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
+            this->_fh << transposed_lines[line_cnt] << "\n";
+            line_cnt++;
+        }
+    }
+
+    return 1;
+}
+
+void
+PlinkExport::close()
+{
+    //
+    // Close and delete the temporary files.
+    //
+    this->_intmpfh.close();
+
+    remove(this->_tmp_path.c_str());
+
+    this->_fh.close();
+    this->_markers_fh.close();
+
+    return;
+}
+
 /*
 int
 write_hzar(map<int, CSLocus *> &catalog,
@@ -3137,551 +3328,6 @@ write_phase(map<int, CSLocus *> &catalog,
         }
 
         fh.close();
-    }
-
-    cout << "done.\n";
-
-    return 0;
-}
-
-int
-write_plink(map<int, CSLocus *> &catalog,
-            PopMap<CSLocus> *pmap,
-            PopSum<CSLocus> *psum)
-{
-    //
-    // Write a PLINK file as defined here: http://pngu.mgh.harvard.edu/~purcell/plink/data.shtml
-    //
-    // We will write one file per chromosome.
-    //
-    cout << "Writing population data to PLINK files...";
-
-    //
-    // Obtain the current date.
-    //
-    time_t     rawtime;
-    struct tm *timeinfo;
-    char       date[32];
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(date, 32, "%B %d, %Y", timeinfo);
-
-    map<string, vector<CSLocus *> >::const_iterator it;
-    CSLocus  *loc;
-    Datum   **d;
-    LocSum  **s;
-    LocTally *t;
-    string    chr;
-
-    //
-    // First, write a markers file containing each marker, the chromosome it falls on,
-    // an empty centiMorgan field, and finally its genomic position in basepairs.
-    //
-    string file = out_path + out_prefix + ".plink.map";
-
-    ofstream fh(file.c_str(), ofstream::out);
-
-    if (fh.fail()) {
-        cerr << "Error opening PLINK markers file '" << file << "'\n";
-        exit(1);
-    }
-
-    //
-    // Output the header.
-    //
-    fh << "# Stacks v" << VERSION << "; " << " PLINK v1.07; " << date << "\n";
-
-    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
-        chr = it->first;
-
-        for (uint pos = 0; pos < it->second.size(); pos++) {
-            loc = it->second[pos];
-            t   = psum->locus_tally(loc->id);
-
-            for (uint i = 0; i < loc->snps.size(); i++) {
-                uint col = loc->snps[i]->col;
-                if (t->nucs[col].allele_cnt == 2)
-                    fh << chr << "\t"
-                       << loc->id << "_" << col << "\t"
-                       << "0\t"
-                       << loc->sort_bp(col) +1 << "\n";
-            }
-        }
-    }
-    fh.close();
-
-    //
-    // Now output the genotypes in a separate file.
-    //
-    file = out_path + out_prefix + ".plink.ped";
-
-    fh.open(file.c_str(), ofstream::out);
-
-    if (fh.fail()) {
-        cerr << "Error opening PLINK markers file '" << file << "'\n";
-        exit(1);
-    }
-
-    fh << "# Stacks v" << VERSION << "; " << " PLINK v1.07; " << date << "\n";
-
-    char p_allele, q_allele;
-
-    //
-    //  marker, output the genotypes for each sample in two successive columns.
-    //
-    for (size_t p=0; p<mpopi.pops().size(); ++p) {
-        const Pop& pop = mpopi.pops()[p];
-
-        for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
-
-            fh << pop.name << "\t"
-               << mpopi.samples()[j].name << "\t"
-               << "0\t"  // Paternal ID
-               << "0\t"  // Maternal ID
-               << "0\t"  // Sex
-               << "0";   // Phenotype
-
-            for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
-                for (uint pos = 0; pos < it->second.size(); pos++) {
-                    loc = it->second[pos];
-
-                    s = psum->locus(loc->id);
-                    d = pmap->locus(loc->id);
-                    t = psum->locus_tally(loc->id);
-
-                    for (uint i = 0; i < loc->snps.size(); i++) {
-                        uint col = loc->snps[i]->col;
-
-                        //
-                        // If this site is fixed in all populations or has too many alleles don't output it.
-                        //
-                        if (t->nucs[col].allele_cnt != 2)
-                            continue;
-                        //
-                        // Output the p and q alleles
-                        //
-                        if (s[p]->nucs[col].incompatible_site ||
-                            s[p]->nucs[col].filtered_site) {
-                            //
-                            // This site contains more than two alleles in this population or was filtered
-                            // due to a minor allele frequency that is too low.
-                            //
-                            fh << "\t" << "0" << "\t" << "0";
-                        } else if (d[j] == NULL || col >= uint(d[j]->len)) {
-                            //
-                            // Data does not exist.
-                            //
-                            fh << "\t" << "0" << "\t" << "0";
-                        } else if (d[j]->model[col] == 'U') {
-                            //
-                            // Data exists, but the model call was uncertain.
-                            //
-                            fh << "\t" << "0" << "\t" << "0";
-                        } else {
-                            //
-                            // Tally up the nucleotide calls.
-                            //
-                            tally_observed_haplotypes(d[j]->obshap, i, p_allele, q_allele);
-
-                            if (p_allele == 0 && q_allele == 0)
-                                fh << "\t" << "0" << "\t" << "0";
-                            else if (p_allele == 0)
-                                fh << "\t" << q_allele << "\t" << q_allele;
-                            else if (q_allele == 0)
-                                fh << "\t" << p_allele << "\t" << p_allele;
-                            else
-                                fh << "\t" << p_allele << "\t" << q_allele;
-                        }
-                    }
-                }
-            }
-            fh << "\n";
-        }
-    }
-
-    fh.close();
-
-    cout << "done.\n";
-
-    return 0;
-}
-
-int
-write_beagle(map<int, CSLocus *> &catalog,
-            PopMap<CSLocus> *pmap,
-            PopSum<CSLocus> *psum)
-{
-    //
-    // Write a Beagle file as defined here: http://faculty.washington.edu/browning/beagle/beagle.html
-    //
-    // We will write one file per chromosome, per population.
-    //
-    cout << "Writing population data to unphased Beagle files...";
-
-    //
-    // Obtain the current date.
-    //
-    time_t     rawtime;
-    struct tm *timeinfo;
-    char       date[32];
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(date, 32, "%B %d, %Y", timeinfo);
-
-    map<string, vector<CSLocus *> >::const_iterator it;
-    CSLocus  *loc;
-    Datum   **d;
-    LocSum  **s;
-    LocTally *t;
-    uint      col;
-
-    stringstream pop_name;
-    string       file;
-
-    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
-
-        //
-        // We need to determine an ordering that can take into account overlapping RAD sites.
-        //
-        vector<GenPos> ordered_snps;
-        for (uint pos = 0; pos < it->second.size(); pos++) {
-            loc = it->second[pos];
-            t   = psum->locus_tally(loc->id);
-
-            for (uint i = 0; i < loc->snps.size(); i++) {
-                col = loc->snps[i]->col;
-                if (t->nucs[col].allele_cnt == 2)
-                    ordered_snps.push_back(GenPos(loc->id, i, loc->sort_bp(col)));
-            }
-        }
-        sort(ordered_snps.begin(), ordered_snps.end());
-
-        //
-        // Now output the genotypes in a separate file for each population.
-        //
-        for (size_t p=0; p<mpopi.pops().size(); ++p) {
-            const Pop& pop = mpopi.pops()[p];
-
-            //
-            // Open a markers file containing each marker, its genomic position in basepairs
-            // and the two alternative alleles at this position.
-            //
-            file = out_path + out_prefix + "." + pop.name + "-" + it->first + ".unphased.bgl.markers";
-
-            ofstream mfh(file.c_str(), ofstream::out);
-            if (mfh.fail()) {
-                cerr << "Error opening Beagle markers file '" << file << "'\n";
-                exit(1);
-            }
-            mfh << "# Stacks v" << VERSION << "; " << " Beagle v3.3; " << date << "\n";
-
-            //
-            // Open the genotypes file.
-            //
-            file = out_path + out_prefix + "." + pop.name + "-" + it->first + ".unphased.bgl";
-
-            ofstream fh(file.c_str(), ofstream::out);
-            if (fh.fail()) {
-                cerr << "Error opening Beagle genotypes file '" << file << "'\n";
-                exit(1);
-            }
-            fh << "# Stacks v" << VERSION << "; " << " Beagle v3.3; " << date << "\n";
-
-            char p_allele, q_allele;
-            //
-            // Output a list of all the samples in this population.
-            //
-            fh << "I\tid";
-            for (size_t j = pop.first_sample; j <= pop.last_sample; j++)
-                fh << "\t" << mpopi.samples()[j].name << "\t" << mpopi.samples()[j].name;
-            fh << "\n";
-
-            //
-            // Output population IDs for each sample.
-            //
-            fh << "S\tid";
-            for (size_t j = pop.first_sample; j <= pop.last_sample; j++)
-                fh << "\t" << pop.name << "\t" << pop.name;
-            fh << "\n";
-
-            //
-            // For each marker, output the genotypes for each sample in two successive columns.
-            //
-            for (uint pos = 0; pos < ordered_snps.size(); pos++) {
-                loc = catalog[ordered_snps[pos].id];
-
-                s   = psum->locus(loc->id);
-                d   = pmap->locus(loc->id);
-                t   = psum->locus_tally(loc->id);
-                col = loc->snps[ordered_snps[pos].snp_index]->col;
-
-                //
-                // If this site is fixed in all populations or has too many alleles don't output it.
-                //
-                if (t->nucs[col].allele_cnt != 2)
-                    continue;
-
-                //
-                // If this site is monomorphic in this population don't output it.
-                //
-                if (s[p]->nucs[col].pi == 0.0)
-                    continue;
-
-                //
-                // Output this locus to the markers file.
-                //
-                mfh << loc->id << "_" << col << "\t"
-                    << loc->sort_bp(col) +1  << "\t"
-                    << t->nucs[col].p_allele << "\t"
-                    << t->nucs[col].q_allele << "\n";
-
-                fh << "M" << "\t" << loc->id << "_" << col;
-
-                for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
-                    //
-                    // Output the p allele
-                    //
-                    if (s[p]->nucs[col].incompatible_site ||
-                        s[p]->nucs[col].filtered_site) {
-                        //
-                        // This site contains more than two alleles in this population or was filtered
-                        // due to a minor allele frequency that is too low.
-                        //
-                        fh << "\t" << "?";
-
-                    } else if (d[j] == NULL || col >= uint(d[j]->len)) {
-                        //
-                        // Data does not exist.
-                        //
-                        fh << "\t" << "?";
-                    } else if (d[j]->model[col] == 'U') {
-                        //
-                        // Data exists, but the model call was uncertain.
-                        //
-                        fh << "\t" << "?";
-                    } else {
-                        //
-                        // Tally up the nucleotide calls.
-                        //
-                        tally_observed_haplotypes(d[j]->obshap, ordered_snps[pos].snp_index, p_allele, q_allele);
-
-                        if (p_allele == 0 && q_allele == 0)
-                            fh << "\t" << "?";
-                        else if (p_allele == 0)
-                            fh << "\t" << q_allele;
-                        else
-                            fh << "\t" << p_allele;
-                    }
-
-                    //
-                    // Now output the q allele
-                    //
-                    if (s[p]->nucs[col].incompatible_site ||
-                        s[p]->nucs[col].filtered_site) {
-                        fh << "\t" << "?";
-
-                    } else if (d[j] == NULL || col >= uint(d[j]->len)) {
-                        fh << "\t" << "?";
-
-                    } else if (d[j]->model[col] == 'U') {
-                        fh << "\t" << "?";
-
-                    } else {
-                        if (p_allele == 0 && q_allele == 0)
-                            fh << "\t" << "?";
-                        else if (q_allele == 0)
-                            fh << "\t" << p_allele;
-                        else
-                            fh << "\t" << q_allele;
-                    }
-                }
-                fh << "\n";
-            }
-
-            fh.close();
-            mfh.close();
-        }
-    }
-
-    cout << "done.\n";
-
-    return 0;
-}
-
-int
-write_beagle_phased(map<int, CSLocus *> &catalog,
-                    PopMap<CSLocus> *pmap,
-                    PopSum<CSLocus> *psum)
-{
-    //
-    // Write a Beagle file as a set of haplotpyes as defined here:
-    //   http://faculty.washington.edu/browning/beagle/beagle.html
-    //
-    // We will write one file per chromosome.
-    //
-    cout << "Writing population data to phased Beagle files...";
-
-    //
-    // Obtain the current date.
-    //
-    time_t     rawtime;
-    struct tm *timeinfo;
-    char       date[32];
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(date, 32, "%B %d, %Y", timeinfo);
-
-    map<string, vector<CSLocus *> >::const_iterator it;
-    CSLocus  *loc;
-    Datum   **d;
-
-    stringstream pop_name;
-    string       file;
-
-    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
-
-        //
-        // We need to determine an ordering for all legitimate loci/SNPs.
-        //
-        vector<GenPos> ordered_loci;
-        for (uint pos = 0; pos < it->second.size(); pos++) {
-            loc = it->second[pos];
-
-            if (loc->snps.size() == 0) continue;
-
-            //
-            // Check that there aren't too many haplotypes (PHASE has a max of 50).
-            //
-            if (loc->alleles.size() > 40) continue;
-
-            //
-            // Iterate over the population to determine that this subset of the population
-            // has data at this locus.
-            //
-            d = pmap->locus(loc->id);
-            for (int j = 0; j < pmap->sample_cnt(); j++) {
-                if (d[j] != NULL &&
-                    d[j]->obshap.size() > 0 &&
-                    d[j]->obshap.size() <= 2) {
-                    //
-                    // Data exists, and their are the corrent number of haplotypes.
-                    //
-                    ordered_loci.push_back(GenPos(loc->id, 0, loc->sort_bp(), haplotype));
-                    break;
-                }
-            }
-        }
-        sort(ordered_loci.begin(), ordered_loci.end());
-
-        //
-        // Now output the genotypes in a separate file for each population.
-        //
-
-        for (size_t i_pop=0; i_pop<mpopi.pops().size(); ++i_pop) {
-            const Pop& pop = mpopi.pops()[i_pop];
-
-            //
-            // Open a file for writing the markers: their genomic position in basepairs
-            // and the two alternative alleles at this position.
-            //
-            file = out_path + out_prefix + "." + pop.name + "-" + it->first + ".phased.bgl.markers";
-
-            ofstream mfh(file.c_str(), ofstream::out);
-            if (mfh.fail()) {
-                cerr << "Error opening Beagle markers file '" << file << "'\n";
-                exit(1);
-            }
-            mfh << "# Stacks v" << VERSION << "; " << " Beagle v3.3; " << date << "\n";
-
-            //
-            // Now output the haplotypes in a separate file.
-            //
-            file = out_path + out_prefix + "." + pop.name + "-" + it->first + ".phased.bgl";
-
-            ofstream fh(file.c_str(), ofstream::out);
-            if (fh.fail()) {
-                cerr << "Error opening Beagle markers file '" << file << "'\n";
-                exit(1);
-            }
-            fh << "# Stacks v" << VERSION << "; " << " Beagle v3.3; " << date << "\n";
-
-            //
-            // Output a list of all the samples in the data set.
-            //
-            fh << "I\tid";
-            for (size_t j = pop.first_sample; j <= pop.last_sample; j++)
-                fh << "\t" << mpopi.samples()[j].name << "\t" << mpopi.samples()[j].name;
-            fh << "\n";
-
-            //
-            // Output population IDs for each sample.
-            //
-            fh << "S\tid";
-            for (size_t j = pop.first_sample; j <= pop.last_sample; j++)
-                fh << "\t" << pop.name << "\t" << pop.name;
-            fh << "\n";
-
-            for (uint pos = 0; pos < ordered_loci.size(); pos++) {
-                loc = catalog[ordered_loci[pos].id];
-                d   = pmap->locus(loc->id);
-
-                //
-                // If this locus is monomorphic in this population don't output it.
-                //
-                set<string> haplotypes;
-                for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
-                    if (d[j] == NULL) continue;
-
-                    if (d[j]->obshap.size() == 2) {
-                        haplotypes.insert(d[j]->obshap[0]);
-                        haplotypes.insert(d[j]->obshap[1]);
-                    } else {
-                        haplotypes.insert(d[j]->obshap[0]);
-                    }
-                }
-                if (haplotypes.size() == 1) continue;
-
-                //
-                // Output this locus to the markers file.
-                //
-                mfh << loc->id << "\t"
-                    << loc->sort_bp() +1;
-                for (uint j = 0; j < loc->strings.size(); j++)
-                    mfh << "\t" << loc->strings[j].first;
-                mfh << "\n";
-
-                //
-                // For each marker, output the genotypes for each sample in two successive columns.
-                //
-                fh << "M" << "\t" << loc->id;
-
-                for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
-                    //
-                    // Output the p and the q haplotype
-                    //
-                    if (d[j] == NULL) {
-                        //
-                        // Data does not exist.
-                        //
-                        fh << "\t" << "?" << "\t" << "?";
-                    } else {
-                        //
-                        // Data exists, output the first haplotype. We will assume the haplotypes are
-                        // numbered by their position in the loc->strings vector.
-                        //
-                        if (d[j]->obshap.size() > 2)
-                            fh << "\t" << "?" << "\t" << "?";
-                        else if (d[j]->obshap.size() == 2)
-                            fh << "\t" << d[j]->obshap[0] << "\t" << d[j]->obshap[1];
-                        else
-                            fh << "\t" << d[j]->obshap[0] << "\t" << d[j]->obshap[0];
-                    }
-                }
-                fh << "\n";
-            }
-            fh.close();
-            mfh.close();
-        }
     }
 
     cout << "done.\n";

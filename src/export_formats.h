@@ -231,6 +231,27 @@ class HapDivergenceExport: public Export {
     }
 };
 
+class PlinkExport: public OrderableExport {
+    const MetaPopInfo *_mpopi;
+    string   _tmp_path;
+    ofstream _tmpfh;
+    ifstream _intmpfh;
+    string   _markers_path;
+    ofstream _markers_fh;
+
+ public:
+    PlinkExport() : _mpopi(NULL) {}
+    ~PlinkExport() {}
+    int  open(const MetaPopInfo *mpopi);
+    int  write_header();
+    int  write_batch(const vector<LocBin *> &loci);
+    int  post_processing();
+    void close();
+
+ private:
+    int write_site(const CSLocus* cloc, const LocPopSum* psum, Datum const*const* datums, size_t col, size_t index);
+};
+
 class GenePopExport: public OrderableExport {
     const MetaPopInfo *_mpopi;
     ofstream _tmpfh;
@@ -427,12 +448,9 @@ class VcfHapsExport: public Export {
 
 /*
 int write_generic(map<int, CSLocus *> &, PopMap<CSLocus> *, bool);
-int write_genomic(map<int, CSLocus *> &, PopMap<CSLocus> *);
 int write_vcf_haplotypes(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
 int write_phase(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
 int write_fastphase(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
-int write_beagle(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
-int write_beagle_phased(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
 int write_plink(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
 int write_hzar(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
 int write_treemix(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
