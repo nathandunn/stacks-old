@@ -1,4 +1,4 @@
-Stacks 2.0 Beta 9 - Mar 06, 2018
+Stacks 2.0 Beta 9 - Mar 12, 2018
 --------------------------------
     Feature: Cleaned up tags/snps/alleles/matches files. We removed the batch ID from ustacks and cstacks 
              output, and the deprecated log likelihood fields from ustacks and cstacks. We also removed 
@@ -7,6 +7,7 @@ Stacks 2.0 Beta 9 - Mar 06, 2018
                gstacks.fa.gz => catalog.fa.gz; gstacks.vcf.gz => catalog.calls
     Feature: Removed read length restrictions from ustacks/cstacks/sstacks core, reads/loci can vary in
              length throughout the pipeline.
+    Feature: Reimplemented PLINK export format for the populations program.
     Bugfix: Updated to HTSLib 1.7; changed to a custom build system that will work with the Stacks build
             system.
     Bugfix: Made gapped alignments mandatory in ustacks, cstacks, and sstacks. Added check for frameshift 
