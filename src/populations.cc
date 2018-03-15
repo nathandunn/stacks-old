@@ -596,10 +596,14 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
         // Create and populate a map of the population genotypes.
         //
         loc->d = new Datum *[loc->sample_cnt];
-        for (size_t i = 0; i < this->_mpopi->samples().size(); i++) loc->d[i] = NULL;
+        for (size_t i = 0; i < this->_mpopi->samples().size(); i++)
+            loc->d[i] = NULL;
         PopMap<CSLocus>::populate_locus(loc->d, *loc->cloc, records, *this->_vcf_header, *this->_mpopi);
         records.clear();
 
+        for (size_t i = 0; i < this->_mpopi->samples().size(); i++)
+            if (loc->d[i] != NULL)
+                ++loc->cloc->cnt;
         this->_dists.accumulate_pre_filtering(loc->cloc);
 
         //
