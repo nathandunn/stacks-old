@@ -94,6 +94,8 @@ void MetaPopInfo::init_popmap(const string& pmap_path) {
         //
 
         parse_tsv(line, parts);
+        for (string& part : parts)
+            strip_whitespace(part);
 
         if (parts.size() < 2
             || parts.size() > 3
