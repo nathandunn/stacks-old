@@ -180,190 +180,192 @@ void PopMap<LocusT>::populate_locus(Datum** locdata,
 
     vector<Nt2> vcfrec_alleles;
     for (size_t sample = 0; sample < mpopi.samples().size(); ++sample) {
+
         size_t sample_vcf_i = header.sample_index(mpopi.samples()[sample].name);
-    try {
-        bool   no_data      = true;
 
-        //
-        // Get the sample's model string.
-        //
+        try {
+            bool no_data = true;
 
-        auto rec = cloc_records.begin();
-        for (size_t col = 0; col < cloc.len; ++col) {
-            if (rec == cloc_records.end()) {
-                // No more VCF records.
-                break;
-            } else if (rec->pos() != col) {
-                // No VCF record for this column, skip it.
-                assert(model[col] == 'U'); // Position never changes as it's missing for all samples.
-                continue;
-            }
-
-            const char* gt_str = rec->find_sample(sample_vcf_i);
-            if (rec->is_monomorphic()) {
-                // Monomorphic site.
-                assert(rec->count_formats() == 1 && strcmp(rec->format0(),"DP")==0); // Only the samples overall depths are given.
-                if (gt_str[0] == '.') {
-                    model[col] = 'U';
-                } else {
-                    if (no_data)
-                        no_data = false;
-                    model[col] = 'O';
-                }
-            } else {
-                // Polymorphic site.
-                pair<int,int> gt = rec->parse_genotype_nochecks(gt_str);
-                if (gt.first == -1) {
-                    model[col] = 'U';
-                } else {
-                    if (no_data)
-                        no_data = false;
-                    model[col] = gt.first == gt.second ? 'O' : 'E';
-                }
-            }
-            ++rec;
-        }
-        assert(rec == cloc_records.end());
-
-        if (!no_data) {
             //
-            // Create the Datum (see rules above).
+            // Get the sample's model string.
             //
 
-            Datum* d = new Datum();
-            locdata[sample] = d;
-
-            d->id = cloc.id;
-            d->len = cloc.len;
-            d->model = new char[cloc.len+1];
-            strncpy(d->model, model.c_str(), cloc.len+1);
-            d->cigar = NULL;
-            if (cloc.snps.empty()) {
-                //
-                // Monomorphic locus.
-                //
-
-                d->obshap.push_back(new char[10]);
-                strncpy(d->obshap[0], "consensus", 10);
-
-            } else {
-                //
-                // Polymorphic locus.
-                //
-
-                // Get the list of SNP records.
-                vector<const VcfRecord*> snp_records;
-                for (auto& rec : cloc_records) {
-                    // N.B. Columns and record indexes can be out of phase as
-                    // columns without coverage don't have a record.
-                    if (!rec.is_monomorphic()) {
-                        assert(rec.pos() == cloc.snps.at(snp_records.size())->col);
-                        snp_records.push_back(&rec);
-                    }
-                }
-                assert(snp_records.size() == cloc.snps.size());
-
-                // Save extra information for the SNP records.
-                for (const VcfRecord* rec : snp_records) {
-                try {
-                    d->snpdata.push_back(Datum::SNPData());
-                    const char* sample_gt = rec->find_sample(sample_vcf_i);
-                    if (d->model[rec->pos()] == 'U')
-                        continue;
-
-                    // DP.
-                    size_t dp_index = rec->index_of_gt_subfield("DP");
-                    const char* dp_str = VcfRecord::util::find_gt_subfield(sample_gt, dp_index);
-                    if (dp_str == NULL) {
-                        cerr << "Error: DP field is missing.\n";
-                        throw exception();
-                    }
-                    long tot_depth = strtol(dp_str, NULL, 10);
-                    if (tot_depth < 0) {
-                        cerr << "Error: Bad DP field.\n";
-                        throw exception();
-                    }
-                    d->snpdata.back().tot_depth = tot_depth;
-
-                    // AD.
-                    size_t ad_index = rec->index_of_gt_subfield("AD");
-                    const char* ad_str = VcfRecord::util::find_gt_subfield(sample_gt, ad_index);
-                    if (ad_str == NULL) {
-                        cerr << "Error: AD field is missing.\n";
-                        throw exception();
-                    }
-                    size_t i = 0;
-                    --ad_str;
-                    do {
-                        ++ad_str;
-                        long ad = strtol(ad_str, const_cast<char**>(&ad_str), 10);
-                        if (ad < 0)
-                            throw exception();
-                        d->snpdata.back().nt_depths.increment(Nt2(*rec->find_allele(i)), ad);
-                        ++i;
-                    } while (*ad_str == ',');
-                    if (i != rec->count_alleles()) {
-                        cerr << "Error: Bad AD field.\n";
-                        throw exception();
-                    }
-
-                    // GQ.
-                    size_t gq_index = rec->index_of_gt_subfield("GQ");
-                    const char* gq_str = VcfRecord::util::find_gt_subfield(sample_gt, gq_index);
-                    if (gq_str == NULL) {
-                        cerr << "Error: GQ field is missing.\n";
-                        throw exception();
-                    }
-                    long gq = strtol(gq_str, NULL, 10);
-                    if (gq < 0 || gq > UINT8_MAX) {
-                        cerr << "Error: Bad DP field.\n";
-                        throw exception();
-                    }
-                    d->snpdata.back().gq = gq;
-
-                    // GL.
-                    size_t gl_index = rec->index_of_gt_subfield("GL");
-                    const char* gl_str = VcfRecord::util::find_gt_subfield(sample_gt, gl_index);
-                    if (gl_str == NULL) {
-                        cerr << "Error: GL field is missing.\n";
-                        throw exception();
-                    }
-                    vcfrec_alleles.clear();
-                    for (auto a=rec->begin_alleles(); a!=rec->end_alleles(); ++a)
-                        vcfrec_alleles.push_back(Nt2(**a));
-                    d->snpdata.back().gtliks = VcfRecord::util::parse_gt_gl(vcfrec_alleles, gl_str);
-
-                } catch (exception&) {
-                    cerr << "Error: In VCF record '" << rec->chrom() << ":" << rec->pos()+1 << "'.\n";
-                    throw;
-                }
+            auto rec = cloc_records.begin();
+            for (size_t col = 0; col < cloc.len; ++col) {
+                if (rec == cloc_records.end()) {
+                    // No more VCF records.
+                    break;
+                } else if (rec->pos() != col) {
+                    // No VCF record for this column, skip it.
+                    assert(model[col] == 'U'); // Position never changes as it's missing for all samples.
+                    continue;
                 }
 
-                // Build the haplotypes from the records.
-                VcfRecord::util::build_haps(obshaps, snp_records, sample_vcf_i);
-                for (size_t i=0; i<2; ++i)
-                    d->obshap.push_back(new char[snp_records.size()+1]);
-                strncpy(d->obshap[0], obshaps.first.c_str(), snp_records.size()+1);
-                strncpy(d->obshap[1], obshaps.second.c_str(), snp_records.size()+1);
+                const char* gt_str = rec->find_sample(sample_vcf_i);
+                if (rec->is_monomorphic()) {
+                    // Monomorphic site.
+                    assert(rec->count_formats() == 1 && strcmp(rec->format0(),"DP")==0); // Only the samples overall depths are given.
+                    if (gt_str[0] == '.') {
+                        model[col] = 'U';
+                    } else {
+                        if (no_data)
+                            no_data = false;
+                        model[col] = 'O';
+                    }
+                } else {
+                    // Polymorphic site.
+                    pair<int,int> gt = rec->parse_genotype_nochecks(gt_str);
+                    if (gt.first == -1) {
+                        model[col] = 'U';
+                    } else {
+                        if (no_data)
+                            no_data = false;
+                        model[col] = gt.first == gt.second ? 'O' : 'E';
+                    }
+                }
+                ++rec;
+            }
+            assert(rec == cloc_records.end());
 
-                // Discard het calls that aren't phased, so that the model is
-                // always 'U' (rather than 'E') where the obshaps are 'N'.
-                for (size_t snp_i=0; snp_i<cloc.snps.size(); ++snp_i) {
-                    if (d->obshap[0][snp_i] == 'N') {
-                        size_t col = cloc.snps[snp_i]->col;
-                        assert(d->model[col] == 'U' || d->model[col] == 'E');
-                        if (d->model[col] == 'E')
-                            d->model[col] = 'U';
+            if (!no_data) {
+                //
+                // Create the Datum (see rules above).
+                //
+
+                Datum* d = new Datum();
+                locdata[sample] = d;
+
+                d->id    = cloc.id;
+                d->len   = cloc.len;
+                d->model = new char[cloc.len+1];
+                strncpy(d->model, model.c_str(), cloc.len+1);
+                d->cigar = NULL;
+                if (cloc.snps.empty()) {
+                    //
+                    // Monomorphic locus.
+                    //
+
+                    d->obshap.push_back(new char[10]);
+                    strncpy(d->obshap[0], "consensus", 10);
+
+                } else {
+                    //
+                    // Polymorphic locus.
+                    //
+
+                    // Get the list of SNP records.
+                    vector<const VcfRecord*> snp_records;
+                    for (auto& rec : cloc_records) {
+                        // N.B. Columns and record indexes can be out of phase as
+                        // columns without coverage don't have a record.
+                        if (!rec.is_monomorphic()) {
+                            assert(rec.pos() == cloc.snps.at(snp_records.size())->col);
+                            snp_records.push_back(&rec);
+                        }
+                    }
+                    assert(snp_records.size() == cloc.snps.size());
+
+                    // Save extra information for the SNP records.
+                    for (const VcfRecord* rec : snp_records) {
+                        try {
+                            d->snpdata.push_back(Datum::SNPData());
+                            const char* sample_gt = rec->find_sample(sample_vcf_i);
+                            if (d->model[rec->pos()] == 'U')
+                                continue;
+
+                            // DP.
+                            size_t dp_index = rec->index_of_gt_subfield("DP");
+                            const char* dp_str = VcfRecord::util::find_gt_subfield(sample_gt, dp_index);
+                            if (dp_str == NULL) {
+                                cerr << "Error: DP field is missing.\n";
+                                throw exception();
+                            }
+                            long tot_depth = strtol(dp_str, NULL, 10);
+                            if (tot_depth < 0) {
+                                cerr << "Error: Bad DP field.\n";
+                                throw exception();
+                            }
+                            d->snpdata.back().tot_depth = tot_depth;
+
+                            // AD.
+                            size_t ad_index = rec->index_of_gt_subfield("AD");
+                            const char* ad_str = VcfRecord::util::find_gt_subfield(sample_gt, ad_index);
+                            if (ad_str == NULL) {
+                                cerr << "Error: AD field is missing.\n";
+                                throw exception();
+                            }
+                            size_t i = 0;
+                            --ad_str;
+                            do {
+                                ++ad_str;
+                                long ad = strtol(ad_str, const_cast<char**>(&ad_str), 10);
+                                if (ad < 0)
+                                    throw exception();
+                                d->snpdata.back().nt_depths.increment(Nt2(*rec->find_allele(i)), ad);
+                                ++i;
+                            } while (*ad_str == ',');
+                            if (i != rec->count_alleles()) {
+                                cerr << "Error: Bad AD field.\n";
+                                throw exception();
+                            }
+
+                            // GQ.
+                            size_t gq_index = rec->index_of_gt_subfield("GQ");
+                            const char* gq_str = VcfRecord::util::find_gt_subfield(sample_gt, gq_index);
+                            if (gq_str == NULL) {
+                                cerr << "Error: GQ field is missing.\n";
+                                throw exception();
+                            }
+                            long gq = strtol(gq_str, NULL, 10);
+                            if (gq < 0 || gq > UINT8_MAX) {
+                                cerr << "Error: Bad DP field.\n";
+                                throw exception();
+                            }
+                            d->snpdata.back().gq = gq;
+
+                            // GL.
+                            size_t gl_index = rec->index_of_gt_subfield("GL");
+                            const char* gl_str = VcfRecord::util::find_gt_subfield(sample_gt, gl_index);
+                            if (gl_str == NULL) {
+                                cerr << "Error: GL field is missing.\n";
+                                throw exception();
+                            }
+                            vcfrec_alleles.clear();
+                            for (auto a=rec->begin_alleles(); a!=rec->end_alleles(); ++a)
+                                vcfrec_alleles.push_back(Nt2(**a));
+                            d->snpdata.back().gtliks = VcfRecord::util::parse_gt_gl(vcfrec_alleles, gl_str);
+
+                        } catch (exception&) {
+                            cerr << "Error: In VCF record '" << rec->chrom() << ":" << rec->pos()+1 << "'.\n";
+                            throw;
+                        }
+                    }
+
+                    // Build the haplotypes from the records.
+                    VcfRecord::util::build_haps(obshaps, snp_records, sample_vcf_i);
+                    for (size_t i=0; i<2; ++i)
+                        d->obshap.push_back(new char[snp_records.size()+1]);
+                    strncpy(d->obshap[0], obshaps.first.c_str(), snp_records.size()+1);
+                    strncpy(d->obshap[1], obshaps.second.c_str(), snp_records.size()+1);
+
+                    // Discard het calls that aren't phased, so that the model is
+                    // always 'U' (rather than 'E') where the obshaps are 'N'.
+                    for (size_t snp_i=0; snp_i<cloc.snps.size(); ++snp_i) {
+                        if (d->obshap[0][snp_i] == 'N') {
+                            size_t col = cloc.snps[snp_i]->col;
+                            assert(d->model[col] == 'U' || d->model[col] == 'E');
+                            if (d->model[col] == 'E')
+                                d->model[col] = 'U';
+                        }
                     }
                 }
             }
+        } catch (exception&) {
+            cerr << "Error: At the " << (sample_vcf_i+1) << "th sample.\n"
+                 << "Error: (Locus " << cloc.id << ")\n"
+                 << "Error: Bad GStacksVCF file.\n";
+            throw;
         }
-    } catch (exception&) {
-        cerr << "Error: At the " << (sample_vcf_i+1) << "th sample.\n"
-             << "Error: (Locus " << cloc.id << ")\n"
-             << "Error: Bad GStacksVCF file.\n";
-        throw;
-    }
     }
 }
 

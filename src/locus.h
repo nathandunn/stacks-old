@@ -156,7 +156,7 @@ public:
     string uncor_marker;
     map<string, int>    hap_cnts; // Counts of each observed haplotype for this locus in the population.
     map<string, string> gmap;     // Observed haplotype to genotype map for this locus.
-    uint16_t confounded_cnt;           // Number of samples containing confounded loci (more than one
+    uint16_t confounded_cnt;      // Number of samples containing confounded loci (more than one
                                   //   locus from an individual sample matches this catalog locus).
     bool     pe_ctg;              // Was a paired-end contig constructed for this locus?
     uint16_t overlap;             // Size of overlap between single and paired-end contigs for this locus.
