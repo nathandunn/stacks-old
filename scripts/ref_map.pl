@@ -145,7 +145,7 @@ sub execute_stacks {
         close($pipe_fh);
         check_return_value($?, $log_fh);
     }
-    
+
     print STDERR  "ref_map.pl is done.\n";
     print $log_fh "ref_map.pl is done.\n";
 }
@@ -165,9 +165,12 @@ sub parse_population_map {
         next if ($line =~ /^\s*#/);
 
         @parts = split(/\t/, $line);
+        if (scalar(@parts) != 2 and scalar(@parts) != 3) {
+            die("Unable to parse population map, '$popmap_path' (expected 2 or 3 columns, found " . scalar(@parts) . "); at line:\n$line\n");
+        }
 
-        if (scalar(@parts) > 3) {
-            die("Unable to parse population map, '$popmap_path' (map should contain no more than three columns).\n");
+        foreach my $part (@parts) {
+            $part =~ s/^\s*|\s*$//g;
         }
 
         push(@{$sample_list}, $parts[0]);
@@ -423,7 +426,7 @@ ref_map.pl --samples dir --popmap path [-s spacer] [--paired] -o dir [-X prog:"o
   General options:
     X: additional options for specific pipeline components, e.g. -X "populations: -p 3 -r 0.50"
     T: the number of threads/CPUs to use (default: 1).
-    d: Dry run. Do not actually execute anything, just print the individual pipeline commands 
+    d: Dry run. Do not actually execute anything, just print the individual pipeline commands
        that would be executed.
 
   SNP model options:

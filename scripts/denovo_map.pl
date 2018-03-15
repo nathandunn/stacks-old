@@ -273,7 +273,7 @@ sub execute_stacks {
         close($pipe_fh);
         check_return_value($?, $log_fh);
     }
-    
+
     print STDERR  "denovo_map.pl is done.\n";
     print $log_fh "denovo_map.pl is done.\n";
 }
@@ -292,8 +292,12 @@ sub parse_population_map {
         next if ($line =~ /^\s*#/);
 
         @parts = split(/\t/, $line);
-        if (scalar(@parts) > 3) {
-            die("Unable to parse population map, '$popmap_path' (map should contain no more than three columns).\n");
+        if (scalar(@parts) != 2 and scalar(@parts) != 3) {
+            die("Unable to parse population map, '$popmap_path' (expected 2 or 3 columns, found " . scalar(@parts) . "); at line:\n$line\n");
+        }
+
+        foreach my $part (@parts) {
+            $part =~ s/^\s*|\s*$//g;
         }
 
         push(@{$sample_list}, $parts[0]);
@@ -362,7 +366,7 @@ sub initialize_samples {
 
             $path    = $sample_path . $sample . $extension;
             $path_pe = ($paired ? $sample_path . $sample . $extension_pe : "");
-            
+
             die("Error: Failed to open single-end file '$path'.\n") if (! -e $path);
             die("Error: Failed to open paired-end file '$path_pe'.\n") if ($paired && ! -e $path_pe);
             die("Unable to find an entry for '" . $sample . "' in the population map, '$popmap_path'.\n") if (!defined($pop_ids->{$sample}));
@@ -480,8 +484,8 @@ sub parse_command_line {
         elsif ($_ =~ /^-e$/)        { $exe_path  = shift @ARGV; }
         elsif ($_ =~ /^-m$/)        { $min_cov     = shift @ARGV; }
         elsif ($_ =~ /^-P$/)        { $min_rcov    = shift @ARGV; }
-        elsif ($_ =~ /^--paired$/)  { $paired      = true; } 
-        elsif ($_ =~ /^--samples$/) { $sample_path = shift @ARGV; } 
+        elsif ($_ =~ /^--paired$/)  { $paired      = true; }
+        elsif ($_ =~ /^--samples$/) { $sample_path = shift @ARGV; }
         elsif ($_ =~ /^-O$/ || $_ =~ /^--popmap$/) {
             $popmap_path = shift @ARGV;
             push(@_cstacks,     "-M " . $popmap_path);
