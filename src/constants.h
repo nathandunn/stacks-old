@@ -24,9 +24,11 @@
 //
 // Pull in the configuration variables from the configure script
 //
-#if HAVE_CONFIG_H
-#include "config.h"
+#ifndef HAVE_CONFIG_H
+#error "Configuration incomplete. (HAVE_CONFIG_H is undefined.)"
 #endif
+
+#include "config.h"
 
 #include <cstdlib>
 #include <cstddef>
