@@ -55,4 +55,22 @@ int   read_line(ifstream &, char **, int *);
 int   read_gzip_line(gzFile &, char **, int *);
 bool  is_comment(const char *);
 
+inline
+void strip_whitespace(std::string& s) {
+    auto right = s.end();
+    while (right != s.begin()) {
+        --right;
+        if (!std::isspace(*right)) {
+            ++right;
+            break;
+        }
+    }
+    s.erase(right, s.end());
+
+    auto left = s.begin();
+    while (left != s.end() && std::isspace(*left))
+        ++left;
+    s.erase(s.begin(), left);
+}
+
 #endif // __INPUT_H__
