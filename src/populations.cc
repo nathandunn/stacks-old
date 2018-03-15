@@ -1475,11 +1475,6 @@ CatalogDists::accumulate_pre_filtering(const CSLocus *loc)
     else
         this->_pre_valid[loc->hcnt]++;
 
-    if (this->_pre_confounded.count(loc->confounded_cnt) == 0)
-        this->_pre_confounded[loc->confounded_cnt] = 1;
-    else
-        this->_pre_confounded[loc->confounded_cnt]++;
-
     missing = loc->cnt - loc->hcnt;
 
     if (this->_pre_absent.count(missing) == 0)
@@ -1508,11 +1503,6 @@ CatalogDists::accumulate(const vector<LocBin *> &loci)
             this->_post_valid[loc->hcnt] = 1;
         else
             this->_post_valid[loc->hcnt]++;
-
-        if (this->_post_confounded.count(loc->confounded_cnt) == 0)
-            this->_post_confounded[loc->confounded_cnt] = 1;
-        else
-            this->_post_confounded[loc->confounded_cnt]++;
 
         missing = loc->cnt - loc->hcnt;
 
@@ -1551,13 +1541,6 @@ CatalogDists::write_results(ostream &log_fh)
         log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
     end_section();
 
-    begin_section("confounded_samples_per_loc_prefilters");
-    log_fh << "\n# Distribution of confounded samples for each catalog locus prior to filtering.\n"
-           << "# Confounded samples at locus\tCount\n";
-    for (cnt_it = this->_pre_confounded.begin(); cnt_it != this->_pre_confounded.end(); cnt_it++)
-        log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
-    end_section();
-
     begin_section("missing_samples_per_loc_prefilters");
     log_fh << "\n# Distribution of missing samples for each catalog locus prior to filtering.\n"
            << "# Absent samples at locus\tCount\n";
@@ -1576,13 +1559,6 @@ CatalogDists::write_results(ostream &log_fh)
     log_fh << "# Distribution of valid samples matched to a catalog locus after filtering.\n"
            << "n_samples\tn_loci\n";
     for (cnt_it = this->_post_valid.begin(); cnt_it != this->_post_valid.end(); cnt_it++)
-        log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
-    end_section();
-
-    begin_section("confounded_samples_per_loc_postfilters");
-    log_fh << "\n# Distribution of confounded samples for each catalog locus after filtering.\n"
-           << "# Confounded samples at locus\tCount\n";
-    for (cnt_it = this->_post_confounded.begin(); cnt_it != this->_post_confounded.end(); cnt_it++)
         log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
     end_section();
 
