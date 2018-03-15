@@ -478,8 +478,8 @@ try {
         size_t n_pcr_dupl = gt_stats.n_read_pairs_pcr_dupl();
         size_t n_used = gt_stats.n_read_pairs_used();
         size_t n_remaining_loci = gt_stats.n_genotyped_loci;
-        cout << "Removed " << n_unpaired << " unpaired reads ("
-             << as_percentage((double) n_unpaired / (n_used + n_pcr_dupl)) << "); kept "
+        cout << "Removed " << n_unpaired << " unpaired (forward) reads ("
+             << as_percentage((double) n_unpaired / (n_unpaired + n_used + n_pcr_dupl)) << "); kept "
              << n_used + n_pcr_dupl << " read pairs in "
              << n_remaining_loci << " loci.\n";
         if (rm_pcr_duplicates) {
