@@ -149,7 +149,6 @@ public:
         this->trans_gcnt     = 0;
         this->pe_ctg         = false;
         this->overlap        = 0;
-        this->confounded_cnt = 0;
     };
     string annotation;
     string marker;

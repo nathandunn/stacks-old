@@ -1583,7 +1583,7 @@ int
 log_haplotype_cnts(map<int, CSLocus *> &catalog, ofstream &log_fh)
 {
     map<int, CSLocus *>::iterator it;
-    map<int, int> valid, absent, confounded;
+    map<int, int> valid, absent;
 
     CSLocus *loc;
     int missing;
@@ -1595,11 +1595,6 @@ log_haplotype_cnts(map<int, CSLocus *> &catalog, ofstream &log_fh)
             valid[loc->hcnt] = 1;
         else
             valid[loc->hcnt]++;
-
-        if (confounded.count(loc->confounded_cnt) == 0)
-            confounded[loc->confounded_cnt] = 1;
-        else
-            confounded[loc->confounded_cnt]++;
 
         missing = loc->cnt - loc->hcnt;
 
@@ -1614,11 +1609,6 @@ log_haplotype_cnts(map<int, CSLocus *> &catalog, ofstream &log_fh)
     log_fh << "# Distribution of valid loci matched to catalog locus.\n"
            << "# Valid samples at locus\tCount\n";
     for (cnt_it = valid.begin(); cnt_it != valid.end(); cnt_it++)
-        log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
-
-    log_fh << "# Distribution of confounded loci at catalog locus.\n"
-           << "# Confounded samples at locus\tCount\n";
-    for (cnt_it = confounded.begin(); cnt_it != confounded.end(); cnt_it++)
         log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
 
     log_fh << "# Distribution of missing loci at catalog loci.\n"
