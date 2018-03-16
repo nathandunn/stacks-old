@@ -36,6 +36,8 @@ const char *bspDI[]   = {"CGAT",              // AT/CGAT, BspDI
                          "ATCG"};
 const char *bstYI[]   = {"GATCC", "GATCT",    // R/GATCY, BstYI (also known as PsuI)
                          "GGATC", "AGATC"};
+const char *cac8I[]    = {"AGC", "CGC", "GGC", "TGC", // GCN/NGC, Cac8I
+                          "GCT", "GCG", "GCC", "GCA"};
 const char *claI[]    = {"CGAT",              // AT/CGAT, ClaI
                          "ATCG"};
 const char *csp6I[]   = {"TAC",               // G/TAC, Csp6I
@@ -66,6 +68,20 @@ const char *mluCI[]   = {"AATT",              // AATT, MluCI
                          "AATT"};
 const char *mseI[]    = {"TAA",               // T/TAA, MseI
                          "TTA"};
+const char *mslI[]    = {                     // CAYNN/NNRTG, MslI
+        "AAATG", "AAGTG", "ACATG", "ACGTG", "AGATG", "AGGTG",
+        "ATATG", "ATGTG", "CAATG", "CAGTG", "CCATG", "CCGTG",
+        "CGATG", "CGGTG", "CTATG", "CTGTG", "GAATG", "GAGTG",
+        "GCATG", "GCGTG", "GGATG", "GGGTG", "GTATG", "GTGTG",
+        "TAATG", "TAGTG", "TCATG", "TCGTG", "TGATG", "TGGTG",
+        "TTATG", "TTGTG",
+        "CATTT", "CACTT", "CATGT", "CACGT", "CATCT", "CACCT",
+        "CATAT", "CACAT", "CATTG", "CACTG", "CATGG", "CACGG",
+        "CATCG", "CACCG", "CATAG", "CACAG", "CATTC", "CACTC",
+        "CATGC", "CACGC", "CATCC", "CACCC", "CATAC", "CACAC",
+        "CATTA", "CACTA", "CATGA", "CACGA", "CATCA", "CACCA",
+        "CATAA", "CACAA"
+};
 const char *mspI[]    = {"CGG",               // C/CGG, MspI
                          "CCG"};
 const char *ncoI[]    = {"CATGG",             // C/CATGG, NcoI
@@ -127,6 +143,7 @@ initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, ma
     renz["ndeI"]    = ndeI;    // CA/TATG, NdeI
     renz["nsiI"]    = nsiI;    // ATGCA/T, NsiI
     renz["mseI"]    = mseI;    // T/TAA, MseI
+    renz["mslI"]    = mslI;
     renz["mspI"]    = mspI;    // C/CGG, MspI
     renz["sexAI"]   = sexAI;   // A/CCWGGT, SexAI; W=A or T
     renz["sau3AI"]  = sau3AI;  // GATC, Sau3AI
@@ -135,6 +152,7 @@ initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, ma
     renz["eaeI"]    = eaeI;    // Y/GGCCR, EaeI
     renz["taqI"]    = taqI;    // T/CGA, TaqI
     renz["claI"]    = claI;    // AT/CGAT, ClaI
+    renz["cac8I"]   = cac8I;
     renz["nheI"]    = nheI;    // G/CTAGC, NheI
     renz["speI"]    = speI;    // A/CTAGT, SpeI
     renz["apoI"]    = apoI;    // R/AATTY, ApoI, XapI
@@ -178,6 +196,7 @@ initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, ma
     renz_cnt["ndeI"]    = 1;
     renz_cnt["nsiI"]    = 1;
     renz_cnt["mseI"]    = 1;
+    renz_cnt["mslI"]    = 32;
     renz_cnt["mspI"]    = 1;
     renz_cnt["sexAI"]   = 2;
     renz_cnt["sau3AI"]  = 1;
@@ -186,6 +205,7 @@ initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, ma
     renz_cnt["eaeI"]    = 2;
     renz_cnt["taqI"]    = 1;
     renz_cnt["claI"]    = 1;
+    renz_cnt["cac8I"]   = 4;
     renz_cnt["nheI"]    = 1;
     renz_cnt["speI"]    = 1;
     renz_cnt["apoI"]    = 2;
@@ -229,6 +249,7 @@ initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, ma
     renz_len["ndeI"]    = 4;
     renz_len["nsiI"]    = 5;
     renz_len["mseI"]    = 3;
+    renz_len["mslI"]    = 5;
     renz_len["mspI"]    = 3;
     renz_len["sexAI"]   = 6;
     renz_len["sau3AI"]  = 4;
@@ -237,6 +258,7 @@ initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, ma
     renz_len["eaeI"]    = 5;
     renz_len["taqI"]    = 3;
     renz_len["claI"]    = 4;
+    renz_len["cac8I"]   = 3;
     renz_len["nheI"]    = 5;
     renz_len["speI"]    = 5;
     renz_len["apoI"]    = 5;
