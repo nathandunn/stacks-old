@@ -30,9 +30,6 @@
 #include "PopMap.h"
 #include "PopSum.h"
 #include "ordered.h" // for "snp"
-#include "populations.h" // for "merget", "InputMode", "uncalled_haplotype()", "count_haplotypes_at_locus()"
-
-extern bool ordered_export;
 
 void tally_complete_haplotypes(
         Datum const*const* data,
@@ -181,10 +178,7 @@ class SnpDivergenceExport: public Export {
     OPopPair<PopPair> *_order;
 
  public:
-    SnpDivergenceExport(ofstream &log_fh) : _mpopi(NULL) {
-        if (ordered_export)
-            this->_order = new OPopPair<PopPair>(log_fh);
-    }
+    SnpDivergenceExport(ofstream &log_fh);
     ~SnpDivergenceExport() {
         for (uint i = 0; i < this->_fhs.size(); i++)
             delete this->_fhs[i];

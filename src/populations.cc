@@ -22,11 +22,19 @@
 // populations -- generate population genetic statistics and output
 // haplotypes in a population context.
 //
+
 #include <cctype>
 #include <typeinfo>
 
+#include "constants.h"
 #include "export_formats.h"
+#include "input.h"
+#include "Seq.h"
+#include "Vcf.h"
+
 #include "populations.h"
+
+#include "export_formats.h"
 
 using namespace std;
 
@@ -59,7 +67,6 @@ bool      bootstrap_wl      = false;
 bool      write_single_snp  = false;
 bool      write_random_snp  = false;
 bool      merge_sites       = false;
-bool      expand_id         = false;
 bool      write_gtypes      = false;
 bool      ordered_export    = false;
 bool      smooth_fstats     = false;
@@ -88,6 +95,8 @@ map<string, const char **> renz;
 map<string, int>           renz_cnt;
 map<string, int>           renz_len;
 map<string, int>           renz_olap;
+
+const int max_snp_dist = 500;
 
 vector<Export *> exports;
 template<typename E>
