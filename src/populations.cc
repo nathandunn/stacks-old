@@ -625,7 +625,7 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
             if (this->_chr.empty()) {
                 this->_chr = loc->cloc->loc.chr();
             } else if (this->_chr.compare(loc->cloc->loc.chr()) != 0) {
-                if (this->_loc_filter.batch_total() > 0) {
+                if (!this->_loci.empty()) {
                     this->_next_loc = loc;
                     this->_loc_filter.locus_unsee();
                     break;
@@ -647,7 +647,7 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
             this->_unordered_bp += loc->cloc->len;
             this->_loci.push_back(loc);
             this->_loc_filter.keep_locus(loc);
-            if (this->_loc_filter.batch_total() == this->_batch_size)
+            if (this->_loci.size() == this->_batch_size)
                 break;
         }
     }
@@ -666,7 +666,7 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
                  return a->cloc->loc.bp < b->cloc->loc.bp;
              });
 
-    return this->_loc_filter.batch_total();
+    return this->_loci.size();
 }
 
 int
@@ -727,31 +727,25 @@ BatchLocusProcessor::init_external_loci(string in_path, string pmap_path)
 size_t
 BatchLocusProcessor::next_batch_external_loci(ostream &log_fh)
 {
-    assert(false && "2018-03-20: This should use PopMap::populate_external().");
-
     //
     // VCF mode
     //
-    LocBin   *loc;
-    string    prev_chr, cur_chr;
-    size_t    loc_cnt = 0;
-    size_t    cloc_id = 1;
-    VcfRecord rec;
+    loci_ordered = true;
 
     //
     // Check if we queued a LocBin object from the last round of reading.
     //
+    int cloc_id;
     if (this->_next_loc != NULL) {
         this->_loci.push_back(this->_next_loc);
         cloc_id         = this->_next_loc->cloc->id + 1;
-        prev_chr        = this->_next_loc->cloc->loc.chr();
         this->_next_loc = NULL;
-        loc_cnt++;
+    } else {
+        cloc_id = 1;
     }
 
-    do {
-        if (!this->_vcf_parser.next_record(rec)) break;
-
+    VcfRecord rec;
+    while (this->_vcf_parser.next_record(rec)) {
         this->_total_ext_vcf++;
 
         // Check for a SNP.
@@ -769,27 +763,36 @@ BatchLocusProcessor::next_batch_external_loci(ostream &log_fh)
         //
         // Create and populate a new catalog locus.
         //
-        loc = new LocBin(this->_mpopi->samples().size());
-        loc->cloc = new_cslocus(rec, cloc_id);
-
-        if (loc->cloc == NULL) {
+        LocBin* loc = new LocBin(this->_mpopi->samples().size());
+        loc->cloc = new CSLocus();
+        loc->d = new Datum *[this->_mpopi->samples().size()];
+        for (size_t i = 0; i < this->_mpopi->samples().size(); i++)
+            loc->d[i] = NULL;
+        if (!PopMap<CSLocus>::populate_external(
+                loc->cloc, loc->d,
+                cloc_id++, rec, *this->_vcf_header, this->_mpopi)
+        ) {
+            // Bad record; a warning has been printed.
             delete loc;
             continue;
         }
-
-        //
-        // Create and populate a map of the population genotypes.
-        //
-        loc->d = new Datum *[loc->sample_cnt];
-        for (size_t i = 0; i < this->_mpopi->samples().size(); i++) loc->d[i] = NULL;
-        PopMap<CSLocus>::populate_locus(loc->d, *loc->cloc, rec, (const VcfHeader &) *this->_vcf_header, (const MetaPopInfo &) *this->_mpopi);
-
-        this->_dists.accumulate_pre_filtering(loc->cloc);
+        assert(!loc->cloc->loc.empty());
+        assert(loc->cloc->len == 1);
+        assert(loc->cloc->snps.size() == 1);
 
         //
         // Apply locus constraints to remove entire loci below the -r/-p thresholds.
         //
+        // Identify individual SNPs that are below the -r threshold or the minor allele
+        // frequency threshold (-a). In these cases we will remove the SNP, but keep the locus.
+        // If all SNPs are filtered, delete the locus.
+        //
+        this->_dists.accumulate_pre_filtering(loc->cloc);
         if (this->_loc_filter.filter(this->_mpopi, loc->d)) {
+            delete loc;
+            continue;
+        }
+        if (this->_loc_filter.prune_sites_with_filters(this->_mpopi, loc->cloc, loc->d, loc->s, log_fh)) {
             delete loc;
             continue;
         }
@@ -797,67 +800,26 @@ BatchLocusProcessor::next_batch_external_loci(ostream &log_fh)
         //
         // Create the PopSum object and compute the summary statistics for this locus.
         //
-        loc->s = new LocPopSum(strlen(loc->cloc->con), (const MetaPopInfo &) *this->_mpopi);
-        loc->s->sum_pops(loc->cloc, (const Datum **) loc->d, (const MetaPopInfo &) *this->_mpopi, verbose, cout);
+        loc->s = new LocPopSum(strlen(loc->cloc->con), *this->_mpopi);
+        loc->s->sum_pops(loc->cloc, (Datum const**) loc->d, *this->_mpopi, verbose, cout);
         loc->s->tally_metapop(loc->cloc);
-
-        //
-        // If write_single_snp or write_random_snp has been specified, mark sites to be pruned using the whitelist.
-        //
-        if (write_single_snp)
-            this->_loc_filter.keep_single_snp(loc->cloc, loc->s->meta_pop());
-        else if (write_random_snp)
-            this->_loc_filter.keep_random_snp(loc->cloc, loc->s->meta_pop());
-        //
-        // Prune the sites according to the whitelist.
-        //
-        this->_loc_filter.prune_sites_with_whitelist(this->_mpopi, loc->cloc, loc->d, this->_user_supplied_whitelist);
-
-        //
-        // Identify individual SNPs that are below the -r threshold or the minor allele
-        // frequency threshold (-a). In these cases we will remove the SNP, but keep the locus.
-        // If all SNPs are filtered, delete the locus.
-        //
-        if (this->_loc_filter.prune_sites_with_filters(this->_mpopi, loc->cloc, loc->d, loc->s, log_fh)) {
-            delete loc;
-            continue;
-        }
-
-        //
-        // Regenerate summary statistics after pruning SNPs.
-        //
-        loc->s->sum_pops(loc->cloc, (const Datum **) loc->d, (const MetaPopInfo &) *this->_mpopi, verbose, cout);
-        loc->s->tally_metapop(loc->cloc);
-
-        //
-        // If these data are unordered, provide an arbitrary ordering.
-        //
-        if (loc->cloc->loc.empty()) {
-            loc->cloc->loc.set("un", this->_unordered_bp, strand_plus);
-            this->_unordered_bp += strlen(loc->cloc->con);
-        } else {
-            loci_ordered = true;
-        }
-
-        cur_chr = loc->cloc->loc.chr();
-        if (prev_chr.length() == 0)
-            prev_chr = cur_chr;
 
         //
         // Tabulate haplotypes present and in what combinations.
         //
         tabulate_locus_haplotypes(loc->cloc, loc->d, this->_mpopi->samples().size());
 
-        if (cur_chr == prev_chr) {
-            this->_loci.push_back(loc);
-            loc_cnt++;
-        } else {
+        //
+        // Detect the end of batch.
+        //
+        if (!this->_loci.empty()
+            && strcmp(loc->cloc->loc.chr(), this->_loci[0]->cloc->loc.chr()) != 0
+        ) {
             this->_next_loc = loc;
+            break;
         }
-        cloc_id++;
-
-    } while (( loci_ordered && prev_chr == cur_chr) ||
-             (!loci_ordered && loc_cnt   < this->_batch_size));
+        this->_loci.push_back(loc);
+    }
 
     //
     // Record the post-filtering distribution of catalog loci for this batch.
@@ -867,13 +829,12 @@ BatchLocusProcessor::next_batch_external_loci(ostream &log_fh)
     //
     // Sort the catalog loci, if possible.
     //
-    if (loci_ordered)
-        sort(this->_loci.begin(), this->_loci.end(),
-             [] (const LocBin *a, const LocBin *b) -> bool {
-                 return a->cloc->loc.bp < b->cloc->loc.bp;
-             });
+    sort(this->_loci.begin(), this->_loci.end(),
+        [] (const LocBin *a, const LocBin *b) -> bool {
+            return a->cloc->loc.bp < b->cloc->loc.bp;
+        });
 
-    return loc_cnt;
+    return this->_loci.size();
 }
 
 int

@@ -277,63 +277,6 @@ try {
     throw;
 }}
 
-void VcfRecord::util::build_haps(
-        pair<string,string>& haplotypes,
-        const vector<const VcfRecord*>& snp_records,
-        size_t sample_index
-        ) {
-    haplotypes.first.resize(snp_records.size(), 'N');
-    haplotypes.second.resize(snp_records.size(), 'N');
-
-    #ifdef DEBUG
-    // gstacks should have written a single non-null phase set.
-    size_t phase_set = SIZE_MAX;
-    #endif
-
-    for (size_t i=0; i<snp_records.size(); ++i) {
-        const VcfRecord& rec = *snp_records[i];
-        assert(rec.count_formats() >= 2 && strcmp(*++rec.begin_formats(), "PS") == 0);
-
-        // Parse the genotype.
-        const char* sample = rec.find_sample(sample_index);
-        pair<int,int> gt = rec.parse_genotype_nochecks(sample);
-
-        // Record the (phased) alleles.
-        if (gt.first == -1) {
-            // No call.
-            haplotypes.first[i] = 'N';
-            haplotypes.second[i] = 'N';
-            continue;
-        } else if (gt.first == gt.second) {
-            // Sample is homozygote for this SNP.
-            char nt = rec.find_allele(gt.first)[0];
-            haplotypes.first[i] = nt;
-            haplotypes.second[i] = nt;
-        } else {
-            // Sample is heterozygote for this SNP.
-            const char* ps = util::find_gt_subfield(sample, 1);
-            if (ps == NULL) {
-                cerr << "Error: PS field is missing.\n";
-                throw exception();
-            }
-            if (ps[0] == '.') {
-                // This genotype couldn't be phased.
-                haplotypes.first[i] = 'N';
-                haplotypes.second[i] = 'N';
-            } else {
-                #ifdef DEBUG
-                if (phase_set == SIZE_MAX)
-                    phase_set = atol(ps);
-                else
-                    assert(size_t(atol(ps)) == phase_set);
-                #endif
-                haplotypes.first[i] = rec.find_allele(gt.first)[0];
-                haplotypes.second[i] = rec.find_allele(gt.second)[0];
-            }
-        }
-    }
-}
-
 VcfParser::VcfParser(const string& path) : file_(path), header_() {
     FileT ftype = guess_file_type(path);
     if (ftype != FileT::vcf && ftype != FileT::gzvcf) {
