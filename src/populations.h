@@ -265,10 +265,10 @@ public:
         for (uint i = 0; i < this->_loci.size(); i++)
             delete this->_loci[i];
         delete [] this->_sig_hwe_dev;
+        delete this->_vcf_header;
     };
 
     int            init(string, string);
-    int            cleanup();
     size_t         next_batch(ostream &);
     size_t         next_batch_number() { return this->_batch_num + 1; }
     int            summarize(ostream &);
@@ -325,6 +325,7 @@ private:
 private:
     int    init_external_loci(string, string);
     int    init_stacks_loci(string, string);
+    void   batch_clear();
     size_t next_batch_external_loci(ostream &);
     size_t next_batch_stacks_loci(ostream &);
 };
