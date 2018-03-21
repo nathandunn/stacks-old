@@ -32,11 +32,10 @@
 
 #include <unistd.h>
 #include <dirent.h>
-
 #include <zlib.h>
 
 #include "constants.h"
-#include "stacks.h"
+#include "nucleotides.h"
 
 char   reverse(char);
 char  *rev_comp(const char *);
@@ -108,6 +107,70 @@ public:
 };
 
 //
+// Counts: A class to store nucleotide counts.
+// e.g. Counts<Nt2> is a std::array of {n_A, n_C, n_G, n_T}.
+//
+template<typename Nt>
+class Counts {
+    // Array of counts, containing the count of A's at index Nt::a,of C's at
+    // index Nt::c, etc.
+    array<size_t,Nt::max()+1> counts_;
+
+public:
+    Counts() {
+        for (size_t& c : counts_)
+            c=-1;
+        for (Nt nt : Nt::all)
+            counts_[size_t(nt)] = 0;
+    }
+    Counts(const Counts<Nt4>& nt4counts);
+    Counts(const Counts<Nt2>& nt2counts);
+
+    void clear() {for (Nt nt : Nt::all) counts_[size_t(nt)]=0;}
+    void increment(Nt nt) {++counts_[size_t(nt)];}
+    void increment(Nt nt, size_t cnt) {counts_[size_t(nt)] += cnt;}
+
+    // Get the count for a given nucleotide.
+    size_t operator[] (Nt nt) const {return counts_[size_t(nt)];}
+    const array<size_t,Nt::max()+1>& arr() const {return counts_;}
+
+    size_t sum() const {return (*this)[Nt::a] + (*this)[Nt::c] + (*this)[Nt::g] + (*this)[Nt::t];}
+    array<pair<size_t,Nt>,4> sorted() const;
+
+    Counts& operator+= (const Counts& other)
+        {for (Nt nt : Nt::all) counts_[size_t(nt)] += other.counts_[size_t(nt)]; return *this;}
+
+    // Print the counts.
+    template<typename Nt_> friend ostream& operator<< (ostream& os, const Counts<Nt_>& cnts);
+};
+
+//
+// GtLiks: A class to store the likelihoods of SNP genotypes.
+//
+class GtLiks {
+    array<double,10> lnliks_; // {AA,AC,CC,AG,CG,GG,AT,CT,GT,TT} similar to VCF.
+public:
+    GtLiks() : lnliks_{{1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0}} {}
+    double at(Nt2 n1, Nt2 n2) const {return at(gt_index(n1,n2));}
+    bool has_lik(Nt2 n1, Nt2 n2) const {return has_lik(gt_index(n1,n2));}
+    void set(Nt2 n1, Nt2 n2, double lnl) {set(gt_index(n1, n2), lnl);}
+
+    double at(size_t gt) const {assert(has_lik(gt)); return lnliks_[gt];}
+    bool has_lik(size_t gt) const {return lnliks_[gt] != 1.0;}
+    void set(size_t gt, double lnl) {assert(!std::isnan(lnl)); assert(lnl<=0.0); assert(!has_lik(gt)); lnliks_[gt] = lnl;}
+
+    static size_t gt_index(Nt2 n1, Nt2 n2) {
+        if(n1<n2)
+            return size_t(n1) + (size_t(n2)*(size_t(n2)+1)) / 2;
+        else
+            return size_t(n2) + (size_t(n1)*(size_t(n1)+1)) / 2;
+    }
+
+    // For debugging.
+    friend ostream& operator<<(ostream& os, const GtLiks& liks);
+};
+
+//
 // Comparison functions for the STL sort routine
 //
 bool compare_ints(int, int);
@@ -115,18 +178,13 @@ bool compare_pair(pair<char, int>, pair<char, int>);
 bool compare_pair_intint(pair<int, int>, pair<int, int>);
 bool compare_pair_intdouble(pair<int, double>, pair<int, double>);
 bool compare_pair_stringint(pair<string, int>, pair<string, int>);
-bool compare_pair_snp(pair<string, SNP *>, pair<string, SNP *>);
-bool compare_pair_haplotype(pair<string, double>, pair<string, double>);
-bool compare_pair_haplotype_rev(pair<string, double>, pair<string, double>);
-bool compare_str_len(string, string);
+bool compare_pair_haplotype(const pair<string, double>&, const pair<string, double>&);
+bool compare_pair_haplotype_rev(const pair<string, double>&, const pair<string, double>&);
+bool compare_str_len(const string&, const string&);
 struct LessCStrs
 {
    bool operator() (const char* str1, const char* str2) const {return strcmp(str1, str2) < 0 ;}
 } ;
-
-//
-// Comparison classes for STL sets
-//
 struct int_increasing {
     bool operator() (const int& lhs, const int& rhs) const {
         return lhs < rhs;
