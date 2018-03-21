@@ -33,6 +33,7 @@
 
 #include "constants.h"
 #include "nucleotides.h"
+#include "utils.h"
 #include "Seq.h"
 #include "DNASeq.h"
 #include "DNANSeq.h"
@@ -66,6 +67,12 @@ class SNP {
         rank_4 = 0;
     }
 };
+
+inline
+bool compare_pair_snp(const pair<string, SNP*>& lhs, const pair<string, SNP*>& rhs)
+{
+    return lhs.second->col < rhs.second->col;
+}
 
 class Gap {
 public:
@@ -258,74 +265,10 @@ struct Read {
     bool is_read2() const;
 };
 
-//
-// Counts: A class to store nucleotide counts.
-// e.g. Counts<Nt2> is a std::array of {n_A, n_C, n_G, n_T}.
-//
-template<typename Nt>
-class Counts {
-    // Array of counts, containing the count of A's at index Nt::a,of C's at
-    // index Nt::c, etc.
-    array<size_t,Nt::max()+1> counts_;
-
-public:
-    Counts() {
-        for (size_t& c : counts_)
-            c=-1;
-        for (Nt nt : Nt::all)
-            counts_[size_t(nt)] = 0;
-    }
-    Counts(const Counts<Nt4>& nt4counts);
-    Counts(const Counts<Nt2>& nt2counts);
-
-    void clear() {for (Nt nt : Nt::all) counts_[size_t(nt)]=0;}
-    void increment(Nt nt) {++counts_[size_t(nt)];}
-    void increment(Nt nt, size_t cnt) {counts_[size_t(nt)] += cnt;}
-
-    // Get the count for a given nucleotide.
-    size_t operator[] (Nt nt) const {return counts_[size_t(nt)];}
-    const array<size_t,Nt::max()+1>& arr() const {return counts_;}
-
-    size_t sum() const {return (*this)[Nt::a] + (*this)[Nt::c] + (*this)[Nt::g] + (*this)[Nt::t];}
-    array<pair<size_t,Nt>,4> sorted() const;
-
-    Counts& operator+= (const Counts& other)
-        {for (Nt nt : Nt::all) counts_[size_t(nt)] += other.counts_[size_t(nt)]; return *this;}
-
-    // Print the counts.
-    template<typename Nt_> friend ostream& operator<< (ostream& os, const Counts<Nt_>& cnts);
-};
-
 struct SiteCounts {
     Counts<Nt2> tot; // The sum over all samples.
     vector<Counts<Nt2>> samples; // With size() == mpopi->samples().size()/
     const MetaPopInfo* mpopi;
-};
-
-//
-// GtLiks: A class to store the likelihoods of SNP genotypes.
-//
-class GtLiks {
-    array<double,10> lnliks_; // {AA,AC,CC,AG,CG,GG,AT,CT,GT,TT} similar to VCF.
-public:
-    GtLiks() : lnliks_{{1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0}} {}
-    double at(Nt2 n1, Nt2 n2) const {return at(gt_index(n1,n2));}
-    bool has_lik(Nt2 n1, Nt2 n2) const {return has_lik(gt_index(n1,n2));}
-    void set(Nt2 n1, Nt2 n2, double lnl) {set(gt_index(n1, n2), lnl);}
-
-    double at(size_t gt) const {assert(has_lik(gt)); return lnliks_[gt];}
-    bool has_lik(size_t gt) const {return lnliks_[gt] != 1.0;}
-    void set(size_t gt, double lnl) {assert(!std::isnan(lnl)); assert(lnl<=0.0); assert(!has_lik(gt)); lnliks_[gt] = lnl;}
-
-    static size_t gt_index(Nt2 n1, Nt2 n2) {
-        if(n1<n2)
-            return size_t(n1) + (size_t(n2)*(size_t(n2)+1)) / 2;
-        else
-            return size_t(n2) + (size_t(n1)*(size_t(n1)+1)) / 2;
-    }
-
-    // For debugging.
-    friend ostream& operator<<(ostream& os, const GtLiks& liks);
 };
 
 //

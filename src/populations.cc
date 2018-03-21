@@ -26,14 +26,7 @@
 #include <cctype>
 #include <typeinfo>
 
-#include "constants.h"
-#include "export_formats.h"
-#include "input.h"
-#include "Seq.h"
-#include "Vcf.h"
-
 #include "populations.h"
-
 #include "export_formats.h"
 
 using namespace std;
@@ -514,14 +507,6 @@ BatchLocusProcessor::init_stacks_loci(string in_path, string pmap_path)
 size_t
 BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
 {
-    vector<VcfRecord> records;
-    Seq seq;
-    seq.id = new char[id_len];
-
-    LocBin *loc;
-    int     cloc_id, rv;
-    size_t  loc_cnt = 0;
-
     this->_loci.clear();
     this->_chr.clear();
     this->_loc_filter.batch_clear();
@@ -534,90 +519,56 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
         this->_loc_filter.locus_seen();
         this->_loc_filter.keep_locus(this->_next_loc);
         this->_next_loc = NULL;
-        loc_cnt++;
     }
 
+    Seq seq;
+    seq.id = new char[id_len];
+    vector<VcfRecord> records;
     while(this->_cloc_reader.read_one_locus(records)) {
-
-        //
-        // Get the current locus ID.
-        //
-        assert(!records.empty());
-        cloc_id = is_integer(records[0].chrom());
-        assert(cloc_id >= 0);
-
-        //
-        // Find the corresponding fasta record. (Note: c-loci with very low coverage
-        // might be entirely missing from the VCF; in this case ignore them.)
-        //
-        do {
-            rv = this->_fasta_reader.next_seq(seq);
-        } while (rv != 0 && is_integer(seq.id) != cloc_id);
-
-        if (rv == 0) {
-            cerr << "Error: catalog VCF and FASTA files are discordant, maybe trucated. rv: " << rv << "; cloc_id: " << cloc_id << "\n";
-            throw exception();
-        }
-
-        //
-        // Create and populate a new catalog locus.
-        //
-        loc = new LocBin(this->_mpopi->samples().size());
-        loc->cloc = new_cslocus(seq, records, cloc_id);
-
-        //
-        // Set the current chromosome.
-        //
-        loci_ordered = !loc->cloc->loc.empty();
-        string cur_chr;
-        if (loci_ordered) {
-            cur_chr.assign(loc->cloc->loc.chr());
-            if (this->_chr.empty())
-                this->_chr = cur_chr;
-        }
-
-        //
-        // If there were no loci analyzed on the previous chromosome,
-        // keep processing the current chromosome without returning.
-        //
-        if (loci_ordered
-                && cur_chr != this->_chr
-                && this->_loc_filter.batch_filtered() == this->_loc_filter.batch_seen())
-            this->_chr = cur_chr;
-
         this->_loc_filter.locus_seen();
 
         //
-        // Check if this locus is filtered.
+        // Get the current locus ID and find the corresponding fasta record.
+        // (Note: c-loci with very low coverage might be entirely missing from
+        // the VCF; in this case ignore them.)
         //
-        if (this->_user_supplied_whitelist && this->_loc_filter.whitelist_filter(cloc_id)) {
-            records.clear();
-            delete loc;
-            continue;
-        }
-        if (this->_loc_filter.blacklist_filter(cloc_id)) {
-            records.clear();
-            delete loc;
+        assert(!records.empty());
+        int cloc_id = is_integer(records[0].chrom());
+        assert(cloc_id >= 0);
+        do {
+            int rv = this->_fasta_reader.next_seq(seq);
+            if (rv == 0) {
+                cerr << "Error: catalog VCF and FASTA files are discordant, maybe trucated. rv: "
+                     << rv << "; cloc_id: " << cloc_id << "\n";
+                throw exception();
+            }
+        } while (is_integer(seq.id) != cloc_id);
+
+        //
+        // Check if this locus is white/blacklisted.
+        //
+        if ((this->_user_supplied_whitelist && this->_loc_filter.whitelist_filter(cloc_id))
+                || this->_loc_filter.blacklist_filter(cloc_id)) {
             continue;
         }
 
         //
-        // Create and populate a map of the population genotypes.
+        // Create and populate a new catalog locus & the associated genotypes.
         //
-        loc->d = new Datum *[loc->sample_cnt];
-        for (size_t i = 0; i < this->_mpopi->samples().size(); i++)
+        LocBin* loc = new LocBin(this->_mpopi->samples().size());
+        loc->cloc = new CSLocus();
+        loc->d = new Datum *[this->_mpopi->samples().size()];
+        for (size_t i=0; i<this->_mpopi->samples().size(); ++i)
             loc->d[i] = NULL;
-        PopMap<CSLocus>::populate_locus(loc->d, *loc->cloc, records, *this->_vcf_header, *this->_mpopi);
-        records.clear();
 
-        for (size_t i = 0; i < this->_mpopi->samples().size(); i++)
-            if (loc->d[i] != NULL)
-                ++loc->cloc->cnt;
+        PopMap<CSLocus>::populate_internal(
+            loc->cloc, loc->d,
+            seq, records, *this->_vcf_header, this->_mpopi);
+
+        //
+        // Apply the -r/-p thresholds.
+        //
         this->_dists.accumulate_pre_filtering(loc->cloc);
-
-        //
-        // Apply locus constraints to remove entire loci below the -r/-p thresholds.
-        //
         if (this->_loc_filter.filter(this->_mpopi, loc->d)) {
             delete loc;
             continue;
@@ -653,14 +604,6 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
         this->_loc_filter.prune_sites_with_whitelist(this->_mpopi, loc->cloc, loc->d, this->_user_supplied_whitelist);
 
         //
-        // If these data are unordered, provide an arbitrary ordering.
-        //
-        if (!loci_ordered) {
-            loc->cloc->loc.set("un", this->_unordered_bp, strand_plus);
-            this->_unordered_bp += loc->cloc->len;
-        }
-
-        //
         // Regenerate summary statistics after pruning SNPs.
         //
         loc->s->sum_pops(loc->cloc, (const Datum **) loc->d, (const MetaPopInfo &) *this->_mpopi, verbose, cout);
@@ -671,25 +614,42 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
         //
         tabulate_locus_haplotypes(loc->cloc, loc->d, this->_mpopi->samples().size());
 
-        if (loci_ordered && cur_chr != this->_chr) {
+        //
+        // Detect the end of batch.
+        //
+        loci_ordered = !loc->cloc->loc.empty();
+        if (loci_ordered) {
             //
-            // End of batch (reference-based).
+            // Ref-based.
             //
-            assert(loci_ordered);
-            this->_loc_filter.locus_unsee();
-            this->_next_loc = loc;
-            break;
+            if (this->_chr.empty()) {
+                this->_chr = loc->cloc->loc.chr();
+            } else if (this->_chr.compare(loc->cloc->loc.chr()) != 0) {
+                if (this->_loc_filter.batch_total() > 0) {
+                    this->_next_loc = loc;
+                    this->_loc_filter.locus_unsee();
+                    break;
+                } else {
+                    //
+                    // No loci were analyzed on the previous chromosome, keep processing
+                    // the current chromosome without returning.
+                    //
+                    this->_chr = loc->cloc->loc.chr();
+                }
+            }
+            this->_loci.push_back(loc);
+            this->_loc_filter.keep_locus(loc);
+        } else {
+            //
+            // De novo.
+            //
+            loc->cloc->loc.set("un", this->_unordered_bp, strand_plus);
+            this->_unordered_bp += loc->cloc->len;
+            this->_loci.push_back(loc);
+            this->_loc_filter.keep_locus(loc);
+            if (this->_loc_filter.batch_total() == this->_batch_size)
+                break;
         }
-
-        this->_loci.push_back(loc);
-        this->_loc_filter.keep_locus(loc);
-        loc_cnt++;
-
-        if (!loci_ordered && loc_cnt == this->_batch_size)
-            //
-            // End of batch (denovo).
-            //
-            break;
     }
 
     //
@@ -706,7 +666,7 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
                  return a->cloc->loc.bp < b->cloc->loc.bp;
              });
 
-    return loc_cnt;
+    return this->_loc_filter.batch_total();
 }
 
 int
@@ -767,6 +727,8 @@ BatchLocusProcessor::init_external_loci(string in_path, string pmap_path)
 size_t
 BatchLocusProcessor::next_batch_external_loci(ostream &log_fh)
 {
+    assert(false && "2018-03-20: This should use PopMap::populate_external().");
+
     //
     // VCF mode
     //
@@ -2615,7 +2577,7 @@ SumStatsSummary::accumulate(const vector<LocBin *> &loci)
                     // Record if site deviates from HWE.
                     //
                     if (calc_hwp && s->nucs[pos].stat[2] < p_value_cutoff) _sig_hwe_dev[pop]++;
-                    
+
                     //
                     // Accumulate sums for each variable to calculate the means.
                     //
@@ -2828,7 +2790,7 @@ SumStatsSummary::write_results()
     }
     os   << "Mean genotyped sites per locus: " << this->_locus_gt_sites_mean << "bp "
          << "(stderr " << sqrt(this->_locus_gt_sites_var) / sqrt(this->_locus_n) << ").\n";
-   
+
     //
     // Write out summary statistics of the summary statistics.
     //
@@ -3124,7 +3086,7 @@ LocusSmoothing::snp_divergence(const vector<LocBin *> &loci, const vector<vector
         assert(div[i].size() == loci.size());
 
         sites.clear();
-        
+
         if (this->_ord_pp->order(sites, loci, div[i]))
             this->_ks_pp->smooth(sites);
     }
@@ -3144,7 +3106,7 @@ LocusSmoothing::hap_divergence(const vector<LocBin *> &loci,
         assert(div[i].size() == loci.size());
 
         sites.clear();
-        
+
         this->_ord_hs->order(sites, loci, div[i]);
         this->_ks_hs->smooth(sites);
     }

@@ -197,11 +197,15 @@ public:
     struct util {
         static string fmt_info_af(const vector<double>& alt_freqs);
         static string fmt_gt_gl(const vector<Nt2>& alleles, const GtLiks& liks);
-        static GtLiks parse_gt_gl(const vector<Nt2>& alleles, const string& gl);
+
+        static size_t parse_gt_dp(const char* gt_str, size_t dp_index);
+        static Counts<Nt2> parse_gt_ad(const char* gt_str, size_t ad_index, const vector<Nt2>& alleles);
+        static uint8_t parse_gt_gq(const char* gt_str, size_t gq_index);
+        static GtLiks parse_gt_gl(const char* gt_str, size_t gl_index, const vector<Nt2>& alleles);
 
         static const char* find_gt_subfield(const char* sample, size_t n);
         static void skip_gt_subfields(const char** start, size_t n);
-        static size_t n_genotypes(size_t n_alleles) {return (n_alleles*(n_alleles+1))/2;}
+        static size_t n_possible_genotypes(size_t n_alleles) {return (n_alleles*(n_alleles+1))/2;}
 
         // Builds the haplotypes of a sample over a set of (phased) records.
         // (At most one phase set is expected.)
@@ -530,7 +534,9 @@ pair<int, int> VcfRecord::parse_genotype(const char* sample) const {
     return genotype;
 }
 
-inline pair<int, int> VcfRecord::parse_genotype_nochecks(const char* sample) const {
+inline
+pair<int, int> VcfRecord::parse_genotype_nochecks(const char* sample) const
+{
     assert(count_formats() > 0 && strcmp(format0(),"GT")==0);
     assert(sample != NULL && sample[0] != '\0');
 

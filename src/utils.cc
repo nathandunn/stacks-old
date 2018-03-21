@@ -308,6 +308,25 @@ reduced_log_factorial(double n, double d)
     return f;
 }
 
+ostream& operator<<(ostream& os, const GtLiks& liks) {
+    bool first = true;
+    for (auto nt2=Nt2::all.begin(); nt2!=Nt2::all.end(); ++nt2) {
+        for (auto nt1=Nt2::all.begin(); ; ++nt1) {
+            if (first)
+                first = false;
+            else
+                os << ", ";
+            if (liks.has_lik(*nt1, *nt2))
+                cout << *nt1 << *nt2 << ":" << liks.at(*nt2, *nt1);
+            else
+                cout << char(std::tolower(char(*nt1))) << char(std::tolower(char(*nt2)));
+            if (nt1==nt2)
+                break;
+        }
+    }
+    return os;
+}
+
 //
 // Tokenize a string.
 //
@@ -352,19 +371,15 @@ bool compare_ints(int a, int b) {
     return (a > b);
 }
 
-bool compare_pair_snp(pair<string, SNP *> a, pair<string, SNP *> b) {
-    return (a.second->col < b.second->col);
-}
-
-bool compare_pair_haplotype(pair<string, double> a, pair<string, double> b) {
+bool compare_pair_haplotype(const pair<string, double>& a, const pair<string, double>& b) {
     return (a.second > b.second);
 }
 
-bool compare_pair_haplotype_rev(pair<string, double> a, pair<string, double> b) {
+bool compare_pair_haplotype_rev(const pair<string, double>& a, const pair<string, double>& b) {
     return (a.second < b.second);
 }
 
-bool compare_str_len(string a, string b) {
+bool compare_str_len(const string& a, const string& b) {
     return (a.length() < b.length());
 }
 

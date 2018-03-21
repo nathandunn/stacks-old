@@ -148,7 +148,7 @@ string VcfRecord::util::fmt_gt_gl(const vector<Nt2>& alleles, const GtLiks& liks
 
     assert(!alleles.empty());
     vector<double> v;
-    v.reserve(n_genotypes(alleles.size()));
+    v.reserve(n_possible_genotypes(alleles.size()));
     for (size_t a2=0; a2<alleles.size(); ++a2) {
         Nt2 a2nt = alleles[a2];
         for (size_t a1=0; a1<=a2; ++a1) {
@@ -160,55 +160,122 @@ string VcfRecord::util::fmt_gt_gl(const vector<Nt2>& alleles, const GtLiks& liks
     return ss.str();
 }
 
-GtLiks VcfRecord::util::parse_gt_gl(const vector<Nt2>& alleles, const string& gl) {
-
-    auto illegal = [&gl](const string& msg = ""){
-        cerr << "Error: Illegal VCF genotype GL field: '" << gl << "'" << msg << ".\n";
+size_t VcfRecord::util::parse_gt_dp(
+    const char* gt_str,
+    size_t dp_index
+) {
+    const char* p = VcfRecord::util::find_gt_subfield(gt_str, dp_index);
+    if (p == NULL || *p == '.') {
+        cerr << "Error: DP field is missing.\n";
         throw exception();
-    };
-
-    GtLiks liks;
-
-    if (gl == ".")
-        return liks;
-    else if (gl.empty())
-        illegal(" (empty field)");
-
-    vector<double> v;
-    double d = 0;
-    const char* p = gl.c_str();
-    char* end = NULL;
-    d = std::strtod(p, &end);
-    if (end == p)
-        illegal();
-    v.push_back(d);
-    p = end;
-    while(*p != '\0') {
-        if (*p != ',')
-            illegal(" (expected a comma)");
-        ++p;
-        d = std::strtod(p, &end);
-        if (end == p)
-            illegal();
-        v.push_back(d);
-        p = end;
     }
-    if (v.size() != n_genotypes(alleles.size()))
-        illegal(string(" (expected ") + to_string(n_genotypes(alleles.size())) + " values)");
+    char* tmp;
+    long dp = strtol(p, &tmp, 10);
+    if (tmp == p || dp < 0) {
+        cerr << "Error: Bad DP field.\n";
+        throw exception();
+    }
+    return dp;
+}
 
-    size_t gt_i = 0;
+Counts<Nt2>
+VcfRecord::util::parse_gt_ad(
+    const char* gt_str,
+    size_t ad_index,
+    const vector<Nt2>& alleles
+) {
+    Counts<Nt2> depths;
+    const char* p = VcfRecord::util::find_gt_subfield(gt_str, ad_index);
+    if (p == NULL || *p == '.') {
+        cerr << "Error: AD field is missing.\n";
+        throw exception();
+    }
+try {
+    size_t i = 0;
+    char* end;
+    --p;
+    do {
+        ++p;
+        long ad = strtol(p, &end, 10);
+        if (end == p || ad < 0)
+            throw exception();
+        depths.increment(alleles.at(i), ad);
+        ++i;
+        p = end;
+    } while (*p == ',');
+    if (i != alleles.size()) {
+        cerr << "Error: Wrong number of values (expected "
+             << alleles.size() << ", found" << i << ").\n";
+        throw exception();
+    }
+    return depths;
+} catch (exception&) {
+    cerr << "Error: Bad AD field in '" << gt_str << "'.\n";
+    throw;
+}}
+
+uint8_t VcfRecord::util::parse_gt_gq(
+    const char* gt_str,
+    size_t gq_index
+) {
+    const char* p = VcfRecord::util::find_gt_subfield(gt_str, gq_index);
+    if (p == NULL || *p == '.') {
+        cerr << "Error: GQ field is missing.\n";
+        throw exception();
+    }
+    char* tmp;
+    long gq = strtol(p, &tmp, 10);
+    if (tmp == p || gq < 0 || gq > UINT8_MAX) {
+        cerr << "Error: Bad GQ field.\n";
+        throw exception();
+    }
+    return gq;
+}
+
+GtLiks VcfRecord::util::parse_gt_gl(
+    const char* gt_str,
+    size_t gl_index,
+    const vector<Nt2>& alleles
+) {
+    GtLiks liks;
+    const char* p = VcfRecord::util::find_gt_subfield(gt_str, gl_index);
+    if (p == NULL) {
+        cerr << "Error: GL field is missing.\n";
+        throw exception();
+    }
+try {
+    size_t n_values_found = 0;
+    char* end;
     for (size_t a2=0; a2<alleles.size(); ++a2) {
         Nt2 a2nt = alleles[a2];
         for (size_t a1=0; a1<=a2; ++a1) {
             Nt2 a1nt = alleles[a1];
-            liks.set(a1nt, a2nt, v[gt_i] * log(10)); // Back to base e.
-            ++gt_i;
+            double lik = strtod(p, &end);
+            if (end == p)
+                throw exception();
+            lik *= log(10); // Back to base e.
+            liks.set(a1nt, a2nt, lik);
+            // Move to the next field.
+            ++n_values_found;
+            p = end;
+            if (*p == ',') {
+                ++p;
+            } else if (*p != ':' && *p != '\0') {
+                throw exception();
+            } else if (n_values_found != n_possible_genotypes(alleles.size())) {
+                cerr << "Error: Wrong number of values (expected "
+                     << n_possible_genotypes(alleles.size()) << ", found "
+                     << n_values_found << ").\n";
+                throw exception();
+            }
         }
     }
-    assert(gt_i == v.size());
-
     return liks;
-}
+} catch (exception&) {
+    cerr << "Error: VCF: Illegal GL format: "
+        << (gl_index+1) << "th field in '" << gt_str << "'.\n";
+    throw;
+}}
 
 void VcfRecord::util::build_haps(
         pair<string,string>& haplotypes,
