@@ -158,19 +158,12 @@ public:
 
     const char* find_allele(size_t i) const
         {auto a=begin_alleles(); for(size_t j=0; j<i; ++j) {assert(a!=end_alleles()); ++a;} return *a;}
-    const char* find_sample(size_t i) const
+    const char* find_sample(size_t i) const // N.B. Inefficient.
         {auto a=begin_samples(); for(size_t j=0; j<i; ++j) {assert(a!=end_samples()); ++a;} return *a;}
 
     bool is_monomorphic() const {return **++begin_alleles() == '.';}
     bool is_snp() const;
-
-    // Returns {first_allele, second_allele} or {-1,-1} if there's no data.
-    // (The second version is for use with internal, stacks-generated files.)
-    pair<int, int> parse_genotype(const char* sample) const;
-    pair<int, int> parse_genotype_nochecks(const char* sample) const;
-
-    size_t index_of_gt_subfield(const char* key) const; // SIZE_MAX if not found.
-    string parse_gt_subfield(const char* sample, size_t index) const; // xxx Remove this; create parse_gt_ad.
+    size_t index_of_gt_subfield(const char* format_key) const; // SIZE_MAX if not found.
 
     // Record creation functions.
     void clear();
@@ -198,6 +191,7 @@ public:
         static string fmt_info_af(const vector<double>& alt_freqs);
         static string fmt_gt_gl(const vector<Nt2>& alleles, const GtLiks& liks);
 
+        static pair<long,long> parse_gt_gt(const char* gt_str);
         static size_t parse_gt_dp(const char* gt_str, size_t dp_index);
         static Counts<Nt2> parse_gt_ad(const char* gt_str, size_t ad_index, const vector<Nt2>& alleles);
         static uint8_t parse_gt_gq(const char* gt_str, size_t gq_index);
@@ -206,13 +200,6 @@ public:
         static const char* find_gt_subfield(const char* sample, size_t n);
         static void skip_gt_subfields(const char** start, size_t n);
         static size_t n_possible_genotypes(size_t n_alleles) {return (n_alleles*(n_alleles+1))/2;}
-
-        // Builds the haplotypes of a sample over a set of (phased) records.
-        // (At most one phase set is expected.)
-        // Returns false if the haplotypes were incomplete (N's).
-        static void build_haps(pair<string,string>& haplotypes,
-                               const vector<const VcfRecord*>& snp_records,
-                               size_t sample_index);
     };
 };
 
@@ -464,109 +451,44 @@ size_t VcfRecord::index_of_gt_subfield(const char* key) const {
 }
 
 inline
-string VcfRecord::parse_gt_subfield(const char* sample, size_t index) const {
-    // Got to the subfield.
-    const char* first = util::find_gt_subfield(sample, index);
-
-    // Make it a std::string.
-    string subf;
-    if (first == NULL)
-        // The requested field is not explicitly written, return the empty string.
-        return subf;
-    const char* last = strchr(first, ':');
-    subf = last == NULL ? string(first) : string(first, last);
-    return subf;
-}
-
-inline
-pair<int, int> VcfRecord::parse_genotype(const char* sample) const {
-
-    pair<int, int> genotype = {-1,-1};
-
+pair<long,long> VcfRecord::util::parse_gt_gt(const char* sample)
+{ try {
     assert(sample != NULL && sample[0] != '\0');
-    if (format0()[0] == '.'
-            || strcmp(format0(), "GT") != 0
-            || sample[0] == '.') {
-        return genotype;
-    }
-
-    const char* first = sample;
-    const char* slash = strchr(first, '/');
-    if (slash == NULL) {
-        slash = strchr(first, '|');
-        if (slash == NULL) {
-            cerr << "Error: Malformed VCF genotype field '" << sample
-                    << "', at marker '" << chrom() << ":" << pos()
-                    << "'.\n";
-            throw exception();
-        }
-    }
-    if (*(slash+1) == '.') {
-        static bool printed = false;
-        if (not printed) {
-            // Print the warning once.
-            cerr << "Notice: Treating incomplete genotypes (e.g. '1/.') as missing.\n";
-            printed = true;
-        }
-        return genotype;
-    }
-
-    int n_alleles = int(count_alleles());
-    try {
-        char* end;
-        genotype.first = int(strtol(first, &end, 10));
-        if (end == first
-                || genotype.first < 0
-                || genotype.first >= n_alleles)
-            throw exception();
-        genotype.second = int(strtol(slash+1, &end, 10));
-        if (end == slash+1
-                || genotype.second < 0
-                || genotype.second >= n_alleles)
-            throw exception();
-    } catch (exception& e) {
-        cerr << "Error: Malformed VCF genotype '" << sample
-             << "', at marker '" << chrom() << ":" << pos()
-             << "'.\n";
-        throw e;
-    }
-
-    return genotype;
-}
-
-inline
-pair<int, int> VcfRecord::parse_genotype_nochecks(const char* sample) const
-{
-    assert(count_formats() > 0 && strcmp(format0(),"GT")==0);
-    assert(sample != NULL && sample[0] != '\0');
-
-    pair<int, int> genotype = {-1,-1};
-    if (sample[0] == '.')
-        return genotype;
-
-    const char* start = sample;
+    if (*sample == '.')
+        return {-1, -1};
     char* end;
-
-    // First allele.
-    genotype.first = strtol(start, &end, 10);
-    assert(end != start);
-    assert(*end == '/' || *end == '|');
-
-    // Second allele.
-    start = end;
-    ++start;
-    genotype.second = strtol(start, &end, 10);
-    assert(end != start);
-    assert(*end == ':' || *end == '\0');
-
-    return genotype;
-}
+    long first = strtol(sample, &end, 10);
+    if (end == sample || (*end != '/' && *end != '|'))
+        throw exception();
+    sample = end;
+    ++sample;
+    if (*sample == '.')
+        // Incomplete, e.g. "1/."
+        return {-1, -1};
+    long second = strtol(sample, &end, 10);
+    if (end == sample || (*end != ':' && *end != '\0'))
+        throw exception();
+    if (first < 0 || second < 0)
+        throw exception();
+    return {first, second};
+} catch (exception&) {
+    cerr << "Error: Malformed VCF sample field '" << sample << "'.\n";
+    throw;
+}}
 
 inline
 bool VcfRecord::is_snp() const {
-    if (is_monomorphic())
+    iterator a = begin_alleles();
+    const iterator end = end_alleles();
+    if (strlen(*a) > 1)
         return false;
-    for (auto a=begin_alleles(); a!=end_alleles(); ++a)
+    ++a;
+    if (a == end)
+        return false;
+    assert(**a != '.');
+    if (**a == '*')
+        return false;
+    for (; a != end; ++a)
         if (strlen(*a) > 1)
             return false;
     return true;

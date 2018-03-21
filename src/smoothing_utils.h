@@ -47,7 +47,7 @@ calc_weights()
 }
 
 template<class StatT>
-inline int
+int
 determine_window_limits(vector<StatT *> &sites, uint center_bp, uint &pos_l, uint &pos_u)
 {
     int limit   = 3 * sigma;
