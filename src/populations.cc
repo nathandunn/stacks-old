@@ -381,7 +381,6 @@ try {
     // Write out the distributions of catalog loci.
     //
     bloc.write_distributions(logger->x);
-    bloc.cleanup();
 
     if (smooth_fstats || smooth_popstats)
         delete smooth;
@@ -439,23 +438,20 @@ BatchLocusProcessor::init(string in_path, string pmap_path)
 size_t
 BatchLocusProcessor::next_batch(ostream &log_fh)
 {
-    size_t loc_cnt;
-
-    //
-    // Clear out any loci from the previous batch.
-    //
-    for (uint i = 0; i < this->_loci.size(); i++)
-        delete this->_loci[i];
-    this->_loci.clear();
-
     this->_batch_num++;
-
     if (this->_input_mode == InputMode::vcf)
-        loc_cnt = this->next_batch_external_loci(log_fh);
+        return this->next_batch_external_loci(log_fh);
     else
-        loc_cnt = this->next_batch_stacks_loci(log_fh);
+        return this->next_batch_stacks_loci(log_fh);
+}
 
-    return loc_cnt;
+void BatchLocusProcessor::batch_clear()
+{
+    for (LocBin* loc : this->_loci)
+        delete loc;
+    this->_loci.clear();
+    this->_chr.clear();
+    this->_loc_filter.batch_clear();
 }
 
 int
@@ -507,18 +503,16 @@ BatchLocusProcessor::init_stacks_loci(string in_path, string pmap_path)
 size_t
 BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
 {
-    this->_loci.clear();
-    this->_chr.clear();
-    this->_loc_filter.batch_clear();
+    this->batch_clear();
 
     //
     // Check if we queued a LocBin object from the last round of reading.
     //
     if (this->_next_loc != NULL) {
         this->_loci.push_back(this->_next_loc);
-        this->_loc_filter.locus_seen();
-        this->_loc_filter.keep_locus(this->_next_loc);
         this->_next_loc = NULL;
+        this->_loc_filter.locus_seen();
+        this->_loc_filter.keep_locus(this->_loci.back());
     }
 
     Seq seq;
@@ -730,22 +724,23 @@ BatchLocusProcessor::next_batch_external_loci(ostream &log_fh)
     //
     // VCF mode
     //
+    this->batch_clear();
     loci_ordered = true;
 
     //
     // Check if we queued a LocBin object from the last round of reading.
     //
-    int cloc_id;
     if (this->_next_loc != NULL) {
         this->_loci.push_back(this->_next_loc);
-        cloc_id         = this->_next_loc->cloc->id + 1;
         this->_next_loc = NULL;
-    } else {
-        cloc_id = 1;
+        this->_loc_filter.locus_seen();
+        this->_loc_filter.keep_locus(this->_loci.back());
     }
 
+    int cloc_id = (this->_loci.empty() ? 1 : this->_loci.back()->cloc->id + 1);
     VcfRecord rec;
     while (this->_vcf_parser.next_record(rec)) {
+        this->_loc_filter.locus_seen();
         this->_total_ext_vcf++;
 
         // Check for a SNP.
@@ -814,13 +809,15 @@ BatchLocusProcessor::next_batch_external_loci(ostream &log_fh)
         //
         // Detect the end of batch.
         //
-        if (!this->_loci.empty()
-            && strcmp(loc->cloc->loc.chr(), this->_loci[0]->cloc->loc.chr()) != 0
-        ) {
+        if (this->_chr.empty()) {
+            this->_chr = loc->cloc->loc.chr();
+        } else if (this->_chr.compare(loc->cloc->loc.chr()) != 0) {
             this->_next_loc = loc;
+            this->_loc_filter.locus_unsee();
             break;
         }
         this->_loci.push_back(loc);
+        this->_loc_filter.keep_locus(loc);
     }
 
     //
@@ -885,19 +882,6 @@ BatchLocusProcessor::hapstats(ostream &log_fh)
                 this->_sig_hwe_dev[j] += l->stat[2] < p_value_cutoff ? 1 : 0;
             }
         }
-    }
-
-    return 0;
-}
-
-int
-BatchLocusProcessor::cleanup()
-{
-    if (this->_input_mode == InputMode::vcf) {
-        delete this->_vcf_header;
-
-    } else {
-        delete this->_vcf_header;
     }
 
     return 0;
