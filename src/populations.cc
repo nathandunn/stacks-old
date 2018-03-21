@@ -783,16 +783,8 @@ BatchLocusProcessor::next_batch_external_loci(ostream &log_fh)
         //
         // Apply locus constraints to remove entire loci below the -r/-p thresholds.
         //
-        // Identify individual SNPs that are below the -r threshold or the minor allele
-        // frequency threshold (-a). In these cases we will remove the SNP, but keep the locus.
-        // If all SNPs are filtered, delete the locus.
-        //
         this->_dists.accumulate_pre_filtering(loc->cloc);
         if (this->_loc_filter.filter(this->_mpopi, loc->d)) {
-            delete loc;
-            continue;
-        }
-        if (this->_loc_filter.prune_sites_with_filters(this->_mpopi, loc->cloc, loc->d, loc->s, log_fh)) {
             delete loc;
             continue;
         }
@@ -803,6 +795,16 @@ BatchLocusProcessor::next_batch_external_loci(ostream &log_fh)
         loc->s = new LocPopSum(strlen(loc->cloc->con), *this->_mpopi);
         loc->s->sum_pops(loc->cloc, (Datum const**) loc->d, *this->_mpopi, verbose, cout);
         loc->s->tally_metapop(loc->cloc);
+
+        //
+        // Identify individual SNPs that are below the -r threshold or the minor allele
+        // frequency threshold (-a). In these cases we will remove the SNP, but keep the locus.
+        // If all SNPs are filtered, delete the locus.
+        //
+        if (this->_loc_filter.prune_sites_with_filters(this->_mpopi, loc->cloc, loc->d, loc->s, log_fh)) {
+            delete loc;
+            continue;
+        }
 
         //
         // Tabulate haplotypes present and in what combinations.

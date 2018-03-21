@@ -450,17 +450,17 @@ try {
     ++allele_i;
     if (allele_i == upstream_del_allele)
         ++allele_i;
-    assert(allele_i != rec_alleles.size());
+    assert(allele_i != long(rec_alleles.size()));
     snp->rank_2 = char(rec_alleles[allele_i]);
     ++allele_i;
     if (allele_i == upstream_del_allele)
         ++allele_i;
-    if (allele_i != rec_alleles.size()) {
+    if (allele_i != long(rec_alleles.size())) {
         snp->rank_3 = char(rec_alleles[allele_i]);
         ++allele_i;
         if (allele_i == upstream_del_allele)
             ++allele_i;
-        if (allele_i != rec_alleles.size())
+        if (allele_i != long(rec_alleles.size()))
             snp->rank_4 = char(rec_alleles[allele_i]);
     }
 
