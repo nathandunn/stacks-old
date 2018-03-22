@@ -50,8 +50,8 @@ class Export {
     virtual int  open(const MetaPopInfo *) = 0;
     virtual int  write_header()    = 0;
     virtual int  write_batch(const vector<LocBin *> &) = 0;
-    virtual int  post_processing() = 0;
-    virtual void close()           = 0;
+    virtual int  post_processing() {return 0;}
+    virtual void close()           {this->_fh.close();}
 
     bool is_hap_export();
     string tmp_path() const {return this->_path + ".part";}
@@ -103,11 +103,6 @@ class MarkersExport: public Export {
     int  open(const MetaPopInfo *mpopi);
     int  write_header();
     int  write_batch(const vector<LocBin *> &);
-    int  post_processing() { return 0; }
-    void close() {
-        this->_fh.close();
-        return;
-    }
 };
 
 class GenotypesExport: public Export {
@@ -122,11 +117,6 @@ class GenotypesExport: public Export {
     int  open(const MetaPopInfo *mpopi);
     int  write_header();
     int  write_batch(const vector<LocBin *> &);
-    int  post_processing() { return 0; }
-    void close() {
-        this->_fh.close();
-        return;
-    }
 };
 
 class SumstatsExport: public Export {
@@ -142,11 +132,6 @@ class SumstatsExport: public Export {
     int  open(const MetaPopInfo *mpopi);
     int  write_header();
     int  write_batch(const vector<LocBin *> &);
-    int  post_processing() { return 0; }
-    void close() {
-        this->_fh.close();
-        return;
-    }
 };
 
 class HapstatsExport: public Export {
@@ -162,11 +147,6 @@ class HapstatsExport: public Export {
     int  open(const MetaPopInfo *mpopi);
     int  write_header();
     int  write_batch(const vector<LocBin *> &);
-    int  post_processing() { return 0; }
-    void close() {
-        this->_fh.close();
-        return;
-    }
 };
 
 class SnpDivergenceExport: public Export {
@@ -188,7 +168,6 @@ class SnpDivergenceExport: public Export {
     int  write_header();
     int  write_batch(const vector<LocBin *> &) { return 0; }
     int  write_batch_pairwise(const vector<LocBin *> &, const vector<vector<PopPair **>> &);
-    int  post_processing() { return 0; }
     void close() {
         for (uint i = 0; i < this->_fhs.size(); i++)
             this->_fhs[i]->close();
@@ -217,7 +196,6 @@ class HapDivergenceExport: public Export {
     int  write_header();
     int  write_batch(const vector<LocBin *> &) { return 0; }
     int  write_batch_pairwise(const vector<LocBin *> &, const vector<vector<HapStat *>> &, const vector<HapStat *> &);
-    int  post_processing() { return 0; }
     void close() {
         for (uint i = 0; i < this->_fhs.size(); i++)
             this->_fhs[i]->close();
@@ -300,23 +278,18 @@ class StructureExport: public OrderableExport {
     int write_site(const CSLocus* cloc, const LocPopSum* psum, Datum const*const* datums, size_t col, size_t index);
 };
 
-class FineStructureExport: public Export {
+class FineRADStructureExport: public Export {
     const MetaPopInfo *_mpopi;
     string   _tmp_path;
     ofstream _tmpfh;
     ifstream _intmpfh;
 
  public:
-    FineStructureExport() : _mpopi(NULL) {}
-    ~FineStructureExport() {}
+    FineRADStructureExport() : _mpopi(NULL) {}
+    ~FineRADStructureExport() {}
     int  open(const MetaPopInfo *mpopi);
     int  write_header();
     int  write_batch(const vector<LocBin *> &);
-    int  post_processing();
-    void close();
-
- private:
-    int write_site(const CSLocus* cloc, const LocPopSum* psum, Datum const*const* datums, size_t col, size_t index);
 };
 
 class PhylipExport: public OrderableExport {
@@ -363,11 +336,6 @@ class FastaLociExport: public Export {
     int  open(const MetaPopInfo *mpopi);
     int  write_header();
     int  write_batch(const vector<LocBin *> &);
-    int  post_processing() { return 0; }
-    void close() {
-        this->_fh.close();
-        return;
-    }
 };
 
 class FastaRawExport: public Export {
@@ -379,14 +347,9 @@ class FastaRawExport: public Export {
  public:
     FastaRawExport() : _mpopi(NULL) {}
     ~FastaRawExport() {}
-    int  open(const MetaPopInfo *mpopi);
-    int  write_header();
-    int  write_batch(const vector<LocBin *> &);
-    int  post_processing() { return 0; }
-    void close() {
-        this->_fh.close();
-        return;
-    }
+    int open(const MetaPopInfo *mpopi);
+    int write_header();
+    int write_batch(const vector<LocBin *> &);
 };
 
 class FastaSamplesExport: public Export {
@@ -398,14 +361,9 @@ class FastaSamplesExport: public Export {
  public:
     FastaSamplesExport() : _mpopi(NULL) {}
     ~FastaSamplesExport() {}
-    int  open(const MetaPopInfo *mpopi);
-    int  write_header();
-    int  write_batch(const vector<LocBin *> &);
-    int  post_processing() { return 0; }
-    void close() {
-        this->_fh.close();
-        return;
-    }
+    int open(const MetaPopInfo *mpopi);
+    int write_header();
+    int write_batch(const vector<LocBin *> &);
 };
 
 class VcfExport: public OrderableExport {
@@ -416,10 +374,7 @@ class VcfExport: public OrderableExport {
     VcfExport() : _mpopi(NULL), _writer(NULL) {}
     ~VcfExport() { delete this->_writer; }
     int open(const MetaPopInfo *mpopi);
-
-    int  write_header() { return 0; }
-    int  post_processing() { return 0; }
-    void close() {}
+    int write_header() { return 0; }
 
  private:
     int write_site(const CSLocus* cloc, const LocPopSum* psum, Datum const*const* datums, size_t col, size_t index);
@@ -434,10 +389,7 @@ class VcfHapsExport: public Export {
     ~VcfHapsExport() { delete this->_writer; }
     int open(const MetaPopInfo *mpopi);
     int write_batch(const vector<LocBin*>& loci);
-
-    int  write_header() { return 0; }
-    int  post_processing() { return 0; }
-    void close() {}
+    int write_header() { return 0; }
 };
 
 /*
