@@ -2131,14 +2131,14 @@ VcfExport::write_site(const CSLocus* cloc,
     VcfRecord rec;
     rec.append_chrom(string(cloc->loc.chr()));
     rec.append_pos(cloc->sort_bp(col) + 1);
-    rec.append_id(to_string(cloc->id) + "_" + to_string(col));
+    rec.append_id(to_string(cloc->id) + ":" + to_string(col + 1)
+        + ':' + (cloc->loc.strand == strand_plus ? '+' : '-'));
     rec.append_allele(Nt2(cloc->loc.strand == strand_plus ? ref : reverse(ref)));
     rec.append_allele(Nt2(cloc->loc.strand == strand_plus ? alt : reverse(alt)));
     rec.append_qual(".");
     rec.append_filters("PASS");
     rec.append_info(string("NS=") + to_string(t->nucs[col].num_indv));
     rec.append_info(string("AF=") + freq_alt);
-    rec.append_info(string("loc_strand=") + (cloc->loc.strand == strand_plus ? "p" : "m"));
     rec.append_format("GT");
     rec.append_format("DP");
     rec.append_format("AD");
@@ -2204,7 +2204,6 @@ VcfHapsExport::open(const MetaPopInfo *mpopi)
 }
 
 int VcfHapsExport::write_batch(const vector<LocBin*>& loci){
-
     VcfRecord rec;
     for (const LocBin* locbin : loci) {
         const CSLocus* cloc = locbin->cloc;
@@ -2227,7 +2226,6 @@ int VcfHapsExport::write_batch(const vector<LocBin*>& loci){
         rec.append_chrom(string(cloc->loc.chr()));
         rec.append_pos(cloc->loc.bp + 1);
         rec.append_id(to_string(cloc->id));
-
         for (size_t i=0; i<sorted_haps.size(); i++) {
             if (cloc->loc.strand == strand_plus) {
                 rec.append_allele(string(sorted_haps[i].first));
@@ -2235,7 +2233,6 @@ int VcfHapsExport::write_batch(const vector<LocBin*>& loci){
                 rec.append_allele(DNASeq4(sorted_haps[i].first).rev_compl().str());
             }
         }
-
         rec.append_qual(".");
         rec.append_filters("PASS");
         stringstream info;
