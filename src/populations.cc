@@ -3725,7 +3725,7 @@ parse_command_line(int argc, char* argv[])
             {"fasta_samples",  no_argument,       NULL, 'J'}, {"fasta_strict", no_argument, NULL, 'J'},
             {"fasta_samples_raw", no_argument,    NULL, 'F'}, {"fasta", no_argument, NULL, 'F'},
             {"structure",      no_argument,       NULL, 'S'},
-            {"finestructure",  no_argument,       NULL, 1015},
+            {"radpainter",     no_argument,       NULL, 1015}, {"fineRADstructure", no_argument, NULL, 1015},
             {"fastphase",      no_argument,       NULL, 'A'},
             {"phase",          no_argument,       NULL, 'C'},
             {"plink",          no_argument,       NULL, 'K'},
@@ -3957,8 +3957,8 @@ parse_command_line(int argc, char* argv[])
             add_export<GenePopHapsExport>();
             dynamic_cast<GenePopHapsExport&>(**find_export<GenePopHapsExport>()).set_digits(3);
             break;
-        case 1015: // --finestructure
-            add_export<FineStructureExport>();
+        case 1015: // --radpainter,--fineradstructure
+            add_export<FineRADStructureExport>();
             break;
         case 1014: // --hwe
             calc_hwp = true;
@@ -4209,7 +4209,7 @@ void help() {
          << "  --vcf: output SNPs and haplotypes in Variant Call Format (VCF).\n"
          << "  --genepop: output SNPs and haplotypes in GenePop format.\n"
          << "  --structure: output results in Structure format.\n"
-         << "  --finestructure: output results in FineStructure format.\n"
+         << "  --radpainter: output results in fineRADstructure/RADpainter format.\n"
          << "  --phase*: output genotypes in PHASE format.\n"
          << "  --fastphase*: output genotypes in fastPHASE format.\n"
          << "  --plink: output genotypes in PLINK format.\n"
