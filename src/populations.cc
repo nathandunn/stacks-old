@@ -493,9 +493,15 @@ BatchLocusProcessor::init_stacks_loci(string in_path, string pmap_path)
     this->_loc_filter.init(this->pop_info());
 
     //
-    // Store the VCF header data.
+    // Create the {sample_vcf_index : sample_popmap_index} table.
     //
-    this->_vcf_header = new VcfHeader(this->cloc_reader().header());
+    const vector<string>& vcf_samples = this->_cloc_reader.header().samples();
+    this->_samples_vcf_to_mpopi.assign(vcf_samples.size(), SIZE_MAX);
+    for (size_t vcf_i=0; vcf_i<vcf_samples.size(); ++vcf_i) {
+        size_t mpopi_i = this->_mpopi->get_sample_index(vcf_samples[vcf_i], false);
+        if (mpopi_i != SIZE_MAX)
+            this->_samples_vcf_to_mpopi[vcf_i] = mpopi_i;
+    }
 
     return 0;
 }
@@ -557,7 +563,8 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
 
         PopMap<CSLocus>::populate_internal(
             loc->cloc, loc->d,
-            seq, records, *this->_vcf_header, this->_mpopi);
+            seq, records,
+            this->_cloc_reader.header(), this->_mpopi, this->_samples_vcf_to_mpopi);
 
         //
         // Apply the -r/-p thresholds.
@@ -709,9 +716,15 @@ BatchLocusProcessor::init_external_loci(string in_path, string pmap_path)
     this->_loc_filter.init(this->pop_info());
 
     //
-    // Store the VCF header data.
+    // Create the {sample_vcf_index : sample_popmap_index} table.
     //
-    this->_vcf_header = new VcfHeader(this->vcf_reader().header());
+    const vector<string>& vcf_samples = this->_vcf_parser.header().samples();
+    this->_samples_vcf_to_mpopi.assign(vcf_samples.size(), SIZE_MAX);
+    for (size_t vcf_i=0; vcf_i<vcf_samples.size(); ++vcf_i) {
+        size_t mpopi_i = this->_mpopi->get_sample_index(vcf_samples[vcf_i], false);
+        if (mpopi_i != SIZE_MAX)
+            this->_samples_vcf_to_mpopi[vcf_i] = mpopi_i;
+    }
 
     this->_total_ext_vcf = 0;
 
@@ -765,7 +778,8 @@ BatchLocusProcessor::next_batch_external_loci(ostream &log_fh)
             loc->d[i] = NULL;
         if (!PopMap<CSLocus>::populate_external(
                 loc->cloc, loc->d,
-                cloc_id++, rec, *this->_vcf_header, this->_mpopi)
+                cloc_id++, rec,
+                this->_vcf_parser.header(), this->_mpopi, this->_samples_vcf_to_mpopi)
         ) {
             // Bad record; a warning has been printed.
             delete loc;

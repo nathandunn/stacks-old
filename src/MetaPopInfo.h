@@ -87,7 +87,7 @@ public:
 
     const vector<size_t>& sample_indexes_orig_order() const {return sample_indexes_orig_order_;}
 
-    size_t get_sample_index(const string& name) const {return sample_indexes_.at(name);}
+    size_t get_sample_index(const string& name, bool must_exist=true) const;
     size_t get_pop_index(const string& name) const {return pop_indexes_.at(name);}
     size_t get_group_index(const string& name) const {return group_indexes_.at(name);}
 
@@ -117,6 +117,19 @@ bool Sample::operator<(const Sample& other) const {
         return name < other.name;
     else
         return pop < other.pop;
+}
+
+inline
+size_t MetaPopInfo::get_sample_index(
+    const string& name,
+    bool must_exist
+) const {
+    if (must_exist) {
+        return sample_indexes_.at(name);
+    } else {
+        auto itr = sample_indexes_.find(name);
+        return (itr == sample_indexes_.end() ? SIZE_MAX : itr->second);
+    }
 }
 
 #endif // METAPOPINFO_H

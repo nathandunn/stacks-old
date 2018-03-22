@@ -45,7 +45,6 @@ public:
         Counts<Nt2> nt_depths;
         uint8_t gq;
         GtLiks gtliks;
-
         SNPData() : tot_depth(0), gq(UINT8_MAX) {}
     };
 
@@ -102,7 +101,8 @@ public:
         const Seq& fasta_record,
         const vector<VcfRecord>& vcf_records,
         const VcfHeader& vcf_header,
-        const MetaPopInfo* mpopi
+        const MetaPopInfo* mpopi,
+        const vector<size_t>& sample_vcf_i_to_mpopi_i
     );
     // Populates the Locus & PopMap based on external VCF files. Returns false
     // and prints warnings if the parsing of the record fails.
@@ -112,7 +112,8 @@ public:
         int cloc_id,
         const VcfRecord& vcf_record,
         const VcfHeader& vcf_header,
-        const MetaPopInfo* mpopi
+        const MetaPopInfo* mpopi,
+        const vector<size_t>& sample_vcf_i_to_mpopi_i
     );
 
     //
@@ -160,15 +161,6 @@ PopMap<LocusT>::~PopMap() {
     delete [] this->data;
 }
 
-
-
-
-
-
-
-
-
-
 template<class LocusT>
 void PopMap<LocusT>::populate_internal(
     LocusT* cloc,
@@ -176,12 +168,14 @@ void PopMap<LocusT>::populate_internal(
     const Seq& fasta_record,
     const vector<VcfRecord>& vcf_records,
     const VcfHeader& vcf_header,
-    const MetaPopInfo* mpopi
+    const MetaPopInfo* mpopi,
+    const vector<size_t>& sample_vcf_i_to_mpopi_i
 ) { try {
     assert(fasta_record.id != NULL);
     assert(fasta_record.seq != NULL);
     assert(!fasta_record.comment.empty());
     assert(!vcf_records.empty());
+    assert(sample_vcf_i_to_mpopi_i.size() == vcf_header.samples().size());
 
     // Parse the FASTA record.
     // ==========
@@ -289,11 +283,16 @@ void PopMap<LocusT>::populate_internal(
             ++gt_itr, ++sample_vcf_i
         ) { try {
             assert(gt_itr != rec.end_samples());
+            // Check that the sample is present in the population map.
+            size_t sample_mpopi_i = sample_vcf_i_to_mpopi_i[sample_vcf_i];
+            if (sample_mpopi_i == SIZE_MAX)
+                continue;
+            else
+                assert(sample_mpopi_i < mpopi->samples().size());
             // Check if the sample has data.
             const char* gt_str = *gt_itr;
             if (gt_str[0] == '.')
                 continue;
-            size_t sample_mpopi_i = mpopi->get_sample_index(vcf_header.samples()[sample_vcf_i]); //TODO inefficient
             Datum* d = locdata[sample_mpopi_i];
             if (snp_rec) {
                 // Check that this isn't an unphased HET.
@@ -353,7 +352,7 @@ void PopMap<LocusT>::populate_internal(
             throw;
         }}
     } catch (exception&) {
-        cerr << "Error: In VCF record '" << rec.chrom() << ":" << rec.pos()+1 << "'.\n";
+        cerr << "Error: In record '" << rec.chrom() << ":" << rec.pos()+1 << "'.\n";
         throw;
     }}
 
@@ -383,16 +382,6 @@ void PopMap<LocusT>::populate_internal(
     throw;
 }}
 
-
-
-
-
-
-
-
-
-
-
 template<class LocusT> bool
 PopMap<LocusT>::populate_external(
     LocusT* cloc,
@@ -400,9 +389,11 @@ PopMap<LocusT>::populate_external(
     int cloc_id,
     const VcfRecord& vcf_record,
     const VcfHeader& vcf_header,
-    const MetaPopInfo* mpopi
+    const MetaPopInfo* mpopi,
+    const vector<size_t>& sample_vcf_i_to_mpopi_i
 ) { try {
     assert(vcf_record.is_snp());
+    assert(sample_vcf_i_to_mpopi_i.size() == vcf_header.samples().size());
     // We ignore the '*' allele & treat samples that have it as missing.
     long upstream_del_allele = -1;
     vector<Nt2> rec_alleles;
@@ -476,6 +467,12 @@ try {
         ++gt_itr, ++sample_vcf_i
     ) { try {
         assert(gt_itr != vcf_record.end_samples());
+        // Check that the sample is present in the population map.
+        size_t sample_mpopi_i = sample_vcf_i_to_mpopi_i[sample_vcf_i];
+        if (sample_mpopi_i == SIZE_MAX)
+            continue;
+        else
+            assert(sample_mpopi_i < mpopi->samples().size());
         // Check if the sample has data.
         const char* gt_str = *gt_itr;
         pair<long,long> gt = VcfRecord::util::parse_gt_gt(gt_str);
@@ -484,7 +481,6 @@ try {
         else if (gt.first == upstream_del_allele || gt.second == upstream_del_allele)
             continue;
         // Fill the datum.
-        size_t sample_mpopi_i = mpopi->get_sample_index(vcf_header.samples()[sample_vcf_i]); //TODO inefficient
         assert(locdata[sample_mpopi_i] == NULL);
         ++cloc->cnt;
         Datum* d = new Datum();
