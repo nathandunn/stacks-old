@@ -254,18 +254,17 @@ class BatchLocusProcessor {
 public:
     BatchLocusProcessor():
         _input_mode(InputMode::stacks2), _user_supplied_whitelist(false), _batch_size(0), _batch_num(0),
-        _mpopi(NULL), _vcf_header(NULL), _next_loc(NULL), _unordered_bp(1) {}
+        _mpopi(NULL), _next_loc(NULL), _unordered_bp(1) {}
     BatchLocusProcessor(InputMode mode, size_t batch_size, MetaPopInfo *popi):
         _input_mode(mode), _user_supplied_whitelist(false), _batch_size(batch_size), _batch_num(0),
-        _mpopi(popi), _vcf_header(NULL), _next_loc(NULL), _unordered_bp(1) {}
+        _mpopi(popi), _next_loc(NULL), _unordered_bp(1) {}
     BatchLocusProcessor(InputMode mode, size_t batch_size):
         _input_mode(mode), _user_supplied_whitelist(false), _batch_size(batch_size), _batch_num(0),
-        _mpopi(NULL), _vcf_header(NULL), _next_loc(NULL), _unordered_bp(1) {}
+        _mpopi(NULL), _next_loc(NULL), _unordered_bp(1) {}
     ~BatchLocusProcessor() {
         for (uint i = 0; i < this->_loci.size(); i++)
             delete this->_loci[i];
         delete [] this->_sig_hwe_dev;
-        delete this->_vcf_header;
     };
 
     int            init(string, string);
@@ -280,7 +279,6 @@ public:
     VcfParser&     vcf_reader()    { return this->_vcf_parser; }
     GzFasta&       fasta_reader()  { return this->_fasta_reader; }
     VcfCLocReader& cloc_reader()   { return this->_cloc_reader; }
-    VcfHeader*     vcf_header()    { return this->_vcf_header; }
     size_t         batch_size()    { return this->_batch_size; }
     size_t         batch_size(size_t bsize) { this->_batch_size = bsize; return bsize; }
     void           report_locus_overlap(size_t&, size_t&, ofstream* = NULL);
@@ -304,9 +302,9 @@ private:
     VcfParser     _vcf_parser;
     VcfCLocReader _cloc_reader;
     GzFasta       _fasta_reader;
+    vector<size_t> _samples_vcf_to_mpopi;
 
     // Data stores
-    VcfHeader        *_vcf_header;
     vector<LocBin *>  _loci;
     LocBin           *_next_loc;
     string            _chr;
