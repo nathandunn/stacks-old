@@ -25,15 +25,6 @@
 
 #include "utils.h"
 
-uint
-Locus::sort_bp(uint k) const
-{
-    if (this->loc.strand == strand_plus)
-        return this->loc.bp + k;
-    else
-        return (k == 0 ? this->loc.bp - this->len + 1 : this->loc.bp - k);
-}
-
 int
 Locus::snp_index(uint col) const
 {
