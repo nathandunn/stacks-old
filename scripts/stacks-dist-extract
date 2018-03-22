@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 usage="\
 Usage:
@@ -23,7 +23,7 @@ if [[ "$2" ]] ;then
         echo "Error: Couldn't find section '$section' in '$dist_f'." >&1
         exit 1
     fi
-    sed -n "/^END $section\\b/ q; /^BEGIN $section\\b/,$ p" "$dist_f" | sed 1d
+    sed -nE "/^END $section($| )/ q; /^BEGIN $section($| )/,$ p" "$dist_f" | sed 1d
 else
     grep ^BEGIN "$dist_f" | cut -c7-
 fi
