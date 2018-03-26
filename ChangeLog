@@ -1,3 +1,15 @@
+tba
+--------------------------------
+    Feature: Improved populations performance.
+    Feature: Added enzymes Cac8I, MslI.
+    Feature: Made populations maps more tolerant to spurious extra spaces.
+    Feature: populations: VCF output: changed the format of the catalog locus field and made the column 1-based.
+    Bugfix:  Fixed populations dramatric slow-down on datasets with more than several hundred samples.
+    Bugfix:  Restored the NS/locus distribution in populations's distributions log.
+    Bugfix:  Fixed the populations --radpainter export.
+    Bugfix:  stacks-dist-extract: Fixed OSX compatibility.
+    Bugfix:  Fixed breaking bug in populations --in-vcf mode filtering statistics.
+
 Stacks 2.0 Beta 9 - Mar 12, 2018
 --------------------------------
     Feature: Cleaned up tags/snps/alleles/matches files. We removed the batch ID from ustacks and cstacks 
