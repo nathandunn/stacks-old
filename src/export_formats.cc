@@ -2566,8 +2566,7 @@ PlinkExport::close()
     // Close and delete the temporary files.
     //
     this->_intmpfh.close();
-
-    remove(this->_tmp_path.c_str());
+    remove(this->tmp_path().c_str());
 
     this->_fh.close();
     this->_markers_fh.close();
