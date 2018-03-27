@@ -205,7 +205,6 @@ class HapDivergenceExport: public Export {
 
 class PlinkExport: public OrderableExport {
     const MetaPopInfo *_mpopi;
-    string   _tmp_path;
     ofstream _tmpfh;
     ifstream _intmpfh;
     string   _markers_path;
