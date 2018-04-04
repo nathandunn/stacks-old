@@ -350,7 +350,8 @@ void CLocAlnSet::recompute_consensus() {
 }
 
 void CLocAlnSet::hard_clip_right_Ns() {
-    assert(!ref_.empty() && ref_[0] != Nt4::n); // consensus must have been computed (first nt is in the cutsite)
+    assert(!ref_.empty());
+    assert(ref_[0] != Nt4::n); // consensus must have been computed (first nt is in the cutsite)
 
     size_t to_clip = 0;
     DNASeq4::iterator nt = ref_.end();
