@@ -168,7 +168,7 @@ public:
     // Record creation functions.
     void clear();
     void append_chrom(const string& s);
-    void append_pos(size_t pos);
+    void append_pos(size_t pos0);
     void append_id(const string& s = ".");
     void append_allele(Nt2 nt);
     void append_allele(const string& s);
@@ -350,11 +350,11 @@ void VcfRecord::append_chrom(const string& s) {
 }
 
 inline
-void VcfRecord::append_pos(size_t pos) {
+void VcfRecord::append_pos(size_t pos0) {
     assert(pos_ == SIZE_MAX);
     pos_ = buffer_.size();
     char s[32];
-    size_t len = sprintf(s, "%zu", pos);
+    size_t len = sprintf(s, "%zu", pos0 + 1);
     append(s, len);
 }
 

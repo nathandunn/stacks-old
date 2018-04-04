@@ -1901,7 +1901,7 @@ void LocusProcessor::write_one_locus (
         // Chrom & pos.
         rec.clear();
         rec.append_chrom(loc_id);
-        rec.append_pos(i+1);
+        rec.append_pos(i);
         rec.append_id();
 
         // Alleles.

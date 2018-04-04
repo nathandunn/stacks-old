@@ -34,6 +34,7 @@ using namespace std;
 
 extern string      out_path;
 extern string      out_prefix;
+extern bool        loci_ordered;
 extern bool        ordered_export;
 extern bool        write_gtypes;
 
@@ -2129,10 +2130,16 @@ VcfExport::write_site(const CSLocus* cloc,
     sprintf(freq_alt, "%0.3f", 1 - t->nucs[col].p_freq);
 
     VcfRecord rec;
-    rec.append_chrom(string(cloc->loc.chr()));
-    rec.append_pos(cloc->sort_bp(col) + 1);
-    rec.append_id(to_string(cloc->id) + ":" + to_string(col + 1)
-        + ':' + (cloc->loc.strand == strand_plus ? '+' : '-'));
+    if (loci_ordered) {
+        rec.append_chrom(string(cloc->loc.chr()));
+        rec.append_pos(cloc->sort_bp(col));
+        rec.append_id(to_string(cloc->id) + ":" + to_string(col + 1)
+            + ':' + (cloc->loc.strand == strand_plus ? '+' : '-'));
+    } else {
+        rec.append_chrom(to_string(cloc->id));
+        rec.append_pos(col);
+        rec.append_id(".");
+    }
     rec.append_allele(Nt2(cloc->loc.strand == strand_plus ? ref : reverse(ref)));
     rec.append_allele(Nt2(cloc->loc.strand == strand_plus ? alt : reverse(alt)));
     rec.append_qual(".");
@@ -2223,9 +2230,15 @@ int VcfHapsExport::write_batch(const vector<LocBin*>& loci){
 
         // Create the record.
         rec.clear();
-        rec.append_chrom(string(cloc->loc.chr()));
-        rec.append_pos(cloc->loc.bp + 1);
-        rec.append_id(to_string(cloc->id));
+        if (loci_ordered) {
+            rec.append_chrom(string(cloc->loc.chr()));
+            rec.append_pos(cloc->loc.bp);
+            rec.append_id(to_string(cloc->id) + ":1:" + (cloc->loc.strand == strand_plus ? '+' : '-'));
+        } else {
+            rec.append_chrom(to_string(cloc->id));
+            rec.append_pos(0);
+            rec.append_id(".");
+        }
         for (size_t i=0; i<sorted_haps.size(); i++) {
             if (cloc->loc.strand == strand_plus) {
                 rec.append_allele(string(sorted_haps[i].first));
@@ -2241,7 +2254,6 @@ int VcfHapsExport::write_batch(const vector<LocBin*>& loci){
         for (const SNP* snp : cloc->snps)
             cols.push_back(snp->col + 1);
         join(cols, ',', info);
-        info << ";loc_strand=" << (cloc->loc.strand == strand_plus ? "p" : "m");
         rec.append_info(info.str());
         rec.append_format("GT");
 
