@@ -103,15 +103,23 @@ public:
 
 class SiteCall {
     map<Nt2,double> alleles_;
+    long snp_qual_;
     vector<SampleCall> sample_calls_; // Empty if alleles_.size() < 2.
 public:
-    SiteCall(map<Nt2,double>&& alleles,
-             vector<SampleCall>&& sample_calls
-             )
-        : alleles_(move(alleles)),
-          sample_calls_(move(sample_calls))
+    SiteCall(
+            map<Nt2,double>&& alleles,
+            long snp_qual,
+            vector<SampleCall>&& sample_calls
+        )
+            : alleles_(move(alleles))
+            , snp_qual_(snp_qual)
+            , sample_calls_(move(sample_calls))
         {}
+    SiteCall(map<Nt2,double>&& alleles, vector<SampleCall>&& sample_calls)
+        : SiteCall(move(alleles), -1, move(sample_calls)) {}
+
     const map<Nt2,double>& alleles() const {return alleles_;}
+    long snp_qual() const {return snp_qual_;}
     const vector<SampleCall>& sample_calls() const {return sample_calls_;}
 
     Nt2 most_frequent_allele() const;

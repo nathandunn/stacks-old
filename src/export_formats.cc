@@ -2142,7 +2142,7 @@ VcfExport::write_site(const CSLocus* cloc,
     }
     rec.append_allele(Nt2(cloc->loc.strand == strand_plus ? ref : reverse(ref)));
     rec.append_allele(Nt2(cloc->loc.strand == strand_plus ? alt : reverse(alt)));
-    rec.append_qual(".");
+    rec.append_qual();
     rec.append_filters("PASS");
     rec.append_info(string("NS=") + to_string(t->nucs[col].num_indv));
     rec.append_info(string("AF=") + freq_alt);
@@ -2246,7 +2246,7 @@ int VcfHapsExport::write_batch(const vector<LocBin*>& loci){
                 rec.append_allele(DNASeq4(sorted_haps[i].first).rev_compl().str());
             }
         }
-        rec.append_qual(".");
+        rec.append_qual();
         rec.append_filters("PASS");
         stringstream info;
         info << "snp_columns=";

@@ -172,7 +172,7 @@ public:
     void append_id(const string& s = ".");
     void append_allele(Nt2 nt);
     void append_allele(const string& s);
-    void append_qual(const string& s = ".");
+    void append_qual(long phred_qual = -1);
     void append_filters(const string& s = ".");
     void append_info(const string& s);
     void append_format(const string& s);
@@ -387,11 +387,17 @@ void VcfRecord::append_allele(const string& s) {
 }
 
 inline
-void VcfRecord::append_qual(const string& s) {
+void VcfRecord::append_qual(long phred_qual) {
     assert(allele0_ != SIZE_MAX);
     assert(qual_ == SIZE_MAX);
     qual_ = buffer_.size();
-    append(s);
+    if (phred_qual >= 0) {
+        char s[32];
+        size_t len = sprintf(s, "%ld", phred_qual);
+        append(s, len);
+    } else {
+        append(".", 1);
+    }
 }
 
 inline

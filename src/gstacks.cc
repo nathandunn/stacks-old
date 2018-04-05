@@ -1908,7 +1908,8 @@ void LocusProcessor::write_one_locus (
         for (Nt2 nt : vcf_alleles)
             rec.append_allele(nt);
 
-        rec.append_qual();
+        // SNP quality.
+        rec.append_qual(sitecall.snp_qual());
         rec.append_filters();
 
         if(vcf_alleles.size() == 1) {
