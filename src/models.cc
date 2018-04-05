@@ -933,6 +933,8 @@ SiteCall MarukiLowModel::call(const SiteCounts& depths) const {
     for (auto& a : allele_freqs)
         flush_freq(a.second);
 
+    long dimorph_qual = vcf_lnl2gq(lnl_dimorph, lnl_fixed);
+
     //
     // IV. Bayes-corrected likelihoods & genotypes.
     //
@@ -993,5 +995,5 @@ SiteCall MarukiLowModel::call(const SiteCounts& depths) const {
         }
     }
 
-    return SiteCall(move(allele_freqs), move(sample_calls));
+    return SiteCall(move(allele_freqs), dimorph_qual, move(sample_calls));
 }
