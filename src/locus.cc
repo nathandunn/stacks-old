@@ -511,7 +511,7 @@ CLocAlnSet::remove_pcr_duplicates(ostream* log)
             ++r;
         }
         if (r - group >= 2)
-            for (auto r2=++group; r2!=r; ++r2)
+            for (auto r2=group+1; r2!=r; ++r2)
                 r2->seq.clear();
         if (log != NULL) {
             *log << "pcr_dupls\t" << mpopi().samples()[group->sample].name
