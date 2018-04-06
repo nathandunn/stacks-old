@@ -122,8 +122,15 @@ try {
     // Open the input BAM file(s).
     //
     vector<Bam*> bam_f_ptrs;
+try {
     for (const string& in_bam : in_bams)
         bam_f_ptrs.push_back(new Bam(in_bam.c_str()));
+} catch(exception& e) {
+    if (bam_f_ptrs.size() >= 1000)
+        cerr << "Error: You may need to increase your system's max-open-files limit,"
+                " see https://groups.google.com/d/msg/stacks-users/GZqJM_WkMhI/m9Hreg4oBgAJ\n";
+    throw;
+}
 
     //
     // Open the log.
