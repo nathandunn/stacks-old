@@ -362,14 +362,7 @@ Nt2 SiteCall::most_frequent_allele() const {
     return best->first;
 }
 
-map<Nt2,double> SiteCall::tally_allele_freqs(const vector<SampleCall>& spldata) {
-    //
-    // Iterate over the SampleCall's & record the existing alleles and their
-    // frequencies.
-    //
-
-    map<Nt2,double> allele_freqs;
-
+Counts<Nt2> SiteCall::tally_allele_counts(const vector<SampleCall>& spldata) {
     Counts<Nt2> counts;
     for (const SampleCall& sd : spldata) {
         switch (sd.call()) {
@@ -386,7 +379,15 @@ map<Nt2,double> SiteCall::tally_allele_freqs(const vector<SampleCall>& spldata) 
             break;
         }
     }
+    return counts;
+}
 
+map<Nt2,double> SiteCall::tally_allele_freqs(const vector<SampleCall>& spldata) {
+    //
+    // Tally the existing alleles and their frequencies.
+    //
+    map<Nt2,double> allele_freqs;
+    Counts<Nt2> counts = tally_allele_counts(spldata);
     array<pair<size_t,Nt2>,4> sorted_alleles = counts.sorted();
     size_t tot = counts.sum();
     for (auto& a : sorted_alleles) {
@@ -394,7 +395,6 @@ map<Nt2,double> SiteCall::tally_allele_freqs(const vector<SampleCall>& spldata) 
             break;
         allele_freqs.insert({a.second, double(a.first)/tot});
     }
-
     return allele_freqs;
 }
 

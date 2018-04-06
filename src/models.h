@@ -127,6 +127,7 @@ public:
     void discard_sample(size_t sample_i)
         {if(!sample_calls_.empty()) sample_calls_[sample_i] = SampleCall();}
 
+    static Counts<Nt2> tally_allele_counts(const vector<SampleCall>& spldata);
     static map<Nt2,double> tally_allele_freqs(const vector<SampleCall>& spldata);
 
     // For debugging.
