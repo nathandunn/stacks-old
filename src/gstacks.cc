@@ -116,7 +116,7 @@ try {
     //
     // Parse arguments.
     //
-    parse_command_line(argc, argv);
+    string opts_report = parse_command_line(argc, argv);
 
     //
     // Open the input BAM file(s).
@@ -136,13 +136,12 @@ try {
     // Open the log.
     //
     logger.reset(new LogAlterator(out_dir + "gstacks", true, quiet, argc, argv));
-    report_options(cout);
-    cout << "\n" << flush;
+    cout << opts_report << flush;
 
     //
     // Initialize the locus readers.
     //
-    cout << "Reading BAM headers...\n" << flush;
+    cout << "\nReading BAM headers...\n" << flush;
     unique_ptr<BamCLocReader> bam_cloc_reader;
     unique_ptr<BamCLocBuilder> bam_cloc_builder;
     const MetaPopInfo* bam_mpopi;
@@ -2361,6 +2360,9 @@ const string help_string = string() +
         "      is just '.bam', i.e. the program expects 'SAMPLE_NAME.bam'\n"
         "  -B: input BAM file(s)\n"
         "  --unpaired: ignore read pairing (for ddRAD; treat READ2's as if they were READ1's)\n"
+        "  --rm-unpaired-reads: discard unpaired reads\n"
+        "  --rm-pcr-duplicates: remove read pairs of the same sample that have the same\n"
+        "      insert length (implies --rm-unpaired-reads)\n"
         "\n"
         "  The input BAM file(s) must be sorted by coordinate.\n"
         "  With -B, records must be assigned to samples using BAM \"reads groups\"\n"
@@ -2386,8 +2388,9 @@ const string help_string = string() +
         "  --kmer-length: kmer length for the de Bruijn graph (default: 31, max. 31)\n"
         "  --min-kmer-cov: minimum coverage to consider a kmer (default: 2)\n"
         "  --min-kmer-freq: minimum frequency (in %reads) to consider a kmer (default: 0.05) \n"
-        "  --rm-unpaired-reads: discard unpaired reads\n"
-        "  --rm-pcr-duplicates: remove read pairs of the same insert length (implies --rm-unpaired-reads)\n"
+        "  --[no-]pcr-duplicates-measures: take measures to mitigate the effects of PCR\n"
+        "      duplicates. Equivalent to [TODO]. (default: OFF if --rm-pcr-duplicates is\n"
+        "      given, ON otherwise)\n"
         "\n"
         "  (Reference-based mode)\n"
         "  --min-mapq: minimum PHRED-scaled mapping quality to consider a read (default: 10)\n"
@@ -2420,15 +2423,12 @@ const string help_string = string() +
 #endif
         ;
 
-void parse_command_line(int argc, char* argv[]) {
-
+string parse_command_line(int argc, char* argv[]) {
     auto bad_args = [](){
         cerr << help_string;
         exit(1);
     };
-
 try {
-
     static const option long_options[] = {
         {"version",      no_argument,       NULL,  1000},
         {"help",         no_argument,       NULL,  'h'},
@@ -2454,16 +2454,18 @@ try {
         {"max-insert-len", required_argument, NULL,  1016},
         {"rm-unpaired-reads", no_argument,  NULL,  1017},
         {"rm-pcr-duplicates", no_argument,  NULL,  1018},
+        {"pcr-duplicates-measures", no_argument, NULL, 1022},
+        {"no-pcr-duplicates-measures", no_argument, NULL, 1023},
         {"phasing-cooccurrences-thr-range", required_argument, NULL, 1019},
         {"phasing-dont-prune-hets", no_argument, NULL, 1020},
         //debug options
         {"dbg-gfa",      no_argument,       NULL,  2003},
-        {"dbg-alns",     no_argument,       NULL,  2004}, {"alns", no_argument, NULL, 3004},
+        {"dbg-alns",     no_argument,       NULL,  2004}, {"alns", no_argument, NULL, 2004},
         {"dbg-depths",   no_argument,       NULL,  2007},
         {"dbg-no-unphased-snps", no_argument, NULL, 2015},
         {"dbg-hapgraphs", no_argument,      NULL,  2010},
         {"dbg-true-reference", no_argument, NULL,  2012},
-        {"dbg-true-alns", no_argument,      NULL,  2011}, {"true-alns", no_argument, NULL, 3011},
+        {"dbg-true-alns", no_argument,      NULL,  2011}, {"true-alns", no_argument, NULL, 2011},
         {"dbg-no-overlaps", no_argument,    NULL,  2008},
         {"dbg-no-haps",  no_argument,       NULL,  2009},
         {"dbg-min-spl-reads", required_argument, NULL, 2014},
@@ -2477,6 +2479,17 @@ try {
 
     double gt_alpha = 0.05;
     double var_alpha = 0.05;
+
+    bool pcr_dupl_measures = true;
+    auto pcr_duplicates_measures = [&](){
+        pcr_dupl_measures = true;
+        //TODO
+    };
+    auto no_pcr_duplicates_measures = [&](){
+        pcr_dupl_measures = false;
+        //TODO
+    };
+    pcr_duplicates_measures();
 
     int c;
     int long_options_i;
@@ -2599,6 +2612,13 @@ try {
         case 1018://rm-pcr-duplicates
             rm_pcr_duplicates = true;
             rm_unpaired_reads = true;
+            no_pcr_duplicates_measures();
+            break;
+        case 1022://pcr-duplicates-measures
+            pcr_duplicates_measures();
+            break;
+        case 1023://no-pcr-duplicates-measures
+            no_pcr_duplicates_measures();
             break;
         case 1019: //phasing-cooccurrences-thr-range
             std::regex_search(optarg, tmp_cmatch, std::regex("^[0-9]+,[0-9]+$"));
@@ -2622,14 +2642,12 @@ try {
         case 2012://dbg-true-alns
             dbg_true_reference = true;
             break;
-        case 3011:
         case 2011://dbg-true-alns
             dbg_true_alns = true;
             break;
         case 2003://dbg-gfa
             dbg_write_gfa = true;
             break;
-        case 3004:
         case 2004://dbg-alns
             dbg_write_alns = true;
             break;
@@ -2775,15 +2793,12 @@ try {
     if (in_bams.empty())
         DOES_NOT_HAPPEN;
 
-} catch (std::invalid_argument&) {
-    bad_args();
-}
-}
-
-void report_options(ostream& os) {
+    //
+    // Write the report.
+    //
+    stringstream os;
     os << "\n"
        << "Configuration for this run:\n";
-
     switch (input_type) {
     case GStacksInputT::denovo_popmap:
     case GStacksInputT::denovo_merger:
@@ -2800,26 +2815,32 @@ void report_options(ostream& os) {
         DOES_NOT_HAPPEN;
         break;
     }
-
     if (!popmap_path.empty())
         os << "  Population map: '" << popmap_path << "'\n";
-
     os << "  Input files: " << in_bams.size() << ", e.g. '" << in_bams.front()<< "'\n"
        << "  Output to: '" << out_dir << "'\n"
        << "  Model: " << *model << "\n";
-
     if (ignore_pe_reads)
         os << "  Ignoring paired-end reads.\n";
     if (!refbased_cfg.paired)
         os << "  Ignoring pairing information.\n";
-    if (rm_unpaired_reads)
-        os << "  Discarding unpaired reads.\n";
-    if (rm_pcr_duplicates)
-        os << "  Removing PCR duplicates.\n";
     if (km_length != 31)
         os << "  Kmer length: " << km_length << "\n";
     if (min_km_count != 2)
         os << "  Minimum kmer count: " << min_km_count << "\n";
     if (min_km_freq != 0.05)
         os << "  Mininimum kmer freq: " << min_km_freq << "\n";
+    if (rm_unpaired_reads)
+        os << "  Discarding unpaired reads.\n";
+    if (rm_pcr_duplicates)
+        os << "  Removing PCR duplicates.\n";
+    if (pcr_dupl_measures)
+        os << "  PCR duplicates mitigation measures enabled.\n";
+
+    return os.str();
+
+} catch (std::invalid_argument&) {
+    bad_args();
+    exit(1);
+}
 }

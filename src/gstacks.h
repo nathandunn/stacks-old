@@ -26,8 +26,7 @@
 #include "SuffixTree.h"
 #include "GappedAln.h"
 
-void parse_command_line(int argc, char* argv[]);
-void report_options(ostream& os);
+string parse_command_line(int argc, char* argv[]);
 
 enum class GStacksInputT {unknown, denovo_popmap, denovo_merger, refbased_popmap, refbased_list};
 
