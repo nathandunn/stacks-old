@@ -201,9 +201,11 @@ struct Timers {
 
     Timer assembling;
     Timer olap_aligning;
-    Timer geno_haplotyping;
+    Timer genotyping;
+    Timer haplotyping;
     Timer building_vcf;
     Timer cpt_consensus;
+    Timer counting_nts;
 
     Timers& operator+= (const Timers& other);
 };

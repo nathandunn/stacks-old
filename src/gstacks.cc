@@ -560,17 +560,6 @@ try {
     }
     logger->x << "END effective_coverages_per_sample\n";
 
-    // phasing_rates_loci
-    logger->x << "\n"
-              << "BEGIN phasing_rates_loci\n"
-              << "n_hets_2snps\tn_bad_hets\tn_loci\n";
-    for (auto& elem : hap_stats.n_badly_phased_samples)
-        logger->x << elem.first.second
-                  << '\t' << elem.first.second - elem.first.first
-                  << '\t' << elem.second
-                  << '\n';
-    logger->x << "END phasing_rates_loci\n";
-
     // phasing_rates_samples
     logger->x << "\n"
               << "BEGIN phasing_rates_per_samples\n"
@@ -588,6 +577,19 @@ try {
     }
     logger->x << "END phasing_rates_samples\n";
 
+    // phasing_rates_loci
+    #ifdef DEBUG
+    logger->x << "\n"
+              << "BEGIN phasing_rates_loci\n"
+              << "n_hets_2snps\tn_bad_hets\tn_loci\n";
+    for (auto& elem : hap_stats.n_badly_phased_samples)
+        logger->x << elem.first.second
+                  << '\t' << elem.first.second - elem.first.first
+                  << '\t' << elem.second
+                  << '\n';
+    logger->x << "END phasing_rates_loci\n";
+    #endif
+
     // Report clockings.
     {
         double ll  = t_parallel.elapsed();
@@ -601,8 +603,10 @@ try {
 
         double a   = t_threads_totals.assembling.elapsed() / num_threads;
         double o   = t_threads_totals.olap_aligning.elapsed() / num_threads;
+        double cnt = t_threads_totals.counting_nts.elapsed() / num_threads;
+        double g   = t_threads_totals.genotyping.elapsed() / num_threads;
+        double h   = t_threads_totals.haplotyping.elapsed() / num_threads;
         double u   = t_threads_totals.cpt_consensus.elapsed() / num_threads;
-        double g   = t_threads_totals.geno_haplotyping.elapsed() / num_threads;
         double b_v = t_threads_totals.building_vcf.elapsed() / num_threads;
 
         double c = t_parallel.consumed()
@@ -612,9 +616,11 @@ try {
                  + t_threads_totals.writing_vcf.consumed() / num_threads
                  + t_threads_totals.writing_details.consumed() / num_threads
                  + t_threads_totals.assembling.consumed() / num_threads
-                 + t_threads_totals.cpt_consensus.consumed() / num_threads
+                 + t_threads_totals.counting_nts.consumed() / num_threads
                  + t_threads_totals.olap_aligning.consumed() / num_threads
-                 + t_threads_totals.geno_haplotyping.consumed() / num_threads
+                 + t_threads_totals.genotyping.consumed() / num_threads
+                 + t_threads_totals.haplotyping.consumed() / num_threads
+                 + t_threads_totals.cpt_consensus.consumed() / num_threads
                  + t_threads_totals.building_vcf.consumed() / num_threads
                  + t_writing_vcf.consumed()
                  ;
@@ -630,8 +636,10 @@ try {
             // De novo mode & paired-ends.
             x_fp1 << std::setw(16) << a << "  assembling (" << as_percentage(a / ll) << ")\n"
                << std::setw(16) << o << "  aligning/overlapping (" << as_percentage(o / ll) << ")\n";
-        x_fp1 << std::setw(16) << u << "  computing consensus (" << as_percentage(u / ll) << ")\n"
-           << std::setw(16) << g << "  genotyping/haplotyping (" << as_percentage(g / ll) << ")\n"
+        x_fp1 << std::setw(16) << cnt << "  counting nucleotides (" << as_percentage(cnt / ll) << ")\n"
+           << std::setw(16) << g << "  genotyping (" << as_percentage(g / ll) << ")\n"
+           << std::setw(16) << h << "  haplotyping (" << as_percentage(h / ll) << ")\n"
+           << std::setw(16) << u << "  computing consensus (" << as_percentage(u / ll) << ")\n"
            << std::setw(16) << b_v << "  building_vcf (" << as_percentage(b_v / ll) << ")\n"
            << std::setw(8) << w_f << "  writing_fa (" << as_percentage(w_f / ll) << ")\n"
            << std::setw(8) << w_v << "  writing_vcf (" << as_percentage(w_v / ll) << ")\n";
@@ -955,6 +963,9 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
             this->loc_.details_ss << "BEGIN locus " << loc_.id << "\n";
     }
 
+    //
+    // Remove unpaired reads/PCR duplicates.
+    //
     if (rm_unpaired_reads) {
         for (size_t sample=0; sample<gt_stats_.per_sample_stats.size(); ++sample)
             gt_stats_.per_sample_stats[sample].n_unpaired_reads += aln_loc.sample_reads(sample).size();
@@ -966,7 +977,6 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
             return;
         }
     }
-    ++gt_stats_.n_genotyped_loci;
     if (rm_pcr_duplicates) {
         assert(rm_unpaired_reads);
         for (size_t sample=0; sample<gt_stats_.per_sample_stats.size(); ++sample)
@@ -976,66 +986,91 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
             gt_stats_.per_sample_stats[sample].n_read_pairs_pcr_dupl -= aln_loc.sample_reads(sample).size();
     }
     assert(!aln_loc.reads().empty());
+    ++gt_stats_.n_genotyped_loci;
     for (size_t sample=0; sample<gt_stats_.per_sample_stats.size(); ++sample) {
         if (!aln_loc.sample_reads(sample).empty()) {
             gt_stats_.per_sample_stats[sample].n_read_pairs_used += aln_loc.sample_reads(sample).size();
             ++gt_stats_.per_sample_stats[sample].n_loci_with_sample;
         }
     }
-
-    timers_.cpt_consensus.restart();
-    aln_loc.recompute_consensus();
-    timers_.cpt_consensus.stop();
-
     if (detailed_output) {
         loc_.details_ss << "BEGIN aln_matrix\n";
         for (const SAlnRead& read : aln_loc.reads())
-            loc_.details_ss << read.name << '\t' << loc_.mpopi->samples()[read.sample].name << '\t' << read.cigar << '\n';
+            loc_.details_ss << read.name << '\t' << loc_.mpopi->samples()[read.sample].name
+                            << '\t' << read.cigar << '\n';
         loc_.details_ss << "END aln_matrix\n";
     }
 
-    if (dbg_write_alns)
-        #pragma omp critical
-        o_aln_f << "BEGIN " << loc_.id << "\n"
-                << aln_loc
-                << "\nEND " << loc_.id << "\n";
-
     //
-    // Call SNPs. Determine the consensus sequence.
+    // Get the nucleotide counts at each position.
     //
-    timers_.geno_haplotyping.restart();
+    timers_.counting_nts.restart();
     vector<SiteCounts> depths;
-    vector<SiteCall> calls;
     depths.reserve(aln_loc.ref().length());
-    calls.reserve(aln_loc.ref().length());
-    DNASeq4 new_consensus = aln_loc.ref();
     for (CLocAlnSet::site_iterator site (aln_loc); bool(site); ++site) {
         depths.push_back(site.counts());
-        calls.push_back(model->call(depths.back()));
-        if (!calls.back().alleles().empty()) {
-            new_consensus.set(site.col(), calls.back().most_frequent_allele());
+        if (depths.back().tot.sum() > 0)
             ++gt_stats_.n_sites_tot; // Sites "with data".
-        } else {
-            // For the high/low Maruki" models this actually only happens when
-            // there is no coverage; for the Hohenlohe model it may also happen
-            // when there isn't a single significant call.
-            // Keep the already computed majority-rule nucleotide/don't do anything.
-            ;
-        }
     }
-    aln_loc.ref(move(new_consensus));
+    assert(depths.size() == aln_loc.ref().length());
+    timers_.counting_nts.stop();
 
+    //
+    // Call SNPs.
+    //
+    timers_.genotyping.restart();
+    vector<SiteCall> calls;
+    calls.reserve(aln_loc.ref().length());
+    for (const SiteCounts& site_depths : depths)
+        calls.push_back(model->call(site_depths));
+    timers_.genotyping.stop();
+
+    //
     // Call haplotypes.
+    //
+    timers_.haplotyping.restart();
     vector<map<size_t,PhasedHet>> phase_data;
     if (!dbg_no_haplotypes)
         phase_data = phase_hets(calls, aln_loc, hap_stats_);
-    timers_.geno_haplotyping.stop();
+    timers_.haplotyping.stop();
 
+    //
+    // Determine the consensus sequence.
+    //
+    timers_.cpt_consensus.restart();
+    DNASeq4 consensus (aln_loc.ref().length());
+    assert(calls.size() == aln_loc.ref().length());
+    assert(depths.size() == aln_loc.ref().length());
+    for (size_t i = 0; i < aln_loc.ref().length(); ++i) {
+        if (!calls[i].alleles().empty()) {
+            consensus.set(i, calls[i].most_frequent_allele());
+        } else {
+            // Use the majority-rule nucleotide.
+            // (For the high/low Maruki" models this actually only happens when
+            // there is no coverage; for the Hohenlohe model it may also happen
+            // when there isn't a single significant call.)
+            pair<size_t,Nt2> nt = depths[i].tot.sorted()[0];
+            if (nt.first > 0)
+                consensus.set(i, nt.second);
+        }
+    }
+    aln_loc.ref(move(consensus));
+    timers_.cpt_consensus.stop();
+
+    //
+    // Create the outputs.
+    //
     write_one_locus(aln_loc, depths, calls, phase_data);
 
     if (detailed_output) {
         loc_.details_ss << "END locus " << loc_.id << "\n";
         loc_.o_details = loc_.details_ss.str();
+    }
+    if (dbg_write_alns) {
+        #pragma omp critical(dbg_alns)
+        o_aln_f << "BEGIN " << loc_.id << "\n"
+                << aln_loc
+                << "\nEND " << loc_.id << "\n";
     }
 }
 
@@ -2327,13 +2362,14 @@ Timers& Timers::operator+= (const Timers& other) {
     writing_fa += other.writing_fa;
     writing_vcf += other.writing_vcf;
     writing_details += other.writing_details;
-
+    // Within processing:
     assembling += other.assembling;
     olap_aligning += other.olap_aligning;
-    geno_haplotyping += other.geno_haplotyping;
+    genotyping += other.genotyping;
+    haplotyping += other.haplotyping;
     building_vcf += other.building_vcf;
     cpt_consensus += other.cpt_consensus;
-
+    counting_nts += other.counting_nts;
     return *this;
 }
 
