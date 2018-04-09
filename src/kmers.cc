@@ -464,10 +464,11 @@ dist(const char *tag_1, const char *tag_2, vector<pair<char, uint> > &cigar)
 {
     uint  size = cigar.size();
     char  op;
-    uint  dist, len, pos_1, pos_2, stop;
+    uint  dist, len_1, len_2, pos_1, pos_2, stop;
     int   mismatches = 0;
 
-    len   = strlen(tag_1);
+    len_1 = strlen(tag_1);
+    len_2 = strlen(tag_2);
     pos_1 = 0;
     pos_2 = 0;
 
@@ -490,7 +491,7 @@ dist(const char *tag_1, const char *tag_2, vector<pair<char, uint> > &cigar)
             break;
         case 'M':
             stop = pos_1 + dist;
-            while (pos_1 < stop && pos_1 < len && pos_2 < len) {
+            while (pos_1 < stop && pos_1 < len_1 && pos_2 < len_2) {
                 if (tag_1[pos_1] != 'N' && tag_2[pos_2] != 'N' && tag_1[pos_1] != tag_2[pos_2])
                     mismatches++;
                 pos_1++;
