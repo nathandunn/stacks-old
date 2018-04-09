@@ -2607,7 +2607,7 @@ try {
         {"phasing-cooccurrences-thr-range", required_argument, NULL, 1019},
         {"phasing-dont-prune-hets", no_argument, NULL, 1020},
         //debug options
-        {"dbg-phasing-min-mac", no_argument, NULL,  2018},
+        {"dbg-phasing-min-mac", required_argument, NULL,  2018},
         {"dbg-phasing-no-2ndpass", no_argument, NULL, 2019},
         {"dbg-gfa",      no_argument,       NULL,  2003},
         {"dbg-alns",     no_argument,       NULL,  2004}, {"alns", no_argument, NULL, 2004},
