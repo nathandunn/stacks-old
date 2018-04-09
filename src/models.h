@@ -115,6 +115,10 @@ public:
             , snp_qual_(snp_qual)
             , sample_calls_(move(sample_calls))
         {}
+    SiteCall()
+        : SiteCall({}, -1, {}) {}
+    SiteCall(Nt2 fixed_nt)
+        : SiteCall({{fixed_nt, 1.0}}, -1, {}) {}
     SiteCall(map<Nt2,double>&& alleles, vector<SampleCall>&& sample_calls)
         : SiteCall(move(alleles), -1, move(sample_calls)) {}
 
@@ -124,6 +128,7 @@ public:
 
     Nt2 most_frequent_allele() const;
 
+    void filter_mac(size_t min_mac);
     void discard_sample(size_t sample_i)
         {if(!sample_calls_.empty()) sample_calls_[sample_i] = SampleCall();}
 

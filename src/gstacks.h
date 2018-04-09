@@ -256,7 +256,7 @@ private:
     // Phase all samples.
     void phase_hets (
             vector<map<size_t,PhasedHet>>& phase_data,
-            const vector<SiteCall>& calls,
+            vector<SiteCall>& calls,
             const CLocAlnSet& aln_loc,
             HaplotypeStats& hap_stats
             ) const;

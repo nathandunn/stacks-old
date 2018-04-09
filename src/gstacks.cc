@@ -1022,12 +1022,17 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
     timers_.genotyping.restart();
     vector<SiteCall> calls;
     calls.reserve(aln_loc.ref().length());
-    for (const SiteCounts& site_depths : depths)
+    for (const SiteCounts& site_depths : depths) {
         calls.push_back(model->call(site_depths));
+        // Make sure our SNP and genotype calls are consistent (discard SNPs with
+        // a MAC of 0, or without calls at all).
+        if (calls.back().alleles().size() > 1)
+            calls.back().filter_mac(1);
+    }
     timers_.genotyping.stop();
 
     //
-    // Call haplotypes.
+    // Call haplotypes; amend SNP/genotype calls.
     //
     vector<map<size_t,PhasedHet>> phase_data;
     if (!dbg_no_haplotypes) {
@@ -1447,15 +1452,20 @@ bool LocusProcessor::add_read_to_aln(
 
 void LocusProcessor::phase_hets(
         vector<map<size_t,PhasedHet>>& phased_samples,
-        const vector<SiteCall>& calls,
+        vector<SiteCall>& calls,
         const CLocAlnSet& aln_loc,
         HaplotypeStats& hap_stats
 ) const {
-    //
-    // Clear the output object.
-    //
     phased_samples.clear();
     phased_samples.resize(loc_.mpopi->samples().size());
+
+    //
+    // Apply a first MAC filter, if requested.
+    //
+    if (phasing_min_mac >= 2)
+        for (SiteCall& call : calls)
+            if (call.alleles().size() > 1)
+                call.filter_mac(phasing_min_mac);
 
     //
     // Find SNPs.
@@ -1464,6 +1474,10 @@ void LocusProcessor::phase_hets(
     for (size_t i=0; i<aln_loc.ref().length(); ++i)
         if (calls[i].alleles().size() > 1)
             snp_cols.push_back(i);
+
+    //
+    // Check that the locus is polymorphic.
+    //
     if (snp_cols.empty()) {
         // No SNPs, there is no phasing to do.
         ++hap_stats.n_badly_phased_samples[ {0, 0} ];
