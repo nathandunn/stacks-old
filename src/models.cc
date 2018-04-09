@@ -362,6 +362,13 @@ Nt2 SiteCall::most_frequent_allele() const {
     return best->first;
 }
 
+void SiteCall::filter_mac(size_t min_mac) {
+    assert(alleles().size() > 1);
+    Counts<Nt2> allele_counts = tally_allele_counts(sample_calls());
+    if (allele_counts.sorted()[1].first < min_mac)
+        *this = SiteCall(most_frequent_allele());
+}
+
 Counts<Nt2> SiteCall::tally_allele_counts(const vector<SampleCall>& spldata) {
     Counts<Nt2> counts;
     for (const SampleCall& sd : spldata) {
@@ -774,7 +781,7 @@ SiteCall MarukiLowModel::call(const SiteCounts& depths) const {
 
     size_t dp_tot = depths.tot.sum();
     if (dp_tot == 0)
-        return SiteCall(map<Nt2,double>(), vector<SampleCall>());
+        return SiteCall();
 
     //
     // I. Likelihood for the fixed-site hypothesis.
@@ -793,7 +800,7 @@ SiteCall MarukiLowModel::call(const SiteCounts& depths) const {
         // at its maximum value of 0, dimorphism isn't significant. This happens
         // when there are either very few non-major-allele reads or very few reads
         // overall.
-        return SiteCall({{nt_M, 1.0}}, vector<SampleCall>());
+        return SiteCall(nt_M);
 
     //
     // II. Compute and optimize the likelihood for the dimorphic-site hypothesis
@@ -924,7 +931,7 @@ SiteCall MarukiLowModel::call(const SiteCounts& depths) const {
     //
 
     if (!lrtest(lnl_dimorph, lnl_fixed, var_threshold_))
-        return SiteCall({{nt_M, 1.0}}, vector<SampleCall>());
+        return SiteCall(nt_M);
 
     map<Nt2,double> allele_freqs = {
         {nt_M, freq_MM+0.5*freq_Mm},
