@@ -35,7 +35,7 @@ enum class GStacksInputT {unknown, denovo_popmap, denovo_merger, refbased_popmap
 // ----------
 //
 struct PhasedHet {
-    size_t phase_set;//TODO // N.B. The convention in VCF is to use the column of the first phased SNP for this.
+    size_t phase_set; // N.B. The convention in VCF is to use the position of the first phased SNP for this.
     Nt4 left_allele;
     Nt4 right_allele;
 
@@ -253,12 +253,26 @@ private:
     int suffix_tree_hits_to_dag(size_t query_len, vector<STAln> &alns, vector<STAln> &final_alns) const;
     size_t find_locus_overlap(SuffixTree *st, GappedAln *g_aln, const DNASeq4 &se_consensus, string &overlap_cigar) const;
 
-    // For each sample, phase heterozygous SNPs.
-    vector<map<size_t,PhasedHet>> phase_hets (
+    // Phase all samples.
+    void phase_hets (
+            vector<map<size_t,PhasedHet>>& phase_data,
             const vector<SiteCall>& calls,
             const CLocAlnSet& aln_loc,
             HaplotypeStats& hap_stats
             ) const;
+
+    // Phase (heterozygous) positions for one sample.
+    bool phase_sample_hets(
+            map<size_t,PhasedHet>& phased_sample,
+            const vector<SiteCall>& calls,
+            const CLocAlnSet& aln_loc,
+            const vector<size_t>& snp_cols,
+            size_t sample,
+            HaplotypeStats& hap_stats,
+            size_t& n_hets_needing_phasing,
+            size_t& n_consistent_hets,
+            ostream& o_hapgraph_ss,
+            bool& has_subgraphs) const;
 
     void count_pairwise_cooccurrences(
             SnpAlleleCooccurrenceCounter& cooccurrences,

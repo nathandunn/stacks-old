@@ -1028,11 +1028,12 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
     //
     // Call haplotypes.
     //
-    timers_.haplotyping.restart();
     vector<map<size_t,PhasedHet>> phase_data;
-    if (!dbg_no_haplotypes)
-        phase_data = phase_hets(calls, aln_loc, hap_stats_);
-    timers_.haplotyping.stop();
+    if (!dbg_no_haplotypes) {
+        timers_.haplotyping.restart();
+        phase_hets(phase_data, calls, aln_loc, hap_stats_);
+        timers_.haplotyping.stop();
+    }
 
     //
     // Determine the consensus sequence.
@@ -1443,30 +1444,39 @@ bool LocusProcessor::add_read_to_aln(
     return true;
 }
 
-vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
+void LocusProcessor::phase_hets(
+        vector<map<size_t,PhasedHet>>& phased_samples,
         const vector<SiteCall>& calls,
         const CLocAlnSet& aln_loc,
         HaplotypeStats& hap_stats
 ) const {
-    if (detailed_output)
-        loc_.details_ss << "BEGIN phasing\n";
+    //
+    // Clear the output object.
+    //
+    phased_samples.clear();
+    phased_samples.resize(loc_.mpopi->samples().size());
 
-    size_t n_hets_needing_phasing = 0;
-    size_t n_consistent_hets = 0;
-
-    vector<map<size_t,PhasedHet>> phased_samples (loc_.mpopi->samples().size());
-    vector<size_t> snp_cols; // The SNPs of this locus.
+    //
+    // Find SNPs.
+    //
+    vector<size_t> snp_cols;
     for (size_t i=0; i<aln_loc.ref().length(); ++i)
         if (calls[i].alleles().size() > 1)
             snp_cols.push_back(i);
-
     if (snp_cols.empty()) {
-        if (detailed_output)
-            loc_.details_ss << "END phasing\n";
-        ++hap_stats.n_badly_phased_samples[ {n_consistent_hets, n_hets_needing_phasing} ];
-        return phased_samples;
+        // No SNPs, there is no phasing to do.
+        ++hap_stats.n_badly_phased_samples[ {0, 0} ];
+        return;
     }
 
+    //
+    // Initialize counters, streams.
+    //
+    size_t n_hets_needing_phasing = 0;
+    size_t n_consistent_hets = 0;
+    assert(hap_stats.per_sample_stats.size() == loc_.mpopi->samples().size());
+    if (detailed_output)
+        loc_.details_ss << "BEGIN phasing\n";
     stringstream o_hapgraph_ss;
     bool has_subgraphs = false;
     if (dbg_write_hapgraphs) {
@@ -1478,206 +1488,17 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
         o_hapgraph_ss << "\n";
     }
 
-    vector<size_t> het_snps;
-    vector<const SampleCall*> sample_het_calls;
-    SnpAlleleCooccurrenceCounter cooccurrences (snp_cols.size());
-    vector<PhaseSet> phase_sets;
-    vector<array<bool,2>> alleles_with_edges;
-    vector<size_t> het_snps_reduced;
-    vector<const SampleCall*> sample_het_calls_reduced;
-    assert(hap_stats.per_sample_stats.size() == loc_.mpopi->samples().size());
-    for (size_t sample=0; sample<loc_.mpopi->samples().size(); ++sample) {
-        if (aln_loc.sample_reads(sample).empty())
-            continue;
-        ++hap_stats.per_sample_stats[sample].n_diploid_loci;
-
-        //
-        // Find heterozygous positions & check that we have >= 2 hets.
-        //
-        het_snps.clear();
-        for(size_t snp_i=0; snp_i<snp_cols.size(); ++snp_i)
-            if (calls[snp_cols[snp_i]].sample_calls()[sample].call() == snp_type_het)
-                het_snps.push_back(snp_i);
-        if (het_snps.size() == 0) {
-            // Sample is homozygous.
-            continue;
-        } else if (het_snps.size() == 1) {
-            // One heterozygous SNP; sample has trivial 1nt-long haplotypes.
-            size_t col = snp_cols[het_snps[0]];
-            const SampleCall& c = calls[col].sample_calls()[sample];
-            phased_samples[sample].insert({col, {col, c.nt0(), c.nt1()}});
-            continue;
-        }
-        ++hap_stats.per_sample_stats[sample].n_hets_2snps;
-        ++n_hets_needing_phasing;
-
-        sample_het_calls.clear();
-        for (size_t het_i=0; het_i<het_snps.size(); ++het_i)
-            sample_het_calls.push_back(&calls[snp_cols[het_snps[het_i]]].sample_calls()[sample]);
-
-        //
-        // Iterate over reads, record seen haplotypes (as pairwise cooccurrences).
-        //
-        count_pairwise_cooccurrences(cooccurrences, aln_loc, sample, snp_cols, het_snps, sample_het_calls);
-
-        if (dbg_write_hapgraphs) {
-            has_subgraphs = true;
-            write_sample_hapgraph(o_hapgraph_ss, sample, het_snps, snp_cols, sample_het_calls, cooccurrences);
-        }
-
-        //
-        // Assemble phase sets.
-        // xxx 2018 Feb. @Nick: Actually all of this would be more simple and efficient
-        // if we used a single vector of PhasedHet's, with each het starting in its own
-        // phase set.
-        //
-        phase_sets.clear();
-        bool phased = false;
-        for (size_t min_n_cooccurrences = phasing_cooccurrences_thr_range.first;
-                min_n_cooccurrences <= phasing_cooccurrences_thr_range.second;
-                ++min_n_cooccurrences) {
-            if (assemble_phase_sets(phase_sets, het_snps, sample_het_calls, cooccurrences, min_n_cooccurrences)) {
-                // Phasing succeeded.
-                phased = true;
-                if (detailed_output)
-                    loc_.details_ss << "phasing_ok\t"
-                        << loc_.mpopi->samples()[sample].name
-                        << "\tn_hets=" << het_snps.size()
-                        << "\tcooc_thr=" << min_n_cooccurrences << '\n';
-                break;
-            }
-
-            // Phasing failed. find alleles that are not connected to any
-            // others, discard the het calls they are part of, and retry.
-            if (phasing_dont_prune_hets)
-                continue;
-            if (min_n_cooccurrences == 1)
-                // All het alleles will have an edge.
-                continue;
-            alleles_with_edges.clear();
-            alleles_with_edges.resize(het_snps.size(), {{false, false}});
-            for (size_t het_i=0; het_i<het_snps.size(); ++het_i) {
-                array<Nt2,2> allelesi = sample_het_calls[het_i]->nts();
-                for (size_t het_j=het_i+1; het_j<het_snps.size(); ++het_j) {
-                    array<Nt2,2> allelesj = sample_het_calls[het_j]->nts();
-                    for (size_t allelei=0; allelei<2; ++allelei) {
-                        for (size_t allelej=0; allelej<2; ++allelej) {
-                            if (cooccurrences.at(het_snps[het_i],
-                                                 allelesi[allelei],
-                                                 het_snps[het_j],
-                                                 allelesj[allelej])
-                                    >= min_n_cooccurrences
-                            ) {
-                                alleles_with_edges[het_i][allelei] = true;
-                                alleles_with_edges[het_j][allelej] = true;
-                            }
-                        }
-                    }
-                }
-            }
-            het_snps_reduced.clear();
-            sample_het_calls_reduced.clear();
-            for (size_t het_i=0; het_i<het_snps.size(); ++het_i) {
-                if (alleles_with_edges[het_i] == array<bool,2>({{true, true}})) {
-                    // Keep this het.
-                    het_snps_reduced.push_back(het_snps[het_i]);
-                    sample_het_calls_reduced.push_back(sample_het_calls[het_i]);
-                }
-            }
-            if (het_snps_reduced.size() == het_snps.size())
-                // No hets were removed; the situation is unchanged and phasing will fail again.
-                continue;
-            assert(!het_snps_reduced.empty()); // Otherwise the phasing wouldn't have previously failed.
-            if (het_snps_reduced.size() == 1
-                || assemble_phase_sets(phase_sets,
-                                       het_snps_reduced,
-                                       sample_het_calls_reduced,
-                                       cooccurrences,
-                                       min_n_cooccurrences)
-            ) {
-                // Phasing succeeded or became trivial.
-                // We just downsize `het_snps`. We can do this because `phased_samples`
-                // doesn't keep track of all the hets; only those of the best phase set.
-                // In addition, unphased HETs are eventually discarded (as of Feb. 2018,
-                // v2.0Beta8; c.f. PopMap::populate_locus) so we don't need to do anything
-                // more to blacklist those genotypes.
-                phased = true;
-                if (detailed_output)
-                    loc_.details_ss << "phasing_ok_rmhets\t"
-                        << loc_.mpopi->samples()[sample].name
-                        << "\tn_hets=" << het_snps.size()
-                        << "\tcooc_thr=" << min_n_cooccurrences
-                        << "\tn_kept_hets=" << het_snps_reduced.size() << '\n';
-                het_snps = het_snps_reduced;
-                sample_het_calls = sample_het_calls_reduced;
-                break;
-            }
-        }
-        if (!phased) {
-            if (detailed_output)
-                loc_.details_ss << "phasing_failed\t"
-                    << loc_.mpopi->samples()[sample].name
-                    << "\tn_hets=" << het_snps.size() << '\n';
-            continue;
-        }
-        ++hap_stats.per_sample_stats[sample].n_phased;
-        ++n_consistent_hets;
-        if (het_snps.size() == 1) {
-            // After pruning hets, sample has trivial 1nt-long haplotypes.
-            // xxx Record that we've just removed the problem...
-            size_t col = snp_cols[het_snps[0]];
-            const SampleCall& c = *sample_het_calls[0];
-            phased_samples[sample].insert({col, {col, c.nt0(), c.nt1()}});
-            continue;
-        }
-
-        //
-        // Record phase sets.
-        //
-        map<size_t,PhasedHet>& sample_phase_data = phased_samples[sample];
-        for (const PhaseSet& ps : phase_sets) {
-            assert(ps.size() == het_snps.size());
-            size_t phase_set_id = SIZE_MAX;
-            for (size_t het_i=0; het_i<het_snps.size(); ++het_i) {
-                if (ps.het(het_i).left_allele == Nt4::n)
-                    continue;
-
-                size_t col = snp_cols[het_snps[het_i]];
-                if (phase_set_id == SIZE_MAX)
-                    phase_set_id = col; // Recommended value, c.f. VCF specification.
-                PhasedHet ph = ps.het(het_i);
-                ph.phase_set = phase_set_id;
-                sample_phase_data[col] = ph;
-            }
-        }
-
-        // Record singleton nodes (that are implicit in our representation).
-        for (size_t het_i=0; het_i<het_snps.size(); ++het_i) {
-            size_t col = snp_cols[het_snps[het_i]];
-            if (!sample_phase_data.count(col)) {
-                array<Nt2,2> alleles = sample_het_calls[het_i]->nts();
-                sample_phase_data[col] = PhasedHet({col, alleles[0], alleles[1]});
-            }
-        }
-        assert(!sample_phase_data.empty());
-
-        //
-        // Remove all phase sets but the largest one.
-        //
-        map<size_t,size_t> phase_set_sizes;
-        for (auto& phasedhet : sample_phase_data)
-            ++phase_set_sizes[phasedhet.second.phase_set];
-        auto best_ps = phase_set_sizes.begin();
-        for (auto ps=++phase_set_sizes.begin(); ps!=phase_set_sizes.end(); ++ps)
-            if (ps->second > best_ps->second)
-                best_ps = ps;
-        for (auto phasedhet=sample_phase_data.begin(); phasedhet!=sample_phase_data.end();) {
-            if (phasedhet->second.phase_set == best_ps->first)
-                ++phasedhet;
-            else
-                sample_phase_data.erase(phasedhet++);
-        }
-    }
+    //
+    // Iterate over samples.
+    //
+    for (size_t sample=0; sample<loc_.mpopi->samples().size(); ++sample)
+        phase_sample_hets(
+            phased_samples[sample],
+            calls, aln_loc, snp_cols, sample,
+            hap_stats,
+            n_hets_needing_phasing, n_consistent_hets,
+            o_hapgraph_ss, has_subgraphs
+        );
 
     if (dbg_write_hapgraphs && has_subgraphs) {
         o_hapgraph_ss << "}\n";
@@ -1688,7 +1509,209 @@ vector<map<size_t,PhasedHet>> LocusProcessor::phase_hets (
     ++hap_stats.n_badly_phased_samples[ {n_consistent_hets, n_hets_needing_phasing} ];
     if (detailed_output)
         loc_.details_ss << "END phasing\n";
-    return phased_samples;
+}
+
+bool LocusProcessor::phase_sample_hets(
+        map<size_t,PhasedHet>& phased_sample,
+        const vector<SiteCall>& calls,
+        const CLocAlnSet& aln_loc,
+        const vector<size_t>& snp_cols,
+        size_t sample,
+        HaplotypeStats& hap_stats,
+        size_t& n_hets_needing_phasing, size_t& n_consistent_hets,
+        ostream& o_hapgraph_ss, bool& has_subgraphs
+) const {
+    phased_sample.clear();
+    if (aln_loc.sample_reads(sample).empty())
+        return true;
+    ++hap_stats.per_sample_stats[sample].n_diploid_loci;
+
+    //
+    // Find heterozygous positions.
+    //
+    vector<size_t> het_snps;
+    for(size_t snp_i=0; snp_i<snp_cols.size(); ++snp_i)
+        if (calls[snp_cols[snp_i]].sample_calls()[sample].call() == snp_type_het)
+            het_snps.push_back(snp_i);
+    if (het_snps.size() == 0) {
+        // Sample is homozygous.
+        return true;
+    } else if (het_snps.size() == 1) {
+        // One heterozygous SNP; sample has trivial 1nt-long haplotypes.
+        size_t col = snp_cols[het_snps[0]];
+        const SampleCall& c = calls[col].sample_calls()[sample];
+        phased_sample.insert({col, {col, c.nt0(), c.nt1()}});
+        return true;
+    }
+    ++hap_stats.per_sample_stats[sample].n_hets_2snps;
+    ++n_hets_needing_phasing;
+
+    vector<const SampleCall*> sample_het_calls; //**********
+    for (size_t het_i=0; het_i<het_snps.size(); ++het_i)
+        sample_het_calls.push_back(&calls[snp_cols[het_snps[het_i]]].sample_calls()[sample]);
+
+    //
+    // Iterate over reads, record as pairwise cooccurrences of  alleles.
+    //
+    SnpAlleleCooccurrenceCounter cooccurrences (snp_cols.size());
+    count_pairwise_cooccurrences(cooccurrences, aln_loc,
+                                    sample, snp_cols, het_snps, sample_het_calls);
+    if (dbg_write_hapgraphs) {
+        has_subgraphs = true;
+        write_sample_hapgraph(o_hapgraph_ss, sample, het_snps, snp_cols,
+                                sample_het_calls, cooccurrences);
+    }
+
+    //
+    // Assemble phase sets.
+    //
+    vector<PhaseSet> phase_sets;
+    bool phased = false;
+    for (size_t min_n_cooccurrences = phasing_cooccurrences_thr_range.first;
+            min_n_cooccurrences <= phasing_cooccurrences_thr_range.second;
+            ++min_n_cooccurrences
+    ) {
+        if (assemble_phase_sets(
+                phase_sets, het_snps, sample_het_calls,
+                cooccurrences, min_n_cooccurrences
+        )) {
+            // Phasing succeeded.
+            phased = true;
+            if (detailed_output)
+                loc_.details_ss << "phasing_ok\t"
+                    << loc_.mpopi->samples()[sample].name
+                    << "\tn_hets=" << het_snps.size()
+                    << "\tcooc_thr=" << min_n_cooccurrences << '\n';
+            break;
+        }
+
+        // Phasing failed. find alleles that are not connected to any
+        // others, discard the het calls they are part of, and retry.
+        if (phasing_dont_prune_hets)
+            continue;
+        vector<array<bool,2>> alleles_with_edges;
+        alleles_with_edges.resize(het_snps.size(), {{false, false}});
+        for (size_t het_i=0; het_i<het_snps.size(); ++het_i) {
+            array<Nt2,2> allelesi = sample_het_calls[het_i]->nts();
+            for (size_t het_j=het_i+1; het_j<het_snps.size(); ++het_j) {
+                array<Nt2,2> allelesj = sample_het_calls[het_j]->nts();
+                for (size_t allelei=0; allelei<2; ++allelei) {
+                    for (size_t allelej=0; allelej<2; ++allelej) {
+                        if (cooccurrences.at(het_snps[het_i],
+                                                allelesi[allelei],
+                                                het_snps[het_j],
+                                                allelesj[allelej])
+                                >= min_n_cooccurrences
+                        ) {
+                            alleles_with_edges[het_i][allelei] = true;
+                            alleles_with_edges[het_j][allelej] = true;
+                        }
+                    }
+                }
+            }
+        }
+        vector<size_t> het_snps_reduced;
+        vector<const SampleCall*> sample_het_calls_reduced;
+        for (size_t het_i=0; het_i<het_snps.size(); ++het_i) {
+            if (alleles_with_edges[het_i] == array<bool,2>({{true, true}})) {
+                // Keep this het.
+                het_snps_reduced.push_back(het_snps[het_i]);
+                sample_het_calls_reduced.push_back(sample_het_calls[het_i]);
+            }
+        }
+        if (het_snps_reduced.size() == het_snps.size())
+            // No hets were removed; the situation is unchanged and phasing will fail again.
+            continue;
+        assert(!het_snps_reduced.empty()); // Otherwise the phasing wouldn't have previously failed.
+        if (het_snps_reduced.size() == 1
+            || assemble_phase_sets(phase_sets,
+                                    het_snps_reduced,
+                                    sample_het_calls_reduced,
+                                    cooccurrences,
+                                    min_n_cooccurrences)
+        ) {
+            // Phasing succeeded or became trivial.
+            // We just downsize `het_snps`. We can do this because `phased_samples`
+            // doesn't keep track of all the hets; only those of the best phase set.
+            // In addition, unphased HETs are eventually discarded (as of Feb. 2018,
+            // v2.0Beta8; c.f. PopMap::populate_locus) so we don't need to do anything
+            // more to blacklist those genotypes.
+            phased = true;
+            if (detailed_output)
+                loc_.details_ss << "phasing_ok_rmhets\t"
+                    << loc_.mpopi->samples()[sample].name
+                    << "\tn_hets=" << het_snps.size()
+                    << "\tcooc_thr=" << min_n_cooccurrences
+                    << "\tn_kept_hets=" << het_snps_reduced.size() << '\n';
+            het_snps = het_snps_reduced;
+            sample_het_calls = sample_het_calls_reduced;
+            break;
+        }
+    }
+    if (!phased) {
+        if (detailed_output)
+            loc_.details_ss << "phasing_failed\t"
+                << loc_.mpopi->samples()[sample].name
+                << "\tn_hets=" << het_snps.size() << '\n';
+        return false;
+    }
+    ++hap_stats.per_sample_stats[sample].n_phased;
+    ++n_consistent_hets;
+    if (het_snps.size() == 1) {
+        // After pruning hets, sample has trivial 1nt-long haplotypes.
+        // TODO Record that we've just removed the problem...
+        size_t col = snp_cols[het_snps[0]];
+        const SampleCall& c = *sample_het_calls[0];
+        phased_sample.insert({col, {col, c.nt0(), c.nt1()}});
+        return true;
+    }
+
+    //
+    // Record phase sets.
+    //
+    for (const PhaseSet& ps : phase_sets) {
+        assert(ps.size() == het_snps.size());
+        size_t phase_set_id = SIZE_MAX;
+        for (size_t het_i=0; het_i<het_snps.size(); ++het_i) {
+            if (ps.het(het_i).left_allele == Nt4::n)
+                continue;
+
+            size_t col = snp_cols[het_snps[het_i]];
+            if (phase_set_id == SIZE_MAX)
+                phase_set_id = col; // Recommended value, c.f. VCF specification.
+            PhasedHet ph = ps.het(het_i);
+            ph.phase_set = phase_set_id;
+            phased_sample[col] = ph;
+        }
+    }
+
+    // Record singleton nodes (that are implicit in our representation).
+    for (size_t het_i=0; het_i<het_snps.size(); ++het_i) {
+        size_t col = snp_cols[het_snps[het_i]];
+        if (!phased_sample.count(col)) {
+            array<Nt2,2> alleles = sample_het_calls[het_i]->nts();
+            phased_sample[col] = PhasedHet({col, alleles[0], alleles[1]});
+        }
+    }
+    assert(!phased_sample.empty());
+
+    //
+    // Remove all phase sets but the largest one.
+    //
+    map<size_t,size_t> phase_set_sizes;
+    for (auto& phasedhet : phased_sample)
+        ++phase_set_sizes[phasedhet.second.phase_set];
+    auto best_ps = phase_set_sizes.begin();
+    for (auto ps=++phase_set_sizes.begin(); ps!=phase_set_sizes.end(); ++ps)
+        if (ps->second > best_ps->second)
+            best_ps = ps;
+    for (auto phasedhet=phased_sample.begin(); phasedhet!=phased_sample.end();) {
+        if (phasedhet->second.phase_set == best_ps->first)
+            ++phasedhet;
+        else
+            phased_sample.erase(phasedhet++);
+    }
+    return true;
 }
 
 void LocusProcessor::count_pairwise_cooccurrences(
@@ -1745,6 +1768,9 @@ bool LocusProcessor::assemble_phase_sets(
         const SnpAlleleCooccurrenceCounter& cooccurrences,
         const size_t min_n_cooccurrences
 ) const {
+    // xxx 2018 Feb. @Nick: Actually all of this would be more simple and efficient
+    // if we used a single vector of PhasedHet's, with each het starting in its own
+    // phase set.
     phase_sets.clear();
 
     // We keep track of which phase set each het is currently part of.
