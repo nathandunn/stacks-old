@@ -76,6 +76,7 @@ bool   dbg_write_nt_depths = false;
 bool   dbg_true_reference  = false;
 bool   dbg_true_alns       = false;
 bool   dbg_log_stats_phasing = false;
+bool   dbg_phasing_no_2ndpass = false;
 
 //
 // Additional globals.
@@ -563,7 +564,12 @@ try {
     // phasing_rates_samples
     logger->x << "\n"
               << "BEGIN phasing_rates_per_samples\n"
-              << "sample\tn_gts\tn_multisnp_hets\tn_phased\tmisphasing_rate\n";
+              << "sample\tn_gts\tn_multisnp_hets\tn_phased\tmisphasing_rate"
+              #ifdef DEBUG
+              << "\tn_phased_2ndpass"
+              #endif
+              << "\n";
+
     assert(hap_stats.per_sample_stats.size() == bam_mpopi->samples().size());
     for (size_t sample=0; sample<bam_mpopi->samples().size(); ++sample) {
         const HaplotypeStats::PerSampleStats& stats = hap_stats.per_sample_stats[sample];
@@ -573,6 +579,9 @@ try {
            << '\t' << stats.n_hets_2snps
            << '\t' << stats.n_phased
            << '\t' << 1.0 - (double) stats.n_phased / stats.n_hets_2snps
+           #ifdef DEBUG
+           << '\t' << stats.n_phased_2ndpass
+           #endif
            << '\n';
     }
     logger->x << "END phasing_rates_samples\n";
@@ -725,6 +734,7 @@ HaplotypeStats& HaplotypeStats::operator+= (const HaplotypeStats& other) {
         per_sample_stats[sample].n_diploid_loci += other.per_sample_stats[sample].n_diploid_loci;
         per_sample_stats[sample].n_hets_2snps += other.per_sample_stats[sample].n_hets_2snps;
         per_sample_stats[sample].n_phased += other.per_sample_stats[sample].n_phased;
+        per_sample_stats[sample].n_phased_2ndpass += other.per_sample_stats[sample].n_phased_2ndpass;
     }
     return *this;
 }
@@ -1503,20 +1513,68 @@ void LocusProcessor::phase_hets(
     }
 
     //
-    // Iterate over samples.
+    // Phase each sample.
     //
-    for (size_t sample=0; sample<loc_.mpopi->samples().size(); ++sample)
-        phase_sample_hets(
-            phased_samples[sample],
-            calls, aln_loc, snp_cols, sample,
-            hap_stats,
-            n_hets_needing_phasing, n_consistent_hets,
-            o_hapgraph_ss, has_subgraphs
-        );
+    vector<size_t> samples_failed;
+    vector<size_t> samples_passed;
+    for (size_t sample=0; sample<loc_.mpopi->samples().size(); ++sample) {
+        if (phase_sample_hets(
+                phased_samples[sample],
+                calls, aln_loc, snp_cols, sample,
+                hap_stats,
+                n_hets_needing_phasing, n_consistent_hets,
+                o_hapgraph_ss, has_subgraphs)
+        ) {
+            samples_passed.push_back(sample);
+        } else {
+            samples_failed.push_back(sample);
+        }
+    }
 
     //
-    // Update the SiteCalls according to the haplotype calls. Reapply the MAC
-    // filter on the updated data.
+    // Retry to phase failed samples after removing SNPs for which the minor
+    // allele was only seen in hets and was never successfully phased.
+    //
+    if (!dbg_phasing_no_2ndpass) {
+        vector<size_t> snp_cols_reduced;
+        for(size_t col : snp_cols) {
+            const vector<SampleCall>& c = calls[col].sample_calls();
+            Counts<Nt2> counts;
+            for (size_t sample : samples_passed) {
+                switch(c[sample].call()) {
+                case snp_type_hom:
+                    counts.increment(c[sample].nt0(), 2);
+                    break;
+                case snp_type_het:
+                    if (phased_samples[sample].count(col)) {
+                        // This het was phased.
+                        counts.increment(c[sample].nt0());
+                        counts.increment(c[sample].nt1());
+                    }
+                    break;
+                default:
+                    break;
+                }
+            }
+            size_t mac = counts.sorted()[1].first;
+            if (mac > 0)
+                // Keep it.
+                snp_cols_reduced.push_back(col);
+        }
+        if (snp_cols_reduced.size() < snp_cols.size())
+            for (size_t sample : samples_failed)
+                if (phase_sample_hets(
+                        phased_samples[sample],
+                        calls, aln_loc, snp_cols_reduced, sample,
+                        hap_stats,
+                        n_hets_needing_phasing, n_consistent_hets,
+                        o_hapgraph_ss, has_subgraphs, false))
+                    ++hap_stats.per_sample_stats[sample].n_phased_2ndpass;
+    }
+
+    //
+    // Update the SiteCalls according to the haplotype calls, and reapply
+    // the MAC filter on the updated data.
     //
     for (size_t col : snp_cols) {
         SiteCall& c = calls[col];
@@ -1548,12 +1606,14 @@ bool LocusProcessor::phase_sample_hets(
         size_t sample,
         HaplotypeStats& hap_stats,
         size_t& n_hets_needing_phasing, size_t& n_consistent_hets,
-        ostream& o_hapgraph_ss, bool& has_subgraphs
+        ostream& o_hapgraph_ss, bool& has_subgraphs,
+        bool first_pass
 ) const {
     phased_sample.clear();
     if (aln_loc.sample_reads(sample).empty())
         return true;
-    ++hap_stats.per_sample_stats[sample].n_diploid_loci;
+    if (first_pass)
+        ++hap_stats.per_sample_stats[sample].n_diploid_loci;
 
     //
     // Find heterozygous positions.
@@ -1562,6 +1622,10 @@ bool LocusProcessor::phase_sample_hets(
     for(size_t snp_i=0; snp_i<snp_cols.size(); ++snp_i)
         if (calls[snp_cols[snp_i]].sample_calls()[sample].call() == snp_type_het)
             het_snps.push_back(snp_i);
+    if (!first_pass) {
+        --hap_stats.per_sample_stats[sample].n_hets_2snps;
+        --n_hets_needing_phasing;
+    }
     if (het_snps.size() == 0) {
         // Sample is homozygous.
         return true;
@@ -1684,7 +1748,7 @@ bool LocusProcessor::phase_sample_hets(
                 << "\tn_hets=" << het_snps.size() << '\n';
         return false;
     }
-    ++hap_stats.per_sample_stats[sample].n_phased;
+    ++hap_stats.per_sample_stats[sample].n_phased; // (if !first_pass, this wasn't reach before; no guard.)
     ++n_consistent_hets;
     if (het_snps.size() == 1) {
         // After pruning hets, sample has trivial 1nt-long haplotypes.
@@ -2494,9 +2558,9 @@ const string help_string = string() +
         "  --dbg-gfa: output a GFA file for each locus\n"
         "  --dbg-alns: output a file showing the contigs & alignments\n"
         "  --dbg-phasing-min-mac: minimum SNP MAC.\n"
+        "  --dbg-phasing-no-2ndpass: don't try a second pass.\n"
         "  --dbg-hapgraphs: output a dot graph file showing phasing information\n"
         "  --dbg-depths: write detailed depth data in the output VCF\n"
-        "  --dbg-no-unphased-snps: don't write unphased SNPs in the output VCF\n"
         "  --dbg-true-alns: use true alignments (for simulated data; read IDs must\n"
         "               include 'cig1=...' and 'cig2=...' fields.\n"
         "  --dbg-true-reference: align paired-end reads to the true reference\n"
@@ -2544,6 +2608,7 @@ try {
         {"phasing-dont-prune-hets", no_argument, NULL, 1020},
         //debug options
         {"dbg-phasing-min-mac", no_argument, NULL,  2018},
+        {"dbg-phasing-no-2ndpass", no_argument, NULL, 2019},
         {"dbg-gfa",      no_argument,       NULL,  2003},
         {"dbg-alns",     no_argument,       NULL,  2004}, {"alns", no_argument, NULL, 2004},
         {"dbg-depths",   no_argument,       NULL,  2007},
@@ -2731,6 +2796,9 @@ try {
                 cerr << "Error: Illegal --dbg-phasing-min-mac value '" << optarg << "'.\n";
                 bad_args();
             }
+            break;
+        case 2019: //dbg-phasing-no-2ndpass
+            dbg_phasing_no_2ndpass = true;
             break;
         case 2012://dbg-true-alns
             dbg_true_reference = true;
