@@ -123,6 +123,7 @@ public:
         size_t n_diploid_loci;
         size_t n_hets_2snps;
         size_t n_phased;
+        size_t n_phased_2ndpass;
     };
     vector<PerSampleStats> per_sample_stats;
 
@@ -272,7 +273,8 @@ private:
             size_t& n_hets_needing_phasing,
             size_t& n_consistent_hets,
             ostream& o_hapgraph_ss,
-            bool& has_subgraphs) const;
+            bool& has_subgraphs,
+            bool first_pass=true) const;
 
     void count_pairwise_cooccurrences(
             SnpAlleleCooccurrenceCounter& cooccurrences,
