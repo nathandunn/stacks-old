@@ -109,7 +109,7 @@ EXTRA_DIST = $(nobase_pkgdata_DATA) LICENSE INSTALL README ChangeLog $(TESTS)
 pkglocalstatedir = $(localstatedir)/$(PACKAGE)
 
 debug:
-	$(MAKE) all "CXXFLAGS=-g -Wall -DDEBUG -std=gnu++11"
+	$(MAKE) all "CXXFLAGS=-g -Wall -DDEBUG -O0"
 
 install-data-hook:
 	sed -e 's,_VERSION_,$(VERSION),' -e 's,_BINDIR_,$(bindir)/,g' -e 's,_PKGDATADIR_,$(pkgdatadir)/,g' $(DESTDIR)$(bindir)/denovo_map.pl > $(DESTDIR)$(bindir)/denovo_map.pl.subst

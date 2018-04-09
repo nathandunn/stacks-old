@@ -125,7 +125,7 @@ int main (int argc, char* argv[]) {
 
     cerr << "\n" << "Loading RAD-Tags...";
 
-    size_t n_reads, n_u_reads, n_r_reads;
+    size_t n_reads, n_u_reads, n_r_reads, n_rr_reads;
     DNASeqHashMap radtags;
     map<int, Stack *> unique;
     map<int, Rem *>   remainders;
@@ -204,6 +204,7 @@ int main (int argc, char* argv[]) {
     cerr << "  Merged " << utilized+util_gapped << " out of " << n_r_reads << " secondary reads ("
          << as_percentage( (double) (utilized+util_gapped) / (double)n_r_reads) << "), "
          << util_gapped << " merged with gapped alignments.\n";
+    n_rr_reads = n_r_reads - utilized - util_gapped;
 
     calc_coverage_distribution(merged, cov_mean, cov_stdev, cov_max, n_used_reads);
     cerr << "Coverage after merging secondary stacks: ";
@@ -218,10 +219,22 @@ int main (int argc, char* argv[]) {
         const size_t n_ungapped_loci = merged.size(); 
         search_for_gaps(merged);
         merge_gapped_alns(unique, remainders, merged);
+        call_consensus(merged, unique, remainders, false);
         cerr << "  Assembled " << n_ungapped_loci << " stacks into " << merged.size() << " stacks.\n";
 
         calc_coverage_distribution(merged, cov_mean, cov_stdev, cov_max, n_used_reads);
         cerr << "Coverage after gapped assembly: ";
+        report_cov();
+        cerr << "\n\n";
+
+        cerr << "Merging secondary stacks, allowing for gaps (min. match length " << as_percentage(min_match_len) << ")...\n";
+        search_for_gapped_remainders(merged, remainders);
+        util_gapped = merge_gapped_remainders(merged, unique, remainders);
+        cerr << "  Merged " << util_gapped << " out of " << n_rr_reads << " secondary reads ("
+             << as_percentage( (double)util_gapped / (double)n_rr_reads) << ").\n";
+
+        calc_coverage_distribution(merged, cov_mean, cov_stdev, cov_max, n_used_reads);
+        cerr << "Coverage after merging gapped secondary stacks: ";
         report_cov();
         cerr << "\n\n";
     }
@@ -621,11 +634,9 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map
     // our map to a vector of integer keys.
     //
     vector<int> keys;
-    size_t tot = 0;
     size_t max_rem_len = 0;
     for (auto it = rem.begin(); it != rem.end(); it++) {
         keys.push_back(it->first);
-        tot += it->second->count();
         max_rem_len = it->second->seq->size() > max_rem_len ? it->second->seq->size() : max_rem_len;
     }
 
@@ -674,6 +685,8 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map
             num_kmers = r->seq->size() - kmer_len + 1;
             generate_kmers_lazily(buf, kmer_len, num_kmers, rem_kmers);
 
+            assert(num_kmers > 0);
+            
             map<int, int> hits;
             //
             // Lookup the occurances of each remainder k-mer in the MergedStack k-mer map
@@ -691,8 +704,8 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map
             // check its full length to verify a match.
             //
             map<int, int> dists;
-            map<int, int>::iterator hit_it;
-            for (hit_it = hits.begin(); hit_it != hits.end(); hit_it++) {
+            for (auto hit_it = hits.begin(); hit_it != hits.end(); hit_it++) {
+
                 if (hit_it->second < min_hits) continue;
 
                 MergedStack *tag_1 = merged[hit_it->first];
@@ -771,6 +784,147 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map
     return utilized;
 }
 
+int
+search_for_gapped_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
+{
+    //
+    // Search for remainders that can be merged with a gapped alignment.
+    //
+
+    //
+    // OpenMP can't parallelize random access iterators, so we convert
+    // our map to a vector of integer keys.
+    //
+    vector<int> keys;
+    size_t max_rem_len = 0;
+    for (auto it = rem.begin(); it != rem.end(); it++) {
+        keys.push_back(it->first);
+        max_rem_len = it->second->seq->size() > max_rem_len ? it->second->seq->size() : max_rem_len;
+    }
+
+    //
+    // Calculate the number of k-mers we will generate.
+    //
+    size_t con_len = 0;
+    for (auto miter = merged.begin(); miter != merged.end(); miter++)
+        con_len = miter->second->len > con_len ? miter->second->len : con_len;
+    size_t kmer_len  = set_kmer_len ? 19 : global_kmer_len;
+
+    //
+    // Calculate the minimum number of matching k-mers required for a possible sequence match.
+    //
+    int min_hits = (round((double) con_len * min_match_len) - (kmer_len * max_gaps)) - kmer_len + 1;
+
+    //cerr << "  Searching with a k-mer length of " << kmer_len << " (" << num_kmers << " k-mers per read); " << min_hits << " k-mer hits required.\n";
+
+    KmerHashMap    kmer_map;
+    vector<char *> kmer_map_keys;
+    populate_kmer_hash(merged, kmer_map, kmer_map_keys, kmer_len);
+
+    #pragma omp parallel
+    {
+        KmerHashMap::iterator h;
+        vector<char *> rem_kmers;
+
+        char  *buf       = new char[max_rem_len + 1];
+        size_t num_kmers = 0;
+
+        #pragma omp for schedule(dynamic)
+        for (uint i = 0; i < keys.size(); i++) {
+            auto it = rem.find(keys[i]);
+            Rem  *r = it->second;
+
+            if (r->utilized) continue;
+
+            //
+            // Generate the k-mers for this remainder sequence
+            //
+            r->seq->seq(buf);
+            if (r->seq->size() < kmer_len) continue;
+            num_kmers = r->seq->size() - kmer_len + 1;
+            generate_kmers_lazily(buf, kmer_len, num_kmers, rem_kmers);
+
+            assert(num_kmers > 0);
+
+            map<int, int> hits;
+            //
+            // Lookup the occurances of each remainder k-mer in the MergedStack k-mer map
+            //
+            for (uint k = 0; k < num_kmers; k++) {
+                h = kmer_map.find(rem_kmers[k]);
+
+                if (h != kmer_map.end())
+                    for (uint k = 0; k <  h->second.size(); k++)
+                        hits[h->second[k]]++;
+            }
+
+            //
+            // Iterate through the list of hits. For each hit that has more than min_hits
+            // check its full length to verify a match.
+            //
+            map<int, int> dists;
+            for (auto hit_it = hits.begin(); hit_it != hits.end(); hit_it++) {
+
+                if (hit_it->second < min_hits) continue;
+                
+                MergedStack *tag_1 = merged[hit_it->first];
+    
+                int d = dist(tag_1, buf);
+
+                //
+                // Store the distance between these two sequences if it is
+                // below the maximum distance
+                //
+                if (d <= max_rem_dist) {
+                    dists[hit_it->first] = d;
+                }
+            }
+
+            //
+            // Check to see if there is a uniquely low distance, if so,
+            // merge this remainder tag. If not, discard it, since we
+            // can't locate a single best-fitting Stack to merge it into.
+            //
+            int min_id = -1;
+            int count  =  0;
+            int dist   =  max_rem_dist + 1;
+
+            for (auto s = dists.begin(); s != dists.end(); s++) {
+                if ((*s).second < dist) {
+                    min_id = (*s).first;
+                    count  = 1;
+                    dist   = (*s).second;
+                } else if ((*s).second == dist) {
+                    count++;
+                }
+            }
+
+            //
+            // Found a merge partner.
+            //
+            if (min_id >= 0 && count == 1) {
+                MergedStack *tag_1 = merged.at(min_id);
+
+                #pragma omp critical
+                tag_1->rem_queue.push_back(r->id);
+            }
+        }
+        
+        //
+        // Free the k-mers we generated for this query.
+        //
+        for (uint j = 0; j < rem_kmers.size(); j++)
+            delete [] rem_kmers[j];
+        rem_kmers.clear();
+
+        delete [] buf;
+    }
+
+    free_kmer_hash(kmer_map, kmer_map_keys);
+
+    return 0;
+}
+
 size_t
 merge_gapped_remainders(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map<int, Rem *> &rem)
 {
@@ -789,21 +943,18 @@ merge_gapped_remainders(map<int, MergedStack *> &merged, map<int, Stack *> &uniq
         Cigar      cigar;
         GappedAln *aln = new GappedAln(merged[keys[0]]->len);
         AlignRes   a;
-        // int        diff;
-        // size_t     q_start, q_end, s_start, s_end;
         string     buf, seq;
 
         #pragma omp for schedule(dynamic)
         for (uint i = 0; i < keys.size(); i++) {
             MergedStack *tag_1 = merged.at(keys[i]);
-            // cerr << "Locus " << tag_1->id << "\n";
+
             //
             // Don't compute distances for masked tags.
             //
             if (tag_1->masked) continue;
 
             for (uint i = 0; i < tag_1->rem_queue.size(); i++) {
-                // cerr << "  Remainder " << i << "\n";
                 Rem *r = rem.at(tag_1->rem_queue[i]);
 
                 // //
@@ -826,53 +977,54 @@ merge_gapped_remainders(map<int, MergedStack *> &merged, map<int, Stack *> &uniq
                 
                 aln->init(r->seq->size(), tag_1->len);
 
-                //if (aln->align_region(r->seq->seq().c_str(), tag_1->con, q_start, q_end, s_start, s_end)) {
                 if (aln->align(r->seq->seq().c_str(), tag_1->con)) {
                     a = aln->result();
                     parse_cigar(a.cigar.c_str(), cigar);
-                    // cerr << "Aligned cigar:   " << cigar << "; padded len: " << cigar_length_padded(cigar) << "\n";
-                    // convert_local_cigar_to_global(cigar);
-                    // cerr << "Converted cigar: " << cigar << "; padded len: " << cigar_length_padded(cigar) << "\n";
 
+                    //
+                    // Check that the alignment still contains fewer than
+                    // max_utag_dist mismatches.
+                    //
+                    if (dist(r->seq->seq().c_str(), tag_1->con, cigar) > max_utag_dist) 
+                        continue;
+
+                    //
+                    // If the alignment has too many gaps, skip it.
+                    //
+                    if (a.gap_cnt > (max_gaps + 1))
+                        continue;
+
+                    //
+                    // If the alignment doesn't span enough of the two sequences, skip it.
+                    //
+                    if (a.pct_id < min_match_len)
+                        continue;
+                    
+                    r->utilized   = true;
                     tag_1->count += r->count();
                     utilized     += r->count();
-
-                    //
-                    // If, in the end, the gapped alignment did not yield a frameshit,
-                    // the cigar will be a single match element, e.g. 150M.
-                    //
-                    if (cigar.size() == 1) {
-                        tag_1->remtags.push_back(r->id);
-                        continue;
-                    }
 
                     buf = r->seq->seq();
                     seq = apply_cigar_to_seq(buf.c_str(), cigar);
                     r->add_seq(seq.c_str());
-                    // cerr << "Applied cigar:   " << r->seq->seq() << "\n";
                     invert_cigar(cigar);
 
                     //
                     // Record the gaps (but not soft-masked 3' regions.
                     //
-                    bool gap_inserted = false;
                     uint pos = 0;
                     for (uint j = 0; j < cigar.size(); j++) {
                         if (cigar[j].first == 'I' || cigar[j].first == 'D') {
-                            gap_inserted = true;
                             tag_1->gaps.push_back(Gap(pos, pos + cigar[j].second - 1));
                         }
                         pos += cigar[j].second;
                     }
-                    if (gap_inserted) {
-                        edit_gapped_seqs(unique, rem, tag_1, cigar);
-                        //
-                        // Add this aligned remainder tag to the locus after adjusting the other reads but before adjusting the consensus.
-                        //
-                        tag_1->remtags.push_back(r->id);
-                        update_consensus(tag_1, unique, rem);
-                        // cerr << "Updated consensus: " << tag_1->con << "\n";
-                    }
+                    edit_gapped_seqs(unique, rem, tag_1, cigar);
+                    //
+                    // Add this aligned remainder tag to the locus after adjusting the other reads but before adjusting the consensus.
+                    //
+                    tag_1->remtags.push_back(r->id);
+                    update_consensus(tag_1, unique, rem);
                 }
             }
 
@@ -980,6 +1132,12 @@ call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map<i
                     reads.push_back(r->seq);
                     read_types.push_back(secondary);
 
+                    if (r->seq->size() != length) {
+                        cerr << "R->id: " << r->id << "\n";
+                        cerr << "About to print remainder sequence.\n";
+                        cerr << "R->seq: " << r->seq->seq() << "\n";
+                        cerr << "R->seq->size(): " << r->seq->size() << ": length: " << length << "\n";
+                    }
                     assert(r->seq->size() == length);
                 }
             }
