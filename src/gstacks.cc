@@ -65,6 +65,7 @@ size_t max_fragment_alns = 2;
 
 pair<size_t,size_t> phasing_cooccurrences_thr_range = {2, 2};
 bool phasing_dont_prune_hets = false;
+long phasing_min_mac = 1; // Set by parse_args() according to --pcr-dupl-measures.
 
 bool   dbg_no_overlaps     = false;
 bool   dbg_no_haplotypes   = false;
@@ -2472,6 +2473,7 @@ const string help_string = string() +
         "  --dbg-no-haps: disable phasing\n"
         "  --dbg-gfa: output a GFA file for each locus\n"
         "  --dbg-alns: output a file showing the contigs & alignments\n"
+        "  --dbg-phasing-min-mac: minimum SNP MAC.\n"
         "  --dbg-hapgraphs: output a dot graph file showing phasing information\n"
         "  --dbg-depths: write detailed depth data in the output VCF\n"
         "  --dbg-no-unphased-snps: don't write unphased SNPs in the output VCF\n"
@@ -2521,6 +2523,7 @@ try {
         {"phasing-cooccurrences-thr-range", required_argument, NULL, 1019},
         {"phasing-dont-prune-hets", no_argument, NULL, 1020},
         //debug options
+        {"dbg-phasing-min-mac", no_argument, NULL,  2018},
         {"dbg-gfa",      no_argument,       NULL,  2003},
         {"dbg-alns",     no_argument,       NULL,  2004}, {"alns", no_argument, NULL, 2004},
         {"dbg-depths",   no_argument,       NULL,  2007},
@@ -2545,10 +2548,12 @@ try {
     bool pcr_dupl_measures = true;
     auto pcr_duplicates_measures = [&](){
         pcr_dupl_measures = true;
+        phasing_min_mac = 3;
         //TODO
     };
     auto no_pcr_duplicates_measures = [&](){
         pcr_dupl_measures = false;
+        phasing_min_mac = 1;
         //TODO
     };
     pcr_duplicates_measures();
@@ -2701,6 +2706,13 @@ try {
         //
         // Debug options
         //
+        case 2018: //dbg-phasing-min-mac
+            phasing_min_mac = is_integer(optarg);
+            if (phasing_min_mac < 0) {
+                cerr << "Error: Illegal --dbg-phasing-min-mac value '" << optarg << "'.\n";
+                bad_args();
+            }
+            break;
         case 2012://dbg-true-alns
             dbg_true_reference = true;
             break;
