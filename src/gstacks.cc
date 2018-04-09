@@ -73,7 +73,6 @@ bool   dbg_write_gfa       = false;
 bool   dbg_write_alns      = false;
 bool   dbg_write_hapgraphs = false;
 bool   dbg_write_nt_depths = false;
-bool   dbg_write_phased_only = false;
 bool   dbg_true_reference  = false;
 bool   dbg_true_alns       = false;
 bool   dbg_log_stats_phasing = false;
@@ -1515,13 +1514,28 @@ void LocusProcessor::phase_hets(
             o_hapgraph_ss, has_subgraphs
         );
 
+    //
+    // Update the SiteCalls according to the haplotype calls. Reapply the MAC
+    // filter on the updated data.
+    //
+    for (size_t col : snp_cols) {
+        SiteCall& c = calls[col];
+        for (size_t sample=0; sample<loc_.mpopi->samples().size(); ++sample)
+            if (c.sample_calls()[sample].call() == snp_type_het
+                    && !phased_samples[sample].count(col))
+                c.discard_sample(sample);
+        c.filter_mac(phasing_min_mac);
+    }
+
+    //
+    // Clean up.
+    //
+    ++hap_stats.n_badly_phased_samples[ {n_consistent_hets, n_hets_needing_phasing} ];
     if (dbg_write_hapgraphs && has_subgraphs) {
         o_hapgraph_ss << "}\n";
         #pragma omp critical
         o_hapgraphs_f << o_hapgraph_ss.rdbuf();
     }
-
-    ++hap_stats.n_badly_phased_samples[ {n_consistent_hets, n_hets_needing_phasing} ];
     if (detailed_output)
         loc_.details_ss << "END phasing\n";
 }
@@ -2047,8 +2061,10 @@ void LocusProcessor::write_one_locus (
 
             // Format.
             rec.append_format("GT");
-            if (!dbg_no_haplotypes)
+            if (!dbg_no_haplotypes) {
                 rec.append_format("PS"); // Phase set.
+                rec.append_format("FT"); // Filter.
+            }
             rec.append_format("GQ");
             rec.append_format("DP");
             rec.append_format("AD");
@@ -2073,32 +2089,18 @@ void LocusProcessor::write_one_locus (
                     gt[0] = vcf_allele_indexes.at(scall.nt0());
                     genotype << gt[0] << '/' << gt[0];
                     if (!dbg_no_haplotypes)
-                        genotype << ":.";
+                        genotype << ":.:.";
                     genotype << ':' << scall.gq();
                     break;
                 case snp_type_het:
                     if (!dbg_no_haplotypes) {
                         assert(!phase_data.empty());
-                        auto itr = phase_data[sample].find(i);
-                        if (itr != phase_data[sample].end()) {
-                            // There is phase data for this heterozygous site.
-                            const PhasedHet& p = itr->second;
-                            genotype << vcf_allele_indexes.at(p.left_allele)
-                                     << '|'
-                                     << vcf_allele_indexes.at(p.right_allele)
-                                     << ':' << (p.phase_set + 1);
-                        } else {
-                            // No phase data.
-                            if (!dbg_write_phased_only) {
-                                gt[0] = vcf_allele_indexes.at(scall.nt0());
-                                gt[1] = vcf_allele_indexes.at(scall.nt1());
-                                std::sort(gt.begin(), gt.end()); // (Prevents '1/0'.)
-                                genotype << gt[0] << '/' << gt[1];
-                                genotype << ":.";
-                            } else {
-                                genotype << "./.:.";
-                            }
-                        }
+                        const PhasedHet& p = phase_data[sample].at(i);
+                        genotype << vcf_allele_indexes.at(p.left_allele)
+                                    << '|'
+                                    << vcf_allele_indexes.at(p.right_allele)
+                                    << ':' << (p.phase_set + 1)
+                                    << ':' << '.';
                     } else {
                         //dbg_no_haplotypes
                         gt[0] = vcf_allele_indexes.at(scall.nt0());
@@ -2110,8 +2112,12 @@ void LocusProcessor::write_one_locus (
                     break;
                 default:
                     genotype << "./.";
-                    if (!dbg_no_haplotypes)
-                        genotype << ":.";
+                    if (!dbg_no_haplotypes) {
+                        if (scall.call() == snp_type_discarded)
+                            genotype << ":.:disc";
+                        else
+                            genotype << ":.:.";
+                    }
                     genotype << ":.";
                     break;
                 }
@@ -2541,7 +2547,6 @@ try {
         {"dbg-gfa",      no_argument,       NULL,  2003},
         {"dbg-alns",     no_argument,       NULL,  2004}, {"alns", no_argument, NULL, 2004},
         {"dbg-depths",   no_argument,       NULL,  2007},
-        {"dbg-no-unphased-snps", no_argument, NULL, 2015},
         {"dbg-hapgraphs", no_argument,      NULL,  2010},
         {"dbg-true-reference", no_argument, NULL,  2012},
         {"dbg-true-alns", no_argument,      NULL,  2011}, {"true-alns", no_argument, NULL, 2011},
@@ -2744,9 +2749,6 @@ try {
             break;
         case 2007://dbg-depths
             dbg_write_nt_depths = true;
-            break;
-        case 2015://dbg-no-unphased-snps
-            dbg_write_phased_only = true;
             break;
         case 2008://dbg-no-haps
             dbg_no_overlaps = true;

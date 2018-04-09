@@ -413,6 +413,8 @@ ostream& operator<<(ostream& os, const SampleCall& c) {
     case snp_type_hom: os << c.nt0() << "/" << c.nt0(); break;
     case snp_type_het: os << std::min(c.nt0(), c.nt1()) << "/" << std::max(c.nt0(), c.nt1()); break;
     case snp_type_unk: os << "u"; break;
+    case snp_type_discarded: os << "d"; break;
+    default: DOES_NOT_HAPPEN; break;
     }
     // Likelihoods.
     os << "\t{" << c.lnls() << "}";

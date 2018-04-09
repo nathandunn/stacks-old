@@ -96,6 +96,7 @@ public:
     long gq() const {assert(call_==snp_type_hom || call_==snp_type_het); return gq_;}
 
     void set_call(snp_type c, Nt2 rank0_nt, Nt2 rank1_nt, long gq);
+    void discard() {call_ = snp_type_discarded; nts_= {{Nt2(), Nt2()}}; gq_ = -1;}
 
     // For debugging.
     friend ostream& operator<<(ostream& os, const SampleCall& sc);
@@ -130,7 +131,7 @@ public:
 
     void filter_mac(size_t min_mac);
     void discard_sample(size_t sample_i)
-        {if(!sample_calls_.empty()) sample_calls_[sample_i] = SampleCall();}
+        {assert(!sample_calls_.empty()); sample_calls_[sample_i].discard();}
 
     static Counts<Nt2> tally_allele_counts(const vector<SampleCall>& spldata);
     static map<Nt2,double> tally_allele_freqs(const vector<SampleCall>& spldata);
