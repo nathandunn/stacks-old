@@ -10,7 +10,6 @@ libhts_a_SOURCES = \
 	bcf_sr_sort.h \
 	bgzf.c \
 	bgzip.c \
-	config.h \
 	cram/cram.h \
 	cram/cram_codecs.c \
 	cram/cram_codecs.h \
