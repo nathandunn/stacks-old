@@ -92,7 +92,7 @@ int    call_consensus(map<int, MergedStack *> &, map<int, Stack *> &, map<int, R
 int    call_alleles(MergedStack *, vector<DNANSeq *> &, vector<read_type> &);
 int    update_consensus(MergedStack *, map<int, Stack *> &, map<int, Rem *> &);
 size_t merge_remainders(map<int, MergedStack *> &, map<int, Stack *> &, map<int, Rem *> &);
-int    search_for_gapped_remainders(map<int, MergedStack *> &, map<int, Rem *> &);
+int    search_for_gapped_remainders(map<int, MergedStack *> &, map<int, Stack *> &, map<int, Rem *> &);
 size_t merge_gapped_remainders(map<int, MergedStack *> &, map<int, Stack *> &, map<int, Rem *> &);
 int    write_results(map<int, MergedStack *> &, map<int, Stack *> &, map<int, Rem *> &);
 
