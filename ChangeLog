@@ -5,6 +5,7 @@ Stacks 2.0 Beta 10 - Apr 10, 2018
     Feature: Added enzymes Cac8I, MslI.
     Feature: Made population maps more tolerant to spurious extra spaces and lines.
     Feature: populations: VCF output: changed the format of the catalog locus field and made the column 1-based.
+    Feature: gstacks: increased haplotyping rates by adding a filtering of spurious SNPs step.
     Bugfix:  Fixed populations dramatric slow-down on datasets with more than several hundred samples.
     Bugfix:  Restored the NS/locus distribution in populations's distributions log.
     Bugfix:  Fixed the populations --radpainter export.
