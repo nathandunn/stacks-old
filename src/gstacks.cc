@@ -65,7 +65,7 @@ size_t max_fragment_alns = 2;
 
 pair<size_t,size_t> phasing_cooccurrences_thr_range = {2, 2};
 bool phasing_dont_prune_hets = false;
-long phasing_min_mac = 1; // Set by parse_args() according to --pcr-dupl-measures.
+long phasing_min_mac = 1;
 
 bool   dbg_no_overlaps     = false;
 bool   dbg_no_haplotypes   = false;
@@ -2535,9 +2535,9 @@ const string help_string = string() +
         "  --kmer-length: kmer length for the de Bruijn graph (default: 31, max. 31)\n"
         "  --min-kmer-cov: minimum coverage to consider a kmer (default: 2)\n"
         "  --min-kmer-freq: minimum frequency (in %reads) to consider a kmer (default: 0.05) \n"
-        "  --[no-]pcr-duplicates-measures: take measures to mitigate the effects of PCR\n"
-        "      duplicates. Equivalent to [TODO]. (default: OFF if --rm-pcr-duplicates is\n"
-        "      given, ON otherwise)\n"
+        // "  --[no-]pcr-duplicates-measures: take measures to mitigate the effects of PCR\n"
+        // "      duplicates. Equivalent to [TODO]. (default: OFF if --rm-pcr-duplicates is\n"
+        // "      given, ON otherwise)\n"
         "\n"
         "  (Reference-based mode)\n"
         "  --min-mapq: minimum PHRED-scaled mapping quality to consider a read (default: 10)\n"
@@ -2602,8 +2602,8 @@ try {
         {"max-insert-len", required_argument, NULL,  1016},
         {"rm-unpaired-reads", no_argument,  NULL,  1017},
         {"rm-pcr-duplicates", no_argument,  NULL,  1018},
-        {"pcr-duplicates-measures", no_argument, NULL, 1022},
-        {"no-pcr-duplicates-measures", no_argument, NULL, 1023},
+        // {"pcr-duplicates-measures", no_argument, NULL, 1022},
+        // {"no-pcr-duplicates-measures", no_argument, NULL, 1023},
         {"phasing-cooccurrences-thr-range", required_argument, NULL, 1019},
         {"phasing-dont-prune-hets", no_argument, NULL, 1020},
         //debug options
@@ -2629,18 +2629,18 @@ try {
     double gt_alpha = 0.05;
     double var_alpha = 0.05;
 
-    bool pcr_dupl_measures = true;
-    auto pcr_duplicates_measures = [&](){
-        pcr_dupl_measures = true;
-        phasing_min_mac = 3;
-        //TODO
-    };
-    auto no_pcr_duplicates_measures = [&](){
-        pcr_dupl_measures = false;
-        phasing_min_mac = 1;
-        //TODO
-    };
-    pcr_duplicates_measures();
+    // bool pcr_dupl_measures = true;
+    // auto pcr_duplicates_measures = [&](){
+    //     pcr_dupl_measures = true;
+    //     phasing_min_mac = 3;
+    //     //TODO
+    // };
+    // auto no_pcr_duplicates_measures = [&](){
+    //     pcr_dupl_measures = false;
+    //     phasing_min_mac = 1;
+    //     //TODO
+    // };
+    // pcr_duplicates_measures();
 
     int c;
     int long_options_i;
@@ -2763,14 +2763,14 @@ try {
         case 1018://rm-pcr-duplicates
             rm_pcr_duplicates = true;
             rm_unpaired_reads = true;
-            no_pcr_duplicates_measures();
+            // no_pcr_duplicates_measures();
             break;
-        case 1022://pcr-duplicates-measures
-            pcr_duplicates_measures();
-            break;
-        case 1023://no-pcr-duplicates-measures
-            no_pcr_duplicates_measures();
-            break;
+        // case 1022://pcr-duplicates-measures
+        //     pcr_duplicates_measures();
+        //     break;
+        // case 1023://no-pcr-duplicates-measures
+        //     no_pcr_duplicates_measures();
+        //     break;
         case 1019: //phasing-cooccurrences-thr-range
             std::regex_search(optarg, tmp_cmatch, std::regex("^[0-9]+,[0-9]+$"));
             if (!tmp_cmatch.empty()) {
@@ -2992,8 +2992,8 @@ try {
         os << "  Discarding unpaired reads.\n";
     if (rm_pcr_duplicates)
         os << "  Removing PCR duplicates.\n";
-    if (pcr_dupl_measures)
-        os << "  PCR duplicates mitigation measures enabled.\n";
+    // if (pcr_dupl_measures)
+    //     os << "  PCR duplicates mitigation measures enabled.\n";
 
     return os.str();
 
