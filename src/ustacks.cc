@@ -228,7 +228,8 @@ int main (int argc, char* argv[]) {
         cerr << "\n\n";
 
         cerr << "Merging secondary stacks, allowing for gaps (min. match length " << as_percentage(min_match_len) << ")...\n";
-        util_gapped = search_for_gapped_remainders(merged, unique, remainders);
+        search_for_gapped_remainders(merged, unique, remainders);
+        util_gapped = merge_gapped_remainders(merged, unique, remainders);
         cerr << "  Merged " << util_gapped << " out of " << n_rr_reads << " secondary reads ("
              << as_percentage( (double)util_gapped / (double)n_rr_reads) << ").\n";
 
@@ -821,9 +822,7 @@ search_for_gapped_remainders(map<int, MergedStack *> &merged, map<int, Stack *> 
     vector<char *> kmer_map_keys;
     populate_kmer_hash(merged, kmer_map, kmer_map_keys, kmer_len);
 
-    size_t utilized = 0;
-
-    #pragma omp parallel reduction(+: utilized)
+    #pragma omp parallel
     {
         KmerHashMap::iterator h;
         vector<char *> rem_kmers;
@@ -923,35 +922,8 @@ search_for_gapped_remainders(map<int, MergedStack *> &merged, map<int, Stack *> 
             if (rem_alns[0].pct_id < min_match_len)
                 continue;
 
-            r->utilized = true;
-            utilized   += r->count();
-
-            buf = r->seq->seq();
-            seq = apply_cigar_to_seq(buf.c_str(), cigar);
-            r->add_seq(seq.c_str());
-            invert_cigar(cigar);
-
             #pragma omp critical
-            {
-                //
-                // Record the gaps (but not soft-masked 3' regions.
-                //
-                uint pos = 0;
-                for (uint j = 0; j < cigar.size(); j++) {
-                    if (cigar[j].first == 'I' || cigar[j].first == 'D') {
-                        tag_1->gaps.push_back(Gap(pos, pos + cigar[j].second - 1));
-                    }
-                    pos += cigar[j].second;
-                }
-                edit_gapped_seqs(unique, rem, tag_1, cigar);
-
-                //
-                // Add this aligned remainder tag to the locus after adjusting the other reads but before adjusting the consensus.
-                //
-                tag_1->count += r->count();
-                tag_1->remtags.push_back(r->id);
-                update_consensus(tag_1, unique, rem);
-            }
+            tag_1->rem_queue.push_back(r->id);
         }
         
         //
@@ -967,7 +939,7 @@ search_for_gapped_remainders(map<int, MergedStack *> &merged, map<int, Stack *> 
 
     free_kmer_hash(kmer_map, kmer_map_keys);
 
-    return utilized;
+    return 0;
 }
 
 size_t
@@ -1070,6 +1042,7 @@ merge_gapped_remainders(map<int, MergedStack *> &merged, map<int, Stack *> &uniq
                         pos += cigar[j].second;
                     }
                     edit_gapped_seqs(unique, rem, tag_1, cigar);
+
                     //
                     // Add this aligned remainder tag to the locus after adjusting the other reads but before adjusting the consensus.
                     //
