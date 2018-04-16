@@ -35,7 +35,6 @@ bool    set_kmer_len      = true;
 int     kmer_len          = 0;
 searcht search_type       = sequence;
 int     num_threads       = 1;
-bool    mult_matches      = false;
 bool    report_mmatches   = false;
 bool    require_uniq_haplotypes = false;
 bool    gapped_alignments = true;
@@ -94,15 +93,6 @@ int main (int argc, char* argv[]) {
         seen_sample_ids.insert(catalog.begin()->second->sample_id);
     }
 
-    //
-    // Build an index of the catalog
-    //
-    map<string, int> cat_index;
-    if (search_type == genomic_loc) {
-        cerr << "Building an index of the catalog.\n";
-        update_catalog_index(catalog, cat_index);
-    }
-
     while (!samples.empty()) {
         map<int, QLocus *> sample;
 
@@ -139,14 +129,15 @@ int main (int argc, char* argv[]) {
 
         cerr << "Merging matches into catalog...\n";
         uint mmatches = 0;
+	uint rmatches = 0;
         uint gmatches = 0;
         uint umatches = 0;
         uint nmatches = 0;
-        merge_matches(catalog, sample, s, ctag_dist, nmatches, umatches, gmatches, mmatches);
+        merge_matches(catalog, sample, s, ctag_dist, nmatches, umatches, gmatches, mmatches, rmatches);
         cerr << "  " << umatches << " loci were matched to a catalog locus.\n"
              << "  " << gmatches << " loci were matched to a catalog locus using gapped alignments.\n"
              << "  " << nmatches << " loci were newly added to the catalog.\n"
-             << "  " << mmatches << " loci matched more than one catalog locus and were excluded.\n";
+             << "  " << mmatches << " loci matched more than one catalog locus and were merged into " << rmatches << " loci.\n";
 
         //
         // Regenerate the alleles for the catalog tags after merging the new sample into the catalog.
@@ -256,7 +247,7 @@ characterize_mismatch_snps(CLocus *catalog_tag, QLocus *query_tag)
 
 int
 merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int, string> &sample_file, int ctag_dist,
-              uint &new_matches, uint &unique_matches, uint &gapped_matches, uint &multiple_matches)
+              uint &new_matches, uint &unique_matches, uint &gapped_matches, uint &merge_matches, uint &reduced_matches)
 {
     map<int, QLocus *>::iterator i;
     CLocus *ctag;
@@ -267,6 +258,12 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
 
     GappedAln *aln = new GappedAln();
 
+    //
+    // Variables to control merging of catalog loci that are linked by haplotypes from one or more sample loci.
+    //
+    vector<vector<int>> cloc_merge_list;
+    map<int, int>       cloc_merge_key;
+    
     for (i = sample.begin(); i != sample.end(); i++) {
         qtag = i->second;
 
@@ -293,171 +290,188 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
                 local_matches[qtag->matches[k]->cat_id] = qtag->matches[k]->dist;
         }
 
-        uint min_dist    =  1000;
-        uint num_matches =  0;
-        int  min_cat_id  = -1;
+        uint min_dist =  UINT_MAX;
+        int  cat_id   = -1;
 
         //
         // Find the minimum distance and then check how many matches have that distance.
         //
-        for (map<int, uint>::iterator j = local_matches.begin(); j != local_matches.end(); j++)
+        for (auto j = local_matches.begin(); j != local_matches.end(); j++)
             min_dist = j->second < min_dist ? j->second : min_dist;
 
-        for (map<int, uint>::iterator j = local_matches.begin(); j != local_matches.end(); j++)
-            if (j->second == min_dist) {
-                num_matches++;
-                min_cat_id = j->first;
-            }
-
+        set<int> catalog_ids;
         //
-        // Emit a warning if the query tag matches more than one tag in the catalog.
+        // Iterate over all of the matches of minimal distance and merge this query locus into the catalog locus.
         //
-        if (num_matches > 1) {
-            multiple_matches++;
-            if (report_mmatches) {
-                cerr <<
-                    "  Warning: sample " << sample_file.second << ", tag " << qtag->id <<
-                    ", matches more than one tag in the catalog and was excluded: ";
-                for (map<int, uint>::iterator j = local_matches.begin(); j != local_matches.end(); j++)
-                    cerr << j->first << " ";
-                cerr << "\n";
-            }
-            //
-            // Don't record matches to multiple catalog entries unless instructed
-            // to do so by the command line option.
-            //
-            if (!mult_matches) continue;
-        }
+        
+        for (auto j = local_matches.begin(); j != local_matches.end(); j++) {
+            if (j->second > min_dist)
+                continue;
 
-        ctag = catalog[min_cat_id];
+            cat_id    = j->first;
+            ctag      = catalog.at(cat_id);
+            cigar_str = "";
+            
+            assert(ctag != NULL);
+            catalog_ids.insert(cat_id);
 
-        if (ctag == NULL)
-            cerr << "  Unable to locate catalog tag " << min_cat_id << "\n";
-
-        cigar_str = "";
-
-        for (uint k = 0; k < qtag->matches.size(); k++)
-            if ((int)qtag->matches[k]->cat_id == min_cat_id) {
-                cigar_str   = qtag->matches[k]->cigar;
-                match_index = k;
-                break;
-            }
-
-        //
-        // If we have already matched a query locus to this catalog locus for the current
-        // sample, we must re-align the sequences in case changes have been made to the
-        // sequence by the previous matching sequence.
-        //
-        if (gapped_alignments && ctag->match_cnt > 0) {
-            string query_allele, query_seq, cat_allele, cat_seq;
-            // cerr << "    Warning: Catalog locus " << ctag->id
-            //      << ", Sample " << qtag->sample_id << ", locus " << qtag->id
-            //      << "; sequence length has changed since original alignment: "
-            //      << qseq_len << " <-> " << ctag->len
-            //      << "; re-aligning.\n";
-
-            //
-            // Find the proper query allele to align against the catalog. We can align
-            // against the catalog consensus because the allele strings may have changed.
-            //
-            query_allele = qtag->matches[match_index]->query_type;
-            for (uint k = 0; k < qtag->strings.size(); k++)
-                if (qtag->strings[k].first == query_allele) {
-                    query_seq = qtag->strings[k].second;
+            for (uint k = 0; k < qtag->matches.size(); k++)
+                if ((int)qtag->matches[k]->cat_id == cat_id) {
+                    cigar_str   = qtag->matches[k]->cigar;
+                    match_index = k;
                     break;
                 }
-            aln->init(ctag->len, qtag->len);
-            aln->align(ctag->con, query_seq);
-            cigar_str = invert_cigar(aln->result().cigar);
-        }
-
-        bool gapped_aln = false;
-        if (cigar_str.length() > 0)
-            gapped_aln = true;
-
-        //
-        // If the match was a gapped alignment, adjust the lengths of the consensus sequences.
-        // Adjust the postition of any SNPs that were shifted down sequence due to a gap.
-        //
-        if (gapped_aln) {
-            cseq_len  = parse_cigar(cigar_str.c_str(), cigar);
-            qseq      = apply_cigar_to_seq(qtag->con, cigar);
-            adjust_snps_for_gaps(cigar, qtag);
-
-            cigar_str = invert_cigar(cigar_str);
-            cseq_len  = parse_cigar(cigar_str.c_str(), cigar);
-            cseq      = apply_cigar_to_seq(ctag->con, cigar);
-            adjust_snps_for_gaps(cigar, ctag);
-
-            if (qseq.length() != cseq.length())
-                cerr << "Sample ID: " << qtag->sample_id << "; Query ID: " << qtag->id << "; catalog ID: " << ctag->id << ";\n"
-                     << "qloc: " << qtag->con << "\n"
-                     << "qseq: " << qseq << "\n"
-                     << "cloc: " << ctag->con << " [" << cigar_str << "]\n"
-                     << "cseq: " << cseq << "\n";
 
             //
-            // If the alignment modified the catalog locus, record it so we can re-align
-            // any other matching sequences from this sample.
+            // If we have already matched a query locus to this catalog locus for the current
+            // sample, we must re-align the sequences in case changes have been made to the
+            // sequence by the previous matching sequence.
             //
-            if ((uint)cseq_len > ctag->len)
+            if (gapped_alignments && ctag->match_cnt > 0) {
+                string query_allele, query_seq, cat_allele, cat_seq;
+
+                //
+                // Find the proper query allele to align against the catalog. We can align
+                // against the catalog consensus because the allele strings may have changed.
+                //
+                query_allele = qtag->matches[match_index]->query_type;
+                for (uint k = 0; k < qtag->strings.size(); k++)
+                    if (qtag->strings[k].first == query_allele) {
+                        query_seq = qtag->strings[k].second;
+                        break;
+                    }
+                aln->init(ctag->len, qtag->len);
+                aln->align(ctag->con, query_seq);
+                cigar_str = invert_cigar(aln->result().cigar);
+            }
+
+            bool gapped_aln = false;
+            if (cigar_str.length() > 0)
+                gapped_aln = true;
+
+            //
+            // If the match was a gapped alignment, adjust the lengths of the consensus sequences.
+            // Adjust the postition of any SNPs that were shifted down sequence due to a gap.
+            //
+            if (gapped_aln) {
+                cseq_len  = parse_cigar(cigar_str.c_str(), cigar);
+                qseq      = apply_cigar_to_seq(qtag->con, cigar);
+                adjust_snps_for_gaps(cigar, qtag);
+
+                cigar_str = invert_cigar(cigar_str);
+                cseq_len  = parse_cigar(cigar_str.c_str(), cigar);
+                cseq      = apply_cigar_to_seq(ctag->con, cigar);
+                adjust_snps_for_gaps(cigar, ctag);
+
+                assert(qseq.length() == cseq.length());
+                
+                // if (qseq.length() != cseq.length())
+                //     cerr << "Sample ID: " << qtag->sample_id << "; Query ID: " << qtag->id << "; catalog ID: " << ctag->id << ";\n"
+                //          << "qloc: " << qtag->con << "\n"
+                //          << "qseq: " << qseq << "\n"
+                //          << "cloc: " << ctag->con << " [" << cigar_str << "]\n"
+                //          << "cseq: " << cseq << "\n";
+
+                //
+                // If the alignment modified the catalog locus, record it so we can re-align
+                // any other matching sequences from this sample.
+                //
+                if ((uint)cseq_len > ctag->len)
+                    ctag->match_cnt++;
+
+                //
+                // Adjust the consensus sequences for both loci.
+                //
+                ctag->add_consensus(cseq.c_str());
+                qtag->add_consensus(qseq.c_str());
+
+                gapped_matches++;
+
+            } else {
+                unique_matches++;
                 ctag->match_cnt++;
+            }
 
             //
-            // Adjust the consensus sequences for both loci.
+            // If mismatches are allowed between query and catalog tags, identify the
+            // mismatches and convert them into SNP objects to be merged into the catalog tag.
             //
-            ctag->add_consensus(cseq.c_str());
-            qtag->add_consensus(qseq.c_str());
+            if (ctag_dist > 0 && !characterize_mismatch_snps(ctag, qtag))
+                cerr
+                    << "  Error characterizing mismatch SNPs "
+                    << sample_file.second << ", tag " << qtag->id
+                    << " with catalog tag " << ctag->id << "\n";
 
-            gapped_matches++;
+            //
+            // Merge the SNPs and alleles from the sample into the catalog tag.
+            //
+            if (!ctag->merge_snps(qtag)) {
+                cerr << "Error merging " << sample_file.second << ", tag " << qtag->id
+                     << " with catalog tag " << ctag->id << "\n";
+            }
 
-        } else {
-            unique_matches++;
-            ctag->match_cnt++;
+            //
+            // Add any new sequence information into the catalog consensus.
+            //
+            if (gapped_aln) {
+                for (uint k = 0; k < ctag->len && k < qtag->len; k++)
+                    if (qtag->con[k] != 'N' && ctag->con[k] == 'N')
+                        ctag->con[k] = qtag->con[k];
+
+            } else if (strlen(ctag->con) < strlen(qtag->con)) {
+                ctag->add_consensus(qtag->con);
+            }
+
+            ctag->sources.push_back(make_pair(sample_file.first, qtag->id));
         }
+        
+        //
+        // If the query tag matches more than one tag in the catalog, mark the catalog loci for merging.
+        //
+        if (catalog_ids.size() > 1) {
+            merge_matches++;
 
-        //
-        // If mismatches are allowed between query and catalog tags, identify the
-        // mismatches and convert them into SNP objects to be merged into the catalog tag.
-        //
-        if ((ctag_dist > 0 || search_type == genomic_loc) && !characterize_mismatch_snps(ctag, qtag))
-            cerr
-                << "  Error characterizing mismatch SNPs "
-                << sample_file.second << ", tag " << qtag->id
-                << " with catalog tag " << ctag->id << "\n";
+            for (auto n = catalog_ids.begin(); n != catalog_ids.end(); n++) {
+                cat_id = *n;
 
-        //
-        // Merge the SNPs and alleles from the sample into the catalog tag.
-        //
-        if (!ctag->merge_snps(qtag)) {
-            cerr << "Error merging " << sample_file.second << ", tag " << qtag->id
-                 << " with catalog tag " << ctag->id << "\n";
+                if (cloc_merge_key.count(cat_id) > 0) {
+                    uint index = cloc_merge_key[cat_id];
+                    for (uint i = 0; i < cloc_merge_list[index].size(); i++)
+                        catalog_ids.insert(cloc_merge_list[index][i]);
+                    cloc_merge_list[index].clear();
+                }
+            }
+
+            // Insert the list of catalog loci to merge.
+            cloc_merge_list.push_back(vector<int>());
+            uint index = cloc_merge_list.size() - 1;
+
+            // Record where to find each catalog locus.
+            for (auto n = catalog_ids.begin(); n != catalog_ids.end(); n++) {
+                cloc_merge_key[*n] = index;
+                cloc_merge_list[index].push_back(*n);
+            }
         }
-
-        //
-        // Add any new sequence information into the catalog consensus.
-        //
-        if (gapped_aln) {
-            for (uint k = 0; k < ctag->len && k < qtag->len; k++)
-                if (qtag->con[k] != 'N' && ctag->con[k] == 'N')
-                    ctag->con[k] = qtag->con[k];
-
-        } else if (strlen(ctag->con) < strlen(qtag->con)) {
-            ctag->add_consensus(qtag->con);
-        }
-
-        ctag->sources.push_back(make_pair(sample_file.first, qtag->id));
     }
 
     delete aln;
 
+    //
+    // Merge catalog loci, that were linked by a sample locus, together.
+    //
+    for (uint j = 0; j < cloc_merge_list.size(); j++) {
+        
+        if (cloc_merge_list[j].size() == 0) continue;
+	
+	reduced_matches++;
+        merge_catalog_loci(catalog, cloc_merge_list[j]);
+    }
     return 0;
 }
 
-int add_unique_tag(pair<int, string> &sample_file, map<int, CLocus *> &catalog, QLocus *qloc) {
-    vector<SNP *>::iterator i;
-    map<string, int>::iterator j;
-
+int
+add_unique_tag(pair<int, string> &sample_file, map<int, CLocus *> &catalog, QLocus *qloc)
+{
     int cid = catalog.size();
 
     CLocus *c = new CLocus;
@@ -476,7 +490,7 @@ int add_unique_tag(pair<int, string> &sample_file, map<int, CLocus *> &catalog, 
 
     // cerr << "Adding sample: " << qloc->id << " to the catalog as ID: " << c->id << "\n";
 
-    for (i = qloc->snps.begin(); i != qloc->snps.end(); i++) {
+    for (auto i = qloc->snps.begin(); i != qloc->snps.end(); i++) {
         SNP *snp    = new SNP;
         snp->col    = (*i)->col;
         snp->type   = (*i)->type;
@@ -487,11 +501,119 @@ int add_unique_tag(pair<int, string> &sample_file, map<int, CLocus *> &catalog, 
         c->snps.push_back(snp);
     }
 
-    for (j = qloc->alleles.begin(); j != qloc->alleles.end(); j++) {
+    for (auto j = qloc->alleles.begin(); j != qloc->alleles.end(); j++) {
         c->alleles[j->first] = j->second;
     }
 
     c->populate_alleles();
+
+    return 0;
+}
+
+int
+merge_catalog_loci(map<int, CLocus *> &catalog, vector<int> &merge_list)
+{
+    GappedAln *aln = new GappedAln();
+
+    sort(merge_list.begin(), merge_list.end());
+
+    cerr << "Merge catalog loci: ";
+    for (uint i = 0; i < merge_list.size(); i++)
+        cerr << merge_list[i] << " ";
+    cerr << "\n";
+
+    //
+    // Initialize the new locus from the first locus in merge_list.
+    //
+    CLocus *c = catalog[merge_list[0]];
+
+    for (uint i = 1; i < merge_list.size(); i++) {
+	CLocus *merge_tag = catalog[merge_list[i]];
+
+	cerr << c->id << ", " << merge_tag->id << ":\n"
+	     << c->con << "\n" << merge_tag->con << "\n";
+
+	cerr << c->id << " sources: ";
+	for (uint j = 0; j < c->sources.size(); j++)
+	    cerr << c->sources[j].first << "_" << c->sources[j].second << " ";
+	cerr << "\n";
+	cerr << merge_tag->id << " sources:\n";
+	for (uint j = 0; j < merge_tag->sources.size(); j++)
+	    cerr << merge_tag->sources[j].first << "_" << merge_tag->sources[j].second << " ";
+	cerr << "\n";
+
+	cerr << c->id << " snps:\n";
+	for (uint j = 0; j < c->snps.size(); j++)
+	    cerr << "  " << c->snps[j]->col << ", " << c->snps[j]->rank_1 << ", " << c->snps[j]->rank_2 << ", " << c->snps[j]->rank_3 << "\n";
+
+	cerr << merge_tag->id << " snps:\n";
+	for (uint j = 0; j < merge_tag->snps.size(); j++)
+	    cerr << "  " << merge_tag->snps[j]->col << ", " << merge_tag->snps[j]->rank_1 << ", " << merge_tag->snps[j]->rank_2 << ", " << merge_tag->snps[j]->rank_3 << "\n";
+
+	//
+	// Align the consensus sequences together if they are not the same length.
+	//
+	if (c->len != merge_tag->len) {
+	    Cigar  cigar;
+	    string cigar_str, qseq, cseq;
+
+	    aln->init(c->len,  merge_tag->len);
+	    aln->align(c->con, merge_tag->con);
+	    cigar_str = invert_cigar(aln->result().cigar);
+
+	    parse_cigar(cigar_str.c_str(), cigar);
+	    qseq = apply_cigar_to_seq(merge_tag->con, cigar);
+	    adjust_snps_for_gaps(cigar, merge_tag);
+
+	    cigar_str = invert_cigar(cigar_str);
+	    parse_cigar(cigar_str.c_str(), cigar);
+	    cseq = apply_cigar_to_seq(c->con, cigar);
+	    adjust_snps_for_gaps(cigar, c);
+
+	    assert(qseq.length() == cseq.length());
+
+	    for (uint k = 0; k < cseq.length() && k < qseq.length(); k++)
+		if (qseq[k] != 'N' && cseq[k] == 'N')
+		    cseq[k] = qseq[k];
+
+	    c->add_consensus(cseq.c_str());
+
+	    cerr << cseq << "; aligned.\n";
+	}
+
+	//
+	// Record the source of this catalog tag.
+	//
+	set<pair<int, int>> sources;
+	for (uint j = 0; j < c->sources.size(); j++)
+	    sources.insert(c->sources[j]);
+	for (uint j = 0; j < merge_tag->sources.size(); j++)
+	    sources.insert(merge_tag->sources[j]);
+	c->sources.clear();
+	for (auto j = sources.begin(); j != sources.end(); j++)
+	    c->sources.push_back(*j);
+
+	cerr << "Merged sources: ";
+	for (uint j = 0; j < c->sources.size(); j++)
+	    cerr << c->sources[j].first << "_" << c->sources[j].second << " ";
+	cerr << "\n";
+	cerr << "\n";
+
+	//
+	// Merge SNPs and alleles.
+	//
+	c->merge_snps(merge_tag);
+
+	cerr << c->id << " merged snps:\n";
+	for (uint j = 0; j < c->snps.size(); j++)
+	    cerr << "  " << c->snps[j]->col << ", " << c->snps[j]->rank_1 << ", " << c->snps[j]->rank_2 << ", " << c->snps[j]->rank_3 << "\n";
+
+	catalog.erase(merge_tag->id);
+    }
+
+    c->populate_alleles();
+
+    delete aln;
 
     return 0;
 }
@@ -1201,22 +1323,16 @@ int merge_allele(Locus *locus, SNP *snp) {
     return 1;
 }
 
-int CLocus::merge_snps(QLocus *matched_tag) {
-    vector<SNP *>::iterator i;
-    map<string, int>::iterator j;
-    vector<pair<string, SNP *> >::iterator k;
-    map<int, pair<string, SNP *> > columns;
-    map<int, pair<string, SNP *> >::iterator c;
-
-    vector<pair<string, SNP *> > merged_snps;
+int CLocus::merge_snps(Locus *matched_tag) {
+    map<int, pair<string, SNP *>> columns;
+    vector<pair<string, SNP *>> merged_snps;
     set<string> merged_alleles;
-    set<string>::iterator s;
     SNP *csnp;
 
-    for (i = this->snps.begin(); i != this->snps.end(); i++)
+    for (auto i = this->snps.begin(); i != this->snps.end(); i++)
         columns[(*i)->col] = make_pair("catalog", *i);
 
-    for (i = matched_tag->snps.begin(); i != matched_tag->snps.end(); i++) {
+    for (auto i = matched_tag->snps.begin(); i != matched_tag->snps.end(); i++) {
         //
         // Is this column already represented from the previous sample?
         //
@@ -1261,7 +1377,7 @@ int CLocus::merge_snps(QLocus *matched_tag) {
         }
     }
 
-    for (c = columns.begin(); c != columns.end(); c++)
+    for (auto c = columns.begin(); c != columns.end(); c++)
         merged_snps.push_back((*c).second);
 
     //
@@ -1279,7 +1395,7 @@ int CLocus::merge_snps(QLocus *matched_tag) {
     if (this->alleles.size() == 0) {
         char c;
         new_allele = "";
-        for (k = merged_snps.begin(); k != merged_snps.end(); k++) {
+        for (auto k = merged_snps.begin(); k != merged_snps.end(); k++) {
             csnp = k->second;
             c    = this->con[k->second->col];
 
@@ -1306,12 +1422,12 @@ int CLocus::merge_snps(QLocus *matched_tag) {
     //
     // Merge the alleles accounting for any SNPs added from either of the two samples.
     //
-    for (j = this->alleles.begin(); j != this->alleles.end(); j++) {
+    for (auto j = this->alleles.begin(); j != this->alleles.end(); j++) {
         allele     = j->first;
         new_allele = "";
         pos        = 0;
 
-        for (k = merged_snps.begin(); k != merged_snps.end(); k++) {
+        for (auto k = merged_snps.begin(); k != merged_snps.end(); k++) {
             //
             // If we inserted a SNP from the sample, add the proper nucleotide from the consensus
             // sequence to account for it in the allele string.
@@ -1327,12 +1443,12 @@ int CLocus::merge_snps(QLocus *matched_tag) {
         merged_alleles.insert(new_allele);
     }
 
-    for (j = matched_tag->alleles.begin(); j != matched_tag->alleles.end(); j++) {
+    for (auto j = matched_tag->alleles.begin(); j != matched_tag->alleles.end(); j++) {
         allele     = j->first;
         new_allele = "";
         pos        = 0;
 
-        for (k = merged_snps.begin(); k != merged_snps.end(); k++) {
+        for (auto k = merged_snps.begin(); k != merged_snps.end(); k++) {
             if (k->first == "catalog") {
                 new_allele += k->second->col > matched_tag->len - 1 ? 'N' : matched_tag->con[k->second->col];
             } else {
@@ -1352,7 +1468,7 @@ int CLocus::merge_snps(QLocus *matched_tag) {
     if (matched_tag->alleles.size() == 0) {
         char c;
         new_allele = "";
-        for (k = merged_snps.begin(); k != merged_snps.end(); k++) {
+        for (auto k = merged_snps.begin(); k != merged_snps.end(); k++) {
             csnp = k->second;
             c    = matched_tag->con[k->second->col];
 
@@ -1376,19 +1492,12 @@ int CLocus::merge_snps(QLocus *matched_tag) {
             merged_alleles.insert(new_allele);
     }
 
-    // //
-    // // If the newly merged alleles contain Ns due to different sequence lengths,
-    // // check if we can reduce the alleles as one of the longer allele haplotypes
-    // // may fully encompass a shorter allele haplotype that has been padded with Ns.
-    // //
-    // if (require_uniq_haplotypes) this->reduce_alleles(merged_alleles);
-
     //
     // Update the catalog entry's list of SNPs and alleles
     //
     this->snps.clear();
 
-    for (k = merged_snps.begin(); k != merged_snps.end(); k++) {
+    for (auto k = merged_snps.begin(); k != merged_snps.end(); k++) {
         SNP *snp    = new SNP;
         snp->col    = (*k).second->col;
         snp->type   = (*k).second->type;
@@ -1405,7 +1514,7 @@ int CLocus::merge_snps(QLocus *matched_tag) {
     }
 
     this->alleles.clear();
-    for (s = merged_alleles.begin(); s != merged_alleles.end(); s++) {
+    for (auto s = merged_alleles.begin(); s != merged_alleles.end(); s++) {
         this->alleles[*s] = 0;
     }
 
@@ -1783,8 +1892,6 @@ int parse_command_line(int argc, char* argv[]) {
         static struct option long_options[] = {
             {"help",            no_argument, NULL, 'h'},
             {"version",         no_argument, NULL, 1000},
-            {"mmatches",        no_argument, NULL, 'm'},
-            {"aligned",         no_argument, NULL, 'g'},
             {"uniq_haplotypes", no_argument, NULL, 'u'},
             {"report_mmatches", no_argument, NULL, 'R'},
             {"disable_gapped",  no_argument, NULL, 'G'},
@@ -1800,7 +1907,7 @@ int parse_command_line(int argc, char* argv[]) {
         };
 
         int option_index = 0;
-        int c = getopt_long(argc, argv, "hgvuRmGX:x:o:s:c:p:n:k:P:M:", long_options, &option_index);
+        int c = getopt_long(argc, argv, "hvuRGX:x:o:s:c:p:n:k:P:M:", long_options, &option_index);
 
         // Detect the end of the options.
         if (c == -1)
@@ -1817,14 +1924,8 @@ int parse_command_line(int argc, char* argv[]) {
             set_kmer_len = false;
             kmer_len     = is_integer(optarg);
             break;
-        case 'm':
-            mult_matches = true;
-            break;
         case 'R':
             report_mmatches = true;
-            break;
-        case 'g':
-            search_type = genomic_loc;
             break;
         case 's':
             samples.push(make_pair(0, optarg));
@@ -1926,13 +2027,11 @@ void version() {
 void help() {
     cerr << "cstacks " << VERSION << "\n"
               << "cstacks -P in_dir -M popmap [-n num_mismatches] [--gapped] [-p num_threads]" << "\n"
-              << "cstacks --aligned -P in_dir -M popmap [-p num_threads]" << "\n"
               << "cstacks -s sample1_path [-s sample2_path ...] -o path [-n num_mismatches] [--gapped] [-p num_threads]" << "\n"
-              << "cstacks --aligned -s sample1_path [-s sample2_path ...] -o path [-p num_threads]" << "\n"
               << "\n"
               << "  P: path to the directory containing Stacks files.\n"
               << "  M: path to a population map file.\n"
-              << "  n: number of mismatches allowed between sample loci when build the catalog (default 1)." << "\n"
+              << "  n: number of mismatches allowed between sample loci when build the catalog (default 1; suggested: set to ustacks -M)." << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
               << "  s: sample prefix from which to load loci into the catalog." << "\n"
               << "  o: output path to write results." << "\n"
