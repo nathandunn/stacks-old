@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2018, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -61,13 +61,14 @@ int  parse_command_line(int, char**);
 int  initialize_new_catalog(pair<int, string> &, map<int, CLocus *> &);
 int  initialize_existing_catalog(string, map<int, CLocus *> &);
 int  update_catalog_index(map<int, CLocus *> &, map<string, int> &);
+int  merge_catalog_loci(map<int, CLocus *> &, vector<int> &);
 int  find_kmer_matches_by_sequence(map<int, CLocus *> &, map<int, QLocus *> &, int);
 int  search_for_gaps(map<int, CLocus *> &, map<int, QLocus *> &, double, double);
 int  find_matches_by_sequence(map<int, CLocus *> &, map<int, QLocus *> &);
 int  find_matches_by_genomic_loc(map<string, int> &, map<int, QLocus *> &);
 int  characterize_mismatch_snps(CLocus *, QLocus *);
 int  merge_allele(Locus *, SNP *);
-int  merge_matches(map<int, CLocus *> &, map<int, QLocus *> &, pair<int, string> &, int, uint &, uint &, uint &, uint &);
+int  merge_matches(map<int, CLocus *> &, map<int, QLocus *> &, pair<int, string> &, int, uint &, uint &, uint &, uint &, uint &);
 int  add_unique_tag(pair<int, string> &, map<int, CLocus *> &, QLocus *);
 bool compare_dist(pair<int, int>, pair<int, int>);
 

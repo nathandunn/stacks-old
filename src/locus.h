@@ -131,7 +131,7 @@ class CLocus : public Locus {
         this->match_cnt = 0;
     };
 
-    int merge_snps(QLocus *);
+    int merge_snps(Locus *);
     int reduce_alleles(set<string> &);
 };
 
