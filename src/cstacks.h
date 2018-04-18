@@ -68,7 +68,7 @@ int  find_matches_by_sequence(map<int, CLocus *> &, map<int, QLocus *> &);
 int  find_matches_by_genomic_loc(map<string, int> &, map<int, QLocus *> &);
 int  characterize_mismatch_snps(CLocus *, QLocus *);
 int  merge_allele(Locus *, SNP *);
-int  merge_matches(map<int, CLocus *> &, map<int, QLocus *> &, pair<int, string> &, int, uint &, uint &, uint &, uint &, uint &);
+int  merge_matches(map<int, CLocus *> &, map<int, QLocus *> &, pair<int, string> &, int, uint &, uint &, uint &, uint &, uint &, uint &);
 int  add_unique_tag(pair<int, string> &, map<int, CLocus *> &, QLocus *);
 bool compare_dist(pair<int, int>, pair<int, int>);
 
