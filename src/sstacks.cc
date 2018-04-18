@@ -1317,11 +1317,11 @@ int parse_command_line(int argc, char* argv[]) {
             {"verify_hap",        no_argument, NULL, 'x'},
             {"uniq_haplotypes",   no_argument, NULL, 'u'},
             {"disable_gapped",    no_argument, NULL, 'G'},
-            {"num_threads", required_argument, NULL, 'p'},
+            {"threads",     required_argument, NULL, 'p'},
             {"catalog",     required_argument, NULL, 'c'},
-            {"sample_path", required_argument, NULL, 's'},
-            {"outpath",     required_argument, NULL, 'o'},
-            {"in_dir",      required_argument, NULL, 'P'},
+            {"sample",      required_argument, NULL, 's'},
+            {"out_path",    required_argument, NULL, 'o'},
+            {"in_path",     required_argument, NULL, 'P'},
             {"popmap",      required_argument, NULL, 'M'},
             {"write-all-matches", no_argument, NULL, 2001},
             {0, 0, 0, 0}
@@ -1453,13 +1453,13 @@ void help() {
     cerr << "sstacks " << VERSION << "\n"
               << "sstacks -P dir -M popmap [-p n_threads]" << "\n"
               << "sstacks -c catalog_path -s sample_path [-s sample_path ...] -o path [-p n_threads]" << "\n"
-              << "  P: path to the directory containing Stacks files.\n"
-              << "  M: path to a population map file from which to take sample names.\n"
-              << "  s: filename prefix from which to load sample loci." << "\n"
-              << "  c: path to the catalog." << "\n"
-              << "  p: enable parallel execution with num_threads threads.\n"
-              << "  o: output path to write results." << "\n"
-              << "  x: don't verify haplotype of matching locus." << "\n"
+              << "  -P,--in_path: path to the directory containing Stacks files.\n"
+              << "  -M,--popmap: path to a population map file from which to take sample names.\n"
+              << "  -s,--sample: filename prefix from which to load sample loci." << "\n"
+              << "  -c,--catalog: path to the catalog." << "\n"
+              << "  -p,--threads: enable parallel execution with num_threads threads.\n"
+              << "  -o,--out_path: output path to write results." << "\n"
+              << "  -x: don't verify haplotype of matching locus." << "\n"
               << "\n"
               << "Gapped assembly options:\n"
               << "  --disable_gapped: disable gapped alignments between stacks (default: enable gapped alignments).\n"

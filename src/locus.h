@@ -34,13 +34,26 @@
 #include "Alignment.h"
 #include "aln_utils.h"
 
-typedef struct match {
+class Match {
+ public:
     uint        cat_id;
     allele_type cat_type;
     allele_type query_type;
     string      cigar;
     uint        dist;
-} Match;
+
+    Match() {
+        this->cat_id = 0;
+        this->dist   = 0;
+    };
+    Match(const Match &other) {
+        this->cat_id     = other.cat_id;
+        this->cat_type   = other.cat_type;
+        this->query_type = other.query_type;
+        this->cigar      = other.cigar;
+        this->dist       = other.dist;
+    };
+};
 
 class Locus;
 bool bp_compare(Locus *, Locus *);
@@ -71,7 +84,7 @@ class Locus {
     PhyLoc                   loc;   // Physical genome location of this stack.
     vector<SNP *>           snps;   // Single Nucleotide Polymorphisms in this stack.
     map<string, int>     alleles;   // Map of the allelic configuration of SNPs in this stack along with the count of each
-    vector<pair<allele_type, string> > strings; // Strings for matching (representing the various allele combinations)
+    vector<pair<allele_type, string>> strings; // Strings for matching (representing the various allele combinations)
 
     Locus()  {
         id              = 0;
@@ -84,6 +97,7 @@ class Locus {
         deleveraged     = false;
         lumberjackstack = false;
     }
+    Locus(const Locus &other);
     virtual ~Locus() {
         delete [] con;
         delete [] model;
@@ -110,6 +124,7 @@ class QLocus : public Locus {
     vector<Match *> matches;   // Matching tags found for the catalog.
 
     QLocus(): Locus() {}
+    QLocus(const QLocus &other);
     ~QLocus();
 
     int add_match(int, allele_type, allele_type, int, string);

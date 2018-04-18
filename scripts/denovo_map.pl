@@ -227,8 +227,8 @@ sub execute_stacks {
     }
 
     $cmd = $exe_path . "tsv2bam -P $out_path $file_paths " . join(" ", @_tsv2bam);
-    print STDERR  "  $cmd\n";
-    print $log_fh "$cmd\n";
+    print STDERR  "  $cmd\n\n";
+    print $log_fh "$cmd\n\n";
 
     if (!$dry_run) {
         open($pipe_fh, "$time $cmd 2>&1 |");

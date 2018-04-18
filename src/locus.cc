@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-OA
 //
-// Copyright 2013-2015, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2013-2018, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -24,6 +24,51 @@
 #include "locus.h"
 
 #include "utils.h"
+
+Locus::Locus(const Locus &templ)
+{
+    this->id              = templ.id;
+    this->sample_id       = templ.sample_id;
+    this->depth           = templ.depth;
+    this->len             = templ.len;
+    this->blacklisted     = templ.blacklisted;
+    this->deleveraged     = templ.deleveraged;
+    this->lumberjackstack = templ.lumberjackstack;
+
+    this->model = NULL;
+    this->con   = NULL;
+
+    if (templ.model != NULL) {
+        this->model = new char [templ.len + 1];
+        strcpy(this->model, templ.model);
+    }
+    if (templ.con != NULL) {
+        this->con = new char [templ.len + 1];
+        strcpy(this->con, templ.con);
+    }
+
+    for (uint i = 0; i < templ.comp.size(); i++) {
+        char *c = new char [strlen(templ.comp[i]) + 1];
+        strcpy(c, templ.comp[i]);
+        this->comp.push_back(c);
+    }
+    for (uint i = 0; i < templ.reads.size(); i++) {
+        char *c = new char [strlen(templ.reads[i]) + 1];
+        strcpy(c, templ.reads[i]);
+        this->reads.push_back(c);
+    }
+    for (uint i = 0; i < templ.snps.size(); i++) {
+        SNP *s = new SNP(*templ.snps[i]);
+        this->snps.push_back(s);
+    }
+
+    this->comp_cnt  = vector<uint>(templ.comp_cnt);
+    this->comp_type = vector<read_type>(templ.comp_type);
+    this->loc       = templ.loc;
+    this->alleles   = map<string, int>(templ.alleles);
+    this->strings   = vector<pair<allele_type, string>>(templ.strings);
+
+}
 
 int
 Locus::snp_index(uint col) const
@@ -251,11 +296,17 @@ remove_snps_from_gaps(Cigar &cigar, Locus *loc)
     return 0;
 }
 
+QLocus::QLocus(const QLocus &other): Locus(other)
+{
+    for (auto it = other.matches.begin(); it != other.matches.end(); it++) {
+        Match *m = *it;
+        this->matches.push_back(new Match(*m));
+    }
+}
+
 QLocus::~QLocus()
 {
-    vector<Match *>::iterator it;
-
-    for (it = this->matches.begin(); it != this->matches.end(); it++)
+    for (auto it = this->matches.begin(); it != this->matches.end(); it++)
         delete *it;
 }
 
