@@ -580,6 +580,7 @@ search_for_gaps(map<int, MergedStack *> &merged)
                         hits[h->second[k]]++;
             }
 
+            vector<pair<int, int>> ordered_hits;
             //
             // Iterate through the list of hits. For each hit that has more than min_hits
             // check its full length to verify a match.
