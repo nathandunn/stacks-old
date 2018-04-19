@@ -619,7 +619,7 @@ denovo_map.pl --samples dir --popmap path -o dir [--paired] (assembly options) [
 
   Stack assembly options:
     M: number of mismatches allowed between stacks within individuals (for ustacks).
-    n: number of mismatches allowed between stacks between individuals (for cstacks).
+    n: number of mismatches allowed between stacks between individuals (for cstacks; default 1; suggested: set to ustacks -M).
 
   SNP model options:
     --var-alpha: significance level at which to call variant sites (for gstacks; default: 0.05).

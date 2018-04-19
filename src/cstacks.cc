@@ -908,11 +908,9 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
 
                 for (uint j = 0; j < stop; j++) {
                     cat_hit = allele_map.at(ordered_hits[j].first);
-                    hit_cnt = ordered_hits[j].second;
-
-                    tag_2 = catalog[cat_hit.second];
-
+                    tag_2   = catalog[cat_hit.second];
                     cat_seq = "";
+
                     for (uint k = 0; k < tag_2->strings.size(); k++)
                         if (tag_2->strings[k].first == cat_hit.first) {
                             cat_seq = tag_2->strings[k].second;
