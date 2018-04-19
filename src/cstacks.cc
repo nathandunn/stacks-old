@@ -281,25 +281,6 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
             continue;
         }
 
-        // cerr << "Tag " << qtag->id << ":\n";
-        // for (uint k = 0; k < qtag->matches.size(); k++)
-        //     cerr << "  Match, qallele: " << qtag->matches[k]->query_type
-        //          << ", Cat ID: " << qtag->matches[k]->cat_id << ", cat allele: " << qtag->matches[k]->cat_type
-        //          << "; dist: " << qtag->matches[k]->dist << "\n";
-        
-        // //
-        // // Check for multiple matches. We will reduce the list of Match objects, which
-        // // contain matches to multiple alleles for a single locus, to the smallest distance
-        // // for a locus.
-        // //
-        // map<int, uint> local_matches;
-        // for (uint k = 0; k < qtag->matches.size(); k++) {
-        //     if (local_matches.count(qtag->matches[k]->cat_id) == 0)
-        //         local_matches[qtag->matches[k]->cat_id] = qtag->matches[k]->dist;
-        //     else if (qtag->matches[k]->dist < local_matches[qtag->matches[k]->cat_id])
-        //         local_matches[qtag->matches[k]->cat_id] = qtag->matches[k]->dist;
-        // }
-
         //
         // Reduce the set of matches to the minimum distance per query allele.
         //
@@ -313,12 +294,6 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
                 min_allele_dist[qtag->matches[k]->query_type]  = qtag->matches[k]->dist;
                 per_allele_match[qtag->matches[k]->query_type] = qtag->matches[k]->cat_id;
             }
-
-        // //
-        // // Find the minimum distance and then check how many matches have that distance.
-        // //
-        // for (auto j = local_matches.begin(); j != local_matches.end(); j++)
-        //     min_dist = j->second < min_dist ? j->second : min_dist;
 
         int cat_id = -1;
         set<int> catalog_ids;
@@ -401,13 +376,6 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
                 adjust_snps_for_gaps(cigar, ctag);
 
                 assert(qseq.length() == cseq.length());
-
-                // if (qseq.length() != cseq.length())
-                //     cerr << "Sample ID: " << qtag->sample_id << "; Query ID: " << qtag->id << "; catalog ID: " << ctag->id << ";\n"
-                //          << "qloc: " << qtag->con << "\n"
-                //          << "qseq: " << qseq << "\n"
-                //          << "cloc: " << ctag->con << " [" << cigar_str << "]\n"
-                //          << "cseq: " << cseq << "\n";
 
                 //
                 // If the alignment modified the catalog locus, record it so we can re-align
