@@ -523,13 +523,6 @@ search_for_gaps(map<int, MergedStack *> &merged)
         con_len = miter->second->len > con_len ? miter->second->len : con_len;
     size_t kmer_len  = set_kmer_len ? 19 : global_kmer_len;
 
-    //
-    // Calculate the minimum number of matching k-mers required for a possible sequence match.
-    //
-    int min_hits = (round((double) con_len * min_match_len) - (kmer_len * max_gaps)) - kmer_len + 1;
-
-    //cerr << "  Searching with a k-mer length of " << kmer_len << " (" << num_kmers << " k-mers per read); " << min_hits << " k-mer hits required.\n";
-
     populate_kmer_hash(merged, kmer_map, kmer_map_keys, kmer_len);
 
     #pragma omp parallel private(tag_1, tag_2)
@@ -568,28 +561,79 @@ search_for_gaps(map<int, MergedStack *> &merged)
             for (uint j = 0; j < num_kmers; j++)
                 uniq_kmers.insert(query_kmers[j]);
 
-            map<int, int> hits;
+            vector<int> hits;
             //
             // Lookup the occurances of each k-mer in the kmer_map
             //
-            for (set<string>::iterator j = uniq_kmers.begin(); j != uniq_kmers.end(); j++) {
+            for (auto j = uniq_kmers.begin(); j != uniq_kmers.end(); j++) {
                 h = kmer_map.find(j->c_str());
 
                 if (h != kmer_map.end())
                     for (uint k = 0; k <  h->second.size(); k++)
-                        hits[h->second[k]]++;
+                        hits.push_back(h->second[k]);
             }
 
+            //
+            // Sort the vector of indexes; provides the number of hits to each allele/locus
+            // and orders them largest to smallest.
+            //
+            sort(hits.begin(), hits.end());
+
+            //
+            // Iterate through the list of hits and collapse them down by number of kmer hits per allele.
+            //
+            uint hit_cnt, index, prev_id, allele_id, hits_size, stop, top_hit;
             vector<pair<int, int>> ordered_hits;
+
+            hits_size = hits.size();
+
+            if (hits_size == 0)
+                continue;
+
+            prev_id = hits[0];
+            index   = 0;
+
+            do {
+                hit_cnt   = 0;
+                allele_id = prev_id;
+
+                while (index < hits_size && (uint) hits[index] == prev_id) {
+                    hit_cnt++;
+                    index++;
+                }
+
+                if (index < hits_size)
+                    prev_id = hits[index];
+
+                ordered_hits.push_back(make_pair(allele_id, hit_cnt));
+
+            } while (index < hits_size);
+
+            if (ordered_hits.size() == 0)
+                continue;
+
+            //
+            // Process the hits from most kmer hits to least kmer hits.
+            //
+            sort(ordered_hits.begin(), ordered_hits.end(), compare_pair_intint);
+
+            //
+            // Only try to align the sequences with the most kmers in common.
+            //
+            top_hit = ordered_hits[0].second;
+            stop    = 1;
+            for (uint j = 1; j < ordered_hits.size(); j++)
+                if ((uint) ordered_hits[j].second < top_hit) {
+                    stop = j;
+                    break;
+                }
+
             //
             // Iterate through the list of hits. For each hit that has more than min_hits
             // check its full length to verify a match.
             //
-            for (auto hit_it = hits.begin(); hit_it != hits.end(); hit_it++) {
-
-                if (hit_it->second < min_hits) continue;
-
-                tag_2 = merged[hit_it->first];
+            for (uint j = 0; j < stop; j++) {
+                tag_2 = merged[ordered_hits[i].first];
 
                 // Don't compute distances for masked tags
                 if (tag_2->masked) continue;

@@ -1,5 +1,7 @@
 Stacks 2.0
 ---------------------------------
+    Feature: modified cstacks and ustacks gapped alignment algorithms to always align the two stacks/alleles
+             with the most k-mers in common, removed the previous minimum k-mer limit.
     Feature: modified cstacks so that when a sample locus matches two or more catalog loci, those catalog
              loci are combined, or rolled-up, reducing undermerged loci that generate excess homozygote calls.
     Feature: modified tsv2bam so that when two loci from the same sample match the same catalog locus, those
