@@ -26,7 +26,7 @@
 #include "cstacks.h"
 
 // Global variables to hold command-line options.
-queue<pair<int, string> > samples;
+queue<pair<int, string>> samples;
 string  out_path;
 string  catalog_path;
 FileT   in_file_type      = FileT::sql;
@@ -66,9 +66,7 @@ int main (int argc, char* argv[]) {
     #endif
 
     map<int, CLocus *> catalog;
-    map<int, CLocus *>::iterator cat_it;
-    map<int, QLocus *>::iterator query_it;
-    pair<int, string> s;
+    pair<int, string>  s;
     bool compressed = false;
     int  i;
 
@@ -146,26 +144,28 @@ int main (int argc, char* argv[]) {
         //
         // Regenerate the alleles for the catalog tags after merging the new sample into the catalog.
         //
-        for (cat_it = catalog.begin(); cat_it != catalog.end(); cat_it++) {
+        for (auto cat_it = catalog.begin(); cat_it != catalog.end(); cat_it++) {
             cat_it->second->populate_alleles();
             cat_it->second->match_cnt = 0;
         }
 
         i++;
 
-        for (query_it = sample.begin(); query_it != sample.end(); query_it++)
+        for (auto query_it = sample.begin(); query_it != sample.end(); query_it++)
             delete query_it->second;
         sample.clear();
     }
 
-    cerr << "\nWriting catalog in directory '" << out_path << "'.\n";
+    cerr << "\nWriting catalog in directory '" << out_path << "'.\n"
+         << "Final catalog contains " << catalog.size() << " loci.\n";
+
     write_catalog(catalog);
     cerr << "cstacks is done.\n";
 
     //
     // Free memory associated with the catalog.
     //
-    for (cat_it = catalog.begin(); cat_it != catalog.end(); cat_it++)
+    for (auto cat_it = catalog.begin(); cat_it != catalog.end(); cat_it++)
         delete cat_it->second;
     catalog.clear();
 
@@ -597,25 +597,23 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
     // Calculate the distance (number of mismatches) between each pair
     // of Radtags. We expect all radtags to be the same length;
     //
-    KmerHashMap                       kmer_map;
-    map<int, pair<allele_type, int> > allele_map;
-    vector<char *>                    kmer_map_keys;
-    map<int, QLocus *>::iterator      it;
-    vector<pair<allele_type, string> >::iterator allele;
+    KmerHashMap                      kmer_map;
+    map<int, pair<allele_type, int>> allele_map;
+    vector<char *>                   kmer_map_keys;
     QLocus *tag_1;
     CLocus *tag_2;
 
     // OpenMP can't parallelize random access iterators, so we convert
     // our map to a vector of integer keys.
     vector<int> keys;
-    for (it = sample.begin(); it != sample.end(); it++)
+    for (auto it = sample.begin(); it != sample.end(); it++)
         keys.push_back(it->first);
 
     //
     // Calculate the number of k-mers we will generate. If kmer_len == 0,
     // determine the optimal length for k-mers.
     //
-    int con_len   = strlen(sample[keys[0]]->con);
+    int con_len = strlen(sample[keys[0]]->con);
     if (set_kmer_len) kmer_len = determine_kmer_length(con_len, ctag_dist);
 
     //
@@ -627,26 +625,21 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
     //      << "; searching with a k-mer length of " << kmer_len << " (" << num_kmers << " k-mers per read); "
     //      << min_hits << " k-mer hits required.\n";
 
-    // clock_t time_1, time_2, time_3, time_4;
-    // double  per_locus = 0.0;
-
-    // time_1 = clock();
     populate_kmer_hash(catalog, kmer_map, kmer_map_keys, allele_map, kmer_len);
-    // time_2 = clock();
 
     cerr << "  " << catalog.size() << " loci in the catalog, " << kmer_map.size() << " kmers in the catalog hash.\n";
 
-    #pragma omp parallel private(tag_1, tag_2, allele)
+    #pragma omp parallel private(tag_1, tag_2)
     {
-        KmerHashMap::iterator   h;
-        vector<char *>          kmers;
-        set<string>             uniq_kmers;
-        vector<int>             hits;
-        vector<pair<int, int> > ordered_hits;
-        uint                    hit_cnt, index, prev_id, allele_id, hits_size;
-        int                     d;
-        pair<allele_type, int>  cat_hit;
-        int                     num_kmers = con_len - kmer_len + 1;
+        KmerHashMap::iterator  h;
+        vector<char *>         kmers;
+        set<string>            uniq_kmers;
+        vector<int>            hits;
+        vector<pair<int, int>> ordered_hits;
+        uint                   hit_cnt, index, prev_id, allele_id, hits_size;
+        int                    d;
+        pair<allele_type, int> cat_hit;
+        int                    num_kmers = con_len - kmer_len + 1;
 
         initialize_kmers(kmer_len, num_kmers, kmers);
 
@@ -656,7 +649,7 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
 
             // time_3 = clock();
 
-            for (allele = tag_1->strings.begin(); allele != tag_1->strings.end(); allele++) {
+            for (auto allele = tag_1->strings.begin(); allele != tag_1->strings.end(); allele++) {
 
                 num_kmers = allele->second.length() - kmer_len + 1;
                 generate_kmers_lazily(allele->second.c_str(), kmer_len, num_kmers, kmers);
@@ -675,7 +668,7 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
                 //
                 // Lookup the occurances of each k-mer in the kmer_map
                 //
-                for (set<string>::iterator j = uniq_kmers.begin(); j != uniq_kmers.end(); j++) {
+                for (auto j = uniq_kmers.begin(); j != uniq_kmers.end(); j++) {
 
                     h = kmer_map.find(j->c_str());
 
@@ -781,9 +774,9 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
     //
     // Search for loci that can be merged with a gapped alignment.
     //
-    KmerHashMap                       kmer_map;
-    map<int, pair<allele_type, int> > allele_map;
-    vector<char *>                    kmer_map_keys;
+    KmerHashMap                      kmer_map;
+    map<int, pair<allele_type, int>> allele_map;
+    vector<char *>                   kmer_map_keys;
     QLocus *tag_1;
     CLocus *tag_2;
 
@@ -806,18 +799,18 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
 
     #pragma omp parallel private(tag_1, tag_2)
     {
-        KmerHashMap::iterator     h;
-        AlignRes                  aln_res;
-        vector<char *>            kmers;
-        set<string>               uniq_kmers;
-        vector<int>               hits;
-        vector<pair<int, int> >   ordered_hits;
-        uint                      hit_cnt, index, prev_id, allele_id, hits_size, stop, top_hit;
-        int                       d;
-        vector<pair<char, uint> > cigar;
-        pair<allele_type, int>    cat_hit;
-        string                    cat_seq;
-        int                       num_kmers = con_len - kmer_len + 1;
+        KmerHashMap::iterator    h;
+        AlignRes                 aln_res;
+        vector<char *>           kmers;
+        set<string>              uniq_kmers;
+        vector<int>              hits;
+        vector<pair<int, int>>   ordered_hits;
+        uint                     hit_cnt, index, prev_id, allele_id, hits_size, stop, top_hit;
+        int                      d;
+        vector<pair<char, uint>> cigar;
+        pair<allele_type, int>   cat_hit;
+        string                   cat_seq;
+        int                      num_kmers = con_len - kmer_len + 1;
 
         GappedAln *aln = new GappedAln();
 
@@ -993,7 +986,7 @@ int find_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *> &sa
 
             i = sample.find(keys[k]);
 
-            vector<pair<allele_type, string> >::iterator r, s;
+            vector<pair<allele_type, string>>::iterator r, s;
 
             //
             // Iterate through the possible SAMPLE alleles
@@ -1165,8 +1158,8 @@ int write_catalog(map<int, CLocus *> &catalog) {
 }
 
 int merge_allele(Locus *locus, SNP *snp) {
-    map<int, pair<string, SNP *> > columns;
-    map<int, pair<string, SNP *> >::iterator c;
+    map<int, pair<string, SNP *>> columns;
+    map<int, pair<string, SNP *>>::iterator c;
     vector<SNP *>::iterator i;
     SNP *lsnp;
 
@@ -1213,7 +1206,7 @@ int merge_allele(Locus *locus, SNP *snp) {
         columns[snp->col] = make_pair("merge", snp);
     }
 
-    vector<pair<string, SNP *> > merged_snps;
+    vector<pair<string, SNP *>> merged_snps;
 
     for (c = columns.begin(); c != columns.end(); c++)
         merged_snps.push_back((*c).second);
@@ -1238,7 +1231,7 @@ int merge_allele(Locus *locus, SNP *snp) {
     }
 
     map<string, int>::iterator j;
-    vector<pair<string, SNP *> >::iterator k;
+    vector<pair<string, SNP *>>::iterator k;
 
     for (j = locus->alleles.begin(); j != locus->alleles.end(); j++) {
         allele     = j->first;
@@ -1277,7 +1270,7 @@ int merge_allele(Locus *locus, SNP *snp) {
 
 int CLocus::merge_snps(Locus *matched_tag) {
     map<int, pair<string, SNP *>> columns;
-    vector<pair<string, SNP *>> merged_snps;
+    vector<pair<string, SNP *>>   merged_snps;
     set<string> merged_alleles;
     SNP *csnp;
 
@@ -1560,7 +1553,7 @@ int
 populate_kmer_hash(map<int, CLocus *> &catalog, CatKmerHashMap &kmer_map, vector<char *> &kmer_map_keys, int kmer_len)
 {
     map<int, CLocus *>::iterator it;
-    vector<pair<allele_type, string> >::iterator allele;
+    vector<pair<allele_type, string>>::iterator allele;
     vector<char *> kmers;
     CLocus        *tag;
     char          *hash_key;
@@ -1609,12 +1602,9 @@ populate_kmer_hash(map<int, CLocus *> &catalog, CatKmerHashMap &kmer_map, vector
 int
 write_simple_output(CLocus *tag, ofstream &cat_file, ofstream &snp_file, ofstream &all_file)
 {
-    vector<SNP *>::iterator           snp_it;
-    map<string, int>::iterator        all_it;
-    vector<pair<int, int> >::iterator src_it;
     string sources;
 
-    for (src_it = tag->sources.begin(); src_it != tag->sources.end(); src_it++) {
+    for (auto src_it = tag->sources.begin(); src_it != tag->sources.end(); src_it++) {
         stringstream s;
         s << (*src_it).first << "_" << (*src_it).second << ",";
         sources += s.str();
@@ -1634,8 +1624,8 @@ write_simple_output(CLocus *tag, ofstream &cat_file, ofstream &snp_file, ofstrea
     //
     // Output the SNPs associated with the catalog tag
     //
-    for (snp_it = tag->snps.begin(); snp_it != tag->snps.end(); snp_it++) {
-        snp_file <<   tag->id        << "\t"
+    for (auto snp_it = tag->snps.begin(); snp_it != tag->snps.end(); snp_it++) {
+        snp_file <<   tag->id      << "\t"
                  << (*snp_it)->col << "\t";
 
         switch((*snp_it)->type) {
@@ -1661,7 +1651,7 @@ write_simple_output(CLocus *tag, ofstream &cat_file, ofstream &snp_file, ofstrea
     //
     // Output the alleles associated with the two matched tags
     //
-    for (all_it = tag->alleles.begin(); all_it != tag->alleles.end(); all_it++)
+    for (auto all_it = tag->alleles.begin(); all_it != tag->alleles.end(); all_it++)
         all_file <<
             tag->id       << "\t" <<
             all_it->first << "\t" <<
@@ -1674,13 +1664,10 @@ write_simple_output(CLocus *tag, ofstream &cat_file, ofstream &snp_file, ofstrea
 int
 write_gzip_output(CLocus *tag, gzFile &cat_file, gzFile &snp_file, gzFile &all_file)
 {
-    vector<SNP *>::iterator           snp_it;
-    map<string, int>::iterator        all_it;
-    vector<pair<int, int> >::iterator src_it;
     string       sources;
     stringstream sstr;
 
-    for (src_it = tag->sources.begin(); src_it != tag->sources.end(); src_it++) {
+    for (auto src_it = tag->sources.begin(); src_it != tag->sources.end(); src_it++) {
         sstr << (*src_it).first << "_" << (*src_it).second << ",";
     }
     sources = sstr.str();
@@ -1704,7 +1691,7 @@ write_gzip_output(CLocus *tag, gzFile &cat_file, gzFile &snp_file, gzFile &all_f
     //
     // Output the SNPs associated with the catalog tag
     //
-    for (snp_it = tag->snps.begin(); snp_it != tag->snps.end(); snp_it++) {
+    for (auto snp_it = tag->snps.begin(); snp_it != tag->snps.end(); snp_it++) {
         sstr << "0"            << "\t"
              <<   tag->id      << "\t"
              << (*snp_it)->col << "\t";
@@ -1735,7 +1722,7 @@ write_gzip_output(CLocus *tag, gzFile &cat_file, gzFile &snp_file, gzFile &all_f
     //
     // Output the alleles associated with the two matched tags
     //
-    for (all_it = tag->alleles.begin(); all_it != tag->alleles.end(); all_it++)
+    for (auto all_it = tag->alleles.begin(); all_it != tag->alleles.end(); all_it++)
         sstr << "0"     << "\t"
              << tag->id << "\t"
              << all_it->first << "\t"
