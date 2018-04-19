@@ -523,6 +523,11 @@ search_for_gaps(map<int, MergedStack *> &merged)
         con_len = miter->second->len > con_len ? miter->second->len : con_len;
     size_t kmer_len  = set_kmer_len ? 19 : global_kmer_len;
 
+    //
+    // Calculate the minimum number of matching k-mers required for a possible sequence match.
+    //
+    uint min_hits = (round((double) con_len * min_match_len) - (kmer_len * max_gaps)) - kmer_len + 1;
+
     populate_kmer_hash(merged, kmer_map, kmer_map_keys, kmer_len);
 
     #pragma omp parallel private(tag_1, tag_2)
@@ -582,8 +587,8 @@ search_for_gaps(map<int, MergedStack *> &merged)
             //
             // Iterate through the list of hits and collapse them down by number of kmer hits per allele.
             //
-            uint hit_cnt, index, prev_id, allele_id, hits_size, stop, top_hit;
-            vector<pair<int, int>> ordered_hits;
+            uint hit_cnt, index, prev_id, allele_id, hits_size, stop;
+            vector<pair<uint, uint>> ordered_hits;
 
             hits_size = hits.size();
 
@@ -605,6 +610,9 @@ search_for_gaps(map<int, MergedStack *> &merged)
                 if (index < hits_size)
                     prev_id = hits[index];
 
+                // Don't compare tag_1 against itself.
+                if (tag_1->id == (int) allele_id) continue;
+
                 ordered_hits.push_back(make_pair(allele_id, hit_cnt));
 
             } while (index < hits_size);
@@ -618,12 +626,12 @@ search_for_gaps(map<int, MergedStack *> &merged)
             sort(ordered_hits.begin(), ordered_hits.end(), compare_pair_intint);
 
             //
-            // Only try to align the sequences with the most kmers in common.
+            // Align at least one locus, regardless of kmer count, or more than one locus if
+            // there are sufficient k-mer hits supporting it.
             //
-            top_hit = ordered_hits[0].second;
-            stop    = 1;
+            stop = 1;
             for (uint j = 1; j < ordered_hits.size(); j++)
-                if ((uint) ordered_hits[j].second < top_hit) {
+                if (ordered_hits[j].second < min_hits) {
                     stop = j;
                     break;
                 }
@@ -637,9 +645,6 @@ search_for_gaps(map<int, MergedStack *> &merged)
 
                 // Don't compute distances for masked tags
                 if (tag_2->masked) continue;
-
-                // Don't compare tag_1 against itself.
-                if (tag_1 == tag_2) continue;
 
                 //
                 // Don't compare tags that are already at or above max_locus_stacks.
