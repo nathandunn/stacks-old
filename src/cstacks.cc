@@ -784,7 +784,6 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
     KmerHashMap                       kmer_map;
     map<int, pair<allele_type, int> > allele_map;
     vector<char *>                    kmer_map_keys;
-    map<int, QLocus *>::iterator      it;
     QLocus *tag_1;
     CLocus *tag_2;
 
@@ -793,7 +792,7 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
     // our map to a vector of integer keys.
     //
     vector<int> keys;
-    for (it = sample.begin(); it != sample.end(); it++)
+    for (auto it = sample.begin(); it != sample.end(); it++)
         keys.push_back(it->first);
 
     //
@@ -802,20 +801,8 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
     //
     int con_len   = strlen(sample[keys[0]]->con);
     int kmer_len  = 19;
-
-    //
-    // Calculate the minimum number of matching k-mers required for a possible sequence match.
-    //
-    int min_hits = (round((double) con_len * min_match_len) - (kmer_len * max_gaps)) - kmer_len + 1;
-
-    // cerr << "  Searching with a k-mer length of " << kmer_len << " (" << num_kmers << " k-mers per read); " << min_hits << " k-mer hits required.\n";
-
-    // clock_t time_1, time_2, time_3, time_4;
-    // double  per_locus = 0.0;
-
-    // time_1 = clock();
+    
     populate_kmer_hash(catalog, kmer_map, kmer_map_keys, allele_map, kmer_len);
-    // time_2 = clock();
 
     #pragma omp parallel private(tag_1, tag_2)
     {
@@ -845,8 +832,6 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
             //
             if (tag_1->matches.size() > 0)
                 continue;
-
-            // time_3 = clock();
 
             for (auto allele = tag_1->strings.begin(); allele != tag_1->strings.end(); allele++) {
 
@@ -905,8 +890,7 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
                     if (index < hits_size)
                         prev_id = hits[index];
 
-                    if (hit_cnt >= (uint) min_hits)
-                        ordered_hits.push_back(make_pair(allele_id, hit_cnt));
+                    ordered_hits.push_back(make_pair(allele_id, hit_cnt));
 
                 } while (index < hits_size);
 
@@ -924,7 +908,7 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
                 top_hit = ordered_hits[0].second;
                 stop    = 1;
                 for (uint j = 1; j < ordered_hits.size(); j++)
-                    if ((uint)ordered_hits[j].second < top_hit) {
+                    if ((uint) ordered_hits[j].second < top_hit) {
                         stop = j;
                         break;
                     }
@@ -966,9 +950,6 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
                     }
                 }
             }
-
-            // time_4 = clock();
-            // per_locus += (time_4 - time_3);
         }
 
         //
@@ -980,9 +961,6 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
 
         delete aln;
     }
-
-    // cerr << "Time to kmerize catalog: " << time_2 - time_1 << "\n"
-    //      << "Average time per locus:  " << per_locus / (double) keys.size() << "\n";
 
     free_kmer_hash(kmer_map, kmer_map_keys);
 
