@@ -281,36 +281,59 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
             continue;
         }
 
-        //
-        // Check for multiple matches. We will reduce the list of Match objects, which
-        // contain matches to multiple alleles for a single locus, to the smallest distance
-        // for a locus.
-        //
-        map<int, uint> local_matches;
-        for (uint k = 0; k < qtag->matches.size(); k++) {
-            if (local_matches.count(qtag->matches[k]->cat_id) == 0)
-                local_matches[qtag->matches[k]->cat_id] = qtag->matches[k]->dist;
-            else if (qtag->matches[k]->dist < local_matches[qtag->matches[k]->cat_id])
-                local_matches[qtag->matches[k]->cat_id] = qtag->matches[k]->dist;
-        }
+        // cerr << "Tag " << qtag->id << ":\n";
+        // for (uint k = 0; k < qtag->matches.size(); k++)
+        //     cerr << "  Match, qallele: " << qtag->matches[k]->query_type
+        //          << ", Cat ID: " << qtag->matches[k]->cat_id << ", cat allele: " << qtag->matches[k]->cat_type
+        //          << "; dist: " << qtag->matches[k]->dist << "\n";
+        
+        // //
+        // // Check for multiple matches. We will reduce the list of Match objects, which
+        // // contain matches to multiple alleles for a single locus, to the smallest distance
+        // // for a locus.
+        // //
+        // map<int, uint> local_matches;
+        // for (uint k = 0; k < qtag->matches.size(); k++) {
+        //     if (local_matches.count(qtag->matches[k]->cat_id) == 0)
+        //         local_matches[qtag->matches[k]->cat_id] = qtag->matches[k]->dist;
+        //     else if (qtag->matches[k]->dist < local_matches[qtag->matches[k]->cat_id])
+        //         local_matches[qtag->matches[k]->cat_id] = qtag->matches[k]->dist;
+        // }
 
-        uint min_dist =  UINT_MAX;
-        int  cat_id   = -1;
-
         //
-        // Find the minimum distance and then check how many matches have that distance.
+        // Reduce the set of matches to the minimum distance per query allele.
         //
-        for (auto j = local_matches.begin(); j != local_matches.end(); j++)
-            min_dist = j->second < min_dist ? j->second : min_dist;
+        map<allele_type, size_t> min_allele_dist;
+        map<allele_type, size_t> per_allele_match;
+        for (uint k = 0; k < qtag->matches.size(); k++)
+            if (min_allele_dist.count(qtag->matches[k]->query_type) == 0) {
+                min_allele_dist[qtag->matches[k]->query_type]  = qtag->matches[k]->dist;
+                per_allele_match[qtag->matches[k]->query_type] = qtag->matches[k]->cat_id;
+            } else if (qtag->matches[k]->dist < min_allele_dist[qtag->matches[k]->query_type]) {
+                min_allele_dist[qtag->matches[k]->query_type]  = qtag->matches[k]->dist;
+                per_allele_match[qtag->matches[k]->query_type] = qtag->matches[k]->cat_id;
+            }
 
+        // //
+        // // Find the minimum distance and then check how many matches have that distance.
+        // //
+        // for (auto j = local_matches.begin(); j != local_matches.end(); j++)
+        //     min_dist = j->second < min_dist ? j->second : min_dist;
+
+        int cat_id = -1;
         set<int> catalog_ids;
         //
         // Iterate over all of the matches of minimal distance and merge this query locus into the catalog locus.
         //
-        for (auto j = local_matches.begin(); j != local_matches.end(); j++) {
-            if (j->second > min_dist)
-                continue;
+        for (auto j = per_allele_match.begin(); j != per_allele_match.end(); j++) {
 
+            cat_id = j->second;
+            //
+            // If we already handled this catalog locus, skip the allele.
+            //
+            if (catalog_ids.count(cat_id) > 0)
+                continue;
+            
             //
             // Make a copy of the query tag so that if we are merging it into multiple catalog
             // loci (which will subsequently be collapsed), we will have an unmodified copy for
@@ -318,7 +341,6 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
             //
             QLocus *qtag_merge = new QLocus(*qtag);
             
-            cat_id      = j->first;
             ctag        = catalog.at(cat_id);
             cigar_str   = "";
             match_index = -1;
@@ -404,7 +426,6 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
 
             } else {
                 unique_matches++;
-                // ctag->match_cnt++;
             }
 
             //

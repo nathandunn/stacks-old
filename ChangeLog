@@ -1,3 +1,10 @@
+Stacks 2.0
+---------------------------------
+    Feature: modified cstacks so that when a sample locus matches two or more catalog loci, those catalog
+             loci are combined, or rolled-up, reducing undermerged loci that generate excess homozygote calls.
+    Feature: modified tsv2bam so that when two loci from the same sample match the same catalog locus, those
+             loci are combined.
+
 Stacks 2.0 Beta 10 - Apr 10, 2018
 ---------------------------------
     Feature: Improved gapped alignment for secondary reads in ustacks.
