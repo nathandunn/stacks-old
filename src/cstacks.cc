@@ -610,20 +610,21 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
         keys.push_back(it->first);
 
     //
-    // Calculate the number of k-mers we will generate. If kmer_len == 0,
-    // determine the optimal length for k-mers.
+    // Calculate the number of k-mers we will generate. If specified,
+    // determine the optimal length for k-mers. Find the minimal sequence length
+    // to use as a base to set the kmer size.
     //
-    int con_len = strlen(sample[keys[0]]->con);
+    uint con_len = UINT_MAX;
+    for (uint i = 0; i < keys.size(); i++) {
+        tag_1 = sample[keys[i]];
+        con_len = sample[keys[i]]->len < con_len ? sample[keys[i]]->len : con_len;
+    }
     if (set_kmer_len) kmer_len = determine_kmer_length(con_len, ctag_dist);
 
     //
     // Calculate the minimum number of matching k-mers required for a possible sequence match.
     //
     int min_hits = calc_min_kmer_matches(kmer_len, ctag_dist, con_len, set_kmer_len ? true : false);
-
-    // cerr << "  Distance allowed between stacks: " << ctag_dist
-    //      << "; searching with a k-mer length of " << kmer_len << " (" << num_kmers << " k-mers per read); "
-    //      << min_hits << " k-mer hits required.\n";
 
     populate_kmer_hash(catalog, kmer_map, kmer_map_keys, allele_map, kmer_len);
 
@@ -647,10 +648,9 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
         for (uint i = 0; i < keys.size(); i++) {
             tag_1 = sample[keys[i]];
 
-            // time_3 = clock();
-
             for (auto allele = tag_1->strings.begin(); allele != tag_1->strings.end(); allele++) {
-
+                assert(kmer_len <= allele->second.length());
+                
                 num_kmers = allele->second.length() - kmer_len + 1;
                 generate_kmers_lazily(allele->second.c_str(), kmer_len, num_kmers, kmers);
 
@@ -747,9 +747,6 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
 
             // Sort the vector of distances.
             sort(tag_1->matches.begin(), tag_1->matches.end(), compare_matches);
-
-            // time_4 = clock();
-            // per_locus += (time_4 - time_3);
         }
 
         //
@@ -759,9 +756,6 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
             delete [] kmers[j];
         kmers.clear();
     }
-
-    // cerr << "Time to kmerize catalog: " << time_2 - time_1 << "\n"
-    //      << "Average time per locus:  " << per_locus / (double) keys.size() << "\n";
 
     free_kmer_hash(kmer_map, kmer_map_keys);
 
