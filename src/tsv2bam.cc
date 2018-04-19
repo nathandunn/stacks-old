@@ -40,6 +40,7 @@ FileT pe_reads_format;
 int num_threads = 1;
 
 bool dbg_reversed_pe_reads = false;
+bool dbg_only_bijective_loci = false;
 
 //
 // Extra globals.
@@ -186,12 +187,11 @@ void run(const vector<int>& cloc_ids,
             throw exception();
         }
     }
-
-    //
-    // Retrieve the list of bijective loci.
-    //
     unordered_map<int, int> sloc_to_cloc;
-    {
+    if (!dbg_only_bijective_loci) {
+        for (const CatMatch* m : matches)
+            sloc_to_cloc[m->tag_id] = m->cat_id;
+    } else { // Retrieve the list of bijective loci.
         vector<pair<int, int> > bij_loci = retrieve_bijective_loci(matches);
         cout << bij_loci.size() << " sample loci ("
              << as_percentage((double) bij_loci.size() / sloci.size())
@@ -201,12 +201,11 @@ void run(const vector<int>& cloc_ids,
             cerr << "Error: No usable matches to the catalog.\n";
             throw exception();
         }
-        sloc_to_cloc.reserve(bij_loci.size());
         sloc_to_cloc.insert(bij_loci.begin(), bij_loci.end());
     }
 
     //
-    // Discard loci that aren't bijective with the catalog.
+    // Discard loci that don't have matches.
     //
     for (auto sloc=sloci.begin(); sloc!=sloci.end();) {
         if (sloc_to_cloc.count(sloc->second->id)) {
@@ -243,7 +242,7 @@ void run(const vector<int>& cloc_ids,
         // principle not contain them. (But what happens when read lengths
         // are variable, especially if not all individuals are in the catalog?)
         size_t cloc_len = cloc_lengths.at(m->cat_id);
-        
+
         assert(sloc->len <= cloc_len);
         assert(m->cigar == NULL || (cigar_is_MDI(c) && strchr(m->cigar, 'I') == NULL));
 
@@ -270,15 +269,18 @@ void run(const vector<int>& cloc_ids,
     //
     struct Loc {
         int cloc_id;
-        Locus* sloc; // 'Sample' locus (includes the fw reads in Locus::comp and Locus::reads)
-        map<DNASeq4, vector<string>>* pe_reads;
+        vector<Locus*> sloci; // 'Sample' locus (includes the fw reads in Locus::comp and Locus::reads)
+        map<DNASeq4, vector<string>> pe_reads;
         bool operator< (const Loc& other) const {return cloc_id < other.cloc_id;}
     };
-    vector<Loc> sorted_loci;
+    map<int,Loc> sorted_loci;
     {
-        for (auto& sloc : sloci)
-            sorted_loci.push_back({sloc_to_cloc.at(sloc.second->id), sloc.second, NULL});
-        std::sort(sorted_loci.begin(), sorted_loci.end());
+        for (auto& sloc : sloci) {
+            int cloc = sloc_to_cloc.at(sloc.second->id);
+            auto itr = sorted_loci.insert({cloc, {}}).first;
+            itr->second.cloc_id = cloc;
+            itr->second.sloci.push_back(sloc.second);
+        }
     }
 
     //
@@ -286,10 +288,6 @@ void run(const vector<int>& cloc_ids,
     //
     if(!pe_reads_paths.empty()) {
         string pe_reads_path = pe_reads_paths.at(sample_i);
-
-        // Initialize the paired-end read structures.
-        for (Loc& loc : sorted_loci)
-            loc.pe_reads = new map<DNASeq4, vector<string>>();
 
         // Open the paired-end reads file.
         Input* pe_reads_f = NULL;
@@ -304,11 +302,13 @@ void run(const vector<int>& cloc_ids,
 
         // Get the read-name-to-locus map.
         unordered_map<string, Loc*> readname_to_loc;
-        for (Loc& loc : sorted_loci) {
-            for (const char* read_name : loc.sloc->comp) {
-                string read_name2 (read_name);
-                strip_read_number(read_name2);
-                readname_to_loc.insert({move(read_name2), &loc});
+        for (auto& loc : sorted_loci) {
+            for (const Locus* sloc : loc.second.sloci) {
+                for (const char* read_name : sloc->comp) {
+                    string read_name2 (read_name);
+                    strip_read_number(read_name2);
+                    readname_to_loc.insert({move(read_name2), &loc.second});
+                }
             }
         }
 
@@ -328,7 +328,7 @@ void run(const vector<int>& cloc_ids,
                 continue;
 
             ++n_used_reads;
-            map<DNASeq4, vector<string> >& loc_stacks = *loc_it->second->pe_reads;
+            map<DNASeq4, vector<string> >& loc_stacks = loc_it->second->pe_reads;
             pair<const DNASeq4,vector<string>>& stack = *loc_stacks.insert({DNASeq4(seq.seq), vector<string>()}).first;
             stack.second.push_back(move(id));
         }
@@ -366,32 +366,35 @@ void run(const vector<int>& cloc_ids,
         BamRecord rec;
         Cigar cig;
         for (auto& loc : sorted_loci) {
-            while (targets[target_i] != loc.cloc_id)
+            assert(loc.first == loc.second.cloc_id);
+            while (targets[target_i] != loc.second.cloc_id)
                 ++target_i;
 
             if(!pe_reads_paths.empty()) {
                 // Write the forward reads.
-                for (size_t j=0; j<loc.sloc->comp.size();++j) {
-                    string name (loc.sloc->comp[j]);
-                    strip_read_number(name);
+                for (const Locus* sloc : loc.second.sloci) {
+                    for (size_t j=0; j<sloc->comp.size();++j) {
+                        string name (sloc->comp[j]);
+                        strip_read_number(name);
 
-                    const char* seq = loc.sloc->reads[j];
-                    size_t seq_len = strlen(seq);
-                    cig.assign({{'M', seq_len}});
-                    rec.assign(
-                            name,
-                            BAM_FPAIRED | BAM_FREAD1,
-                            target_i,
-                            0,
-                            cig,
-                            DNASeq4(seq, seq_len),
-                            sample_id
-                            );
-                    bam_f.write(rec);
+                        const char* seq = sloc->reads[j];
+                        size_t seq_len = strlen(seq);
+                        cig.assign({{'M', seq_len}});
+                        rec.assign(
+                                name,
+                                BAM_FPAIRED | BAM_FREAD1,
+                                target_i,
+                                0,
+                                cig,
+                                DNASeq4(seq, seq_len),
+                                sample_id
+                                );
+                        bam_f.write(rec);
+                    }
                 }
 
                 // Write the paired-end reads.
-                for (const pair<DNASeq4, vector<string>>& stack : *loc.pe_reads) {
+                for (const pair<DNASeq4, vector<string>>& stack : loc.second.pe_reads) {
                     for (const string& name : stack.second) {
                         cig.assign({{'X', 1}, {'S', stack.first.length()-1}});
                         rec.assign(
@@ -411,21 +414,23 @@ void run(const vector<int>& cloc_ids,
                 // Write the (possibly pooled) reads.
                 // In this case we do not expect the read names to have a
                 // specific suffix, and we do not set the FREAD1 flag.
-                for (size_t j=0; j<loc.sloc->comp.size();++j) {
-                    const char* name = loc.sloc->comp[j];
-                    const char* seq = loc.sloc->reads[j];
-                    size_t seq_len = strlen(seq);
-                    cig.assign({{'M', seq_len}});
-                    rec.assign(
-                            string(name),
-                            0,
-                            target_i,
-                            0,
-                            cig,
-                            DNASeq4(seq, seq_len),
-                            sample_id
-                            );
-                    bam_f.write(rec);
+                for (const Locus* sloc : loc.second.sloci) {
+                    for (size_t j=0; j<sloc->comp.size();++j) {
+                        const char* name = sloc->comp[j];
+                        const char* seq = sloc->reads[j];
+                        size_t seq_len = strlen(seq);
+                        cig.assign({{'M', seq_len}});
+                        rec.assign(
+                                string(name),
+                                0,
+                                target_i,
+                                0,
+                                cig,
+                                DNASeq4(seq, seq_len),
+                                sample_id
+                                );
+                        bam_f.write(rec);
+                    }
                 }
             }
         }
@@ -438,9 +443,6 @@ void run(const vector<int>& cloc_ids,
         delete m;
     for (auto& sloc : sloci)
         delete sloc.second;
-    if(!pe_reads_paths.empty())
-        for (Loc& loc : sorted_loci)
-            delete loc.pe_reads;
 }
 
 void cigar_apply_to_locus(Locus* l, const Cigar& c) {
@@ -512,6 +514,7 @@ void parse_command_line(int argc, char* argv[]) {
         {"pe-reads-dir", required_argument, NULL, 'R'},
         {"threads",      required_argument, NULL, 't'},
         {"dbg-reversed-pe-reads", no_argument, NULL, 2000},
+        {"dbg-only-bijective-loci", no_argument, NULL, 2001},
         {0, 0, 0, 0}
     };
 
@@ -564,6 +567,9 @@ void parse_command_line(int argc, char* argv[]) {
             break;
         case 2000: // reversed-pe-reads
             dbg_reversed_pe_reads = true;
+            break;
+        case 2001: // dbg-only-bijective-loci
+            dbg_only_bijective_loci = true;
             break;
         default:
             bad_args();
