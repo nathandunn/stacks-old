@@ -633,7 +633,7 @@ search_for_gaps(map<int, MergedStack *> &merged)
             // check its full length to verify a match.
             //
             for (uint j = 0; j < stop; j++) {
-                tag_2 = merged[ordered_hits[i].first];
+                tag_2 = merged.at(ordered_hits[j].first);
 
                 // Don't compute distances for masked tags
                 if (tag_2->masked) continue;
