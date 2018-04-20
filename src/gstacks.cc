@@ -222,7 +222,7 @@ try {
 
     bool eof = false;
     #pragma omp parallel num_threads(num_threads)
-    try {
+    { try {
         LocusProcessor loc_proc (bam_mpopi->samples().size());
         Timers& t = loc_proc.timers();
 
@@ -232,7 +232,7 @@ try {
         while(omp_return == 0) {
             t.reading.restart();
             #pragma omp critical(read)
-            try {
+            { try {
                 if (!eof && omp_return == 0) {
                     if (input_type == GStacksInputT::denovo_popmap || input_type == GStacksInputT::denovo_merger)
                         eof = !bam_cloc_reader->read_one_locus(loc);
@@ -242,7 +242,7 @@ try {
                 thread_eof = eof;
             } catch (exception& e) {
                 omp_return = stacks_handle_exceptions(e);
-            }
+            }}
             t.reading.stop();
             if (thread_eof || omp_return != 0)
                 break;
@@ -337,7 +337,7 @@ try {
     } catch (exception& e) {
         #pragma omp critical(exc)
         omp_return = stacks_handle_exceptions(e);
-    }
+    }}
     if (omp_return != 0)
         return omp_return;
     t_parallel.stop();

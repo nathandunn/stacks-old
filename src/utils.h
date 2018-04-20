@@ -107,44 +107,6 @@ public:
 };
 
 //
-// Counts: A class to store nucleotide counts.
-// e.g. Counts<Nt2> is a std::array of {n_A, n_C, n_G, n_T}.
-//
-template<typename Nt>
-class Counts {
-    // Array of counts, containing the count of A's at index Nt::a,of C's at
-    // index Nt::c, etc.
-    array<size_t,Nt::max()+1> counts_;
-
-public:
-    Counts() {
-        for (size_t& c : counts_)
-            c=-1;
-        for (Nt nt : Nt::all)
-            counts_[size_t(nt)] = 0;
-    }
-    Counts(const Counts<Nt4>& nt4counts);
-    Counts(const Counts<Nt2>& nt2counts);
-
-    void clear() {for (Nt nt : Nt::all) counts_[size_t(nt)]=0;}
-    void increment(Nt nt) {++counts_[size_t(nt)];}
-    void increment(Nt nt, size_t cnt) {counts_[size_t(nt)] += cnt;}
-
-    // Get the count for a given nucleotide.
-    size_t operator[] (Nt nt) const {return counts_[size_t(nt)];}
-    const array<size_t,Nt::max()+1>& arr() const {return counts_;}
-
-    size_t sum() const {return (*this)[Nt::a] + (*this)[Nt::c] + (*this)[Nt::g] + (*this)[Nt::t];}
-    array<pair<size_t,Nt>,4> sorted() const;
-
-    Counts& operator+= (const Counts& other)
-        {for (Nt nt : Nt::all) counts_[size_t(nt)] += other.counts_[size_t(nt)]; return *this;}
-
-    // Print the counts.
-    template<typename Nt_> friend ostream& operator<< (ostream& os, const Counts<Nt_>& cnts);
-};
-
-//
 // GtLiks: A class to store the likelihoods of SNP genotypes.
 //
 class GtLiks {
@@ -410,7 +372,6 @@ void VersatileWriter::gzputs_(const char* s) {
     if (gzputs(gzfile_, s) == -1)
         throw ios::failure("gzputs");
 }
-
 
 inline
 VersatileWriter& operator<< (VersatileWriter& w, const string& s) {

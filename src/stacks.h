@@ -335,48 +335,6 @@ bool PStack::operator< (const PStack& other) const {
         return *seq < *other.seq;
 }
 
-template<> inline
-Counts<Nt2>::Counts(const Counts<Nt2>& nt2counts) : counts_(nt2counts.counts_) {}
-template<> inline
-Counts<Nt2>::Counts(const Counts<Nt4>& nt4counts) : Counts() {
-    for (Nt2 nt2 : Nt2::all) // We thus ignore Nt4::n.
-        counts_[size_t(nt2)] = nt4counts[Nt4(nt2)];
-}
-template<> inline
-Counts<Nt4>::Counts(const Counts<Nt4>& nt4counts) : counts_(nt4counts.counts_) {}
-template<> inline
-Counts<Nt4>::Counts(const Counts<Nt2>& nt2counts) : Counts() {
-    for (Nt2 nt2 : Nt2::all)
-        counts_[size_t(Nt4(nt2))] = nt2counts[nt2];
-}
-
-template<typename Nt>
-array<pair<size_t,Nt>,4> Counts<Nt>::sorted() const {
-    array<pair<size_t,Nt>,4> arr {{
-        {(*this)[Nt::t], Nt::t},
-        {(*this)[Nt::g], Nt::g},
-        {(*this)[Nt::c], Nt::c},
-        {(*this)[Nt::a], Nt::a}
-    }};
-    // Sort by decreasing value. Primarily on the count, secondarily on
-    // the Nt4 value.
-    std::sort(arr.rbegin(), arr.rend());
-    return arr;
-}
-
-template<typename Nt>
-ostream& operator<< (ostream& os, const Counts<Nt>& cnts) {
-    bool first=true;
-    for (Nt nt : Nt::all) {
-        if (first)
-            first = false;
-        else
-            os << " ";
-        os << nt << ":" << cnts[nt];
-    }
-    return os;
-}
-
 inline
 bool Read::is_read2() const {
     return name.length() >= 2
