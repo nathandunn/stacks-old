@@ -68,6 +68,7 @@ class SNP {
     }
     SNP(const SNP &other) {
         col    = other.col;
+        type   = other.type;
         lratio = other.lratio;
         rank_1 = other.rank_1;
         rank_2 = other.rank_2;
