@@ -769,9 +769,8 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
     // OpenMP can't parallelize random access iterators, so we convert
     // our map to a vector of integer keys.
     //
-    map<int, QLocus *>::iterator it;
     vector<int> keys;
-    for (it = sample.begin(); it != sample.end(); it++)
+    for (auto it = sample.begin(); it != sample.end(); it++)
         keys.push_back(it->first);
 
     //
@@ -780,13 +779,6 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
     //
     int con_len   = strlen(sample[keys[0]]->con);
     int num_kmers = con_len - gapped_kmer_len + 1;
-
-    //
-    // Calculate the minimum number of matching k-mers required for a possible sequence match.
-    //
-    int min_hits = (round((double) con_len * min_match_len) - (gapped_kmer_len * max_gaps)) - gapped_kmer_len + 1;
-
-    // cerr << "  Searching with a k-mer length of " << gapped_kmer_len << " (" << num_kmers << " k-mers per read); " << min_hits << " k-mer hits required.\n";
 
     uint gapped_aln = 0;
     uint matches    = 0;
@@ -800,20 +792,20 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
 
     #pragma omp parallel
     {
-        QLocus                      *query;
-        Locus                       *tag_2;
-        KmerHashMap::iterator        h;
-        AlignRes                     aln_res;
-        vector<char *>               kmers;
-        set<string>                  uniq_kmers;
-        vector<int>                  hits;
-        vector<pair<int, int> >      ordered_hits;
-        uint                         hit_cnt, index, prev_id, allele_id, hits_size, stop, top_hit;
-        pair<allele_type, int>       cat_hit;
-        string                       query_allele, query_seq, cat_allele, cat_seq;
-        map<string, vector<string> > haplo_hits;
-        set<int>                     loci_hit;
-        vector<pair<char, uint> >    cigar;
+        QLocus                     *query;
+        Locus                      *tag_2;
+        KmerHashMap::iterator       h;
+        AlignRes                    aln_res;
+        vector<char *>              kmers;
+        set<string>                 uniq_kmers;
+        vector<int>                 hits;
+        vector<pair<int, int>>      ordered_hits;
+        uint                        hit_cnt, index, prev_id, allele_id, hits_size, stop, top_hit;
+        pair<allele_type, int>      cat_hit;
+        string                      query_allele, query_seq, cat_allele, cat_seq;
+        map<string, vector<string>> haplo_hits;
+        set<int>                    loci_hit;
+        vector<pair<char, uint>>    cigar;
 
         GappedAln *aln = new GappedAln();
 
@@ -832,12 +824,11 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
 
             gapped_aln++;
 
-            map<allele_type, map<allele_type, AlignRes> > query_hits;
+            map<allele_type, map<allele_type, AlignRes>> query_hits;
 
             loci_hit.clear();
 
-            for (vector<pair<allele_type, string> >::iterator allele = query->strings.begin(); allele != query->strings.end(); allele++) {
-                // cerr << "Allele: " << query_allele << "\n";
+            for (auto allele = query->strings.begin(); allele != query->strings.end(); allele++) {
 
                 query_allele = allele->first;
                 query_seq    = allele->second;
@@ -859,7 +850,7 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
                 //
                 // Lookup the occurances of each k-mer in the kmer_map
                 //
-                for (set<string>::iterator j = uniq_kmers.begin(); j != uniq_kmers.end(); j++) {
+                for (auto j = uniq_kmers.begin(); j != uniq_kmers.end(); j++) {
 
                     h = kmer_map.find(j->c_str());
 
@@ -897,8 +888,7 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
                     if (index < hits_size)
                         prev_id = hits[index];
 
-                    if (hit_cnt >= (uint) min_hits)
-                        ordered_hits.push_back(make_pair(allele_id, hit_cnt));
+                    ordered_hits.push_back(make_pair(allele_id, hit_cnt));
 
                 } while (index < hits_size);
 
@@ -916,7 +906,7 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
                 top_hit = ordered_hits[0].second;
                 stop    = 1;
                 for (uint j = 1; j < ordered_hits.size(); j++)
-                    if ((uint)ordered_hits[j].second < top_hit) {
+                    if ((uint) ordered_hits[j].second < top_hit) {
                         stop = j;
                         break;
                     }
@@ -945,7 +935,6 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
                         aln->parse_cigar(cigar);
 
                         aln_res = aln->result();
-                        // cerr << "CIGAR: " << aln_res.cigar << "; pct_id: " << aln_res.pct_id << "\n";
                         //
                         // At this point in the analysis, all possible alleles we want to detect must already
                         // be present in the catalog. Therefore, we should reject any alignment that implies a
@@ -962,7 +951,6 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
                         if (aln_res.gap_cnt <= (max_gaps + 1) &&
                             aln_res.pct_id  >= min_match_len  &&
                             dist(cat_seq.c_str(), query_seq.c_str(), cigar) == 0) {
-                            // cerr << "Adding match: " << aln_res.cigar << "\n";
                             loci_hit.insert(tag_2->id);
                             query_hits[query_allele][cat_allele] = aln_res;
                         }
@@ -1020,8 +1008,6 @@ verify_gapped_match(map<int, Locus *> &catalog, QLocus *query,
     int    cat_id = *(loci_hit.begin());
     Locus *cat    = catalog[cat_id];
 
-    map<allele_type, map<allele_type, AlignRes> >::iterator query_it;
-    map<allele_type, AlignRes>::iterator                    cat_it;
     AlignRes aln_res;
     string   query_allele, cat_allele, converted_query_allele, qseq;
     int      query_len;
@@ -1031,9 +1017,9 @@ verify_gapped_match(map<int, Locus *> &catalog, QLocus *query,
     // 2. Check if there was a consistent alignment between the alleles to the catalog locus.
     //
     set<string> cigars;
-    for (query_it = query_hits.begin(); query_it != query_hits.end(); query_it++) {
+    for (auto query_it = query_hits.begin(); query_it != query_hits.end(); query_it++) {
         map<allele_type, AlignRes> &cat_hits = query_it->second;
-        for (cat_it = cat_hits.begin(); cat_it != cat_hits.end(); cat_it++)
+        for (auto cat_it = cat_hits.begin(); cat_it != cat_hits.end(); cat_it++)
             cigars.insert(cat_it->second.cigar);
     }
     if (cigars.size() > 1) {
@@ -1046,7 +1032,7 @@ verify_gapped_match(map<int, Locus *> &catalog, QLocus *query,
     //
     // 3. Make sure the query has no SNPs unaccounted for in the catalog.
     //
-    vector<pair<char, uint> > cigar;
+    Cigar cigar;
     query_len = parse_cigar(invert_cigar(*cigars.begin()).c_str(), cigar);
     adjust_snps_for_gaps(cigar, query);
     qseq = apply_cigar_to_seq(query->con, cigar);
@@ -1054,10 +1040,9 @@ verify_gapped_match(map<int, Locus *> &catalog, QLocus *query,
 
     int min_tag_len = (uint)query_len > cat->len ? query_len : cat->len;
 
-    vector<SNP *>::iterator i, j;
     bool found;
 
-    for (i = query->snps.begin(); i != query->snps.end(); i++) {
+    for (auto i = query->snps.begin(); i != query->snps.end(); i++) {
         found = false;
         //
         // SNP occurs in a column that is beyond the length of the catalog
@@ -1065,7 +1050,7 @@ verify_gapped_match(map<int, Locus *> &catalog, QLocus *query,
         if ((int)(*i)->col > min_tag_len - 1)
             continue;
 
-        for (j = cat->snps.begin(); j != cat->snps.end(); j++) {
+        for (auto j = cat->snps.begin(); j != cat->snps.end(); j++) {
             if ((*i)->col == (*j)->col)
                 found = true;
         }
@@ -1083,13 +1068,13 @@ verify_gapped_match(map<int, Locus *> &catalog, QLocus *query,
     //
     // 4. Assign the allele hits after verifying there is a match between catalog and query allele.
     //
-    for (query_it = query_hits.begin(); query_it != query_hits.end(); query_it++) {
+    for (auto query_it = query_hits.begin(); query_it != query_hits.end(); query_it++) {
         query_allele = query_it->first;
 
         map<allele_type, AlignRes> &cat_hits = query_it->second;
 
         if (cat_hits.size() == 1 && cat_hits.begin()->first == "consensus") {
-            cat_it = cat_hits.begin();
+            auto cat_it = cat_hits.begin();
 
             cat_allele = cat_it->first;
             aln_res    = cat_it->second;
@@ -1101,7 +1086,7 @@ verify_gapped_match(map<int, Locus *> &catalog, QLocus *query,
 
         converted_query_allele = generate_query_allele(cat, query, query_allele);
 
-        cat_it = cat_hits.find(converted_query_allele);
+        auto cat_it = cat_hits.find(converted_query_allele);
 
         if (cat_it != cat_hits.end()) {
             cat_allele = cat_it->first;
@@ -1110,25 +1095,6 @@ verify_gapped_match(map<int, Locus *> &catalog, QLocus *query,
             verified++;
             query->add_match(cat_id, cat_allele, query_allele, 0, invert_cigar(aln_res.cigar));
         }
-        // } else {
-        //     //
-        //     // Check for alleles that have Ns in the query, but not in the catalog, but otherwise match.
-        //     //
-        //     uint match_cnt = 0;
-        //     for (cat_it = cat_hits.begin(); cat_it != cat_hits.end(); cat_it++) {
-        //         cat_allele = cat_it->first;
-
-        //         if (match_alleles(cat_allele, converted_query_allele)) {
-        //             match_cnt++;
-        //             aln_res = cat_it->second;
-        //         }
-        //     }
-
-        //     if (match_cnt == 1) {
-        //         verified++;
-        //         query->add_match(cat_id, cat_allele, query_allele, 0, invert_cigar(aln_res.cigar));
-        //     }
-        // }
     }
 
     if (verified > 0) {
