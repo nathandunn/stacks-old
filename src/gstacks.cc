@@ -1557,7 +1557,7 @@ void LocusProcessor::phase_hets(
                 }
             }
             size_t mac = counts.sorted()[1].first;
-            if (mac >= phasing_min_mac)
+            if (mac >= size_t(phasing_min_mac))
                 // Keep it.
                 snp_cols_reduced.push_back(col);
         }
