@@ -854,9 +854,8 @@ GenotypesExport::write_header()
         this->_fh << "Marker\t";
     this->_fh << "Cnt";
 
-    for (size_t i = 0; i < this->_mpopi->samples().size(); i++) {
+    for (size_t i : this->_mpopi->sample_indexes_orig_order())
         this->_fh << "\t" << this->_mpopi->samples()[i].name;
-    }
     this->_fh << "\n";
 
     return 0;
@@ -887,7 +886,7 @@ GenotypesExport::write_batch(const vector<LocBin *> &loci)
         Datum **d = loci[i]->d;
         string  obshap;
 
-        for (size_t i = 0; i < this->_mpopi->samples().size(); i++) {
+        for (size_t i : this->_mpopi->sample_indexes_orig_order()) {
             this->_fh << "\t";
 
             if (d[i] == NULL)
@@ -1082,7 +1081,7 @@ FastaRawExport::write_batch(const vector<LocBin *> &loci)
         seq = new char[loc->cloc->len + 1];
         strcpy(seq, loc->cloc->con);
 
-        for (uint j = 0; j < this->_mpopi->samples().size(); j++) {
+        for (uint j : this->_mpopi->sample_indexes_orig_order()) {
             if (d[j] == NULL)
                 continue;
 
@@ -1155,7 +1154,7 @@ FastaSamplesExport::write_batch(const vector<LocBin *> &loci)
         seq = new char[loc->cloc->len + 1];
         strcpy(seq, loc->cloc->con);
 
-        for (uint j = 0; j < this->_mpopi->samples().size(); j++) {
+        for (uint j : this->_mpopi->sample_indexes_orig_order()) {
             if (d[j] == NULL)
                 continue;
             if (d[j]->obshap.size() > 2)
@@ -1286,12 +1285,18 @@ GenePopExport::open(const MetaPopInfo *mpopi)
 int
 GenePopExport::write_header()
 {
-    for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
-        const Pop& pop = this->_mpopi->pops()[p];
-        for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
+    //
+    // N.B. For the GENEPOP output, we iterate over samples in the sorted order
+    // rather than in the original one, because samples MUST be grouped by
+    // population.
+    //
+    const vector<size_t>& orig_order = this->_mpopi->sample_indexes_orig_order();
+    if (!std::is_sorted(orig_order.begin(), orig_order.end()))
+        cerr << "Warning: Genepop: The order in which samples appear was modified"
+            " (as the input population map is not sorted).";
+    for (const Pop& pop : this->_mpopi->pops())
+        for (size_t j = pop.first_sample; j <= pop.last_sample; j++)
             this->_tmpfh << "\t" << this->_mpopi->samples()[j].name;
-        }
-    }
     this->_tmpfh << "\n";
 
     return 0;
@@ -1406,10 +1411,8 @@ GenePopExport::post_processing()
     this->_fh << transposed_lines[line_cnt].substr(1) << "\n";
     line_cnt++;
 
-    for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
-        const Pop& pop = this->_mpopi->pops()[p];
+    for (const Pop& pop : this->_mpopi->pops()) {
         this->_fh << "pop\n";
-
         for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
             pos = transposed_lines[line_cnt].find_first_of('\t');
             transposed_lines[line_cnt][pos] = ',';
@@ -1439,7 +1442,7 @@ GenePopHapsExport::open(const MetaPopInfo *mpopi)
 int
 GenePopHapsExport::write_header()
 {
-    for (const Pop& pop : this->_mpopi->pops())
+    for (const Pop& pop : this->_mpopi->pops()) // Per pop; c.f. GenePopExport.
         for (size_t s = pop.first_sample; s <= pop.last_sample; s++)
             this->_tmpfh << "\t" << this->_mpopi->samples()[s].name << ',';
     this->_tmpfh << "\n";
@@ -1582,24 +1585,20 @@ int
 StructureExport::write_header()
 {
     this->_tmpfh << "\t";
-    for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
-        const Pop& pop = this->_mpopi->pops()[p];
-        for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
-            this->_tmpfh << this->_mpopi->samples()[j].name << "\t" << this->_mpopi->samples()[j].name;
-            if (j < this->_mpopi->samples().size() - 1)
-                this->_tmpfh << "\t";
-        }
+    for (size_t j : this->_mpopi->sample_indexes_orig_order()) {
+        this->_tmpfh << this->_mpopi->samples()[j].name << "\t" << this->_mpopi->samples()[j].name;
+        if (j < this->_mpopi->samples().size() - 1)
+            this->_tmpfh << "\t";
     }
     this->_tmpfh << "\n";
 
     this->_tmpfh << "\t";
-    for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
-        const Pop& pop = this->_mpopi->pops()[p];
-        for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
-            this->_tmpfh << pop.name << "\t" << pop.name;
-            if (j < this->_mpopi->samples().size() - 1)
-                this->_tmpfh << "\t";
-        }
+    for (size_t j : this->_mpopi->sample_indexes_orig_order()) {
+        const Sample& sample = this->_mpopi->samples()[j];
+        const Pop& pop = this->_mpopi->pops()[sample.pop];
+        this->_tmpfh << pop.name << "\t" << pop.name;
+        if (j < this->_mpopi->samples().size() - 1)
+            this->_tmpfh << "\t";
     }
     this->_tmpfh << "\n";
 
@@ -1620,63 +1619,58 @@ StructureExport::write_site(const CSLocus *loc, const LocPopSum *lps, Datum cons
 
     this->_tmpfh << loc->id << "_" << col;
 
-    for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
-        const Pop& pop = this->_mpopi->pops()[p];
-        s = lps->per_pop(p);
-
-        for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
-
-            if (s->nucs[col].incompatible_site ||
-                s->nucs[col].filtered_site) {
-                //
-                // This site contains more than two alleles in this population or was filtered
-                // due to a minor allele frequency that is too low.
-                //
-                this->_tmpfh << "\t" << "0";
-            } else if (d[j] == NULL || col >= uint(d[j]->len)) {
-                //
-                // Data does not exist.
-                //
-                this->_tmpfh << "\t" << "0";
-            } else if (d[j]->model[col] == 'U') {
-                //
-                // Data exists, but the model call was uncertain.
-                //
-                this->_tmpfh << "\t" << "0";
-            } else {
-                //
-                // Tally up the nucleotide calls.
-                //
-                tally_observed_haplotypes(d[j]->obshap, snp_index, p_allele, q_allele);
-
-                if (p_allele == 0 && q_allele == 0)
-                    this->_tmpfh << "\t" << "0";
-                else if (p_allele == 0)
-                    this->_tmpfh << "\t" << nuc_map[q_allele];
-                else
-                    this->_tmpfh << "\t" << nuc_map[p_allele];
-            }
-
+    for (size_t j : this->_mpopi->sample_indexes_orig_order()) {
+        s = lps->per_pop(this->_mpopi->samples()[j].pop);
+        if (s->nucs[col].incompatible_site ||
+            s->nucs[col].filtered_site) {
             //
-            // Output the site for this sample again, now for the q allele
+            // This site contains more than two alleles in this population or was filtered
+            // due to a minor allele frequency that is too low.
             //
-            if (s->nucs[col].incompatible_site ||
-                s->nucs[col].filtered_site) {
-                this->_tmpfh << "\t" << "0";
-            } else if (d[j] == NULL || col >= uint(d[j]->len)) {
-                this->_tmpfh << "\t" << "0";
-            } else if (d[j]->model[col] == 'U') {
-                this->_tmpfh << "\t" << "0";
-            } else {
-                tally_observed_haplotypes(d[j]->obshap, snp_index, p_allele, q_allele);
+            this->_tmpfh << "\t" << "0";
+        } else if (d[j] == NULL || col >= uint(d[j]->len)) {
+            //
+            // Data does not exist.
+            //
+            this->_tmpfh << "\t" << "0";
+        } else if (d[j]->model[col] == 'U') {
+            //
+            // Data exists, but the model call was uncertain.
+            //
+            this->_tmpfh << "\t" << "0";
+        } else {
+            //
+            // Tally up the nucleotide calls.
+            //
+            tally_observed_haplotypes(d[j]->obshap, snp_index, p_allele, q_allele);
 
-                if (p_allele == 0 && q_allele == 0)
-                    this->_tmpfh << "\t" << "0";
-                else if (q_allele == 0)
-                    this->_tmpfh << "\t" << nuc_map[p_allele];
-                else
-                    this->_tmpfh << "\t" << nuc_map[q_allele];
-            }
+            if (p_allele == 0 && q_allele == 0)
+                this->_tmpfh << "\t" << "0";
+            else if (p_allele == 0)
+                this->_tmpfh << "\t" << nuc_map[q_allele];
+            else
+                this->_tmpfh << "\t" << nuc_map[p_allele];
+        }
+
+        //
+        // Output the site for this sample again, now for the q allele
+        //
+        if (s->nucs[col].incompatible_site ||
+            s->nucs[col].filtered_site) {
+            this->_tmpfh << "\t" << "0";
+        } else if (d[j] == NULL || col >= uint(d[j]->len)) {
+            this->_tmpfh << "\t" << "0";
+        } else if (d[j]->model[col] == 'U') {
+            this->_tmpfh << "\t" << "0";
+        } else {
+            tally_observed_haplotypes(d[j]->obshap, snp_index, p_allele, q_allele);
+
+            if (p_allele == 0 && q_allele == 0)
+                this->_tmpfh << "\t" << "0";
+            else if (q_allele == 0)
+                this->_tmpfh << "\t" << nuc_map[p_allele];
+            else
+                this->_tmpfh << "\t" << nuc_map[q_allele];
         }
     }
     this->_tmpfh << "\n";
@@ -2324,48 +2318,24 @@ PlinkExport::write_header()
     strftime(date, 32, "%B %d, %Y", timeinfo);
     this->_markers_fh << "# Stacks v" << VERSION << "; " << " PLINK v1.07; " << date << "\n";
 
-    for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
-        const Pop& pop = this->_mpopi->pops()[p];
-        for (size_t j = pop.first_sample; j <= pop.last_sample; j++)
-            this->_tmpfh << "\t" << pop.name;
+    // Population names.
+    for (size_t s : this->_mpopi->sample_indexes_orig_order()) {
+        const Sample& sample = this->_mpopi->samples()[s];
+        this->_tmpfh << '\t' << this->_mpopi->pops()[sample.pop].name;
     }
-    this->_tmpfh << "\n";
-
-    for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
-        const Pop& pop = this->_mpopi->pops()[p];
-        for (size_t j = pop.first_sample; j <= pop.last_sample; j++)
-            this->_tmpfh << "\t" << this->_mpopi->samples()[j].name;
+    this->_tmpfh << '\n';
+    // Sample names.
+    for (size_t s : this->_mpopi->sample_indexes_orig_order()) {
+        const Sample& sample = this->_mpopi->samples()[s];
+        this->_tmpfh << '\t' << sample.name;
     }
-    this->_tmpfh << "\n";
-
-    for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
-        const Pop& pop = this->_mpopi->pops()[p];
-        for (size_t j = pop.first_sample; j <= pop.last_sample; j++)
-            this->_tmpfh << "\t" << 0;  // Paternal ID
+    this->_tmpfh << '\n';
+    // Paternal IDs, maternal IDs, sexes, phenotypes.
+    for (size_t i=0; i<4; ++i) {
+        for (size_t j=0; j<this->_mpopi->samples().size(); ++j)
+            this->_tmpfh << '\t' << 0;
+        this->_tmpfh << '\n';
     }
-    this->_tmpfh << "\n";
-
-    for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
-        const Pop& pop = this->_mpopi->pops()[p];
-        for (size_t j = pop.first_sample; j <= pop.last_sample; j++)
-            this->_tmpfh << "\t" << 0;  // Maternal ID
-    }
-    this->_tmpfh << "\n";
-
-    for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
-        const Pop& pop = this->_mpopi->pops()[p];
-        for (size_t j = pop.first_sample; j <= pop.last_sample; j++)
-            this->_tmpfh << "\t" << 0;  // Sex
-    }
-    this->_tmpfh << "\n";
-
-    for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
-        const Pop& pop = this->_mpopi->pops()[p];
-        for (size_t j = pop.first_sample; j <= pop.last_sample; j++)
-            this->_tmpfh << "\t" << 0;  // Phenotype
-    }
-    this->_tmpfh << "\n";
-
     return 0;
 }
 
@@ -2416,7 +2386,7 @@ PlinkExport::write_batch(const vector<LocBin*> &loci)
                                   << cloc->sort_bp(col) + 1 << "\n";
             }
         }
-    }
+    }//
 
     return OrderableExport::write_batch(loci);
 }
@@ -2429,88 +2399,79 @@ PlinkExport::write_site(const CSLocus *loc, const LocPopSum *lps, Datum const*co
 
     this->_tmpfh << loc->id << "_" << col;
 
-    for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
-        const Pop& pop = this->_mpopi->pops()[p];
-        s = lps->per_pop(p);
+    for (size_t j : this->_mpopi->sample_indexes_orig_order()) {
+        s = lps->per_pop(this->_mpopi->samples()[j].pop);
+        if (s->nucs[col].incompatible_site ||
+            s->nucs[col].filtered_site) {
+            //
+            // This site contains more than two alleles in this population or was filtered
+            // due to a minor allele frequency that is too low.
+            //
+            this->_tmpfh << "\t" << "0";
+        } else if (d[j] == NULL || col >= uint(d[j]->len)) {
+            //
+            // Data does not exist.
+            //
+            this->_tmpfh << "\t" << "0";
+        } else if (d[j]->model[col] == 'U') {
+            //
+            // Data exists, but the model call was uncertain.
+            //
+            this->_tmpfh << "\t" << "0";
+        } else {
+            //
+            // Tally up the nucleotide calls.
+            //
+            tally_observed_haplotypes(d[j]->obshap, snp_index, p_allele, q_allele);
 
-        for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
-
-            if (s->nucs[col].incompatible_site ||
-                s->nucs[col].filtered_site) {
-                //
-                // This site contains more than two alleles in this population or was filtered
-                // due to a minor allele frequency that is too low.
-                //
+            if (p_allele == 0 && q_allele == 0)
                 this->_tmpfh << "\t" << "0";
-            } else if (d[j] == NULL || col >= uint(d[j]->len)) {
-                //
-                // Data does not exist.
-                //
-                this->_tmpfh << "\t" << "0";
-            } else if (d[j]->model[col] == 'U') {
-                //
-                // Data exists, but the model call was uncertain.
-                //
-                this->_tmpfh << "\t" << "0";
-            } else {
-                //
-                // Tally up the nucleotide calls.
-                //
-                tally_observed_haplotypes(d[j]->obshap, snp_index, p_allele, q_allele);
-
-                if (p_allele == 0 && q_allele == 0)
-                    this->_tmpfh << "\t" << "0";
-                else if (p_allele == 0)
-                    this->_tmpfh << "\t" << q_allele;
-                else if (q_allele == 0)
-                    this->_tmpfh << "\t" << p_allele;
-                else
-                    this->_tmpfh << "\t" << p_allele;
-            }
+            else if (p_allele == 0)
+                this->_tmpfh << "\t" << q_allele;
+            else if (q_allele == 0)
+                this->_tmpfh << "\t" << p_allele;
+            else
+                this->_tmpfh << "\t" << p_allele;
         }
     }
+
     this->_tmpfh << "\n";
 
     this->_tmpfh << loc->id << "_" << col;
 
-    for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
-        const Pop& pop = this->_mpopi->pops()[p];
-        s = lps->per_pop(p);
+    for (size_t j : this->_mpopi->sample_indexes_orig_order()) {
+        s = lps->per_pop(this->_mpopi->samples()[j].pop);
+        if (s->nucs[col].incompatible_site ||
+            s->nucs[col].filtered_site) {
+            //
+            // This site contains more than two alleles in this population or was filtered
+            // due to a minor allele frequency that is too low.
+            //
+            this->_tmpfh << "\t" << "0";
+        } else if (d[j] == NULL || col >= uint(d[j]->len)) {
+            //
+            // Data does not exist.
+            //
+            this->_tmpfh << "\t" << "0";
+        } else if (d[j]->model[col] == 'U') {
+            //
+            // Data exists, but the model call was uncertain.
+            //
+            this->_tmpfh << "\t" << "0";
+        } else {
+            //
+            // Tally up the nucleotide calls.
+            //
+            tally_observed_haplotypes(d[j]->obshap, snp_index, p_allele, q_allele);
 
-        for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
-
-            if (s->nucs[col].incompatible_site ||
-                s->nucs[col].filtered_site) {
-                //
-                // This site contains more than two alleles in this population or was filtered
-                // due to a minor allele frequency that is too low.
-                //
+            if (p_allele == 0 && q_allele == 0)
                 this->_tmpfh << "\t" << "0";
-            } else if (d[j] == NULL || col >= uint(d[j]->len)) {
-                //
-                // Data does not exist.
-                //
-                this->_tmpfh << "\t" << "0";
-            } else if (d[j]->model[col] == 'U') {
-                //
-                // Data exists, but the model call was uncertain.
-                //
-                this->_tmpfh << "\t" << "0";
-            } else {
-                //
-                // Tally up the nucleotide calls.
-                //
-                tally_observed_haplotypes(d[j]->obshap, snp_index, p_allele, q_allele);
-
-                if (p_allele == 0 && q_allele == 0)
-                    this->_tmpfh << "\t" << "0";
-                else if (p_allele == 0)
-                    this->_tmpfh << "\t" << q_allele;
-                else if (q_allele == 0)
-                    this->_tmpfh << "\t" << p_allele;
-                else
-                    this->_tmpfh << "\t" << q_allele;
-            }
+            else if (p_allele == 0)
+                this->_tmpfh << "\t" << q_allele;
+            else if (q_allele == 0)
+                this->_tmpfh << "\t" << p_allele;
+            else
+                this->_tmpfh << "\t" << q_allele;
         }
     }
     this->_tmpfh << "\n";
@@ -2548,27 +2509,20 @@ PlinkExport::post_processing()
     check_open(intmpfh, this->tmp_path());
 
     vector<string> transposed_lines;
-
     Export::transpose(intmpfh, transposed_lines);
-
     assert(transposed_lines.size() == this->_mpopi->samples().size() + 1);
 
-    size_t line_cnt = 0;
     //
-    // The first line has a list of locus IDs, they are unnecessary in this format, so ignore them.
+    // The first line has a list of locus IDs, they are unnecessary in this
+    // format, so ignore them.
     //
-    line_cnt++;
+    auto line = transposed_lines.begin();
+    assert(!transposed_lines.empty());
+    ++line;
+    for (; line != transposed_lines.end(); ++line)
+        this->_fh << *line << '\n';
 
-    for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
-        const Pop& pop = this->_mpopi->pops()[p];
-
-        for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
-            this->_fh << transposed_lines[line_cnt] << "\n";
-            line_cnt++;
-        }
-    }
-
-    return 1;
+    return true;
 }
 
 void
