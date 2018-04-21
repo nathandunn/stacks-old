@@ -1379,24 +1379,13 @@ LocusFilter::prune_sites_with_filters(MetaPopInfo *mpopi, CSLocus *cloc, Datum *
     }
 
     //
-    // If no SNPs were retained for this locus, then mark it to be removed entirely.
+    // Remove the filtered sites from this locus.
     //
-    if (site_list.size() == 0) {
-        if (verbose)
-            log_fh << "removed_locus\t"
-                   << cloc->id << "\t"
-                   << cloc->loc.chr() << "\t"
-                   << cloc->sort_bp() +1 << "\t"
-                   << 0 << "\tno_snps_remaining\n";
-        this->_filtered_loci++;
-        this->_batch_filtered_loci++;
-        return true;
-    } else {
-        //
-        // Remove the filtered sites from this locus.
-        //
-        this->prune_sites(cloc, d, site_list);
-    }
+    // (Note: Initially loci with "no_snps_remaining" would get filtered out;
+    // then the condition changed to all loci without SNPs regardless of whether
+    // they initially had SNPs; and now we don't remove loci anymore.)
+    //
+    this->prune_sites(cloc, d, site_list);
 
     return false;
 }
