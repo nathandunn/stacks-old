@@ -1780,7 +1780,7 @@ initialize_existing_catalog(string catalog_path, map<int, CLocus *> &catalog)
     CLocus *loc;
     char   *p, *q;
     int     sample_id, locus_id;
-    size_t  max_catalog_id;
+    size_t  max_catalog_id = 0;
 
     for (auto j = catalog.begin(); j != catalog.end(); j++) {
         loc = j->second;
