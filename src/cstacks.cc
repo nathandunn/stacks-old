@@ -267,7 +267,7 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
     //
     vector<vector<int>> cloc_merge_list;
     map<int, int>       cloc_merge_key;
-    
+
     for (i = sample.begin(); i != sample.end(); i++) {
         qtag = i->second;
 
@@ -308,14 +308,14 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
             //
             if (catalog_ids.count(cat_id) > 0)
                 continue;
-            
+
             //
             // Make a copy of the query tag so that if we are merging it into multiple catalog
             // loci (which will subsequently be collapsed), we will have an unmodified copy for
             // each merge.
             //
             QLocus *qtag_merge = new QLocus(*qtag);
-            
+
             ctag        = catalog.at(cat_id);
             cigar_str   = "";
             match_index = -1;
@@ -466,7 +466,7 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
     // Merge catalog loci, that were linked by a sample locus, together.
     //
     for (uint j = 0; j < cloc_merge_list.size(); j++) {
-        
+
         if (cloc_merge_list[j].size() == 0) continue;
 
         merge_cloci  += cloc_merge_list[j].size();
@@ -483,7 +483,7 @@ add_unique_tag(pair<int, string> &sample_file, map<int, CLocus *> &catalog, QLoc
 
     c->id = next_catalog_id;
     next_catalog_id++;
-    
+
     c->add_consensus(qloc->con);
     //
     // Record the source of this catalog tag.
@@ -649,8 +649,8 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
             tag_1 = sample[keys[i]];
 
             for (auto allele = tag_1->strings.begin(); allele != tag_1->strings.end(); allele++) {
-                assert(kmer_len <= allele->second.length());
-                
+                assert(size_t(kmer_len) <= allele->second.length());
+
                 num_kmers = allele->second.length() - kmer_len + 1;
                 generate_kmers_lazily(allele->second.c_str(), kmer_len, num_kmers, kmers);
 
@@ -788,7 +788,7 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
     //
     int con_len   = strlen(sample[keys[0]]->con);
     int kmer_len  = 19;
-    
+
     populate_kmer_hash(catalog, kmer_map, kmer_map_keys, allele_map, kmer_len);
 
     #pragma omp parallel private(tag_1, tag_2)
@@ -1780,12 +1780,13 @@ initialize_existing_catalog(string catalog_path, map<int, CLocus *> &catalog)
     CLocus *loc;
     char   *p, *q;
     int     sample_id, locus_id;
-    size_t  max_catalog_id;
+    size_t  max_catalog_id = 0;
 
     for (auto j = catalog.begin(); j != catalog.end(); j++) {
         loc = j->second;
 
-        if ((size_t) loc->id > max_catalog_id) max_catalog_id = (size_t) loc->id;
+        if ((size_t) loc->id > max_catalog_id)
+            max_catalog_id = (size_t) loc->id;
 
         for (uint i = 0; i < loc->comp.size(); i++) {
             //
@@ -1810,7 +1811,7 @@ initialize_existing_catalog(string catalog_path, map<int, CLocus *> &catalog)
     }
 
     next_catalog_id = max_catalog_id + 1;
-    
+
     return 1;
 }
 
