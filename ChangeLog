@@ -8,6 +8,9 @@ Stacks 2.0
              loci are combined.
     Bugfix: corrected BbvCI restriction enzyme to add the missing negative strand sequence.
     Bugfix: corrected the catalog writing routines for unzipped output files to include missing column.
+    Bugfix: populations: Fixed the filtering of monomorphic loci.
+    Bugfix: populations: Now preserving sample ordering in all outputs.
+    Bugfix: Fixed ICPC compilation.
 
 Stacks 2.0 Beta 10 - Apr 10, 2018
 ---------------------------------
@@ -25,8 +28,8 @@ Stacks 2.0 Beta 10 - Apr 10, 2018
 
 Stacks 2.0 Beta 9 - Mar 12, 2018
 --------------------------------
-    Feature: Cleaned up tags/snps/alleles/matches files. We removed the batch ID from ustacks and cstacks 
-             output, and the deprecated log likelihood fields from ustacks and cstacks. We also removed 
+    Feature: Cleaned up tags/snps/alleles/matches files. We removed the batch ID from ustacks and cstacks
+             output, and the deprecated log likelihood fields from ustacks and cstacks. We also removed
              the chromosome/bp/strand fields as they are no longer used in these files.
     Feature: Renamed gstacks output files that represent the new components of the catalog:
                gstacks.fa.gz => catalog.fa.gz; gstacks.vcf.gz => catalog.calls
@@ -35,7 +38,7 @@ Stacks 2.0 Beta 9 - Mar 12, 2018
     Feature: Reimplemented PLINK export format for the populations program.
     Bugfix: Updated to HTSLib 1.7; changed to a custom build system that will work with the Stacks build
             system.
-    Bugfix: Made gapped alignments mandatory in ustacks, cstacks, and sstacks. Added check for frameshift 
+    Bugfix: Made gapped alignments mandatory in ustacks, cstacks, and sstacks. Added check for frameshift
             at 3' end of the read -- if found, a match is deferred to the gapped aligner.
 
 Stacks 2.0 Beta 8 - Feb 03, 2018
@@ -79,12 +82,12 @@ Stacks 2.0 Beta 7 - Dec 29, 2017
 Stacks 2.0 Beta 6 - Dec 02, 2017
 --------------------------------
     Feature: Implmented the VCF haplotypes output.
-    Bugfix:  Corrected asset failure in populations when exporting data for genepop or structure output. 
+    Bugfix:  Corrected asset failure in populations when exporting data for genepop or structure output.
 
 Stacks 2.0 Beta 5 - Nov 27, 2017
 --------------------------------
     Feature: Reimplemented structure, phylip, and phylip_var exports.
-    Bugfix: Tightened up the overlap algorithm to require 80% of overlapping sequence to be 
+    Bugfix: Tightened up the overlap algorithm to require 80% of overlapping sequence to be
             aligned and of the aligned sequence, 80% must be identities.
     Bugfix: Fixed segfault in gstacks when compiled with CLANG on OS X.
     Bugfix: gstacks: Fixed how misphasings are reported.
@@ -138,7 +141,7 @@ Stacks 2.0 Beta 1 - Oct 09, 2017
 Stacks 1.48 - Nov 20, 2017
 ---------------------------
     Feature: Added HinP1I restriction enzyme.
-    Feature: Added --null_inline mode to clone_filter (and process_radtags) for previously unseen type 
+    Feature: Added --null_inline mode to clone_filter (and process_radtags) for previously unseen type
              of oligo combination.
 
 Stacks 1.47 - Sept 06, 2017
@@ -186,7 +189,7 @@ Stacks 1.45 - Feb 24, 2017
     Bugfix: Fixed process_radtags writing fasta (instead of fastq) discard files when input
             files were gzfastq.
     Bugfix: kernel smoothing was not working correctly for Fis values (values were too negative).
-    Bugfix: fixed a regression for gapped alignments in cstacks that was causing a buffer overflow. 
+    Bugfix: fixed a regression for gapped alignments in cstacks that was causing a buffer overflow.
 
 Stacks 1.44 - Oct 11, 2016
 --------------------------
@@ -223,10 +226,10 @@ Stacks 1.42 - Aug 05, 2016
 
 Stacks 1.41 - June 22, 2016
 ---------------------------
-	Bugfix: the kernel-smoothing procedure in populations (used for Fst, Pi, heterozygosity etc. smoothing) 
+	Bugfix: the kernel-smoothing procedure in populations (used for Fst, Pi, heterozygosity etc. smoothing)
 	was not functioning at sizes larger than the default size. A bug was creating incorrect weights for the
 	smoothing operation when the sliding window size was set to a large value causing the smoothing
-	window to have a maximum size after which increasing the size did not change the smoothing. 
+	window to have a maximum size after which increasing the size did not change the smoothing.
 	Bugfix: cstacks was reporting gapped alignments even when --gapped was not enabled. This affected
 	a small number of (mostly) confounded catalog loci.
 	Feature: Added the Csp6I restriction enzyme.
@@ -335,7 +338,7 @@ Stacks 1.31 - June 17, 2015
 	Bugfix: --write_random_snp was causing a segfault in the populations program in
 	some cases.
 	Feature: changed the default setting for the -n option of cstacks (number of fixed
-	differences allowed between loci) to 1 (at the request of 
+	differences allowed between loci) to 1 (at the request of
 	Josie Paris <J.R.Paris@exeter.ac.uk>).
 	Bugfix: made some tweaks to improve layout in the web interface.
  	Bugfix: single-end reads, with paired barcodes (inline/index) were not being handled
@@ -350,7 +353,7 @@ Stacks 1.31 - June 17, 2015
 	Feature: Changed default database engine type to be excplicitly MyISAM. Previously
 	Stacks just used the default which at one time was MyISAM but has recently changed in
 	many systems to be INNODB. Using MyISAM should provide much faster imports of data
-	and ultimately use less disk space (as the space is reclaimed when databases are 
+	and ultimately use less disk space (as the space is reclaimed when databases are
 	deleted).
 
 Stacks 1.30 - May 07, 2015
@@ -738,12 +741,12 @@ Stacks 1.0 - June 06, 2013
 	that contains both an inline and indexed barcode.
 	Feature: added command line option and supporting code to cstacks to allow samples
 	to be added to an existing catalog.
-	Feature: refactored command line handling in denovo_map.pl and ref_map.pl to be much 
+	Feature: refactored command line handling in denovo_map.pl and ref_map.pl to be much
 	more flexible. Arbitrary command line options can now be passed to particular pipeline
 	programs using the -X flag.
-	Feature: for genetic maps, catalog may now be constructed out of mulitple parents, 
+	Feature: for genetic maps, catalog may now be constructed out of mulitple parents,
 	genotypes is smart enough to cross check the parents used to construct the catalog
-	against those submitted to genotypes for producing a map. Will allow for a single 
+	against those submitted to genotypes for producing a map. Will allow for a single
 	catalog to be used across a series of crosses so all maps share the same catalog IDs.
 	Feature: added option to genotypes to import manual corrections exported from Stacks
 	SQL database.
@@ -848,14 +851,14 @@ Stacks 0.99994 - February 12, 2013
 Stacks 0.99993 - January 30, 2013
 ---------------------------------
 	Feature: process_radtags/process_shortreads/ustacks can now read gzipped Fasta/Fastq input files.
-	Feature: ref_map.pl/pstacks now supports the use of BAM alignment files. This feature is optional and must 
+	Feature: ref_map.pl/pstacks now supports the use of BAM alignment files. This feature is optional and must
 	be enabled during compilation. It requires the Samtools library to be installed.
 	Bugfix: When using referenced aligned data, soft-masked alignments (Ns) were getting imporperly injected into
-	the SNP models, which would call them as Homozygous Ns, and this data would eventually be passed to the 
+	the SNP models, which would call them as Homozygous Ns, and this data would eventually be passed to the
 	summary statistics in populations, which would make errant Fst calculations.
 	Bugfix: In rare cases, sequences aligned to the negative strand had their base pair positions slightly off,
 	this could cause a segfault during populations' kernel-smoothed Fst calculations.
-	Bugfix: In populations, fixed a rare, infinite loop condition in Fisher's exact test for Fst calculations. 
+	Bugfix: In populations, fixed a rare, infinite loop condition in Fisher's exact test for Fst calculations.
 	Could occur due to a floating point rounding error when calculating allele frequencies for Fst calculation.
 
 Stacks 0.99992 - January 8, 2013
@@ -865,8 +868,8 @@ Stacks 0.99992 - January 8, 2013
 
 Stacks 0.99991 - December 17, 2012
 ----------------------------------
-	Feature: process_shortreads and process_radtags can now filter for adapter sequence in raw data, trimming 
-	(process_shortreads) or discarding (process_shortreads/process_radtags) it. Mismatches to the adapter 
+	Feature: process_shortreads and process_radtags can now filter for adapter sequence in raw data, trimming
+	(process_shortreads) or discarding (process_shortreads/process_radtags) it. Mismatches to the adapter
 	sequence are allowed to accomodate for sequencing error.
 	Bugfix: added --merge flag to process_shortreads/process_radtags to handle regression where unbarcoded
 	data should be merged together into single output files.
@@ -925,7 +928,7 @@ Stacks 0.9999 - October 03, 2012
 	based on a minimum spanning tree. A new parameter has been introduced, --max_locus_stacks,
 	which controls the number of stacks allowed to be merged together into a single locus. Loci that
 	contain more than --max_locus_stacks stacks are set aside and not added to the catalog later on.
-	Feature: export_sql.pl now has two depth parameters, allele and locus depth, allowing for the filtering 
+	Feature: export_sql.pl now has two depth parameters, allele and locus depth, allowing for the filtering
 	of loci based on either one.
 	Feature: added a 'dry run' flag (-d) to denovo_map.pl and ref_map.pl to allow the pipeline to be tested
 	to see what it would execute, before actually executing any programs.
@@ -964,18 +967,18 @@ Stacks 0.9994 - July 01, 2012
 -----------------------------
 	Feature: the populations program can now write a file in the GenePop format. GenePop files can be read
 	by the GenePop program and converted for other population genetics programs such as Arlequin. Caution: you
-	may not be able to include all loci from a Stacks run in the output as these programs aren't necessarily 
+	may not be able to include all loci from a Stacks run in the output as these programs aren't necessarily
 	capable of handling such a volume of data. However, you can use populations' whitelist feature to only
 	include certain loci in the output.
 	Feature: the populations program now writes an Fst summary file providing a matrix of mean Fst measures
 	for each pair of populations in the analysis.
-	Feature: added two filters to populations to require a locus to be present in a certain percentage of 
+	Feature: added two filters to populations to require a locus to be present in a certain percentage of
 	individuals in a population, and requiring a locus to be present in a certain number of populations. If
 	the former criteria is not reached, the locus is zeroed out only in the specific population, if the latter
 	criteria is not met, the locus is discarded from the analysis.
 	Feature: three Fst corrections are now provided by the populations program: requiring a locus to have a significant
-	p-value (smaller than 0.05, although its configurable), applying a Bonferroni correction according to the number 
-	of data points in the sliding window, and applying a Bonferroni correction according to the number of data points 
+	p-value (smaller than 0.05, although its configurable), applying a Bonferroni correction according to the number
+	of data points in the sliding window, and applying a Bonferroni correction according to the number of data points
 	in the genome. Loci that fail to reach statitical significance in each case are considered not different from zero
 	and are set to zero.
 	Feature: a filter can be specified to the populations program requiring a minimum allele frequency (MAF) at
@@ -983,21 +986,21 @@ Stacks 0.9994 - July 01, 2012
 	Feature: when using a reference genome, Stacks can now work with samples of different sequence lengths.
 	This means one can combine samples generated from different Illumina runs of different length. Each
 	individual sample must be of the same length internally, however.
-	Feature: pstacks can now handle gapped alignments properly. It parses the CIGAR string in the SAM file 
+	Feature: pstacks can now handle gapped alignments properly. It parses the CIGAR string in the SAM file
 	and inserts/removes Ns to accomodate indels and soft-masked alignment fragments. This prevents the SNP
 	model from mistakenly calling polymorphisms due to indel frameshifts.
-	Bugfix: Removed O(n^2) algorithm from Sliding window Fst calculation in populations program, significant 
-	speedup acheived. 
-	Bugfix: Updated load_radtags.pl to support population types and to import sumstats, fst, and genotypes 
+	Bugfix: Removed O(n^2) algorithm from Sliding window Fst calculation in populations program, significant
+	speedup acheived.
+	Bugfix: Updated load_radtags.pl to support population types and to import sumstats, fst, and genotypes
 	files.
 	Bugfix: fixed a small memory leak in DNANSeq.
 
 Stacks 0.9993 - June 07, 2012
 --------------------------------
 	Feature: Added Fisher's Exact Test statistics to Fst estimates. This provides a p-value, an odds ratio
-	along with a 95% confidence interval and a Log of Odds (LOD) score for each Fst estimate. These 
-	statistics allow one to decide if a particular Fst measurement is significant. 
-	Feature: denovo_map.pl and ref_map.pl now import population statistics files into the database (fst 
+	along with a 95% confidence interval and a Log of Odds (LOD) score for each Fst estimate. These
+	statistics allow one to decide if a particular Fst measurement is significant.
+	Feature: denovo_map.pl and ref_map.pl now import population statistics files into the database (fst
 	and sumstats files).
 	Feature: Web interface now displays summary statistics and Fst values for every locus.
 	Feature: population names can now be directly added through the web interface and they will be stored
@@ -1007,48 +1010,48 @@ Stacks 0.9992 - May 22, 2012
 --------------------------------
 	Bugfix: fixed massive memory leak in Fst calcuations in populations program.
 	Bugfix: if using a population map to calculate Fst in the populations program, some individuals could
-	be inadvertently attributed to the wrong populations, due to a mismatch between the indices of the 
+	be inadvertently attributed to the wrong populations, due to a mismatch between the indices of the
 	population map (PopMap.h) and the indexes recorded for making the population summary (PopSum.h).
-	Feature: population map can now be specified to denovo_map.pl and ref_map.pl. This data is 
+	Feature: population map can now be specified to denovo_map.pl and ref_map.pl. This data is
 	populated into the database and samples are displayed according to their population in the web interface.
 	Feature: improved denovo_map.pl and ref_map.pl to check for existence of input files.
-	Bugfix: export_sql.pl wasn't properly using the new filters that use a lower and upper bound (snps, alle, 
+	Bugfix: export_sql.pl wasn't properly using the new filters that use a lower and upper bound (snps, alle,
 	pare).
 	Feature: improved how values are generated for web-based filters, allowing for larger populations/maps.
 	Improved HTML rendering for extremely long haplotype strings.
-	Bugfix: corrected alleles to be output as "unphased" in VCF file; corrected homozygotes to be printed as 
+	Bugfix: corrected alleles to be output as "unphased" in VCF file; corrected homozygotes to be printed as
 	diploid values, e.g. '0/0' or '1/1' instead of just '0'.
 	Bugfix: changed reporting of SNPs on samples.php page to specify total number of SNPs and the number
 	of polymorphic loci (containing one or more SNPs).
 	Bugfix: an extra tab was being placed in the VCF output file.
-	Feature: added flag to process_radtags to disable checking the integrity of the RAD site in each raw 
+	Feature: added flag to process_radtags to disable checking the integrity of the RAD site in each raw
 	read. Added a flag to allow more nucleotide mismatches in the barcode when rescuing barcodes.
 
 Stacks 0.9991 - April 17, 2012
 --------------------------------
-	Bugfix: replaced bit-rotted code causing all nucleotides to be masked as 'N' when fixed model engaged 
+	Bugfix: replaced bit-rotted code causing all nucleotides to be masked as 'N' when fixed model engaged
 	on ustacks.
 
 Stacks 0.999 - April 11, 2012
 --------------------------------
 	Feature: Added support for the 1000 Genomes Project, Variant Call Format (VCF) in the populations
-	program. (http://www.1000genomes.org/node/101). This file output includes the genotype calls for 
+	program. (http://www.1000genomes.org/node/101). This file output includes the genotype calls for
 	every individual for each locus, allele depth, and likelihood values for heterozygous SNP calls.
 
-	Feature: implemented a three-bit compression scheme so that uncalled bases ('N's) can be stored 
-	in compressed format in pstacks. Other stacks programs currently use two-bit compression which is 
+	Feature: implemented a three-bit compression scheme so that uncalled bases ('N's) can be stored
+	in compressed format in pstacks. Other stacks programs currently use two-bit compression which is
 	more compact, but can only store plain nucleotides ('A', 'C', 'G', 'T'). This restores earlier behavior
 	that allowed Ns in pstacks prior to the implementation of the two-bit compression scheme.
 
-	Bugfix: the populations program was only outputing sites to the summary statistics file (*.sumstats.tsv) 
+	Bugfix: the populations program was only outputing sites to the summary statistics file (*.sumstats.tsv)
 	if they were heterozygous in a population. This could give the impression that the same site may be
-	absent in other populations when in reality it was simply fixed in the other populations. Now, if a 
+	absent in other populations when in reality it was simply fixed in the other populations. Now, if a
 	site is heterozygous in any of the populations, it will be output for all populations.
-	Bugfix: added lots of error checking code to populations so it properly handles 
+	Bugfix: added lots of error checking code to populations so it properly handles
 	poorly formatted population maps, missing files, and similar errors.
-	Bugfix: added uncalled bases ('n', 'N', and '.') to the reverse complement function (reads 
+	Bugfix: added uncalled bases ('n', 'N', and '.') to the reverse complement function (reads
 	aligned on the negative strand and processed by pstacks will be stored reverse complement.
-	Bugfix: updated the PHP code as well as export_sql.pl to properly use the new filters for 
+	Bugfix: updated the PHP code as well as export_sql.pl to properly use the new filters for
 	chromosome, basepair, as well as lower and upper ranges to various filters.
 	Other: Removed the deprecated markers.pl, genotypes.pl, and process_radtags.pl programs from the distribution.
 
@@ -1122,36 +1125,36 @@ Stacks 0.997 - November 22, 2011
 
 Stacks 0.996 - October 5, 2011
 ---------------------------------
-	Web interface updates: 
+	Web interface updates:
 	  * If the RAD tags are aligned to a reference genome, a filter is now available to view markers
 	    from a particular genomic region.
 	  * The individual RAD tag viewer now scrolls while keeping the scale view and consensus sequence
-	    always visible. 
+	    always visible.
 	  * The RAD tag viewer now highlights columns for which the catalog locus shows a SNP, but the
 	    RAD tag does not.
 	  * In the genotype viewer, the map between the haplotype and genotype is now available.
 	  * The depth of each RAD tag is now visible in the genotype viewer.
-	  * The genotype viewer has now been integrated with the observed haplotype viewer. You can 
-	    make changes/corrections to genotypes directly now, no need to submit a form and wait for 
+	  * The genotype viewer has now been integrated with the observed haplotype viewer. You can
+	    make changes/corrections to genotypes directly now, no need to submit a form and wait for
 	    the page to reload.
 	Bugfix: process_radtags wasn't properly parsing the names of v1 Illumnina BUSTARD files.
 	Bugfix: process_radtags wasn't counting the total number of barceded paired-end reads correctly.
 	Bugfix: sstacks' impute_haplotype() was causing spurious matching in some, error-based cases.
-	Bugfix: build system was not properly replacing the _PKGDATADIR_ variable in denovo/ref_map.pl 
+	Bugfix: build system was not properly replacing the _PKGDATADIR_ variable in denovo/ref_map.pl
 	programs.
 
 Stacks 0.995 - September 23, 2011
 ---------------------------------
-	Feature: sstacks can now handle samples and catalogs that have different length reads. 
+	Feature: sstacks can now handle samples and catalogs that have different length reads.
 	Each individual sample must be constructed from the same length reads (by ustacks and cstacks),
-	but between samples there can be different lengths, e.g. a catalog of length 50bp and samples 
+	but between samples there can be different lengths, e.g. a catalog of length 50bp and samples
 	of length 100bp, or vice versa.
 	Feature: Added the ApeKI restriction enzyme to process_radtags
 	Feature: process_radtags can now capture discarded reads to a file.
-	Bugfix: a coding limitation was removed that required polymorphic sites in the catalog to 
+	Bugfix: a coding limitation was removed that required polymorphic sites in the catalog to
 	contain only two alleles. Now, all four alleles can be recorded at a single site in a locus in
 	the catalog.
-	Bugfix: Exporting results from the web interface was not including manual genotype corrections 
+	Bugfix: Exporting results from the web interface was not including manual genotype corrections
 	when requested.
 
 Stacks 0.994 - August 08, 2011
@@ -1161,15 +1164,15 @@ Stacks 0.994 - August 08, 2011
 	Feature: added a new output type, 'genomic' to genotypes. Outputs SNPs individually,
 	encoded as a set of integers, for reference-aligned reads.
 	Bugfix: pstacks was not writing individual stack sequences properly.
-	Bugfix: process_radtags was still checking the quality of sequence that was 
+	Bugfix: process_radtags was still checking the quality of sequence that was
 	destined to be truncated off the read.
 	Bugfix: process_radtags segfault fixed, parsing stop position
 	mis-specified in parse_input_record().
 
 Stacks 0.993 - August 05, 2011
 ------------------------------
-	Memory usage optimization: Individual sequence reads are now stored internally 
-	using a 2-bit encoding of DNA nucleotides. Some simple benchmarking of 
+	Memory usage optimization: Individual sequence reads are now stored internally
+	using a 2-bit encoding of DNA nucleotides. Some simple benchmarking of
 	ustacks (previous version / new version):
 
 	 Sample size         Elapsed Time       Used Memory
@@ -1192,7 +1195,7 @@ Stacks 0.992 - July 04, 2011
 	the new default encoding in Illumina's CASAVA software (v1.8).
 	Bugfix: Changed the sql input parser to handle variable length input
 	lines. Necessary if loading tens of individuals into a catalog.
-	Bugfix: Added command line options to ustacks to better control the use of secondary reads 
+	Bugfix: Added command line options to ustacks to better control the use of secondary reads
 	in the stack-building procedure.
 
 Stacks 0.991 - June 06, 2011
@@ -1204,18 +1207,18 @@ Stacks 0.991 - June 06, 2011
 
 Stacks 0.99 - May 20, 2011
 --------------------------
-	*A new C++ genotypes program has been added. This program works independently from the 
+	*A new C++ genotypes program has been added. This program works independently from the
 	database allowing the pipeline to fully function without installing the database. The
 	new program performs the tasks once completed by markers.pl and genotypes.pl.
 	    - The pipeline has been modified to now automatically execute the genotypes program
 	      as the last stage in an analysis. It will generate a file containing the observed
 	      haplotypes and an additional file containing a map-agnostic set of genotype calls.
-	    - If SQL interaction is enabled, the genotypes will be imported to the database and 
+	    - If SQL interaction is enabled, the genotypes will be imported to the database and
 	      serve as a base to export genotypes directly from the web interface for a particular
 	      map and using the set of filters available online.
 	    - If a population is being examinined, the observed haplotypes file can be imported into
 	      Microsoft Excel or another tab-separated file viewer to immediately see the results.
-	    - By replacing the Perl version of genotypes.pl we also no longer need to install or 
+	    - By replacing the Perl version of genotypes.pl we also no longer need to install or
 	      worry about the caching mechanism for auto-correcting stacks, the C++ version can do
 	      this by directly reading the Stacks output files.
 	*markers.pl and genotypes.pl are now deprecated and will no longer be supported.
@@ -1271,10 +1274,10 @@ Stacks 0.982 - Mar 29, 2011
 Stacks 0.98 - Feb 25, 2011
 ---------------------------
         Note: if you have pre-existing databases, you must rebuild the catalog
-	index (index_radtags.pl -D db -c) so that they are compatible with 
+	index (index_radtags.pl -D db -c) so that they are compatible with
 	the new elements of the web interface.
 
-	*Added option to pstacks to require a minimum depth of coverage for 
+	*Added option to pstacks to require a minimum depth of coverage for
 	 a stack aligned to the refernce genome before reporting it.
 	*Added double haploid (DH) and F2 export types to the genotypes.pl
 	 script.
@@ -1282,39 +1285,39 @@ Stacks 0.98 - Feb 25, 2011
 	*Added feature to filter by number of available genotypes in progeny
 	*Added command line option to ustacks to capture and output unused
          reads.
-	*Added display of chromosome/base pair to web interface for stacks 
+	*Added display of chromosome/base pair to web interface for stacks
 	 aligned to a reference genome.
 	*Bugfix: FASTA parser was missing records due to a bug introduced from
 	 a FASTQ parser fix.
-	*Bugfix: process_radtags.pl was not properly checking the integrity of 
+	*Bugfix: process_radtags.pl was not properly checking the integrity of
 	 the RAD site after adding restriction enzymes with alternate
 	 nucleotides.
 	*Bugfix: when constructing the catalog, some tags being added to the
-	 did not have their genomic location transferred over to a new catalog 
+	 did not have their genomic location transferred over to a new catalog
 	 tag.
 	*Modified sstacks to include an option to match stacks against the
 	 catalog based on the genomic location (assuming individuals were
 	 processed with pstacks).
-        *Bugfix: Lots of clean-ups and command line option fixes, thanks 
+        *Bugfix: Lots of clean-ups and command line option fixes, thanks
 	 to <yannick -dot- wurm -at- unil -dot- ch>.
 
 Stacks 0.971 - Jan 30, 2011
 ---------------------------
-	*Illumina software version 1.3 produces Phred scores that can begin 
-	 with a '@' character, throwing off the FASTQ parser. Added code to 
-	 clear the read buffer in between records to solve the problem. Thanks 
+	*Illumina software version 1.3 produces Phred scores that can begin
+	 with a '@' character, throwing off the FASTQ parser. Added code to
+	 clear the read buffer in between records to solve the problem. Thanks
 	 to Aarti <aartiv -at- uchicago -dot- edu> for finding the bug.
 
 Stacks 0.97
 ---------------------------
-	*ustacks now detects when there are uncalled nucleotides in FASTA or 
+	*ustacks now detects when there are uncalled nucleotides in FASTA or
 	 FASTQ input files, replaces those bases with 'A'.
-	*process_radtags.pl now detects barcode length automatically. Removed 
+	*process_radtags.pl now detects barcode length automatically. Removed
 	 spurious error messages when no data is processed.
 
 Stacks 0.96 - Jan 7, 2011
 ---------------------------
-	*Fixed typo in README giving the wrong file path for the Apache 
+	*Fixed typo in README giving the wrong file path for the Apache
 	 configuration file.
-	*Fixed several hard-coded paths in PHP files that referred to our local 
+	*Fixed several hard-coded paths in PHP files that referred to our local
 	 system.
