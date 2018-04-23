@@ -6,6 +6,8 @@ Stacks 2.0
              loci are combined, or rolled-up, reducing undermerged loci that generate excess homozygote calls.
     Feature: modified tsv2bam so that when two loci from the same sample match the same catalog locus, those
              loci are combined.
+    Bugfix: corrected BbvCI restriction enzyme to add the missing negative strand sequence.
+    Bugfix: corrected the catalog writing routines for unzipped output files to include missing column.
 
 Stacks 2.0 Beta 10 - Apr 10, 2018
 ---------------------------------

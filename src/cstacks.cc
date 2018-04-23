@@ -1617,7 +1617,8 @@ write_simple_output(CLocus *tag, ofstream &cat_file, ofstream &snp_file, ofstrea
     // Output the SNPs associated with the catalog tag
     //
     for (auto snp_it = tag->snps.begin(); snp_it != tag->snps.end(); snp_it++) {
-        snp_file <<   tag->id      << "\t"
+        snp_file << "0"            << "\t"
+                 << tag->id        << "\t"
                  << (*snp_it)->col << "\t";
 
         switch((*snp_it)->type) {
@@ -1644,11 +1645,11 @@ write_simple_output(CLocus *tag, ofstream &cat_file, ofstream &snp_file, ofstrea
     // Output the alleles associated with the two matched tags
     //
     for (auto all_it = tag->alleles.begin(); all_it != tag->alleles.end(); all_it++)
-        all_file <<
-            tag->id       << "\t" <<
-            all_it->first << "\t" <<
-            "0"           << "\t" <<    // These two fields are used in the
-            "0"           << "\n";      // ustacks/pstacks output, not in cstacks.
+        all_file << "0"           << "\t"
+                 << tag->id       << "\t"
+                 << all_it->first << "\t"
+                 << "0"           << "\t"    // These two fields are used in the
+                 << "0"           << "\n";   // ustacks/pstacks output, not in cstacks.
 
     return 0;
 }
