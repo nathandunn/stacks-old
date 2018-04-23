@@ -22,8 +22,8 @@ const char *aseI[]    = {"TAAT",              // AT/TAAT, AseI
                          "ATTA"};
 const char *bamHI[]   = {"GATCC",             // G/GATCC, BamHI
                          "GGATC"};
-const char *bbvCI[]   = {"TCAGC",             // CC/TCAGC
-                         "GCTGA"};
+const char *bbvCI[]   = {"TCAGC", "GGAGT",    // CC/TCAGC and GGAGT/CG, BbvCI
+                         "GCTGA", "ACTCC"};
 const char *bfaI[]    = {"TAG",               // C/TAG, BfaI
                          "CTA"};
 const char *bfuCI[]   = {"GATC",              // /GATC, BfuCI
