@@ -30,7 +30,7 @@ string parse_command_line(int argc, char* argv[]);
 
 enum class GStacksInputT {unknown, denovo_popmap, denovo_merger, refbased_popmap, refbased_list};
 
- //
+//
 // PhasedHet & PhaseSet
 // ----------
 //
@@ -100,6 +100,8 @@ public:
         size_t n_read_pairs_pcr_dupl;
         size_t n_read_pairs_used;
         size_t n_loci_with_sample;
+        size_t ns_cumsum;
+        size_t ns_weighted_n_read_pairs_used;
     };
     vector<PerSampleStats> per_sample_stats;
     size_t n_unpaired_reads_rm() const {size_t n=0; for(auto& s: per_sample_stats) n+=s.n_unpaired_reads; return n;}
