@@ -508,7 +508,7 @@ try {
     double ecov_min = DBL_MAX;
     double ecov_max = 0.0;
     for (const GenotypeStats::PerSampleStats& sample : gt_stats.per_sample_stats) {
-        double cov = (double) sample.n_read_pairs_used / sample.n_loci_with_sample;
+        double cov = (double) sample.ns_weighted_n_read_pairs_used / sample.ns_cumsum;
         ecov_mean.increment(cov);
         if (cov < ecov_min)
             ecov_min = cov;
@@ -518,7 +518,7 @@ try {
     o_fp1 << "\n"
          << "Genotyped " << gt_stats.n_genotyped_loci << " loci:\n"
          << "  effective per-sample coverage: mean=" << ecov_mean.mean() << "x, stdev="
-         << ecov_mean.sd_p() << "x, min=" << ecov_min << "x, max=" << ecov_max << "x (per locus where sample is present)\n"
+         << ecov_mean.sd_p() << "x, min=" << ecov_min << "x, max=" << ecov_max << "x\n"
          << "  mean number of sites per locus: " << gt_stats.mean_n_sites_per_loc() << "\n"
          << "  a consistent phasing was found for " << n_hap_pairs << " of out " << n_hap_attempts
          << " (" << as_percentage((double) n_hap_pairs / n_hap_attempts)
@@ -530,11 +530,14 @@ try {
 
     // effective_coverages_per_sample
     logger->x << "\n"
-              << "BEGIN effective_coverages_per_sample\n";
+                 "BEGIN effective_coverages_per_sample\n"
+                 "# For mean_cov_ns, the coverage at each locus is weighted by the number of\n"
+                 "# samples present at that locus (i.e. coverage at shared loci counts more).\n";
     logger->x << "sample"
-                 "\tmean_cov"
                  "\tn_loci"
-                 "\tn_used_fw_reads";
+                 "\tn_used_fw_reads"
+                 "\tmean_cov"
+                 "\tmean_cov_ns";
     if (rm_unpaired_reads) {
         logger->x << "\tn_unpaired_reads";
         if (rm_pcr_duplicates) {
@@ -547,9 +550,10 @@ try {
     for (size_t sample=0; sample<bam_mpopi->samples().size(); ++sample) {
         const GenotypeStats::PerSampleStats& stats = gt_stats.per_sample_stats[sample];
         x_fp3 << bam_mpopi->samples()[sample].name
-           << '\t' << (double) stats.n_read_pairs_used / stats.n_loci_with_sample
            << '\t' << stats.n_loci_with_sample
-           << '\t' << stats.n_read_pairs_used;
+           << '\t' << stats.n_read_pairs_used
+           << '\t' << (double) stats.n_read_pairs_used / stats.n_loci_with_sample
+           << '\t' << (double) stats.ns_weighted_n_read_pairs_used / stats.ns_cumsum;
         if (rm_unpaired_reads) {
             x_fp3 << '\t' << stats.n_unpaired_reads;
             if (rm_pcr_duplicates) {
@@ -722,6 +726,8 @@ GenotypeStats& GenotypeStats::operator+= (const GenotypeStats& other) {
         per_sample_stats[sample].n_read_pairs_pcr_dupl += other.per_sample_stats[sample].n_read_pairs_pcr_dupl;
         per_sample_stats[sample].n_read_pairs_used += other.per_sample_stats[sample].n_read_pairs_used;
         per_sample_stats[sample].n_loci_with_sample += other.per_sample_stats[sample].n_loci_with_sample;
+        per_sample_stats[sample].ns_cumsum += other.per_sample_stats[sample].ns_cumsum;
+        per_sample_stats[sample].ns_weighted_n_read_pairs_used += other.per_sample_stats[sample].ns_weighted_n_read_pairs_used;
     }
     return *this;
 }
@@ -997,10 +1003,14 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
     }
     assert(!aln_loc.reads().empty());
     ++gt_stats_.n_genotyped_loci;
+    size_t n_samples = aln_loc.n_samples();
     for (size_t sample=0; sample<gt_stats_.per_sample_stats.size(); ++sample) {
         if (!aln_loc.sample_reads(sample).empty()) {
-            gt_stats_.per_sample_stats[sample].n_read_pairs_used += aln_loc.sample_reads(sample).size();
-            ++gt_stats_.per_sample_stats[sample].n_loci_with_sample;
+            auto& s = gt_stats_.per_sample_stats[sample];
+            ++s.n_loci_with_sample;
+            s.n_read_pairs_used += aln_loc.sample_reads(sample).size();
+            s.ns_cumsum += n_samples;
+            s.ns_weighted_n_read_pairs_used += n_samples * aln_loc.sample_reads(sample).size();
         }
     }
     if (detailed_output) {
