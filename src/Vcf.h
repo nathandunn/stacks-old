@@ -74,7 +74,7 @@ public:
 
     const vector<VcfMeta>& meta() const {return meta_;}
     const vector<string>& samples() const {return samples_;}
-    const size_t sample_index(const string& sample) const {return sample_indexes_.at(sample);}
+    size_t sample_index(const string& sample) const {return sample_indexes_.at(sample);}
 
     void add_meta(const VcfMeta& m) {meta_.push_back(m);}
     void add_sample(const string& s) {samples_.push_back(s); sample_indexes_.insert({s, samples_.size()-1});}
