@@ -1584,21 +1584,14 @@ StructureExport::open(const MetaPopInfo *mpopi)
 int
 StructureExport::write_header()
 {
-    this->_tmpfh << "\t";
-    for (size_t j : this->_mpopi->sample_indexes_orig_order()) {
-        this->_tmpfh << this->_mpopi->samples()[j].name << "\t" << this->_mpopi->samples()[j].name;
-        if (j < this->_mpopi->samples().size() - 1)
-            this->_tmpfh << "\t";
-    }
-    this->_tmpfh << "\n";
+    for (size_t j : this->_mpopi->sample_indexes_orig_order())
+        this->_tmpfh << '\t' << this->_mpopi->samples()[j].name << '\t' << this->_mpopi->samples()[j].name;
+    this->_tmpfh << '\n';
 
-    this->_tmpfh << "\t";
     for (size_t j : this->_mpopi->sample_indexes_orig_order()) {
         const Sample& sample = this->_mpopi->samples()[j];
         const Pop& pop = this->_mpopi->pops()[sample.pop];
-        this->_tmpfh << pop.name << "\t" << pop.name;
-        if (j < this->_mpopi->samples().size() - 1)
-            this->_tmpfh << "\t";
+        this->_tmpfh << '\t' << pop.name << '\t' << pop.name;
     }
     this->_tmpfh << "\n";
 
