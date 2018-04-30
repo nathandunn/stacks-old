@@ -402,7 +402,10 @@ void CLocAlnSet::recompute_consensus() {
 
 void CLocAlnSet::hard_clip_right_Ns() {
     assert(!ref_.empty());
-    assert(ref_[0] != Nt4::n); // consensus must have been computed (first nt is in the cutsite)
+    //assert(ref_[0] != Nt4::n); // consensus must have been computed, and the first nt is in the cutsite.
+    if (ref_[0] == Nt4::n)
+        cerr << "WARNING: Some loci seemingly do not start with a cutsite; check your input reads. ("
+             << id_ << ")\n";
 
     size_t to_clip = 0;
     DNASeq4::iterator nt = ref_.end();
