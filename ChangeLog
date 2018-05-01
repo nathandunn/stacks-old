@@ -12,6 +12,12 @@ Stacks 2.0 - Apr 23, 2018
     Bugfix: populations: Now preserving sample ordering in all outputs.
     Bugfix: Fixed ICPC compilation.
 
+    2.0b - May 1, 2018
+    Feature: gstacks: Removed the assertion that the first basepair of each locus should
+             be part of a cutsite (now a warning).
+    Feature: gstacks: The reported effective coverage is now a more realistic weighted mean.
+    Bugfix: populations: Fixed STRUCTURE output being corrupted for some unordereds population maps.
+
 Stacks 2.0 Beta 10 - Apr 10, 2018
 ---------------------------------
     Feature: Improved gapped alignment for secondary reads in ustacks.
