@@ -148,8 +148,9 @@ int run() {
     //
     // Write the saved logs.
     //
+    cout << '\n';
     for (const string& o : outputs)
-        cout << o;
+        cout << o << '\n';
 
     return 0;
 }
@@ -161,7 +162,7 @@ void run(const vector<int>& cloc_ids,
     ostream& os
 ) {
     ostream& cout = os;
-    cout << "\nSample '" << samples.at(sample_i) << "':\n";
+    cout << "Sample '" << samples.at(sample_i) << "':";
 
     string prefix_path = in_dir + samples.at(sample_i);
 
@@ -193,10 +194,10 @@ void run(const vector<int>& cloc_ids,
             sloc_to_cloc[m->tag_id] = m->cat_id;
     } else { // Retrieve the list of bijective loci.
         vector<pair<int, int> > bij_loci = retrieve_bijective_loci(matches);
-        cout << bij_loci.size() << " sample loci ("
+        cout << ' ' << bij_loci.size() << " sample loci ("
              << as_percentage((double) bij_loci.size() / sloci.size())
              << " of " << sloci.size()
-             << ") had a one-to-one relationship with the catalog.\n";
+             << ") had a one-to-one relationship with the catalog;";
         if (bij_loci.empty()) {
             cerr << "Error: No usable matches to the catalog.\n";
             throw exception();
@@ -282,6 +283,8 @@ void run(const vector<int>& cloc_ids,
             itr->second.sloci.push_back(sloc.second);
         }
     }
+    cout << " matched " << sloci.size() << " sample loci to " << sorted_loci.size()
+         << " catalog loci;";
 
     //
     // Load the paired-end reads, if any.
@@ -336,9 +339,9 @@ void run(const vector<int>& cloc_ids,
             cerr << "Error: Failed to find any matching paired-end reads in '" << pe_reads_path << "'.\n";
             throw exception();
         }
-        cout << "Found a paired-end read for " << n_used_reads
+        cout << " found a paired-end read for " << n_used_reads
              << " (" << as_percentage((double) n_used_reads / readname_to_loc.size())
-             << ") of the assembled forward reads." << endl;
+             << ") of the assembled forward reads;";
 
         delete pe_reads_f;
     }
@@ -365,6 +368,7 @@ void run(const vector<int>& cloc_ids,
         size_t target_i = 0;
         BamRecord rec;
         Cigar cig;
+        size_t n_recs_written = 0;
         for (auto& loc : sorted_loci) {
             assert(loc.first == loc.second.cloc_id);
             while (targets[target_i] != loc.second.cloc_id)
@@ -390,6 +394,7 @@ void run(const vector<int>& cloc_ids,
                                 sample_id
                                 );
                         bam_f.write(rec);
+                        ++n_recs_written;
                     }
                 }
 
@@ -407,6 +412,7 @@ void run(const vector<int>& cloc_ids,
                                 sample_id
                                 );
                         bam_f.write(rec);
+                        ++n_recs_written;
                     }
                 }
 
@@ -430,10 +436,12 @@ void run(const vector<int>& cloc_ids,
                                 sample_id
                                 );
                         bam_f.write(rec);
+                        ++n_recs_written;
                     }
                 }
             }
         }
+        cout << " wrote " << n_recs_written << " records.";
     }
 
     //
