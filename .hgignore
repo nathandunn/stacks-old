@@ -12,18 +12,13 @@ config.log
 config.status
 config/*
 configure
-src/.deps/*
-src/.dirstamp
-src/*.o
 htslib/version.h
-htslib/*.o
-htslib/cram/*.o
 stamp-h1
+*/.deps/*
+*/.dirstamp
 
-htslib/libhts.a
-libcore.a
-libclean.a
-libpop.a
+*.o
+*.a
 cstacks
 estacks
 genotypes
