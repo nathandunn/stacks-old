@@ -50,7 +50,6 @@ parser.add_argument('-X', '--program', action='append',
 parser.add_argument('--paired', action='store_true',
     help='assemble contigs for each locus from paired-end reads')
 
-
 def main():
     args = parser.parse_args()
     args.samples = args.samples.rstrip('/')
@@ -58,10 +57,9 @@ def main():
     # load command line options in a dictionary.
     dictionary_command_option = {}
     for x_options in args.program:
-        x_option = x_options.split(":")
+        x_option = x_options.split(':',1)
         cmd_opt_list = x_option[1].strip(' ').strip('\n').split(' ')
         dictionary_command_option[x_option[0].strip(' ')]= cmd_opt_list
-    print(dictionary_command_option)
     # Create a log file, write a standard header.
     log_file = open('{}{}'.format(args.output,'/denovo_map.log'), 'w')
     log_file.write('denovo_map.py version {} started at {}\n'
@@ -87,18 +85,16 @@ def main():
     first_sample = list_of_samples_names[0]
     for ext in known_extensions:
         first_sample_filename = first_sample + ext
-        print('Trying extension {}; the file to find is {}'.format(ext, first_sample_filename))
         if first_sample_filename in filenames:
-            print('File {} exists!'.format(first_sample_filename))
             extension = ext
             break
     if extension is None:
         print('Panic! I didnt find it!')
         sys.exit(1)
-
     # Create a list of all the input file paths.
     for sample_name in list_of_samples_names:
-        list_of_sample_reads_paths.append('{}/{}{}'.format(args.samples, sample_name, extension))
+        list_of_sample_reads_paths.append('{}/{}{}'
+            .format(args.samples, sample_name, extension))
     # For each sample, create and run the ustacks command.
     for sample_index, sample_name in enumerate(list_of_samples_names):
         input_file_path = list_of_sample_reads_paths[sample_index]
@@ -118,10 +114,10 @@ def main():
             ustacks_command.append('-p')
             ustacks_command.append(str(args.threads))
         if 'ustacks' in dictionary_command_option:
-            ustacks_command.append(dictionary_command_option['ustacks'])
+            list_of_options = dictionary_command_option['ustacks']
+            for element in list_of_options:
+                ustacks_command.append(element)
         run_command(ustacks_command, log_file, args)
-
-    # Write command line code for cstacks, sstacks, tsv2bam, gstacks, and populations in a log file.
     # cstacks
     # ==========
     log_file.write('\ncstacks\n==========\n')
@@ -136,7 +132,9 @@ def main():
         cstacks_command.append('-p')
         cstacks_command.append(str(args.threads))
     if 'cstacks' in dictionary_command_option:
-        cstacks_command.append(dictionary_command_option['cstacks'])
+        list_of_options = dictionary_command_option['cstacks']
+        for element in list_of_options:
+            cstacks_command.append(element)
     run_command(cstacks_command, log_file, args)
     # sstacks
     # ==========
@@ -149,7 +147,9 @@ def main():
         sstacks_command.append('-p')
         sstacks_command.append(str(args.threads))
     if 'sstacks' in dictionary_command_option:
-        sstacks_command.append(dictionary_command_option['sstacks'])
+        list_of_options = dictionary_command_option['sstacks']
+        for element in list_of_options:
+            sstacks_command.append(element)
     run_command(sstacks_command, log_file, args)
     # tsv2bam
     # ==========
@@ -162,7 +162,9 @@ def main():
         tsv2bam_command.append('-t')
         tsv2bam_command.append(str(args.threads))
     if 'tsv2bam' in dictionary_command_option:
-        tsv2bam_command.append(dictionary_command_option['tsv2bam'])
+        list_of_options = dictionary_command_option['tsv2bam']
+        for element in list_of_options:
+            tsv2bam_command.append(element)
     if args.paired:
         tsv2bam_command.append('-R')
         tsv2bam_command.append(args.samples+'/')
@@ -197,7 +199,8 @@ def main():
         for element in list_of_options:
             populations_command.append(element)
     run_command(populations_command, log_file, args)
-
+    # Finish.
+    # ==========
     log_file.write('\ndenovo_map.py is done.\n')
     log_file.write('\ndenovo_map.py completed at {}\n'.format(get_current_time()))
 
