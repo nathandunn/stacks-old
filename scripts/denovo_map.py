@@ -9,10 +9,13 @@ def run_command(command, log_file, args):
     assert type(command) == list
     for word in command:
         assert type(word) == str
-    log_file.write(' '.join(['"{}"'.format(word) if ' ' in word else word for word in command]))
+    log_file.write(' '.join(
+        ['\'{}\''.format(word) if ' ' in word else word for word in command]))
     log_file.write('\n')
     if args.dry_run:
         return
+    if args.time_components:
+        command = ['/usr/bin/time'] + command
     # Run the command.
     process = subprocess.Popen(
         command,
@@ -40,45 +43,48 @@ parser.add_argument('-s','--samples', required=True, help='path to the directory
 parser.add_argument('-p','--popmap', required=True, help='path to a population map file')
 parser.add_argument('-d', '--dry-run', action='store_true')
 parser.add_argument('-o', '--output', required=True, help='path to write pipline output files')
-parser.add_argument('-M', '--ustacks',
+parser.add_argument('-M', '--ustacks-M',
     type=int, help='number of mismatches allowed between stacks within individuals (for ustacks)')
-parser.add_argument('-n', '--cstacks',
-    type=int,help='number of mismatches allowed between stacks between individuals (for cstacks)')
+parser.add_argument('-n', '--cstacks-n',
+    type=int, help='number of mismatches allowed between stacks between individuals (for cstacks)')
 parser.add_argument('-T', '--threads', help='the number of threads/CPUs to use')
-parser.add_argument('-X', '--program', action='append',
+parser.add_argument('-X', action='append',
     help='additional options for specific pipeline components')
 parser.add_argument('--paired', action='store_true',
     help='assemble contigs for each locus from paired-end reads')
+parser.add_argument('--time-components', action='store_true')
 
-def main():
-    args = parser.parse_args()
+def main(args):
+    # Post-process the parsed arguments.
+    # ==========
     args.samples = args.samples.rstrip('/')
-
     # load command line options in a dictionary.
-    dictionary_command_option = {}
-    for x_options in args.program:
-        x_option = x_options.split(':',1)
-        cmd_opt_list = x_option[1].strip(' ').strip('\n').split(' ')
-        dictionary_command_option[x_option[0].strip(' ')]= cmd_opt_list
-    # Create a log file, write a standard header.
-    log_file = open('{}{}'.format(args.output,'/denovo_map.log'), 'w')
-    log_file.write('denovo_map.py version {} started at {}\n'
-        .format(version, get_current_time()))
-    log_file.write(' '.join(sys.argv))
-    log_file.write('\n')
-
-    # Load the list of samples names
+    x_options = args.X
+    args.X = {
+        'ustacks': [], 'cstacks': [], 'sstacks': [],
+        'tsv2bam': [], 'gstacks': [], 'populations': [] }
+    if x_options is not None:
+        for x_option in x_options:
+            if not ':' in x_option:
+                print('Panic!', x_option)
+                sys.exit(1)
+            program, arguments = x_option.split(':', 1)
+            program = program.strip()
+            arguments = arguments.split()
+            if not program in args.X:
+                print('Panic!', program)
+                sys.exit(1)
+            args.X[program] += arguments
+    # Load the samples names from the population map.
+    # ==========
     list_of_samples_names = []
     with open(args.popmap, 'r') as popmap_file:
         for line in popmap_file:
             field = line.rstrip('\n').split('\t')
             sample_name = field[0]
             list_of_samples_names.append(sample_name)
-    # ustacks
+    # Find the reads files.
     # ==========
-    log_file.write('\nustacks\n==========\n')
-    list_of_sample_reads_paths = []
-    # Find the extension of the reads files.
     known_extensions = ['.1.fa.gz', '.1.fq.gz']
     extension = None
     filenames = set(os.listdir(args.samples+'/'))
@@ -91,13 +97,20 @@ def main():
     if extension is None:
         print('Panic! I didnt find it!')
         sys.exit(1)
-    # Create a list of all the input file paths.
-    for sample_name in list_of_samples_names:
-        list_of_sample_reads_paths.append('{}/{}{}'
-            .format(args.samples, sample_name, extension))
+    # Open the log file, write a standard header.
+    # ==========
+    log_file = open('{}{}'.format(args.output,'/denovo_map.log'), 'w')
+    log_file.write('denovo_map.py version {} started at {}\n'
+        .format(version, get_current_time()))
+    log_file.write(' '.join(
+        ['\'{}\''.format(word) if ' ' in word else word for word in sys.argv]))
+    log_file.write('\n')
+    # ustacks
+    # ==========
+    log_file.write('\nustacks\n==========\n')
     # For each sample, create and run the ustacks command.
     for sample_index, sample_name in enumerate(list_of_samples_names):
-        input_file_path = list_of_sample_reads_paths[sample_index]
+        input_file_path = '{}/{}{}'.format(args.samples, sample_name, extension)
         log_file.write(
             "\nsample {} of {} '{}'\n----------\n"
             .format(sample_index + 1, len(list_of_samples_names), sample_name))
@@ -107,16 +120,11 @@ def main():
             '-o', args.output,
             '-i', str(sample_index + 1),
             '--name', sample_name]
-        if args.ustacks is not None:
-            ustacks_command.append('-M')
-            ustacks_command.append(str(args.ustacks))
+        if args.ustacks_M is not None:
+            ustacks_command += ['-M', str(args.ustacks_M)]
         if args.threads is not None:
-            ustacks_command.append('-p')
-            ustacks_command.append(str(args.threads))
-        if 'ustacks' in dictionary_command_option:
-            list_of_options = dictionary_command_option['ustacks']
-            for element in list_of_options:
-                ustacks_command.append(element)
+            ustacks_command += ['-p', str(args.threads)]
+        ustacks_command += args.X['ustacks']
         run_command(ustacks_command, log_file, args)
     # cstacks
     # ==========
@@ -125,16 +133,11 @@ def main():
         '{}/bin/cstacks'.format(install_prefix),
         '-P', args.output,
         '-M', args.popmap]
-    if args.cstacks is not None:
-        cstacks_command.append('-n')
-        cstacks_command.append(str(args.cstacks))
+    if args.cstacks_n is not None:
+        cstacks_command += ['-n', str(args.cstacks_n)]
     if args.threads is not None:
-        cstacks_command.append('-p')
-        cstacks_command.append(str(args.threads))
-    if 'cstacks' in dictionary_command_option:
-        list_of_options = dictionary_command_option['cstacks']
-        for element in list_of_options:
-            cstacks_command.append(element)
+        cstacks_command += ['-p', str(args.threads)]
+    cstacks_command += args.X['cstacks']
     run_command(cstacks_command, log_file, args)
     # sstacks
     # ==========
@@ -144,12 +147,8 @@ def main():
         '-P', args.output,
         '-M', args.popmap]
     if args.threads is not None:
-        sstacks_command.append('-p')
-        sstacks_command.append(str(args.threads))
-    if 'sstacks' in dictionary_command_option:
-        list_of_options = dictionary_command_option['sstacks']
-        for element in list_of_options:
-            sstacks_command.append(element)
+        sstacks_command += ['-p', str(args.threads)]
+    sstacks_command += args.X['sstacks']
     run_command(sstacks_command, log_file, args)
     # tsv2bam
     # ==========
@@ -159,15 +158,10 @@ def main():
         '-P', args.output,
         '-M', args.popmap]
     if args.threads is not None:
-        tsv2bam_command.append('-t')
-        tsv2bam_command.append(str(args.threads))
-    if 'tsv2bam' in dictionary_command_option:
-        list_of_options = dictionary_command_option['tsv2bam']
-        for element in list_of_options:
-            tsv2bam_command.append(element)
+        tsv2bam_command += ['-t', str(args.threads)]
     if args.paired:
-        tsv2bam_command.append('-R')
-        tsv2bam_command.append(args.samples+'/')
+        tsv2bam_command += ['-R', args.samples]
+    tsv2bam_command += args.X['tsv2bam']
     run_command(tsv2bam_command, log_file, args)
     # gstacks
     # ==========
@@ -177,12 +171,8 @@ def main():
         '-P', args.output,
         '-M', args.popmap]
     if args.threads is not None:
-        gstacks_command.append('-t')
-        gstacks_command.append(str(args.threads))
-    if 'gstacks' in dictionary_command_option:
-        list_of_options = dictionary_command_option['gstacks']
-        for element in list_of_options:
-            gstacks_command.append(element)
+        gstacks_command += ['-t', str(args.threads)]
+    gstacks_command += args.X['gstacks']
     run_command(gstacks_command, log_file, args)
     # populations
     # ==========
@@ -192,12 +182,8 @@ def main():
         '-P', args.output,
         '-M', args.popmap]
     if args.threads is not None:
-        populations_command.append('-t')
-        populations_command.append(str(args.threads))
-    if 'populations' in dictionary_command_option:
-        list_of_options = dictionary_command_option['populations']
-        for element in list_of_options:
-            populations_command.append(element)
+        populations_command += ['-t', str(args.threads)]
+    populations_command += args.X['populations']
     run_command(populations_command, log_file, args)
     # Finish.
     # ==========
@@ -205,4 +191,5 @@ def main():
     log_file.write('\ndenovo_map.py completed at {}\n'.format(get_current_time()))
 
 if __name__ == '__main__':
-    main()
+    args = parser.parse_args()
+    main(args)
