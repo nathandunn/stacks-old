@@ -37,22 +37,50 @@ def get_current_time():
     return current_time
 
 # Create command line options for executing stacks pipeline
-parser = argparse.ArgumentParser(
-    description='execute stacks pipeline by running each components of the stacks individually')
-parser.add_argument('-s','--samples', required=True, help='path to the directory of samples')
-parser.add_argument('-p','--popmap', required=True, help='path to a population map file')
+parser = argparse.ArgumentParser()
+parser.add_argument('-s', '--samples', required=True)
+parser.add_argument('-p','--popmap', required=True)
+parser.add_argument('-o', '--outdir', required=True)
+parser.add_argument('-M', '--ustacks-M', type=int)
+parser.add_argument('-n', '--cstacks-n', type=int)
+parser.add_argument('--paired', action='store_true')
+parser.add_argument('--model', type=float)
+parser.add_argument('--var-alpha', type=float)
+parser.add_argument('--gt-alpha', type=float)
+parser.add_argument('-X', action='append')
+parser.add_argument('-T', '--threads', type=int)
 parser.add_argument('-d', '--dry-run', action='store_true')
-parser.add_argument('-o', '--output', required=True, help='path to write pipline output files')
-parser.add_argument('-M', '--ustacks-M',
-    type=int, help='number of mismatches allowed between stacks within individuals (for ustacks)')
-parser.add_argument('-n', '--cstacks-n',
-    type=int, help='number of mismatches allowed between stacks between individuals (for cstacks)')
-parser.add_argument('-T', '--threads', help='the number of threads/CPUs to use')
-parser.add_argument('-X', action='append',
-    help='additional options for specific pipeline components')
-parser.add_argument('--paired', action='store_true',
-    help='assemble contigs for each locus from paired-end reads')
 parser.add_argument('--time-components', action='store_true')
+
+# Overwrite the help/usage behavior.
+parser.format_usage = lambda : '''\
+{prog} {version}
+{prog} --samples dir --popmap path -o dir (assembly options) [-X "prog:opts" ...]
+
+  Input/Output files:
+    --samples: path to the directory containing the samples reads files.
+    --popmap: path to a population map file (format is "<name> TAB <pop>", one sample per line).
+    --outdir: path to an output directory.
+
+  General options:
+    X: additional options for specific pipeline components, e.g. -X "populations: -p 3 -r 0.50".
+    T: the number of threads/CPUs to use (default: 1).
+    --dry-run: Dry run. Do not actually execute anything, just print the commands
+               that would be executed.
+
+  Assembly options:
+    --ustacks-M: number of mismatches allowed between alleles within individuals.
+    --cstacks-n: number of mismatches allowed between alleles between individuals (suggested: set to ustacks -M).
+    --paired: assemble forward reads into RAD loci, then assemble a mini-contig
+              using the paired-end reads of each locus.
+
+  SNP model options (for gstacks):
+    --model: model to use for calling SNPs and genotypes.
+    --var-alpha: significance level at which to call SNPs.
+    --gt-alpha: significance level at which to call genotypes.
+
+'''.format(prog=os.path.basename(__file__), version=version)
+parser.format_help = parser.format_usage
 
 def main(args):
     # Post-process the parsed arguments.
@@ -99,7 +127,7 @@ def main(args):
         sys.exit(1)
     # Open the log file, write a standard header.
     # ==========
-    log_file = open('{}{}'.format(args.output,'/denovo_map.log'), 'w')
+    log_file = open('{}{}'.format(args.outdir,'/denovo_map.log'), 'w')
     log_file.write('denovo_map.py version {} started at {}\n'
         .format(version, get_current_time()))
     log_file.write(' '.join(
@@ -117,7 +145,7 @@ def main(args):
         ustacks_command = [
             '{}/bin/ustacks'.format(install_prefix),
             '-f', input_file_path,
-            '-o', args.output,
+            '-o', args.outdir,
             '-i', str(sample_index + 1),
             '--name', sample_name]
         if args.ustacks_M is not None:
@@ -131,7 +159,7 @@ def main(args):
     log_file.write('\ncstacks\n==========\n')
     cstacks_command = [
         '{}/bin/cstacks'.format(install_prefix),
-        '-P', args.output,
+        '-P', args.outdir,
         '-M', args.popmap]
     if args.cstacks_n is not None:
         cstacks_command += ['-n', str(args.cstacks_n)]
@@ -144,7 +172,7 @@ def main(args):
     log_file.write('\nsstacks\n==========\n')
     sstacks_command = [
         '{}/bin/sstacks'.format(install_prefix),
-        '-P', args.output,
+        '-P', args.outdir,
         '-M', args.popmap]
     if args.threads is not None:
         sstacks_command += ['-p', str(args.threads)]
@@ -155,7 +183,7 @@ def main(args):
     log_file.write('\ntsv2bam\n==========\n')
     tsv2bam_command = [
         '{}/bin/tsv2bam'.format(install_prefix),
-        '-P', args.output,
+        '-P', args.outdir,
         '-M', args.popmap]
     if args.threads is not None:
         tsv2bam_command += ['-t', str(args.threads)]
@@ -168,7 +196,7 @@ def main(args):
     log_file.write('\ngstacks\n==========\n')
     gstacks_command = [
         '{}/bin/gstacks'.format(install_prefix),
-        '-P', args.output,
+        '-P', args.outdir,
         '-M', args.popmap]
     if args.threads is not None:
         gstacks_command += ['-t', str(args.threads)]
@@ -179,7 +207,7 @@ def main(args):
     log_file.write('\npopulations\n==========\n')
     populations_command = [
         '{}/bin/populations'.format(install_prefix),
-        '-P', args.output,
+        '-P', args.outdir,
         '-M', args.popmap]
     if args.threads is not None:
         populations_command += ['-t', str(args.threads)]
@@ -192,4 +220,11 @@ def main(args):
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    main(args)
+    try:
+        sys.exit(main(args))
+    except Exception as e:
+        if type(e) in (FileNotFoundError, PermissionError, NotADirectoryError):
+            print(e)
+            sys.exit(1)
+        else:
+            raise
