@@ -62,6 +62,7 @@ parser.add_argument('-T', '--threads', type=int)
 parser.add_argument('-d', '--dry-run', action='store_true')
 parser.add_argument('--time-components', action='store_true')
 parser.add_argument('--quiet', action='store_true')
+parser.add_argument('--catalog-popmap')
 
 # Overwrite the help/usage behavior.
 parser.format_usage = lambda : '''\
@@ -172,9 +173,12 @@ def main(args):
     # cstacks
     cstacks = [
         '{}/bin/cstacks'.format(install_prefix),
-        '-P', args.outdir,
-        '-M', args.popmap]
+        '-P', args.outdir]
     if args.cstacks_n is not None: cstacks += ['-n', str(args.cstacks_n)]
+    if args.catalog_popmap or (args.catalog_popmap and os.path.exists(args.popmap)) is not None:
+        cstacks += ['-M', str(args.catalog_popmap)]
+    else:
+         cstacks += ['-M', str(args.popmap)]   
     if args.threads is not None: cstacks += ['-p', str(args.threads)]
     cstacks += args.X['cstacks']
     # sstacks
@@ -243,6 +247,7 @@ def main(args):
 
 if __name__ == '__main__':
     args = parser.parse_args()
+    print (args)
     try:
         main(args)
     except (FileNotFoundError, PermissionError, NotADirectoryError) as e:
