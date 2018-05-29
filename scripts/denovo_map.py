@@ -5,6 +5,20 @@ version = '_VERSION_'
 install_prefix = '_INSTALLPREFIX_'.rstrip('/')
 program_name = os.path.basename(__file__)
 
+def parse_sample_names(popmap_path):
+    sample_names = []
+    with open(popmap_path, 'r') as popmap_file:
+        for i, line in enumerate(popmap_file):
+            if ' ' in line:
+                print('WARNING: The population map contains spaces.', file=sys.stderr)
+            fields = line.rstrip('\n').split('\t')
+            if not 2 <= len(fields) <= 3:
+                sys.exit('ERROR: Bad number of fields at line {} of the'
+                    ' population map, \'{}\''
+                    .format(i+1, line.rstrip('\n')))
+            sample_names.append(fields[0])
+    return sample_names
+
 # Function to run a command and save its output.
 def run_command(command, log_file, args):
     assert type(command) == list
@@ -83,6 +97,8 @@ parser.format_usage = lambda : '''\
   Assembly options:
     --ustacks-M: number of mismatches allowed between alleles within individuals.
     --cstacks-n: number of mismatches allowed between alleles between individuals (suggested: set to ustacks -M).
+    --catalog-popmap: population map listing the subset of samples that should be
+                      used to create the catalog (default: all).
     --paired: assemble forward reads into RAD loci, then assemble a mini-contig
               using the paired-end reads of each locus.
 
@@ -115,17 +131,12 @@ def main(args):
             args.X[program] += arguments
     # Load the samples names from the population map.
     # ==========
-    samples_names = []
-    with open(args.popmap, 'r') as popmap_file:
-        for i, line in enumerate(popmap_file):
-            if ' ' in line:
-                print('WARNING: The population map contains spaces.', file=sys.stderr)
-            fields = line.rstrip('\n').split('\t')
-            if not 2 <= len(fields) <= 3:
-                sys.exit('ERROR: Bad number of fields at line {} of the'
-                    ' population map, \'{}\''
-                    .format(i+1, line.rstrip('\n')))
-            samples_names.append(fields[0])
+    samples_names = parse_sample_names(args.popmap)
+    # Check the catalog popmap, if any.
+    if args.catalog_popmap is not None:
+        catalog_samples = parse_sample_names(args.catalog_popmap)
+        if len(set(catalog_samples) - set(samples_names)) > 0:
+            sys.exit('Error: The catalog popmap must be a subset of the global one.')
     # Find the reads files.
     # ==========
     known_extensions = [
@@ -174,11 +185,11 @@ def main(args):
     cstacks = [
         '{}/bin/cstacks'.format(install_prefix),
         '-P', args.outdir]
-    if args.cstacks_n is not None: cstacks += ['-n', str(args.cstacks_n)]
-    if args.catalog_popmap or (args.catalog_popmap and os.path.exists(args.popmap)) is not None:
-        cstacks += ['-M', str(args.catalog_popmap)]
+    if args.catalog_popmap is not None:
+        cstacks += ['-M', args.catalog_popmap]
     else:
-         cstacks += ['-M', str(args.popmap)]   
+        cstacks += ['-M', args.popmap]
+    if args.cstacks_n is not None: cstacks += ['-n', str(args.cstacks_n)]
     if args.threads is not None: cstacks += ['-p', str(args.threads)]
     cstacks += args.X['cstacks']
     # sstacks
@@ -247,7 +258,6 @@ def main(args):
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    print (args)
     try:
         main(args)
     except (FileNotFoundError, PermissionError, NotADirectoryError) as e:
