@@ -3735,6 +3735,7 @@ parse_command_line(int argc, char* argv[])
             {"progeny",        required_argument, NULL, 'r'},
             {"renz",           required_argument, NULL, 'e'},
             {"popmap",         required_argument, NULL, 'M'},
+            {"no-popmap",      no_argument,       NULL, 1017}, // Negates a previous -M/--popmap
             {"whitelist",      required_argument, NULL, 'W'},
             {"blacklist",      required_argument, NULL, 'B'},
             {"batch_size",     required_argument, NULL, 1999},
@@ -3811,8 +3812,11 @@ parse_command_line(int argc, char* argv[])
         case 'V':
             in_vcf_path = optarg;
             break;
-        case 'M':
+        case 'M': // popmap
             pmap_path = optarg;
+            break;
+        case 1017: //no-popmap
+            pmap_path.clear();
             break;
         case 'D':
             merge_sites = true;
