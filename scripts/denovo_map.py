@@ -2,8 +2,10 @@
 
 import sys, os, signal, argparse, datetime, re, subprocess
 version = '_VERSION_'
-install_prefix = '_INSTALLPREFIX_'.rstrip('/')
 program_name = os.path.basename(__file__)
+
+def bin_path(component):
+    return '_BINDIR_/{}'.format(component)
 
 def parse_sample_names(popmap_path):
     sample_names = []
@@ -172,7 +174,7 @@ def main(args):
     for sample_index, sample_name in enumerate(samples_names):
         input_file_path = '{}/{}{}'.format(args.samples, sample_name, extension)
         cmd = [
-            '{}/bin/ustacks'.format(install_prefix),
+            bin_path('ustacks'),
             '-f', input_file_path,
             '-o', args.outdir,
             '-i', str(sample_index + 1),
@@ -183,7 +185,7 @@ def main(args):
         ustacks[sample_name] = cmd
     # cstacks
     cstacks = [
-        '{}/bin/cstacks'.format(install_prefix),
+        bin_path('cstacks'),
         '-P', args.outdir]
     if args.catalog_popmap is not None:
         cstacks += ['-M', args.catalog_popmap]
@@ -194,14 +196,14 @@ def main(args):
     cstacks += args.X['cstacks']
     # sstacks
     sstacks = [
-        '{}/bin/sstacks'.format(install_prefix),
+        bin_path('sstacks'),
         '-P', args.outdir,
         '-M', args.popmap]
     if args.threads is not None: sstacks += ['-p', str(args.threads)]
     sstacks += args.X['sstacks']
     # tsv2bam
     tsv2bam = [
-        '{}/bin/tsv2bam'.format(install_prefix),
+        bin_path('tsv2bam'),
         '-P', args.outdir,
         '-M', args.popmap]
     if args.threads is not None: tsv2bam += ['-t', str(args.threads)]
@@ -209,14 +211,14 @@ def main(args):
     tsv2bam += args.X['tsv2bam']
     # gstacks
     gstacks = [
-        '{}/bin/gstacks'.format(install_prefix),
+        bin_path('gstacks'),
         '-P', args.outdir,
         '-M', args.popmap]
     if args.threads is not None: gstacks += ['-t', str(args.threads)]
     gstacks += args.X['gstacks']
     # populations
     populations = [
-        '{}/bin/populations'.format(install_prefix),
+        bin_path('populations'),
         '-P', args.outdir,
         '-M', args.popmap]
     if args.threads is not None: populations += ['-t', str(args.threads)]
