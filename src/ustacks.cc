@@ -44,7 +44,7 @@ int     dump_graph        = 0;
 int     retain_rem_reads  = false;
 int     deleverage_stacks = 0;
 bool    remove_rep_stacks = true;
-double  removal_threshold = 2.0;
+double  removal_threshold = 3.0;
 int     max_utag_dist     = 2;
 int     max_rem_dist      = -1;
 bool    force_diff_len    = false;
@@ -216,7 +216,7 @@ int main (int argc, char* argv[]) {
     //
     if (gapped_alignments) {
         cerr << "Assembling stacks, allowing for gaps (min. match length " << as_percentage(min_match_len) << ")...\n";
-        const size_t n_ungapped_loci = merged.size(); 
+        const size_t n_ungapped_loci = merged.size();
         search_for_gaps(merged);
         merge_gapped_alns(unique, remainders, merged);
         call_consensus(merged, unique, remainders, false);
@@ -561,7 +561,7 @@ search_for_gaps(map<int, MergedStack *> &merged)
             generate_kmers_lazily(tag_1->con, kmer_len, num_kmers, query_kmers);
 
             assert(num_kmers > 0);
-            
+
             uniq_kmers.clear();
             for (uint j = 0; j < num_kmers; j++)
                 uniq_kmers.insert(query_kmers[j]);
@@ -721,7 +721,7 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map
         string     seq;
         char      *buf = new char[max_rem_len + 1];
         size_t     num_kmers = 0;
-        
+
         #pragma omp for schedule(dynamic)
         for (uint j = 0; j < keys.size(); j++) {
             auto it = rem.find(keys[j]);
@@ -736,7 +736,7 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map
             generate_kmers_lazily(buf, kmer_len, num_kmers, rem_kmers);
 
             assert(num_kmers > 0);
-            
+
             map<int, int> hits;
             //
             // Lookup the occurances of each remainder k-mer in the MergedStack k-mer map
@@ -760,7 +760,7 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map
                     continue;
 
                 MergedStack *tag_1 = merged[hit_it->first];
-    
+
                 int d = dist(tag_1, buf);
 
                 //
@@ -797,7 +797,7 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map
             //
             if (min_id >= 0 && count == 1) {
                 MergedStack *tag_1 = merged.at(min_id);
-                
+
                 //
                 // The max_rem_dist distance allows for the possibility of a frameshift smaller
                 // or equal to max_rem_dist at the 3' end of the read. If we detect a possible
@@ -820,7 +820,7 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map
                 }
             }
         }
-        
+
         //
         // Free the k-mers we generated for this remainder read
         //
@@ -926,7 +926,7 @@ search_for_gapped_remainders(map<int, MergedStack *> &merged, map<int, Stack *> 
             for (auto hit_it = hits.begin(); hit_it != hits.end(); hit_it++) {
 
                 if (hit_it->second < min_hits) continue;
-                
+
                 MergedStack *tag_1 = merged[hit_it->first];
 
                 // Don't compute distances for masked tags
@@ -975,7 +975,7 @@ search_for_gapped_remainders(map<int, MergedStack *> &merged, map<int, Stack *> 
             #pragma omp critical
             tag_1->rem_queue.push_back(r->id);
         }
-        
+
         //
         // Free the k-mers we generated for this query.
         //
@@ -1036,12 +1036,12 @@ merge_gapped_remainders(map<int, MergedStack *> &merged, map<int, Stack *> &uniq
 
                 // q_start = diff > 0 ? q_start + diff : q_start;
                 // s_start = diff < 0 ? s_start + abs(diff) : s_start;
-                
+
                 // cerr << "Consensus size: " << tag_1->len << "; remainder size: " << r->seq->size() << "\n"
                 //      << "Con seq: " << tag_1->con << " (" << strlen(tag_1->con) << ")\n"
                 //      << "Rem seq: " << r->seq->seq() << "\n"
                 //      << "q_start: " << q_start << "; q_end: " << q_end << "; s_start: " << s_start << "; s_end: " << s_end << "\n";
-                
+
                 aln->init(r->seq->size(), tag_1->len);
 
                 if (aln->align(r->seq->seq().c_str(), tag_1->con)) {
@@ -1104,7 +1104,7 @@ merge_gapped_remainders(map<int, MergedStack *> &merged, map<int, Stack *> &uniq
             tag_1->rem_queue.clear();
         }
     }
-    
+
     return utilized;
 }
 
@@ -1360,7 +1360,7 @@ update_consensus(MergedStack *mtag, map<int, Stack *> &unique, map<int, Rem *> &
 
     for (col = 0; col < length; col++) {
         nucs.assign(5, 0);
-        
+
         for (row = 0; row < height; row++) {
             d = reads[row];
             switch ((*d)[col]) {
@@ -3130,7 +3130,7 @@ void help() {
          << "  Stack assembly options:\n"
          << "    d,--deleverage: enable the Deleveraging algorithm, used for resolving over merged tags.\n"
          << "    --keep_high_cov: disable the algorithm that removes highly-repetitive stacks and nearby errors.\n"
-         << "    --high_cov_thres: highly-repetitive stacks threshold, in standard deviation units (default: 2.0).\n"
+         << "    --high_cov_thres: highly-repetitive stacks threshold, in standard deviation units (default: 3.0).\n"
          << "    --max_locus_stacks <num>: maximum number of stacks at a single de novo locus (default 3).\n"
          << "     --k_len <len>: specify k-mer size for matching between alleles and loci (automatically calculated by default).\n\n"
          << "  Gapped assembly options:\n"
