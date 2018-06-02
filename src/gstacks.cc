@@ -60,7 +60,7 @@ unique_ptr<const Model> model;
 
 size_t km_length         = 31;
 size_t min_km_count      = 2;
-double min_km_freq       = 0.05;
+double min_km_freq       = 0.01;
 size_t max_fragment_alns = 2;
 
 pair<size_t,size_t> phasing_cooccurrences_thr_range = {2, 2};
@@ -2544,7 +2544,7 @@ const string help_string = string() +
         "  (De novo mode)\n"
         "  --kmer-length: kmer length for the de Bruijn graph (default: 31, max. 31)\n"
         "  --min-kmer-cov: minimum coverage to consider a kmer (default: 2)\n"
-        "  --min-kmer-freq: minimum frequency (in %reads) to consider a kmer (default: 0.05) \n"
+        "  --min-kmer-freq: minimum frequency (in %reads) to consider a kmer (default: 0.01) \n"
         // "  --[no-]pcr-duplicates-measures: take measures to mitigate the effects of PCR\n"
         // "      duplicates. Equivalent to [TODO]. (default: OFF if --rm-pcr-duplicates is\n"
         // "      given, ON otherwise)\n"
@@ -2907,7 +2907,7 @@ try {
             cerr << "Error: Please specify an output directory (-O).\n";
             bad_args();
         }
-        if (min_km_count != 2 || min_km_freq != 0.05) {
+        if (min_km_count != 2 || min_km_freq != 0.01) {
             cerr << "Error: --min-kmer-count, --min-kmer-freq are for the denovo mode.\n";
             bad_args();
         }
@@ -2996,7 +2996,7 @@ try {
         os << "  Kmer length: " << km_length << "\n";
     if (min_km_count != 2)
         os << "  Minimum kmer count: " << min_km_count << "\n";
-    if (min_km_freq != 0.05)
+    if (min_km_freq != 0.01)
         os << "  Mininimum kmer freq: " << min_km_freq << "\n";
     if (rm_unpaired_reads)
         os << "  Discarding unpaired reads.\n";
