@@ -77,6 +77,7 @@ bool   dbg_true_reference  = false;
 bool   dbg_true_alns       = false;
 bool   dbg_log_stats_phasing = false;
 bool   dbg_phasing_no_2ndpass = false;
+size_t dbg_denovo_min_loc_samples = 0;
 
 //
 // Additional globals.
@@ -808,11 +809,14 @@ void LocData::clear() {
 void
 LocusProcessor::process(CLocReadSet& loc)
 {
+    this->loc_.clear();
+    if (dbg_denovo_min_loc_samples > 0
+            && loc.n_samples() < dbg_denovo_min_loc_samples)
+        loc.clear();
     if (loc.reads().empty())
         return;
     ++ctg_stats_.n_nonempty_loci;
 
-    this->loc_.clear();
     this->loc_.id  =  loc.id();
     this->loc_.pos =  loc.pos();
     this->loc_.mpopi   = &loc.mpopi();
@@ -2576,7 +2580,7 @@ const string help_string = string() +
         "  --dbg-true-reference: align paired-end reads to the true reference\n"
         "  --dbg-log-stats-phasing: log detailed phasing statistics\n"
         "  --dbg-min-spl-reads: discard samples with less than this many reads (ref-based)\n"
-        "  --dbg-min-loc-spls: discard loci with less than this many samples (ref-based)\n"
+        "  --dbg-min-loc-spls: discard loci with less than this many samples\n"
         "\n"
 #endif
         ;
@@ -2839,6 +2843,7 @@ try {
             break;
         case 2017://dbg-min-loc-spls
             refbased_cfg.min_samples_per_locus = stoi(optarg);
+            dbg_denovo_min_loc_samples = stoi(optarg);
             break;
         case '?':
             bad_args();
