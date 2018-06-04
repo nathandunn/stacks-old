@@ -378,6 +378,17 @@ CLocAlnSet::clear() {
     reads_per_sample_.clear();
 }
 
+size_t CLocReadSet::n_samples() const {
+    vector<size_t> n_reads_per_sample (mpopi_->samples().size());
+    for (auto& r : reads_)
+        ++n_reads_per_sample[r.sample];
+    size_t n_samples = 0;
+    for (size_t n_s_reads : n_reads_per_sample)
+        if (n_s_reads > 0)
+            ++n_samples;
+    return n_samples;
+}
+
 void CLocAlnSet::reinit(int id, const PhyLoc& aln_pos, const MetaPopInfo* mpopi) {
     clear();
     id_ = id;

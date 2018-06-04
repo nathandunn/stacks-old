@@ -197,7 +197,7 @@ struct SAlnRead : AlnRead {
 };
 
 class CLocReadSet {
-    const MetaPopInfo& mpopi_;
+    const MetaPopInfo* mpopi_;
     size_t bam_i_; // BAM target index (SIZE_MAX if unavailable).
     int id_; // Catalog locus ID
     PhyLoc aln_pos_;
@@ -206,10 +206,10 @@ class CLocReadSet {
 
 public:
     CLocReadSet(const MetaPopInfo& mpopi)
-        : mpopi_(mpopi), bam_i_(SIZE_MAX), id_(-1), aln_pos_(), reads_(), pe_reads_()
+        : mpopi_(&mpopi), bam_i_(SIZE_MAX), id_(-1), aln_pos_(), reads_(), pe_reads_()
         {}
 
-    const MetaPopInfo& mpopi() const {return mpopi_;}
+    const MetaPopInfo& mpopi() const {return *mpopi_;}
     size_t bam_i() const {return bam_i_;}
     int id() const {return id_;}
     const PhyLoc& pos() const {return aln_pos_;}
@@ -224,6 +224,7 @@ public:
     void pos(const PhyLoc& p) {aln_pos_ = p;}
     void add(SRead&& r) {reads_.push_back(move(r));}
     void add_pe(SRead&& r) {pe_reads_.push_back(move(r));}
+    size_t n_samples() const;
 };
 
 class CLocAlnSet {
