@@ -686,8 +686,8 @@ try {
     //
 
     gzclose(o_gzfasta_f);
-    o_vcf_f.reset();
-    o_details_f.reset();
+    o_vcf_f->file().close();
+    o_details_f->close();
     model.reset();
     if (dbg_write_hapgraphs)
         o_hapgraphs_f << "}\n";

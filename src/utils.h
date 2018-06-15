@@ -290,9 +290,10 @@ class VersatileWriter {
 
 public:
     VersatileWriter(const string& path);
-    ~VersatileWriter() {if(is_gzipped_) if (gzclose(gzfile_) != Z_OK) {throw std::ios::failure("~VersatileWriter::gzclose");}}
+    ~VersatileWriter() {if(is_gzipped_) gzclose(gzfile_);}
 
     const string& path() const {return path_;}
+    void close();
 
     friend VersatileWriter& operator<< (VersatileWriter& w, char c);
     friend VersatileWriter& operator<< (VersatileWriter& w, const char* s);
@@ -345,6 +346,19 @@ void strip_read_number(string& read_name) {
     cerr << "Error: Unrecognized read name format: expected '"
          << read_name << "' to end with /1, /2, _1 or _2.\n";
     throw exception();
+}
+
+inline
+void VersatileWriter::close() {
+    if (is_gzipped_) {
+        if (gzclose(gzfile_) != Z_OK) {
+            cerr << "Error: VersatileWriter::gzclose failed for '"
+                 << path_ << "'\n";
+            throw exception();
+        }
+    } else {
+        ofs_.close();
+    }
 }
 
 inline
