@@ -290,7 +290,7 @@ class VersatileWriter {
 
 public:
     VersatileWriter(const string& path);
-    ~VersatileWriter() {if(is_gzipped_) gzclose(gzfile_);}
+    ~VersatileWriter() {if(is_gzipped_) if (gzclose(gzfile_) != Z_OK) {throw std::ios::failure("~VersatileWriter::gzclose");}}
 
     const string& path() const {return path_;}
 
