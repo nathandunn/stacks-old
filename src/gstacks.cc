@@ -686,6 +686,8 @@ try {
     //
 
     gzclose(o_gzfasta_f);
+    o_vcf_f.reset();
+    o_details_f.reset();
     model.reset();
     if (dbg_write_hapgraphs)
         o_hapgraphs_f << "}\n";
@@ -869,8 +871,10 @@ LocusProcessor::process(CLocReadSet& loc)
             // Assemble a contig.
             timers_.assembling.restart();
             vector<const DNASeq4*> seqs_to_assemble;
-            for (const Read& r : loc.pe_reads())
+            size_t every = loc.pe_reads.size() < 1000 ? 1 : loc.pe_reads.size() / 1000;
+            for (const Read& r : loc.pe_reads()) {
                 seqs_to_assemble.push_back(&r.seq);
+            }
             DNASeq4 ctg = DNASeq4(assemble_contig(seqs_to_assemble));
             timers_.assembling.stop();
             if (ctg.empty())
