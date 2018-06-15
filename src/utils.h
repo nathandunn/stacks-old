@@ -290,7 +290,7 @@ class VersatileWriter {
 
 public:
     VersatileWriter(const string& path);
-    ~VersatileWriter() {if(is_gzipped_) gzclose(gzfile_);}
+    ~VersatileWriter() {if(is_gzipped_ && gzfile_!=NULL) gzclose(gzfile_);}
 
     const string& path() const {return path_;}
     void close();
@@ -356,6 +356,7 @@ void VersatileWriter::close() {
                  << path_ << "'\n";
             throw exception();
         }
+        gzfile_ = NULL;
     } else {
         ofs_.close();
     }
