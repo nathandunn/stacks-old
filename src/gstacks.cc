@@ -871,10 +871,8 @@ LocusProcessor::process(CLocReadSet& loc)
             // Assemble a contig.
             timers_.assembling.restart();
             vector<const DNASeq4*> seqs_to_assemble;
-            size_t every = loc.pe_reads.size() < 1000 ? 1 : loc.pe_reads.size() / 1000;
-            for (const Read& r : loc.pe_reads()) {
+            for (const Read& r : loc.pe_reads())
                 seqs_to_assemble.push_back(&r.seq);
-            }
             DNASeq4 ctg = DNASeq4(assemble_contig(seqs_to_assemble));
             timers_.assembling.stop();
             if (ctg.empty())
