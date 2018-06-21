@@ -1012,23 +1012,27 @@ verify_gapped_match(map<int, Locus *> &catalog, QLocus *query,
     string   query_allele, cat_allele, converted_query_allele, qseq;
     int      query_len;
     uint     verified = 0;
-
-    //
-    // 2. Check if there was a consistent alignment between the alleles to the catalog locus.
-    //
+    
+    // // //
+    // // // 2. Check if there was a consistent alignment between the alleles to the catalog locus.
+    // // //
     set<string> cigars;
     for (auto query_it = query_hits.begin(); query_it != query_hits.end(); query_it++) {
         map<allele_type, AlignRes> &cat_hits = query_it->second;
         for (auto cat_it = cat_hits.begin(); cat_it != cat_hits.end(); cat_it++)
             cigars.insert(cat_it->second.cigar);
     }
-    if (cigars.size() > 1) {
-        bad_aln++;
-        if (write_all_matches)
-                query->add_match(cat->id, "ambig_aln");
-        return false;
-    }
+    // // if (cigars.size() > 1) {
+    // //     bad_aln++;
+    // //     if (write_all_matches)
+    // //         query->add_match(cat->id, "ambig_aln");
+    // //     return false;
+    // // }
 
+    //
+    // ***** We need to reduce multi alignments to the same catalog locus down to a single, best alignment.
+    //       
+    
     //
     // 3. Make sure the query has no SNPs unaccounted for in the catalog.
     //

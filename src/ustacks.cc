@@ -1205,12 +1205,6 @@ call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map<i
                     reads.push_back(r->seq);
                     read_types.push_back(secondary);
 
-                    if (r->seq->size() != length) {
-                        cerr << "R->id: " << r->id << "\n";
-                        cerr << "About to print remainder sequence.\n";
-                        cerr << "R->seq: " << r->seq->seq() << "\n";
-                        cerr << "R->seq->size(): " << r->seq->size() << ": length: " << length << "\n";
-                    }
                     assert(r->seq->size() == length);
                 }
             }
