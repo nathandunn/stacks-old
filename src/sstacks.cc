@@ -1021,9 +1021,9 @@ verify_gapped_match(map<int, Locus *> &catalog, QLocus *query,
     set<string> cat_alleles_matched;
     Cigar cigar;
     for (auto query_it = query_hits.begin(); query_it != query_hits.end(); query_it++) {
+
         // Rank the alignments between this query allele and all catalog alleles.
         vector<pair<allele_type, AlignRes>> cat_hits;
-        // bool found = false;
         for (auto cat_it = query_it->second.begin(); cat_it != query_it->second.end(); cat_it++)
             cat_hits.push_back(*cat_it);
         sort(cat_hits.begin(), cat_hits.end(),
@@ -1031,33 +1031,14 @@ verify_gapped_match(map<int, Locus *> &catalog, QLocus *query,
              {
                  return compare_alignres(a.second, b.second);
              });
-        // //
-        // // Take the first allele that hasn't already been assigned. If the query is monomorphic
-        // // make sure the reconstructed allele (based on catalog SNP positions) matches the proper
-        // // catalog allele.
-        // // 
-        for (uint i = 0; i < cat_hits.size(); i++)
-            if (cat_alleles_matched.count(cat_hits[i].first) == 0) {
 
-        //         parse_cigar(invert_cigar(cat_hits[i].second.cigar).c_str(), cigar);
-        //         qseq = apply_cigar_to_seq(query->con, cigar);
-        //         converted_query_allele = generate_query_allele(cat, query, qseq.c_str(), query_it->first);
-        //         if (converted_query_allele != cat_hits[i].first)
-        //             continue;
-                
+        for (uint i = 0; i < cat_hits.size(); i++)
+            if (cat_alleles_matched.count(cat_hits[i].first) == 0) {                
                 query_it->second.clear();
                 query_it->second.insert(cat_hits[i]);
                 cat_alleles_matched.insert(cat_hits[i].first);
-                // found = true;
                 break;
             }
-
-        // if (found == false) {
-        //     bad_aln++;
-        //     if (write_all_matches)
-        //         query->add_match(cat->id, "ambig_aln");
-        //     return false;
-        // }
     }
 
     //
@@ -1110,30 +1091,8 @@ verify_gapped_match(map<int, Locus *> &catalog, QLocus *query,
     for (auto query_it = query_hits.begin(); query_it != query_hits.end(); query_it++) {
         query_allele = query_it->first;
         cat_allele   = query_it->second.begin()->first;
-        // map<allele_type, AlignRes> &cat_hits = query_it->second;
-
-        // if (cat_hits.size() == 1 && cat_hits.begin()->first == "consensus") {
-        //     auto cat_it = cat_hits.begin();
-
-        //     cat_allele = cat_it->first;
-        //     aln_res    = cat_it->second;
-
-        //     verified++;
-        //     query->add_match(cat_id, cat_allele, query_allele, 0, invert_cigar(aln_res.cigar));
-        //     continue;
-        // }
-
-        // converted_query_allele = generate_query_allele(cat, query, (const char *) query->con, query_allele);
-
-        // auto cat_it = cat_hits.find(converted_query_allele);
-
-        // if (cat_it != cat_hits.end()) {
-            // cat_allele = cat_it->first;
-            // aln_res    = cat_it->second;
-
-            verified++;
-            query->add_match(cat_id, cat_allele, query_allele, 0, invert_cigar(query_it->second.begin()->second.cigar));
-        // }
+        verified++;
+        query->add_match(cat_id, cat_allele, query_allele, 0, invert_cigar(query_it->second.begin()->second.cigar));
     }
 
     if (verified > 0) {
