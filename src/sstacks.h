@@ -68,7 +68,7 @@ int    verify_sequence_match(map<int, Locus *> &, QLocus *, set<int> &, map<stri
 int    search_for_gaps(map<int, Locus *> &, map<int, QLocus *> &, KmerHashMap &, map<int, pair<allele_type, int> > &, double);
 bool   verify_gapped_match(map<int, Locus *> &, QLocus *, set<int> &, map<allele_type, map<allele_type, AlignRes> > &, uint &, uint &, uint &, uint &, uint &);
 int    verify_genomic_loc_match(Locus *, QLocus *, set<string> &, unsigned long &);
-string generate_query_allele(Locus *, Locus *, allele_type);
+string generate_query_allele(Locus *, Locus *, const char *, allele_type);
 bool   match_alleles(allele_type, allele_type);
 int    generate_query_haplotypes(Locus *, QLocus *, set<string> &);
 int    impute_haplotype(string, vector<pair<allele_type, string> > &, string &);
