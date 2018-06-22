@@ -1010,49 +1010,84 @@ verify_gapped_match(map<int, Locus *> &catalog, QLocus *query,
 
     AlignRes aln_res;
     string   query_allele, cat_allele, converted_query_allele, qseq;
-    int      query_len;
     uint     verified = 0;
     
-    // // //
-    // // // 2. Check if there was a consistent alignment between the alleles to the catalog locus.
-    // // //
-    set<string> cigars;
+    //
+    // 2. We have aligned multiple query alleles against multiple catalog alleles for each locus.
+    //    Different alleles may have slightly different CIGARs due to placement of gaps. Assign
+    //    the best alignment for each query allele to a single catalog allele -- do not asign more
+    //    than one query allele to more than one catalog allele.
+    //
+    set<string> cat_alleles_matched;
+    Cigar cigar;
     for (auto query_it = query_hits.begin(); query_it != query_hits.end(); query_it++) {
-        map<allele_type, AlignRes> &cat_hits = query_it->second;
-        for (auto cat_it = cat_hits.begin(); cat_it != cat_hits.end(); cat_it++)
-            cigars.insert(cat_it->second.cigar);
+        // Rank the alignments between this query allele and all catalog alleles.
+        vector<pair<allele_type, AlignRes>> cat_hits;
+        // bool found = false;
+        for (auto cat_it = query_it->second.begin(); cat_it != query_it->second.end(); cat_it++)
+            cat_hits.push_back(*cat_it);
+        sort(cat_hits.begin(), cat_hits.end(),
+             [] (pair<allele_type, AlignRes> &a, pair<allele_type, AlignRes> &b)
+             {
+                 return compare_alignres(a.second, b.second);
+             });
+        // //
+        // // Take the first allele that hasn't already been assigned. If the query is monomorphic
+        // // make sure the reconstructed allele (based on catalog SNP positions) matches the proper
+        // // catalog allele.
+        // // 
+        for (uint i = 0; i < cat_hits.size(); i++)
+            if (cat_alleles_matched.count(cat_hits[i].first) == 0) {
+
+        //         parse_cigar(invert_cigar(cat_hits[i].second.cigar).c_str(), cigar);
+        //         qseq = apply_cigar_to_seq(query->con, cigar);
+        //         converted_query_allele = generate_query_allele(cat, query, qseq.c_str(), query_it->first);
+        //         if (converted_query_allele != cat_hits[i].first)
+        //             continue;
+                
+                query_it->second.clear();
+                query_it->second.insert(cat_hits[i]);
+                cat_alleles_matched.insert(cat_hits[i].first);
+                // found = true;
+                break;
+            }
+
+        // if (found == false) {
+        //     bad_aln++;
+        //     if (write_all_matches)
+        //         query->add_match(cat->id, "ambig_aln");
+        //     return false;
+        // }
     }
-    // // if (cigars.size() > 1) {
-    // //     bad_aln++;
-    // //     if (write_all_matches)
-    // //         query->add_match(cat->id, "ambig_aln");
-    // //     return false;
-    // // }
 
     //
-    // ***** We need to reduce multi alignments to the same catalog locus down to a single, best alignment.
-    //       
-    
+    // 3. We need to apply the CIGAR to the query consensus sequence. Pick the match with the most depth
+    //    so the consensus stays the consensus if there are different CIGARS between alleles.
     //
-    // 3. Make sure the query has no SNPs unaccounted for in the catalog.
-    //
-    Cigar cigar;
-    query_len = parse_cigar(invert_cigar(*cigars.begin()).c_str(), cigar);
+    string max_query_allele;
+    int    max_query_allele_depth = 0;
+    if (query->alleles.size() == 0) {
+        max_query_allele = "consensus";
+        max_query_allele_depth = query->depth;
+    } else {
+        for (auto query_it = query_hits.begin(); query_it != query_hits.end(); query_it++) {
+            if (query->alleles[query_it->first] > max_query_allele_depth) {
+                max_query_allele_depth = query->alleles[query_it->first];
+                max_query_allele       = query_it->first;
+            }
+        }
+    }
+    parse_cigar(invert_cigar(query_hits[max_query_allele].begin()->second.cigar).c_str(), cigar);
     adjust_snps_for_gaps(cigar, query);
     qseq = apply_cigar_to_seq(query->con, cigar);
     query->add_consensus(qseq.c_str());
 
-    int min_tag_len = (uint)query_len > cat->len ? query_len : cat->len;
-
+    //
+    // 4. Make sure the query has no SNPs unaccounted for in the catalog.
+    //
     bool found;
-
     for (auto i = query->snps.begin(); i != query->snps.end(); i++) {
         found = false;
-        //
-        // SNP occurs in a column that is beyond the length of the catalog
-        //
-        if ((int)(*i)->col > min_tag_len - 1)
-            continue;
 
         for (auto j = cat->snps.begin(); j != cat->snps.end(); j++) {
             if ((*i)->col == (*j)->col)
@@ -1070,35 +1105,35 @@ verify_gapped_match(map<int, Locus *> &catalog, QLocus *query,
     }
 
     //
-    // 4. Assign the allele hits after verifying there is a match between catalog and query allele.
+    // 5. Assign the allele hits after verifying there is a match between catalog and query allele.
     //
     for (auto query_it = query_hits.begin(); query_it != query_hits.end(); query_it++) {
         query_allele = query_it->first;
+        cat_allele   = query_it->second.begin()->first;
+        // map<allele_type, AlignRes> &cat_hits = query_it->second;
 
-        map<allele_type, AlignRes> &cat_hits = query_it->second;
+        // if (cat_hits.size() == 1 && cat_hits.begin()->first == "consensus") {
+        //     auto cat_it = cat_hits.begin();
 
-        if (cat_hits.size() == 1 && cat_hits.begin()->first == "consensus") {
-            auto cat_it = cat_hits.begin();
+        //     cat_allele = cat_it->first;
+        //     aln_res    = cat_it->second;
 
-            cat_allele = cat_it->first;
-            aln_res    = cat_it->second;
+        //     verified++;
+        //     query->add_match(cat_id, cat_allele, query_allele, 0, invert_cigar(aln_res.cigar));
+        //     continue;
+        // }
+
+        // converted_query_allele = generate_query_allele(cat, query, (const char *) query->con, query_allele);
+
+        // auto cat_it = cat_hits.find(converted_query_allele);
+
+        // if (cat_it != cat_hits.end()) {
+            // cat_allele = cat_it->first;
+            // aln_res    = cat_it->second;
 
             verified++;
-            query->add_match(cat_id, cat_allele, query_allele, 0, invert_cigar(aln_res.cigar));
-            continue;
-        }
-
-        converted_query_allele = generate_query_allele(cat, query, query_allele);
-
-        auto cat_it = cat_hits.find(converted_query_allele);
-
-        if (cat_it != cat_hits.end()) {
-            cat_allele = cat_it->first;
-            aln_res    = cat_it->second;
-
-            verified++;
-            query->add_match(cat_id, cat_allele, query_allele, 0, invert_cigar(aln_res.cigar));
-        }
+            query->add_match(cat_id, cat_allele, query_allele, 0, invert_cigar(query_it->second.begin()->second.cigar));
+        // }
     }
 
     if (verified > 0) {
@@ -1130,14 +1165,19 @@ match_alleles(allele_type catalog_allele, allele_type query_allele)
 }
 
 string
-generate_query_allele(Locus *ctag, Locus *qtag, allele_type allele)
+generate_query_allele(Locus *ctag, Locus *qtag, const char *qseq, allele_type allele)
 {
     string new_allele = "";
+    size_t qlen       = strlen(qseq);
 
     if (qtag->snps.size() == 0) {
         for (uint i = 0; i < ctag->snps.size(); i++)
-            new_allele += ctag->snps[i]->col > qtag->len - 1 ? 'N' : qtag->con[ctag->snps[i]->col];
-
+            if (ctag->snps[i]->col > qlen - 1)
+                new_allele += 'N';
+            else if (qseq[ctag->snps[i]->col] == 'N')
+                new_allele += ctag->con[ctag->snps[i]->col];
+            else
+                new_allele += qseq[ctag->snps[i]->col];
     } else {
         uint pos   = 0;
         uint index = 0;
@@ -1148,7 +1188,12 @@ generate_query_allele(Locus *ctag, Locus *qtag, allele_type allele)
                 index++;
                 pos++;
             } else {
-                new_allele += ctag->snps[i]->col > qtag->len - 1 ? 'N' : qtag->con[ctag->snps[i]->col];
+                if (ctag->snps[i]->col > qlen - 1)
+                    new_allele += 'N';
+                else if (qseq[ctag->snps[i]->col] == 'N')
+                    new_allele += ctag->con[ctag->snps[i]->col];
+                else
+                    new_allele += qseq[ctag->snps[i]->col];
             }
         }
     }
