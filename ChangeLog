@@ -1,3 +1,9 @@
+Stacks 2.1 - tba
+-------------------------
+    Feature: ustacks Changed --high_cov_thres default value from 2.0 to 3.0.
+    Feature: gstacks: Changed --min-kmer-freq default value from 0.05 to 0.01.
+    Feature: Added further checks on zlib calls.
+
 Stacks 2.0 - Apr 23, 2018
 -------------------------
     Feature: modified cstacks and ustacks gapped alignment algorithms to always align the two stacks/alleles
