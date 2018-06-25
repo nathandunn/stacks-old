@@ -128,9 +128,9 @@ install-data-hook:
 	chmod +x $(DESTDIR)$(bindir)/stacks-integrate-alignments
 	chmod +x $(DESTDIR)$(bindir)/stacks-dist-extract
 	chmod +x $(DESTDIR)$(bindir)/stacks-gdb
-	#sed -e 's,_VERSION_,$(VERSION),' -e 's,_BINDIR_,$(DESTDIR)$(bindir)/,g' -e 's,_PKGDATADIR_,$(pkgdatadir)/,g' $(DESTDIR)$(bindir)/denovo_map.py > $(DESTDIR)$(bindir)/denovo_map.py.subst
-	#mv $(DESTDIR)$(bindir)/denovo_map.py.subst $(DESTDIR)$(bindir)/denovo_map.py
-	#chmod +x $(DESTDIR)$(bindir)/denovo_map.py
+	##sed -e 's,_VERSION_,$(VERSION),' -e 's,_BINDIR_,$(DESTDIR)$(bindir)/,g' -e 's,_PKGDATADIR_,$(pkgdatadir)/,g' $(DESTDIR)$(bindir)/denovo_map.py > $(DESTDIR)$(bindir)/denovo_map.py.subst
+	##mv $(DESTDIR)$(bindir)/denovo_map.py.subst $(DESTDIR)$(bindir)/denovo_map.py
+	##chmod +x $(DESTDIR)$(bindir)/denovo_map.py
 
 uninstall-hook:
 	rm -rf $(DESTDIR)$(pkglocalstatedir)
