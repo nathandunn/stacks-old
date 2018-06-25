@@ -1,5 +1,9 @@
-Stacks 2.1 - tba
+Stacks 2.1 - June 25, 2018
 -------------------------
+    Bugfix: Fixed a performance regression in sstacks. Recent changes in sstacks made it more likely to
+            invoke the gapped algorithm to match to the catalog. In some cases, matches to the catalog
+            would be marked as ambiguous alignments and dropped from the next stages of analysis due to 
+            differences in CIGAR strings from the gapped alignment. 
     Feature: ustacks Changed --high_cov_thres default value from 2.0 to 3.0.
     Feature: gstacks: Changed --min-kmer-freq default value from 0.05 to 0.01.
     Feature: Added further checks on zlib calls.
