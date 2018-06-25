@@ -83,9 +83,9 @@ clone_filter_LDADD       = $(LDADD) libclean.a
 kmer_filter_LDADD        = $(LDADD) libclean.a
 populations_LDADD        = $(LDADD) libpop.a
 
-dist_bin_SCRIPTS = scripts/denovo_map.pl scripts/denovo_map.py scripts/ref_map.pl \
+dist_bin_SCRIPTS = scripts/denovo_map.pl scripts/ref_map.pl \
 	scripts/integrate_alignments.py scripts/count_fixed_catalog_snps.py \
-	scripts/stacks-integrate-alignments scripts/stacks-dist-extract scripts/stacks-gdb
+	scripts/stacks-integrate-alignments scripts/stacks-dist-extract scripts/stacks-gdb # scripts/denovo_map.py
 
 dist_noinst_SCRIPTS = autogen.sh scripts/extract_interpop_chars.pl scripts/convert_stacks.pl
 
@@ -128,9 +128,9 @@ install-data-hook:
 	chmod +x $(DESTDIR)$(bindir)/stacks-integrate-alignments
 	chmod +x $(DESTDIR)$(bindir)/stacks-dist-extract
 	chmod +x $(DESTDIR)$(bindir)/stacks-gdb
-	sed -e 's,_VERSION_,$(VERSION),' -e 's,_BINDIR_,$(DESTDIR)$(bindir)/,g' -e 's,_PKGDATADIR_,$(pkgdatadir)/,g' $(DESTDIR)$(bindir)/denovo_map.py > $(DESTDIR)$(bindir)/denovo_map.py.subst
-	mv $(DESTDIR)$(bindir)/denovo_map.py.subst $(DESTDIR)$(bindir)/denovo_map.py
-	chmod +x $(DESTDIR)$(bindir)/denovo_map.py
+	#sed -e 's,_VERSION_,$(VERSION),' -e 's,_BINDIR_,$(DESTDIR)$(bindir)/,g' -e 's,_PKGDATADIR_,$(pkgdatadir)/,g' $(DESTDIR)$(bindir)/denovo_map.py > $(DESTDIR)$(bindir)/denovo_map.py.subst
+	#mv $(DESTDIR)$(bindir)/denovo_map.py.subst $(DESTDIR)$(bindir)/denovo_map.py
+	#chmod +x $(DESTDIR)$(bindir)/denovo_map.py
 
 uninstall-hook:
 	rm -rf $(DESTDIR)$(pkglocalstatedir)
