@@ -64,9 +64,9 @@ def get_current_time():
 
 # Create command line options for executing stacks pipeline
 parser = argparse.ArgumentParser()
-parser.add_argument('-s', '--samples', required=True)
-parser.add_argument('-p','--popmap', required=True)
-parser.add_argument('-o', '--outdir', required=True)
+parser.add_argument('--samples', '-s', required=True)
+parser.add_argument('--popmap', '-O', required=True)
+parser.add_argument('--outdir', '-o', required=True)
 parser.add_argument('-M', '--ustacks-M', type=int)
 parser.add_argument('-n', '--cstacks-n', type=int)
 parser.add_argument('--paired', action='store_true')
