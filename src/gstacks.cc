@@ -568,7 +568,7 @@ try {
 
     // phasing_rates_samples
     logger->x << "\n"
-              << "BEGIN phasing_rates_per_samples\n"
+              << "BEGIN phasing_rates_per_sample\n"
               << "sample\tn_gts\tn_multisnp_hets\tn_phased\tmisphasing_rate"
               #ifdef DEBUG
               << "\tn_phased_2ndpass"
@@ -589,7 +589,7 @@ try {
            #endif
            << '\n';
     }
-    logger->x << "END phasing_rates_samples\n";
+    logger->x << "END phasing_rates_per_sample\n";
 
     // phasing_rates_loci
     #ifdef DEBUG
