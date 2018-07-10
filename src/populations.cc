@@ -68,6 +68,7 @@ bool      loci_ordered      = false;
 bool      log_fst_comp      = false;
 bool      verbose           = false;
 bool      filter_lnl        = false;
+size_t    min_gt_depth      = 0;
 double    lnl_limit         = 0.0;
 double    merge_prune_lim   = 1.0;
 double    minor_allele_freq = 0.0;
@@ -565,15 +566,20 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
             loc->cloc, loc->d,
             seq, records,
             this->_cloc_reader.header(), this->_mpopi, this->_samples_vcf_to_mpopi);
+        this->_dists.accumulate_pre_filtering(loc->cloc);
 
         //
         // Apply the -r/-p thresholds.
         //
-        this->_dists.accumulate_pre_filtering(loc->cloc);
         if (this->_loc_filter.filter(this->_mpopi, loc->d)) {
             delete loc;
             continue;
         }
+
+        //
+        // Filter genotypes for depth.
+        //
+        this->_loc_filter.gt_depth_filter(loc->d, loc->cloc);
 
         //
         // Create the PopSum object and compute the summary statistics for this locus.
@@ -1005,7 +1011,6 @@ LocusFilter::blacklist_filter(size_t locus_id)
     return false;
 }
 
-
 bool
 LocusFilter::filter(MetaPopInfo *mpopi, Datum **d)
 {
@@ -1059,6 +1064,32 @@ LocusFilter::filter(MetaPopInfo *mpopi, Datum **d)
     }
 
     return pop_limit;
+}
+
+void
+LocusFilter::gt_depth_filter(Datum** data, const CSLocus* cloc)
+{
+    if (min_gt_depth == 0)
+        return;
+    else if (cloc->snps.empty())
+        return;
+    for (size_t spl=0; spl<this->_sample_cnt; ++spl) {
+        Datum* d = data[spl];
+        assert(d->obshap.size() == 2);
+        assert(strlen(d->obshap[0]) == cloc->snps.size()
+            && strlen(d->obshap[1]) == cloc->snps.size());
+        for (size_t snp=0; snp<cloc->snps.size(); ++snp) {
+            size_t col = cloc->snps[snp]->col;
+            if (d->model[col] == 'U')
+                continue;
+            // Check this genotype's depth.
+            if (d->snpdata[snp].tot_depth < min_gt_depth) {
+                d->model[col] = 'U';
+                for(size_t i=0; i<2; ++i)
+                    d->obshap[i][snp] = 'N';
+            }
+        }
+    }
 }
 
 void
@@ -3739,6 +3770,7 @@ parse_command_line(int argc, char* argv[])
             {"whitelist",      required_argument, NULL, 'W'},
             {"blacklist",      required_argument, NULL, 'B'},
             {"batch_size",     required_argument, NULL, 1999},
+            {"dbg-min-gt-depth", required_argument, NULL, 2001},
             {"write_single_snp",  no_argument,       NULL, 'I'},
             {"write_random_snp",  no_argument,       NULL, 'j'},
             {"no_hap_exports",    no_argument,       NULL, 1012},
@@ -3803,6 +3835,9 @@ parse_command_line(int argc, char* argv[])
             break;
         case 1999:
             batch_size = is_integer(optarg);
+            break;
+        case 2001:
+            min_gt_depth = stol(optarg);
             break;
         case 'O':
             out_path = optarg;
@@ -4214,16 +4249,19 @@ void help() {
          << "  --no_hap_exports: omit haplotype outputs.\n"
          << "  --fasta_samples_raw: output all haplotypes observed in each sample, for each locus, in FASTA format.\n"
          << "  (*not implemented as of v2.0Beta7)\n"
-         #ifdef DEBUG
-         << "\n"
-         << "  genepop-haps-3digits: Use 3-digit alleles in the genepop haps output (default is 2-digit).\n"
-         #endif
          << "\n"
          << "Additional options:\n"
          << "  -h,--help: display this help messsage.\n"
          << "  -v,--version: print program version.\n"
          << "  --verbose: turn on additional logging.\n"
-         << ("  --log_fst_comp: log components of Fst/Phi_st calculations to a file.\n");
+         << ("  --log_fst_comp: log components of Fst/Phi_st calculations to a file.\n")
+         #ifdef DEBUG
+         << "\n"
+         << "DEBUG:\n"
+         << "  --dbg-min-gt-depth\n"
+         << "  --genepop-haps-3digits: Use 3-digit alleles in the genepop haps output (default is 2-digit).\n"
+         #endif
+         ;
 
               // << "    --bootstrap_type [exact|approx]: enable bootstrap resampling for population statistics (reference genome required).\n"
 

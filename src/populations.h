@@ -199,6 +199,7 @@ public:
     bool   whitelist_filter(size_t locus_id);
     bool   blacklist_filter(size_t locus_id);
     bool   filter(MetaPopInfo *mpopi, Datum **d);
+    void   gt_depth_filter(Datum **d, const CSLocus *cloc);
     int    keep_single_snp(const CSLocus *cloc, const LocTally *t);
     int    keep_random_snp(const CSLocus *cloc, const LocTally *t);
     int    prune_sites_with_whitelist(MetaPopInfo *mpopi, CSLocus *cloc, Datum **d, bool user_wl);
