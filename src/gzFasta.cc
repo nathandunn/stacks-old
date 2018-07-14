@@ -83,8 +83,8 @@ GzFasta::next_seq(Seq &s)
     // Check if there is a carraige return in the buffer
     //
     uint len = strlen(this->line);
-    if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
-    if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
+    if (len >= 1 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
+    if (len >= 2 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
 
     //
     // Check if the ID line of the FASTA file has a comment after the ID.
@@ -110,8 +110,8 @@ GzFasta::next_seq(Seq &s)
 
     while (this->line[0] != '>' && !gzeof(this->gz_fh)) {
         len = strlen(this->line);
-        if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
-        if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
+        if (len >= 1 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
+        if (len >= 2 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
 
         this->buf    += this->line;
         this->line[0] = '\0';
@@ -120,8 +120,8 @@ GzFasta::next_seq(Seq &s)
 
     if (gzeof(this->gz_fh)) {
         len = strlen(this->line);
-        if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
-        if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
+        if (len >= 1 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
+        if (len >= 2 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
 
         this->buf += this->line;
         this->line[0] = '\0';
