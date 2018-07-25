@@ -78,6 +78,7 @@ bool   dbg_true_alns       = false;
 bool   dbg_log_stats_phasing = false;
 bool   dbg_phasing_no_2ndpass = false;
 size_t dbg_denovo_min_loc_samples = 0;
+size_t dbg_max_debruijn_reads = SIZE_MAX;
 
 //
 // Additional globals.
@@ -875,8 +876,17 @@ LocusProcessor::process(CLocReadSet& loc)
             // Assemble a contig.
             timers_.assembling.restart();
             vector<const DNASeq4*> seqs_to_assemble;
-            for (const Read& r : loc.pe_reads())
-                seqs_to_assemble.push_back(&r.seq);
+            if (loc.pe_reads().size() <= dbg_max_debruijn_reads) {
+                for (const Read& r : loc.pe_reads())
+                    seqs_to_assemble.push_back(&r.seq);
+            } else {
+                double seq_i = 0.0;
+                double step = (double) loc.pe_reads().size() / dbg_max_debruijn_reads;
+                for (size_t i=0; i<dbg_max_debruijn_reads; ++i) {
+                    seqs_to_assemble.push_back(&loc.pe_reads()[(size_t)seq_i].seq);
+                    seq_i += step;
+                }
+            }
             DNASeq4 ctg = DNASeq4(assemble_contig(seqs_to_assemble));
             timers_.assembling.stop();
             if (ctg.empty())
@@ -2587,6 +2597,7 @@ const string help_string = string() +
         "  --dbg-log-stats-phasing: log detailed phasing statistics\n"
         "  --dbg-min-spl-reads: discard samples with less than this many reads (ref-based)\n"
         "  --dbg-min-loc-spls: discard loci with less than this many samples\n"
+        "  --dbg-max-debruijn-reads\n"
         "\n"
 #endif
         ;
@@ -2639,6 +2650,7 @@ try {
         {"dbg-no-haps",  no_argument,       NULL,  2009},
         {"dbg-min-spl-reads", required_argument, NULL, 2014},
         {"dbg-min-loc-spls", required_argument, NULL, 2017},
+        {"dbg-max-debruijn-reads", required_argument, NULL, 2020},
         {0, 0, 0, 0}
     };
 
@@ -2850,6 +2862,9 @@ try {
         case 2017://dbg-min-loc-spls
             refbased_cfg.min_samples_per_locus = stoi(optarg);
             dbg_denovo_min_loc_samples = stoi(optarg);
+            break;
+        case 2020: // dbg-max-debruijn-reads
+            dbg_max_debruijn_reads = stoi(optarg);
             break;
         case '?':
             bad_args();
