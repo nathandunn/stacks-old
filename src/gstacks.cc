@@ -59,8 +59,8 @@ modelt model_type = marukilow;
 unique_ptr<const Model> model;
 
 size_t km_length         = 31;
+size_t max_debruijn_reads = 1000;
 size_t min_km_count      = 2;
-double min_km_freq       = 0.01;
 size_t max_fragment_alns = 2;
 
 pair<size_t,size_t> phasing_cooccurrences_thr_range = {2, 2};
@@ -78,7 +78,6 @@ bool   dbg_true_alns       = false;
 bool   dbg_log_stats_phasing = false;
 bool   dbg_phasing_no_2ndpass = false;
 size_t dbg_denovo_min_loc_samples = 0;
-size_t dbg_max_debruijn_reads = SIZE_MAX;
 
 //
 // Additional globals.
@@ -876,13 +875,13 @@ LocusProcessor::process(CLocReadSet& loc)
             // Assemble a contig.
             timers_.assembling.restart();
             vector<const DNASeq4*> seqs_to_assemble;
-            if (loc.pe_reads().size() <= dbg_max_debruijn_reads) {
+            if (loc.pe_reads().size() <= max_debruijn_reads) {
                 for (const Read& r : loc.pe_reads())
                     seqs_to_assemble.push_back(&r.seq);
             } else {
                 double seq_i = 0.0;
-                double step = (double) loc.pe_reads().size() / dbg_max_debruijn_reads;
-                for (size_t i=0; i<dbg_max_debruijn_reads; ++i) {
+                double step = (double) loc.pe_reads().size() / max_debruijn_reads;
+                for (size_t i=0; i<max_debruijn_reads; ++i) {
                     seqs_to_assemble.push_back(&loc.pe_reads()[(size_t)seq_i].seq);
                     seq_i += step;
                 }
@@ -1428,9 +1427,7 @@ string
 LocusProcessor::assemble_contig(const vector<const DNASeq4*>& seqs)
 {
     Graph graph (km_length);
-
-    size_t min_cov = std::max(min_km_count, size_t(std::ceil( min_km_freq * seqs.size() )));
-    graph.rebuild(seqs, min_cov);
+    graph.rebuild(seqs, min_km_count);
     if (graph.empty()) {
         ++ctg_stats_.n_loci_almost_no_pe_reads;
         return string();
@@ -2563,11 +2560,8 @@ const string help_string = string() +
         "Advanced options:\n"
         "  (De novo mode)\n"
         "  --kmer-length: kmer length for the de Bruijn graph (default: 31, max. 31)\n"
+        "  --max-debruijn-reads: maximum number of reads to use in the de Bruijn graph (default: 1000)\n"
         "  --min-kmer-cov: minimum coverage to consider a kmer (default: 2)\n"
-        "  --min-kmer-freq: minimum frequency (in %reads) to consider a kmer (default: 0.01) \n"
-        // "  --[no-]pcr-duplicates-measures: take measures to mitigate the effects of PCR\n"
-        // "      duplicates. Equivalent to [TODO]. (default: OFF if --rm-pcr-duplicates is\n"
-        // "      given, ON otherwise)\n"
         "\n"
         "  (Reference-based mode)\n"
         "  --min-mapq: minimum PHRED-scaled mapping quality to consider a read (default: 10)\n"
@@ -2615,17 +2609,17 @@ try {
         {"stacks-dir",   required_argument, NULL,  'P'},
         {"in-dir",       required_argument, NULL,  'I'},
         {"in-bam",       required_argument, NULL,  'B'},
-        {"suffix",       required_argument, NULL,  'S'}, {"spacer", required_argument, NULL, 's'},
+        {"suffix",       required_argument, NULL,  'S'},
         {"popmap",       required_argument, NULL,  'M'},
         {"out-dir",      required_argument, NULL,  'O'},
-        {"unpaired",     no_argument,       NULL,  1007}, {"paired", no_argument, NULL, 3007},
+        {"unpaired",     no_argument,       NULL,  1007},
         {"threads",      required_argument, NULL,  't'},
         {"model",        required_argument, NULL,  1006},
         {"gt-alpha",     required_argument, NULL,  1005},
         {"var-alpha",    required_argument, NULL,  1008},
         {"kmer-length",  required_argument, NULL,  1001},
+        {"max-debruijn-reads", required_argument, NULL, 1024},
         {"min-kmer-cov", required_argument, NULL,  1002},
-        {"min-kmer-freq", required_argument, NULL, 1021},
         {"ignore-pe-reads", no_argument,    NULL,  1012},
         {"details",      no_argument,       NULL,  1013},
         {"min-mapq",     required_argument, NULL,  1014},
@@ -2633,11 +2627,10 @@ try {
         {"max-insert-len", required_argument, NULL,  1016},
         {"rm-unpaired-reads", no_argument,  NULL,  1017},
         {"rm-pcr-duplicates", no_argument,  NULL,  1018},
-        // {"pcr-duplicates-measures", no_argument, NULL, 1022},
-        // {"no-pcr-duplicates-measures", no_argument, NULL, 1023},
         {"phasing-cooccurrences-thr-range", required_argument, NULL, 1019},
         {"phasing-dont-prune-hets", no_argument, NULL, 1020},
         //debug options
+        {"min-kmer-freq", required_argument, NULL, 3021},
         {"dbg-phasing-min-mac", required_argument, NULL,  2018},
         {"dbg-phasing-no-2ndpass", no_argument, NULL, 2019},
         {"dbg-gfa",      no_argument,       NULL,  2003},
@@ -2650,7 +2643,6 @@ try {
         {"dbg-no-haps",  no_argument,       NULL,  2009},
         {"dbg-min-spl-reads", required_argument, NULL, 2014},
         {"dbg-min-loc-spls", required_argument, NULL, 2017},
-        {"dbg-max-debruijn-reads", required_argument, NULL, 2020},
         {0, 0, 0, 0}
     };
 
@@ -2677,7 +2669,7 @@ try {
     int c;
     int long_options_i;
     std::cmatch tmp_cmatch;
-    char* tmp_str;
+    long tmp_long;
     while (true) {
 
         c = getopt_long(argc, argv, "hqP:I:B:S:s:M:O:W:t:m:", long_options, &long_options_i);
@@ -2709,16 +2701,6 @@ try {
         case 'S':
             suffix = optarg;
             break;
-        case 's': // xxx Remove this after the beta
-            cerr << "WARNING: --spacer is deprecated; please use -S/--suffix instead.\n";
-            suffix = optarg;
-            while(!suffix.empty() && suffix.back() == '.')
-                suffix.pop_back();
-            while(!suffix.empty() && suffix.front() == '.')
-                suffix.erase(suffix.begin());
-            suffix.insert(suffix.begin(), '.');
-            suffix += ".bam";
-            break;
         case 'M':
             popmap_path = optarg;
             break;
@@ -2727,9 +2709,6 @@ try {
             break;
         case 1007: //unpaired
             refbased_cfg.paired = false;
-            break;
-        case 3007: // xxx Remove this after the beta
-            cerr << "WARNING: --paired is deprecated: it is ON by default, see --unpaired instead.\n";
             break;
         case 1006: //model
             model_type = parse_model_type(optarg);
@@ -2758,16 +2737,19 @@ try {
                 bad_args();
             }
             break;
-        case 1002://min-kmer-cov
-            min_km_count = atoi(optarg);
-            break;
-        case 1021://min-kmer-freq
-            min_km_freq = strtod(optarg, &tmp_str);
-            if (tmp_str == optarg || *tmp_str != '\0'
-                    || !std::isfinite(min_km_freq) || min_km_freq < 0.0 || min_km_freq > 1.0) {
-                cerr << "Error: Unable to parse the minimum kmer frequency from '" << optarg << "'.\n";
+        case 1024: // max-debruijn-reads
+            try {
+                tmp_long = std::stol(optarg);
+                if (tmp_long < 1)
+                    throw exception();
+            } catch(std::exception) {
+                cerr << "Error: Illegal max-debruijn-reads option value '" << optarg << "'.\n";
                 bad_args();
             }
+            max_debruijn_reads = tmp_long;
+            break;
+        case 1002://min-kmer-cov
+            min_km_count = atoi(optarg);
             break;
         case 1013://details
             detailed_output = true;
@@ -2822,6 +2804,9 @@ try {
         //
         // Debug options
         //
+        case 3021://min-kmer-freq
+            cerr << "WARNING: Ignored option --min-kmer-freq that does not exist anymore. See --max-debruijn-reads.\n";
+            break;
         case 2018: //dbg-phasing-min-mac
             phasing_min_mac = is_integer(optarg);
             if (phasing_min_mac < 0) {
@@ -2862,9 +2847,6 @@ try {
         case 2017://dbg-min-loc-spls
             refbased_cfg.min_samples_per_locus = stoi(optarg);
             dbg_denovo_min_loc_samples = stoi(optarg);
-            break;
-        case 2020: // dbg-max-debruijn-reads
-            dbg_max_debruijn_reads = stoi(optarg);
             break;
         case '?':
             bad_args();
@@ -2933,8 +2915,8 @@ try {
             cerr << "Error: Please specify an output directory (-O).\n";
             bad_args();
         }
-        if (min_km_count != 2 || min_km_freq != 0.01) {
-            cerr << "Error: --min-kmer-count, --min-kmer-freq are for the denovo mode.\n";
+        if (min_km_count != 2 || max_debruijn_reads != 1000) {
+            cerr << "Error: --min-kmer-count, --max-debruijn-reads are for the denovo mode.\n";
             bad_args();
         }
     } else {
@@ -3020,10 +3002,10 @@ try {
         os << "  Ignoring pairing information.\n";
     if (km_length != 31)
         os << "  Kmer length: " << km_length << "\n";
+    if (max_debruijn_reads != 1000)
+        os << "  Maximum reads used for contig assembly: " << max_debruijn_reads << "\n";
     if (min_km_count != 2)
         os << "  Minimum kmer count: " << min_km_count << "\n";
-    if (min_km_freq != 0.01)
-        os << "  Mininimum kmer freq: " << min_km_freq << "\n";
     if (rm_unpaired_reads)
         os << "  Discarding unpaired reads.\n";
     if (rm_pcr_duplicates)
