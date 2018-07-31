@@ -38,8 +38,11 @@ GzFasta::open(const char *path)
     #if ZLIB_VERNUM >= 0x1240
     gzbuffer(this->gz_fh, libz_buffer_size);
     #endif
-    char first = gzgetc(gz_fh);
-    if (first != '>') {
+    int first = gzgetc(gz_fh);
+    if (first == -1) {
+        cerr << "Error: Failed to read any content from '" << path << "'.\n";
+        exit(EXIT_FAILURE);
+    } else if (first != '>') {
         cerr << "Error: '" << path << "': not in fasta format (expected '>').\n";
         exit(EXIT_FAILURE);
     }
