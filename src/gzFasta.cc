@@ -40,10 +40,14 @@ GzFasta::open(const char *path)
     #endif
     int first = gzgetc(gz_fh);
     if (first == -1) {
-        cerr << "Error: Failed to read any content from '" << path << "'.\n";
+        int errnum;
+        const char* errstr = gzerror(gz_fh, &errnum);
+        cerr << "Error: Failed to read any content from '" << path
+            << "' (gzerror: " << errstr << ").\n";
         exit(EXIT_FAILURE);
     } else if (first != '>') {
-        cerr << "Error: '" << path << "': not in fasta format (expected '>').\n";
+        cerr << "Error: '" << path << "': not in fasta format (expected '>', got 0x"
+             << std::hex << first << " '" << flush << (char) first << "').\n";
         exit(EXIT_FAILURE);
     }
     gzrewind(gz_fh);
