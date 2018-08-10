@@ -553,5 +553,8 @@ VersatileWriter::VersatileWriter(const string& path)
     } else {
         gzfile_ = gzopen(path_.c_str(), "wb");
         check_open(gzfile_, path_);
+        #if ZLIB_VERNUM >= 0x1240
+        gzbuffer(gzfile_, libz_buffer_size);
+        #endif
     }
 }
