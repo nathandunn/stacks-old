@@ -60,8 +60,7 @@ modelt model_type         = snp;
 double alpha              = 0.05;
 
 int main (int argc, char* argv[]) {
-    IF_NDEBUG_TRY
-
+try{
     parse_command_line(argc, argv);
 
     //
@@ -261,8 +260,9 @@ int main (int argc, char* argv[]) {
 
     cerr << "ustacks is done.\n";
     return 0;
-    IF_NDEBUG_CATCH_ALL_EXCEPTIONS
-}
+} catch(std::exception& e) {
+    return stacks_handle_exceptions(e);
+}}
 
 int
 merge_gapped_alns(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, MergedStack *> &merged)
@@ -2295,7 +2295,7 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
     MergedStack  *tag_1;
     Stack        *tag_2;
     Rem          *rem;
-    stringstream  sstr;
+    char strbuf32[32];
 
     bool gzip = (in_file_type == FileT::gzfastq || in_file_type == FileT::gzfasta) ? true : false;
 
@@ -2311,7 +2311,6 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
     string tag_file = prefix_path + ".tags.tsv";
     string snp_file = prefix_path + ".snps.tsv";
     string all_file = prefix_path + ".alleles.tsv";
-
     if (gzip) {
         tag_file += ".gz";
         snp_file += ".gz";
@@ -2321,50 +2320,7 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
     //
     // Open the output files for writing.
     //
-    gzFile   gz_tags=NULL, gz_snps=NULL, gz_alle=NULL;
-    ofstream tags, snps, alle;
-    if (gzip) {
-        gz_tags = gzopen(tag_file.c_str(), "wb");
-        if (!gz_tags) {
-            cerr << "Error: Unable to open gzipped tag file '" << tag_file << "': " << strerror(errno) << ".\n";
-            exit(1);
-        }
-        #if ZLIB_VERNUM >= 0x1240
-        gzbuffer(gz_tags, libz_buffer_size);
-        #endif
-        gz_snps = gzopen(snp_file.c_str(), "wb");
-        if (!gz_snps) {
-            cerr << "Error: Unable to open gzipped snps file '" << snp_file << "': " << strerror(errno) << ".\n";
-            exit(1);
-        }
-        #if ZLIB_VERNUM >= 0x1240
-        gzbuffer(gz_snps, libz_buffer_size);
-        #endif
-        gz_alle = gzopen(all_file.c_str(), "wb");
-        if (!gz_alle) {
-            cerr << "Error: Unable to open gzipped alleles file '" << all_file << "': " << strerror(errno) << ".\n";
-            exit(1);
-        }
-        #if ZLIB_VERNUM >= 0x1240
-        gzbuffer(gz_alle, libz_buffer_size);
-        #endif
-    } else {
-        tags.open(tag_file.c_str());
-        if (tags.fail()) {
-            cerr << "Error: Unable to open tag file for writing.\n";
-            exit(1);
-        }
-        snps.open(snp_file.c_str());
-        if (snps.fail()) {
-            cerr << "Error: Unable to open SNPs file for writing.\n";
-            exit(1);
-        }
-        alle.open(all_file.c_str());
-        if (alle.fail()) {
-            cerr << "Error: Unable to open allele file for writing.\n";
-            exit(1);
-        }
-    }
+    VersatileWriter tags{tag_file}, snps{snp_file}, alle{all_file};
 
     //
     // Record the version of Stacks used and the date generated as a comment in the catalog.
@@ -2379,19 +2335,9 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
     timeinfo = localtime(&rawtime);
     strftime(date, 32, "%F %T", timeinfo);
     log << "# ustacks version " << VERSION << "; generated on " << date << "\n";
-    if (gzip) {
-        gzputs(gz_tags, log.str().c_str());
-        gzputs(gz_snps, log.str().c_str());
-        gzputs(gz_alle, log.str().c_str());
-    } else {
-        tags << log.str();
-        snps << log.str();
-        alle << log.str();
-    }
-
-    int id;
-
-    char *buf = new char[m.begin()->second->len + 1];
+    tags << log.str();
+    snps << log.str();
+    alle << log.str();
 
     for (i = m.begin(); i != m.end(); i++) {
         float total = 0;
@@ -2404,7 +2350,7 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
         tag_1->calc_likelihood();
 
         // First write the consensus sequence
-        sstr << sample_id          << "\t"
+        tags << sample_id          << "\t"
              << tag_1->id          << "\t"
              << "consensus\t"      << "\t"
              << "\t"
@@ -2416,52 +2362,42 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
         //
         // Write a sequence recording the output of the SNP model for each nucleotide.
         //
-        sstr << sample_id << "\t"
+        tags << sample_id << "\t"
              << tag_1->id << "\t"
              << "model\t" << "\t"
              << "\t";
         for (s = tag_1->snps.begin(); s != tag_1->snps.end(); s++) {
             switch((*s)->type) {
             case snp_type_het:
-                sstr << "E";
+                tags << "E";
                 break;
             case snp_type_hom:
-                sstr << "O";
+                tags << "O";
                 break;
             default:
-                sstr << "U";
+                tags << "U";
                 break;
             }
         }
-        sstr << "\t"
-             << "\t"
-             << "\t"
-             << "\n";
-
-        if (gzip) gzputs(gz_tags, sstr.str().c_str()); else tags << sstr.str();
-        sstr.str("");
+        tags << "\t\t\t\n";
 
         //
         // Now write out the components of each unique tag merged into this locus.
         //
-        id = 0;
+        int id = 0;
         for (k = tag_1->utags.begin(); k != tag_1->utags.end(); k++) {
             tag_2  = u[*k];
             total += tag_2->count();
 
             for (uint j = 0; j < tag_2->map.size(); j++) {
-                sstr << sample_id << "\t"
+                tags << sample_id << "\t"
                      << tag_1->id << "\t"
                      << "primary\t"
                      << id << "\t"
                      << seq_ids[tag_2->map[j]] << "\t"
                      << tag_2->seq->seq()
                      << "\t\t\t\n";
-
-                if (gzip) gzputs(gz_tags, sstr.str().c_str()); else tags << sstr.str();
-                sstr.str("");
             }
-
             id++;
         }
 
@@ -2472,72 +2408,55 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
             rem    = r[*k];
             total += rem->map.size();
             for (uint j = 0; j < rem->map.size(); j++)
-                sstr << sample_id << "\t"
+                tags << sample_id << "\t"
                      << tag_1->id << "\t"
                      << "secondary\t"
                      << "\t"
                      << seq_ids[rem->map[j]] << "\t"
                      << rem->seq->seq()
                      << "\t\t\t\n";
-
-            if (gzip) gzputs(gz_tags, sstr.str().c_str()); else tags << sstr.str();
-            sstr.str("");
         }
 
         //
         // Write out the model calls for each nucleotide in this locus.
         //
         for (s = tag_1->snps.begin(); s != tag_1->snps.end(); s++) {
-            sstr << sample_id << "\t"
+            snps << sample_id << "\t"
                  << tag_1->id << "\t"
-                 << (*s)->col << "\t";
-
+                 << (size_t) (*s)->col << "\t";
             switch((*s)->type) {
             case snp_type_het:
-                sstr << "E\t";
+                snps << "E\t";
                 break;
             case snp_type_hom:
-                sstr << "O\t";
+                snps << "O\t";
                 break;
             default:
-                sstr << "U\t";
+                snps << "U\t";
                 break;
             }
-
-            sstr << std::fixed   << setprecision(2)
-                 << (*s)->lratio << "\t"
+            sprintf(strbuf32, "%.2f", (*s)->lratio);
+            snps << strbuf32 << "\t"
                  << (*s)->rank_1 << "\t"
                  << (*s)->rank_2 << "\t\t\n";
         }
-
-        if (gzip) gzputs(gz_snps, sstr.str().c_str()); else snps << sstr.str();
-        sstr.str("");
 
         //
         // Write the expressed alleles seen for the recorded SNPs and
         // the percentage of tags a particular allele occupies.
         //
         for (t = tag_1->alleles.begin(); t != tag_1->alleles.end(); t++) {
-            sstr << sample_id   << "\t"
+            alle << sample_id   << "\t"
                  << tag_1->id   << "\t"
-                 << (*t).first  << "\t"
-                 << (((*t).second/total) * 100) << "\t"
+                 << (*t).first  << "\t";
+            sprintf(strbuf32, "%.2f", ((*t).second/total) * 100);
+            alle << strbuf32 << "\t"
                  << (*t).second << "\n";
         }
-        if (gzip) gzputs(gz_alle, sstr.str().c_str()); else alle << sstr.str();
-        sstr.str("");
-
     }
-
-    if (gzip) {
-        gzclose(gz_tags);
-        gzclose(gz_snps);
-        gzclose(gz_alle);
-    } else {
-        tags.close();
-        snps.close();
-        alle.close();
-    }
+    tags.close();
+    snps.close();
+    alle.close();
 
     //
     // Free sequence IDs.
@@ -2550,40 +2469,14 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
     //
     if (retain_rem_reads) {
         string unused_file = prefix_path + ".unused.fa";
-
-        gzFile   gz_unused=NULL;
-        ofstream unused;
-
-        if (gzip) {
-            unused_file += ".gz";
-            gz_unused = gzopen(unused_file.c_str(), "wb");
-            if (!gz_unused) {
-                cerr << "Error: Unable to open gzipped discard file '" << unused_file << "': " << strerror(errno) << ".\n";
-                exit(1);
-            }
-            #if ZLIB_VERNUM >= 0x1240
-            gzbuffer(gz_unused, libz_buffer_size);
-            #endif
-        } else {
-            unused.open(unused_file.c_str());
-            if (unused.fail()) {
-                cerr << "Error: Unable to open discard file for writing.\n";
-                exit(1);
-            }
-        }
+        VersatileWriter unused{unused_file};
 
         map<int, Rem *>::iterator r_it;
-        for (r_it = r.begin(); r_it != r.end(); r_it++) {
+        for (r_it = r.begin(); r_it != r.end(); r_it++)
             if (r_it->second->utilized == false)
-                sstr << ">" << r_it->second->id << "\n" << r_it->second->seq->seq() << "\n";
-            if (gzip) gzputs(gz_unused, sstr.str().c_str()); else unused << sstr.str();
-            sstr.str("");
-        }
-
-        if (gzip) gzclose(gz_unused); else unused.close();
+                unused << ">" << (long) r_it->second->id << "\n" << r_it->second->seq->seq() << "\n";
+        unused.close();
     }
-
-    delete [] buf;
 
     return 0;
 }

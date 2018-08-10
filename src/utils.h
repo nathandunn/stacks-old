@@ -290,7 +290,7 @@ class VersatileWriter {
 
 public:
     VersatileWriter(const string& path);
-    ~VersatileWriter() {if(is_gzipped_ && gzfile_!=NULL) gzclose(gzfile_);}
+    ~VersatileWriter() {gzclose(gzfile_);}
 
     const string& path() const {return path_;}
     void close();
@@ -299,6 +299,7 @@ public:
     friend VersatileWriter& operator<< (VersatileWriter& w, const char* s);
     friend VersatileWriter& operator<< (VersatileWriter& w, const string& s);
     friend VersatileWriter& operator<< (VersatileWriter& w, int i);
+    friend VersatileWriter& operator<< (VersatileWriter& w, long i);
     friend VersatileWriter& operator<< (VersatileWriter& w, size_t i);
 };
 
@@ -351,11 +352,8 @@ void strip_read_number(string& read_name) {
 inline
 void VersatileWriter::close() {
     if (is_gzipped_) {
-        if (gzclose(gzfile_) != Z_OK) {
-            cerr << "Error: VersatileWriter::gzclose failed for '"
-                 << path_ << "'\n";
-            throw exception();
-        }
+        if (gzclose(gzfile_) != Z_OK)
+            throw ios::failure("gzclose");
         gzfile_ = NULL;
     } else {
         ofs_.close();
@@ -404,6 +402,18 @@ VersatileWriter& operator<< (VersatileWriter& w, int i) {
     if (w.is_gzipped_) {
         char buf[16];
         sprintf(buf, "%d", i);
+        w.gzputs_(buf);
+    } else {
+        w.ofs_ << i;
+    }
+    return w;
+}
+
+inline
+VersatileWriter& operator<< (VersatileWriter& w, long i) {
+    if (w.is_gzipped_) {
+        char buf[32];
+        sprintf(buf, "%ld", i);
         w.gzputs_(buf);
     } else {
         w.ofs_ << i;
