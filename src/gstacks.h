@@ -336,25 +336,4 @@ private:
     void using_true_reference(CLocAlnSet& aln_loc, CLocReadSet&& loc);
 };
 
-//
-// For debugging and benchmarking.
-// ==========
-//
-
-//
-// dbg_extract_cigar
-// ----------
-// Extracts a true alignment from a read ID. The ID is expected to contain
-// `cig1=<CIGAR1>` and possibly `cig2=<CIGAR2>` fields, e.g.:
-// `t00800n:msp_00:a2:r0:cig1=77M1I72M851H:cig2=211H150M639H/1`
-//
-Cigar dbg_extract_cigar(const string& read_id);
-
-//
-// from_true_alignments
-// ----------
-// Creates a CLocAlnSet from a CLocReadSet, using true alignments.
-//
-void from_true_alignments(CLocAlnSet& aln_loc, CLocReadSet&& loc, bool merge_reads);
-
 #endif
