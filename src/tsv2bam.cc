@@ -399,7 +399,7 @@ void run(const vector<int>& cloc_ids,
                 }
 
                 // Write the paired-end reads.
-                for (const pair<DNASeq4, vector<string>>& stack : loc.second.pe_reads) {
+                for (const pair<const DNASeq4, vector<string>>& stack : loc.second.pe_reads) {
                     for (const string& name : stack.second) {
                         cig.assign({{'X', 1}, {'S', stack.first.length()-1}});
                         rec.assign(
@@ -408,7 +408,7 @@ void run(const vector<int>& cloc_ids,
                                 target_i,
                                 0,
                                 cig,
-                                dbg_reversed_pe_reads ? stack.first : stack.first.rev_compl(),
+                                dbg_reversed_pe_reads ? stack.first : (const DNASeq4&) stack.first.rev_compl(),
                                 sample_id
                                 );
                         bam_f.write(rec);

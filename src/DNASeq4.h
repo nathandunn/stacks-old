@@ -76,7 +76,7 @@ public:
     class iterator;
 
     DNASeq4() : l_(0), v_() {}
-    DNASeq4(const DNASeq4& other) : l_(other.l_), v_(other.v_) {}
+    explicit DNASeq4(const DNASeq4& other) : l_(other.l_), v_(other.v_) {}
     DNASeq4(DNASeq4&& other) : l_(other.l_), v_(move(other.v_)) {other.clear();}
     DNASeq4(const char* s, size_t len);
     DNASeq4(const uchar* arr, size_t len) : l_(len), v_(arr, arr+len/2+len%2) {} // `len` is the length of the sequence (not of the array)
