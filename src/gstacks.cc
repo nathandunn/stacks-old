@@ -73,8 +73,6 @@ bool   dbg_write_gfa       = false;
 bool   dbg_write_alns      = false;
 bool   dbg_write_hapgraphs = false;
 bool   dbg_write_nt_depths = false;
-bool   dbg_true_reference  = false;
-bool   dbg_true_alns       = false;
 bool   dbg_log_stats_phasing = false;
 bool   dbg_phasing_no_2ndpass = false;
 size_t dbg_denovo_min_loc_samples = 0;
@@ -835,149 +833,143 @@ LocusProcessor::process(CLocReadSet& loc)
     CLocAlnSet aln_loc;
     aln_loc.reinit(loc_.id, loc_.pos, loc_.mpopi);
 
-    if (dbg_true_alns) {
-        from_true_alignments(aln_loc, move(loc), true);
-    } else if (dbg_true_reference) {
-        using_true_reference(aln_loc, move(loc));
-    } else {
-        //
-        // Transfer the already aligned foward-reads.
-        //
-        aln_loc.ref(DNASeq4(loc.reads().at(0).seq.length())); // Just N's.
-        for (SRead& r : loc.reads()) {
-            Cigar c = {{'M', r.seq.length()}};
-            aln_loc.add(SAlnRead(Read(move(r.seq), move(r.name)), move(c), r.sample));
-            r = SRead();
-        }
-        timers_.cpt_consensus.restart();
-        aln_loc.recompute_consensus();
-        timers_.cpt_consensus.stop();
-
-        //
-        // Sometimes the consensus in the catalog.tags.tsv file extends further
-        // than any of the validly matching loci. In this case there's no
-        // coverage at the end of the 'forward' alignment matrix, but the reads
-        // are still N-padded. If this happens, hard-clip the Ns.
-        //
-        if (*--aln_loc.ref().end() == Nt4::n)
-            aln_loc.hard_clip_right_Ns();
-
-        //
-        // Process the paired-end reads, if any.
-        //
-        do { // Avoiding nested IFs.
-            if (ignore_pe_reads)
-                break;
-            if (loc.pe_reads().empty())
-                break;
-            ++this->ctg_stats_.n_loci_w_pe_reads;
-
-            // Assemble a contig.
-            timers_.assembling.restart();
-            vector<const DNASeq4*> seqs_to_assemble;
-            if (loc.pe_reads().size() <= max_debruijn_reads) {
-                for (const Read& r : loc.pe_reads())
-                    seqs_to_assemble.push_back(&r.seq);
-            } else {
-                double seq_i = 0.0;
-                double step = (double) loc.pe_reads().size() / max_debruijn_reads;
-                for (size_t i=0; i<max_debruijn_reads; ++i) {
-                    seqs_to_assemble.push_back(&loc.pe_reads()[(size_t)seq_i].seq);
-                    seq_i += step;
-                }
-            }
-            DNASeq4 ctg = DNASeq4(assemble_contig(seqs_to_assemble));
-            timers_.assembling.stop();
-            if (ctg.empty())
-                break;
-            ctg_stats_.length_ctg_tot += ctg.length();
-
-            //
-            // Build a SuffixTree of the contig.
-            //
-            timers_.olap_aligning.restart();
-            SuffixTree *stree   = new SuffixTree(ctg);
-            stree->build_tree();
-
-            //
-            // Initialize a gapped alignment obect for use in SE/PE contig overlap and read alignmnets.
-            //
-            GappedAln aligner;
-            AlignRes  aln_res;
-
-            //
-            // Determine if there is overlap -- and how much -- between the SE and PE contigs.
-            //   We will query the PE contig suffix tree using the SE consensus sequence.
-            //
-            int    overlap;
-            string overlap_cigar;
-            if (dbg_no_overlaps)
-                overlap = 0;
-            else
-                overlap = this->find_locus_overlap(stree, &aligner, aln_loc.ref(), overlap_cigar);
-
-            if (overlap > 0) {
-                this->loc_.ctg_status = LocData::overlapped;
-                this->loc_.olap_length = overlap;
-                this->ctg_stats_.n_overlaps++;
-                this->ctg_stats_.length_overlap_tot += overlap;
-                this->ctg_stats_.length_olapd_loci_tot += aln_loc.ref().length() + ctg.length() - overlap;
-            } else {
-                this->loc_.ctg_status = LocData::separate;
-            }
-
-            if (detailed_output)
-                loc_.details_ss
-                        << "BEGIN contig\n"
-                        << "pe_contig\t"     << ctg << '\n'
-                        << "fw_consensus\t"  << aln_loc.ref() << '\n'
-                        << "overlap\t"       << overlap << '\t' << overlap_cigar << "\n"
-                        ;
-
-            //
-            // Extend the reference sequence & recompute the suffix tree.
-            //
-            CLocAlnSet tmp_loc;
-            tmp_loc.reinit(loc_.id, loc_.pos, loc_.mpopi);
-            tmp_loc.ref(move(ctg));
-
-            aln_loc = CLocAlnSet::juxtapose(move(aln_loc), move(tmp_loc), (overlap > 0 ? -long(overlap) : +10));
-            if (detailed_output)
-                loc_.details_ss << "merger\t" << aln_loc.ref() << "\nEND contig\n";
-
-            delete stree;
-            stree   = new SuffixTree(aln_loc.ref());
-            stree->build_tree();
-
-            //
-            // Align the paired-end reads.
-            //
-            this->ctg_stats_.n_tot_reads += loc.pe_reads().size();
-            if (detailed_output)
-                loc_.details_ss << "BEGIN pe_alns\n";
-            for (SRead& r : loc.pe_reads()) {
-                if (add_read_to_aln(aln_loc, aln_res, move(r), &aligner, stree)) {
-                    this->ctg_stats_.n_aln_reads++;
-                    if (detailed_output)
-                        loc_.details_ss << "pe_aln_local"
-                                        << '\t' << aln_loc.reads().back().name
-                                        << '\t' << aln_res.subj_pos + 1 << ':' << aln_res.cigar
-                                        << '\n';
-                } else {
-                    if (detailed_output)
-                        // `r` hasn't been moved.
-                        loc_.details_ss << "pe_aln_fail\t" << r.name << '\n';
-                }
-            }
-            if (detailed_output)
-                loc_.details_ss << "END pe_alns\n";
-            delete stree;
-            timers_.olap_aligning.stop();
-
-            aln_loc.merge_paired_reads();
-
-        } while (false);
+    //
+    // Transfer the already aligned foward-reads.
+    //
+    aln_loc.ref(DNASeq4(loc.reads().at(0).seq.length())); // Just N's.
+    for (SRead& r : loc.reads()) {
+        Cigar c = {{'M', r.seq.length()}};
+        aln_loc.add(SAlnRead(Read(move(r.seq), move(r.name)), move(c), r.sample));
+        r = SRead();
     }
+    timers_.cpt_consensus.restart();
+    aln_loc.recompute_consensus();
+    timers_.cpt_consensus.stop();
+
+    //
+    // Sometimes the consensus in the catalog.tags.tsv file extends further
+    // than any of the validly matching loci. In this case there's no
+    // coverage at the end of the 'forward' alignment matrix, but the reads
+    // are still N-padded. If this happens, hard-clip the Ns.
+    //
+    if (*--aln_loc.ref().end() == Nt4::n)
+        aln_loc.hard_clip_right_Ns();
+
+    //
+    // Process the paired-end reads, if any.
+    //
+    do { // Avoiding nested IFs.
+        if (ignore_pe_reads)
+            break;
+        if (loc.pe_reads().empty())
+            break;
+        ++this->ctg_stats_.n_loci_w_pe_reads;
+
+        // Assemble a contig.
+        timers_.assembling.restart();
+        vector<const DNASeq4*> seqs_to_assemble;
+        if (loc.pe_reads().size() <= max_debruijn_reads) {
+            for (const Read& r : loc.pe_reads())
+                seqs_to_assemble.push_back(&r.seq);
+        } else {
+            double seq_i = 0.0;
+            double step = (double) loc.pe_reads().size() / max_debruijn_reads;
+            for (size_t i=0; i<max_debruijn_reads; ++i) {
+                seqs_to_assemble.push_back(&loc.pe_reads()[(size_t)seq_i].seq);
+                seq_i += step;
+            }
+        }
+        DNASeq4 ctg = DNASeq4(assemble_contig(seqs_to_assemble));
+        timers_.assembling.stop();
+        if (ctg.empty())
+            break;
+        ctg_stats_.length_ctg_tot += ctg.length();
+
+        //
+        // Build a SuffixTree of the contig.
+        //
+        timers_.olap_aligning.restart();
+        SuffixTree *stree   = new SuffixTree(ctg);
+        stree->build_tree();
+
+        //
+        // Initialize a gapped alignment obect for use in SE/PE contig overlap and read alignmnets.
+        //
+        GappedAln aligner;
+        AlignRes  aln_res;
+
+        //
+        // Determine if there is overlap -- and how much -- between the SE and PE contigs.
+        //   We will query the PE contig suffix tree using the SE consensus sequence.
+        //
+        int    overlap;
+        string overlap_cigar;
+        if (dbg_no_overlaps)
+            overlap = 0;
+        else
+            overlap = this->find_locus_overlap(stree, &aligner, aln_loc.ref(), overlap_cigar);
+
+        if (overlap > 0) {
+            this->loc_.ctg_status = LocData::overlapped;
+            this->loc_.olap_length = overlap;
+            this->ctg_stats_.n_overlaps++;
+            this->ctg_stats_.length_overlap_tot += overlap;
+            this->ctg_stats_.length_olapd_loci_tot += aln_loc.ref().length() + ctg.length() - overlap;
+        } else {
+            this->loc_.ctg_status = LocData::separate;
+        }
+
+        if (detailed_output)
+            loc_.details_ss
+                    << "BEGIN contig\n"
+                    << "pe_contig\t"     << ctg << '\n'
+                    << "fw_consensus\t"  << aln_loc.ref() << '\n'
+                    << "overlap\t"       << overlap << '\t' << overlap_cigar << "\n"
+                    ;
+
+        //
+        // Extend the reference sequence & recompute the suffix tree.
+        //
+        CLocAlnSet tmp_loc;
+        tmp_loc.reinit(loc_.id, loc_.pos, loc_.mpopi);
+        tmp_loc.ref(move(ctg));
+
+        aln_loc = CLocAlnSet::juxtapose(move(aln_loc), move(tmp_loc), (overlap > 0 ? -long(overlap) : +10));
+        if (detailed_output)
+            loc_.details_ss << "merger\t" << aln_loc.ref() << "\nEND contig\n";
+
+        delete stree;
+        stree   = new SuffixTree(aln_loc.ref());
+        stree->build_tree();
+
+        //
+        // Align the paired-end reads.
+        //
+        this->ctg_stats_.n_tot_reads += loc.pe_reads().size();
+        if (detailed_output)
+            loc_.details_ss << "BEGIN pe_alns\n";
+        for (SRead& r : loc.pe_reads()) {
+            if (add_read_to_aln(aln_loc, aln_res, move(r), &aligner, stree)) {
+                this->ctg_stats_.n_aln_reads++;
+                if (detailed_output)
+                    loc_.details_ss << "pe_aln_local"
+                                    << '\t' << aln_loc.reads().back().name
+                                    << '\t' << aln_res.subj_pos + 1 << ':' << aln_res.cigar
+                                    << '\n';
+            } else {
+                if (detailed_output)
+                    // `r` hasn't been moved.
+                    loc_.details_ss << "pe_aln_fail\t" << r.name << '\n';
+            }
+        }
+        if (detailed_output)
+            loc_.details_ss << "END pe_alns\n";
+        delete stree;
+        timers_.olap_aligning.stop();
+
+        aln_loc.merge_paired_reads();
+
+    } while (false);
     loc.clear();
 
     process(aln_loc);
@@ -2362,138 +2354,6 @@ void LocusProcessor::write_sample_hapgraph(
     os << "\t}\n";
 }
 
-//
-// Debugging & benchmarking
-// ========================
-//
-
-Cigar dbg_extract_cigar(const string& read_id) {
-    static const char keyword1[] = "cig1=";
-    static const char keyword2[] = "cig2=";
-    static const size_t kw_len = sizeof(keyword1) - 1;
-    static_assert(sizeof(keyword1) == sizeof(keyword2), "");
-
-    Cigar cigar;
-
-    bool paired_end = read_id.back() == '2' && read_id.at(read_id.length()-2) == '/';
-
-    // Find the start.
-    const char* cig_start = read_id.c_str();
-    const char* kw = keyword1;
-    if (paired_end)
-        kw = keyword2;
-    while (*cig_start != '\0'
-            && ! (*cig_start == kw[0] && strncmp(cig_start, kw, kw_len) == 0))
-        ++cig_start;
-    if (*cig_start == '\0') {
-        cerr << "Error: DEBUG: Coulnd't find cigar in read ID '" << read_id
-             << "'; expected 'cigar=.+[^A-Z0-9]'.\n";
-        throw exception();
-    }
-    cig_start += kw_len;
-
-    // Find the end.
-    const char* cig_past = cig_start;
-    while(*cig_past != '\0' && is_cigar_char[uint(*cig_past)])
-        ++cig_past;
-
-    // Extract the cigar.
-    parse_cigar(string(cig_start, cig_past).c_str(), cigar, true);
-
-    // For paired-end reads, reverse complement (i.e. just reverse) the cigar.
-    if (paired_end)
-        std::reverse(cigar.begin(), cigar.end());
-
-    return cigar;
-}
-
-void from_true_alignments(CLocAlnSet& aln_loc, CLocReadSet&& loc, bool merge_reads) {
-    //
-    // Add forward reads.
-    //
-    for (SRead& r : loc.reads()) {
-        Cigar cigar = dbg_extract_cigar(r.name);
-        simplify_cigar_to_MDI(cigar);
-        if (aln_loc.ref().empty()) {
-            aln_loc.ref(DNASeq4(string(cigar_length_ref(cigar), 'N')));
-        } else if (cigar_length_ref(cigar) != aln_loc.ref().length()) {
-            cerr << "Error: DEBUG: ref-length of cig1 in read '" << r.name
-                 << "' was expected to be " << aln_loc.ref().length()
-                 << ", not " << cigar_length_ref(cigar) << ".\n";
-            throw exception();
-        }
-        // Undo the alignments. We remove the Ns added by tsv2bam (that make
-        // the sequence longer than the read), but not the Ns added by
-        // ustacks/pstacks (as the sequence was trimmed accordingly).
-        r.seq.shift_Ns_towards_the_end();
-        r.seq.resize(cigar_length_query(cigar));
-        aln_loc.add(SAlnRead(move((Read&)r), move(cigar), r.sample));
-    }
-
-    //
-    // Add paired-end reads, if any.
-    //
-    if (!ignore_pe_reads && !loc.pe_reads().empty()) {
-        for (SRead& r : loc.pe_reads()) {
-            Cigar cigar = dbg_extract_cigar(r.name);
-            simplify_cigar_to_MDI(cigar);
-            if (cigar_length_ref(cigar) != aln_loc.ref().length()) {
-                cerr << "Error: DEBUG: ref-length of cig2 in read '" << r.name
-                     << "' was expected to be " << aln_loc.ref().length()
-                     << ", not " << cigar_length_ref(cigar) << ".\n";
-                throw exception();
-            }
-            aln_loc.add(SAlnRead(move((Read&)r), move(cigar), r.sample));
-        }
-        if (merge_reads)
-            aln_loc.merge_paired_reads();
-    }
-}
-
-void LocusProcessor::using_true_reference(CLocAlnSet& aln_loc, CLocReadSet&& loc) {
-    // Reconstruct the reference sequence, based on true alignments.
-    from_true_alignments(aln_loc, move(loc), false);
-    DNASeq4 true_ref (aln_loc.ref().length());
-    size_t i = 0;
-    Counts<Nt4> cnts;
-    for (CLocAlnSet::site_iterator site (aln_loc); bool(site); ++site, ++i) {
-        site.counts(cnts);
-        pair<size_t,Nt4> best_nt = cnts.sorted()[0];
-        true_ref.set(i, best_nt.first > 0 ? best_nt.second : Nt4::n);
-    }
-    aln_loc.ref(move(true_ref));
-
-    // Undo the paired-end read (true) alignments.
-    // N.B. `from_true_alignments()` adds the paired-end reads at the end.
-    vector<SRead> pe_reads;
-    while(!aln_loc.reads().empty() && aln_loc.reads().back().name.back() == '2') {
-        SAlnRead& r = aln_loc.reads().back();
-        pe_reads.push_back(SRead(Read(move(r.seq), move(r.name)), r.sample));
-        aln_loc.reads().pop_back();
-    }
-
-    if (!pe_reads.empty()) {
-        // Compute the paired-end reads alignments.
-        SuffixTree stree (aln_loc.ref());
-        stree.build_tree();
-        GappedAln aligner (pe_reads.front().seq.length(), aln_loc.ref().length(), true);
-        AlignRes aln_res;
-        for (SRead& r : pe_reads)
-            if(add_read_to_aln(aln_loc, aln_res, move(r), &aligner, &stree))
-                ++ctg_stats_.n_aln_reads;
-        if (detailed_output)
-            for (auto& r : aln_loc.reads())
-                if (r.is_read2())
-                    loc_.details_ss << "pe_aln_global"
-                                << '\t' << r.name
-                                << '\t' << r.cigar
-                                << '\n';
-
-        // Merge forward & paired-end reads.
-        aln_loc.merge_paired_reads();
-    }
-}
-
 Timers& Timers::operator+= (const Timers& other) {
     reading += other.reading;
     processing += other.processing;
@@ -2585,9 +2445,6 @@ const string help_string = string() +
         "  --dbg-phasing-no-2ndpass: don't try a second pass.\n"
         "  --dbg-hapgraphs: output a dot graph file showing phasing information\n"
         "  --dbg-depths: write detailed depth data in the output VCF\n"
-        "  --dbg-true-alns: use true alignments (for simulated data; read IDs must\n"
-        "               include 'cig1=...' and 'cig2=...' fields.\n"
-        "  --dbg-true-reference: align paired-end reads to the true reference\n"
         "  --dbg-log-stats-phasing: log detailed phasing statistics\n"
         "  --dbg-min-spl-reads: discard samples with less than this many reads (ref-based)\n"
         "  --dbg-min-loc-spls: discard loci with less than this many samples\n"
@@ -2637,8 +2494,6 @@ try {
         {"dbg-alns",     no_argument,       NULL,  2004}, {"alns", no_argument, NULL, 2004},
         {"dbg-depths",   no_argument,       NULL,  2007},
         {"dbg-hapgraphs", no_argument,      NULL,  2010},
-        {"dbg-true-reference", no_argument, NULL,  2012},
-        {"dbg-true-alns", no_argument,      NULL,  2011}, {"true-alns", no_argument, NULL, 2011},
         {"dbg-no-overlaps", no_argument,    NULL,  2008},
         {"dbg-no-haps",  no_argument,       NULL,  2009},
         {"dbg-min-spl-reads", required_argument, NULL, 2014},
@@ -2816,12 +2671,6 @@ try {
             break;
         case 2019: //dbg-phasing-no-2ndpass
             dbg_phasing_no_2ndpass = true;
-            break;
-        case 2012://dbg-true-alns
-            dbg_true_reference = true;
-            break;
-        case 2011://dbg-true-alns
-            dbg_true_alns = true;
             break;
         case 2003://dbg-gfa
             dbg_write_gfa = true;
