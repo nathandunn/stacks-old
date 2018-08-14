@@ -33,34 +33,12 @@ void Graph::rebuild(const vector<const DNASeq4*>& reads, size_t min_kmer_count) 
     //
     // Fill the kmer map & count all kmers.
     //
+    Kmer km;
     for (const DNASeq4* s : reads) {
-
-        // Build the first kmer.
-        DNASeq4::iterator next_nt = s->begin();
-        Kmer km = Kmer(km_len_, next_nt, s->end());
-        if (km.empty()) {
-            cerr << "Oops, no " << km_len_ << "-mers in " << s->str() << "\n"; //
-            continue;
-        }
-
-        // Record it.
-        ++map_[km].count;
-
-        // Walk the sequence.
-        while (next_nt != s->end()) {
-            Nt4 nt4 = *next_nt;
-            if (nt4 == Nt4::n) {
-                ++next_nt;
-                km = Kmer(km_len_, next_nt, s->end());
-                if (km.empty())
-                    // Not enough sequence remaining to make another kmer.
-                    break;
-            } else {
-                km = km.succ(km_len_, Nt2(nt4));
-                ++next_nt;
-            }
+        Kmerizer kmers {km_len_, *s};
+        Kmer km;
+        while ((km = kmers.next()))
             ++map_[km].count;
-        }
     }
     //cerr << "Found " << map_.size() << " kmers in " << readset.reads().size() <<" reads.\n"; //debug
 
@@ -278,22 +256,25 @@ void Graph::dump_gfa(const string& path, bool individual_nodes) const {
     }
 }
 
-void Graph::compute_components() {
+vector<vector<const SPath*>> Graph::components() {
+    map<const void*, vector<const SPath*>> components_map;
     for (SPath& p : simple_paths_)
         p.visitdata = NULL;
-
-    for (SPath& p : simple_paths_)
-        propagate_component_id(&p, &p);
-
     for (SPath& p : simple_paths_) {
-        const void* comp_id = p.visitdata;
-        components_[comp_id].insert(&p);
-        sp_to_component_[&p] = comp_id;
+        propagate_component_id(&p, NULL);
+        components_map[p.visitdata].push_back(&p);
     }
+    vector<vector<const SPath*>> components;
+    for (auto& c : components_map)
+        components.push_back(move(c.second));
+    return components;
 }
 
 void Graph::propagate_component_id(const SPath* p, void* id) {
     if (p->visitdata == NULL) {
+        if (id == NULL)
+            // (One simple path address serves as an ID for each component.)
+            id = const_cast<SPath*>(p);
         p->visitdata = id;
         const SPath* neighbor;
         for (size_t nt2=0; nt2<4; ++nt2) {
@@ -305,33 +286,4 @@ void Graph::propagate_component_id(const SPath* p, void* id) {
                 propagate_component_id(neighbor, id);
         }
     }
-}
-
-vector<const void*> Graph::components() const {
-    assert(!components_.empty());
-    vector<const void*> comps;
-    for (auto c : components_)
-        comps.push_back(c.first);
-    return comps;
-}
-
-size_t Graph::component_n_nodes(const void* c) const {
-    assert(!components_.empty());
-    size_t n = 0;
-    for (const SPath* p : components_.at(c))
-        n += p->n_nodes();
-    return n;
-}
-
-size_t Graph::component_n_spaths(const void* c) const {
-    assert(!components_.empty());
-    return components_.at(c).size();
-}
-
-size_t Graph::component_km_count(const void* c) const {
-    assert(!components_.empty());
-    size_t km_count = 0;
-    for (const SPath* p : components_.at(c))
-        km_count += p->km_cumcount();
-    return km_count;
 }

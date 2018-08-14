@@ -535,7 +535,7 @@ CLocAlnSet::remove_pcr_duplicates(ostream* log)
     for (SAlnRead& r : this->reads_) {
         assert(!r.cigar.empty());
         assert(cigar_is_MDI(r.cigar));
-        assert(r.cigar.front().first == 'M'); // This is the cutsite.
+        // assert(r.cigar.front().first == 'M'); // This is the cutsite. //FIXME:
         cigar_canonicalize_MDI_order(r.cigar);
     }
     auto compute_insert_length = [] (const Cigar& c) -> size_t {

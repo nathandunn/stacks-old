@@ -251,6 +251,8 @@ try {
             size_t loc_i;
             if (input_type == GStacksInputT::denovo_popmap || input_type == GStacksInputT::denovo_merger) {
                 loc_i = loc.bam_i();
+                if (ignore_pe_reads)
+                    loc.pe_reads().clear();
                 loc_proc.process(loc);
             } else {
                 assert(aln_loc.id() >= 1);
@@ -813,165 +815,134 @@ void LocData::clear() {
 void
 LocusProcessor::process(CLocReadSet& loc)
 {
-    this->loc_.clear();
+    loc_.clear();
     if (dbg_denovo_min_loc_samples > 0
             && loc.n_samples() < dbg_denovo_min_loc_samples)
         loc.clear();
     if (loc.reads().empty())
         return;
-    ++ctg_stats_.n_nonempty_loci;
-
-    this->loc_.id  =  loc.id();
-    this->loc_.pos =  loc.pos();
-    this->loc_.mpopi   = &loc.mpopi();
     if (detailed_output)
-        loc_.details_ss << "BEGIN locus " << loc_.id << "\n";
+        loc_.details_ss << "BEGIN locus " << loc.id() << "\n";
 
-    //
-    // Build the alignment matrix.
-    //
+    ++ctg_stats_.n_nonempty_loci;
+    if (!loc.pe_reads().empty())
+        ++ctg_stats_.n_loci_w_pe_reads;
+    loc_.id = loc.id();
+    loc_.pos = loc.pos();
+    loc_.mpopi = &loc.mpopi();
+
     CLocAlnSet aln_loc;
     aln_loc.reinit(loc_.id, loc_.pos, loc_.mpopi);
 
     //
-    // Transfer the already aligned foward-reads.
+    // Remove N's in the forward reads.
     //
-    aln_loc.ref(DNASeq4(loc.reads().at(0).seq.length())); // Just N's.
-    for (SRead& r : loc.reads()) {
-        Cigar c = {{'M', r.seq.length()}};
-        aln_loc.add(SAlnRead(Read(move(r.seq), move(r.name)), move(c), r.sample));
-        r = SRead();
+    for (SRead& r : loc.reads())
+        r.seq.remove_Ns();
+
+    //
+    // Assemble a contig.
+    //
+    timers_.assembling.restart();
+    if (detailed_output)
+        loc_.details_ss << "BEGIN contig\n";
+    DNASeq4 ctg = assemble_locus_contig(loc.reads(), loc.pe_reads());
+    timers_.assembling.stop();
+    if (ctg.empty()) {
+        //FIXME:
+        if (detailed_output) {
+            loc_.details_ss << "contig_assembly_failed\n"
+                << "END contig\n"
+                << "END locus " << loc_.id << '\n';
+            loc_.o_details = loc_.details_ss.str();
+        }
+        return;
     }
-    timers_.cpt_consensus.restart();
-    aln_loc.recompute_consensus();
-    timers_.cpt_consensus.stop();
+    aln_loc.ref(move(ctg));
 
-    //
-    // Sometimes the consensus in the catalog.tags.tsv file extends further
-    // than any of the validly matching loci. In this case there's no
-    // coverage at the end of the 'forward' alignment matrix, but the reads
-    // are still N-padded. If this happens, hard-clip the Ns.
-    //
-    if (*--aln_loc.ref().end() == Nt4::n)
-        aln_loc.hard_clip_right_Ns();
+    timers_.olap_aligning.restart();
+    SuffixTree* stree = new SuffixTree(aln_loc.ref());
+    stree->build_tree();
+    GappedAln aligner;
+    AlignRes aln_res;
 
-    //
-    // Process the paired-end reads, if any.
-    //
-    do { // Avoiding nested IFs.
-        if (ignore_pe_reads)
-            break;
-        if (loc.pe_reads().empty())
-            break;
-        ++this->ctg_stats_.n_loci_w_pe_reads;
-
-        // Assemble a contig.
-        timers_.assembling.restart();
-        vector<const DNASeq4*> seqs_to_assemble;
-        if (loc.pe_reads().size() <= max_debruijn_reads) {
-            for (const Read& r : loc.pe_reads())
-                seqs_to_assemble.push_back(&r.seq);
-        } else {
-            double seq_i = 0.0;
-            double step = (double) loc.pe_reads().size() / max_debruijn_reads;
-            for (size_t i=0; i<max_debruijn_reads; ++i) {
-                seqs_to_assemble.push_back(&loc.pe_reads()[(size_t)seq_i].seq);
-                seq_i += step;
-            }
-        }
-        DNASeq4 ctg = DNASeq4(assemble_contig(seqs_to_assemble));
-        timers_.assembling.stop();
-        if (ctg.empty())
-            break;
-        ctg_stats_.length_ctg_tot += ctg.length();
-
+    timers_.olap_aligning.stop();
+    if (!loc.pe_reads().empty()) {
         //
-        // Build a SuffixTree of the contig.
+        // Check that the contig starts at the cutsite (and not in the
+        // adapter), by aligning one FW read.
         //
-        timers_.olap_aligning.restart();
-        SuffixTree *stree   = new SuffixTree(ctg);
-        stree->build_tree();
-
-        //
-        // Initialize a gapped alignment obect for use in SE/PE contig overlap and read alignmnets.
-        //
-        GappedAln aligner;
-        AlignRes  aln_res;
-
-        //
-        // Determine if there is overlap -- and how much -- between the SE and PE contigs.
-        //   We will query the PE contig suffix tree using the SE consensus sequence.
-        //
-        int    overlap;
-        string overlap_cigar;
-        if (dbg_no_overlaps)
-            overlap = 0;
-        else
-            overlap = this->find_locus_overlap(stree, &aligner, aln_loc.ref(), overlap_cigar);
-
-        if (overlap > 0) {
-            this->loc_.ctg_status = LocData::overlapped;
-            this->loc_.olap_length = overlap;
-            this->ctg_stats_.n_overlaps++;
-            this->ctg_stats_.length_overlap_tot += overlap;
-            this->ctg_stats_.length_olapd_loci_tot += aln_loc.ref().length() + ctg.length() - overlap;
-        } else {
-            this->loc_.ctg_status = LocData::separate;
-        }
-
-        if (detailed_output)
-            loc_.details_ss
-                    << "BEGIN contig\n"
-                    << "pe_contig\t"     << ctg << '\n'
-                    << "fw_consensus\t"  << aln_loc.ref() << '\n'
-                    << "overlap\t"       << overlap << '\t' << overlap_cigar << "\n"
-                    ;
-
-        //
-        // Extend the reference sequence & recompute the suffix tree.
-        //
-        CLocAlnSet tmp_loc;
-        tmp_loc.reinit(loc_.id, loc_.pos, loc_.mpopi);
-        tmp_loc.ref(move(ctg));
-
-        aln_loc = CLocAlnSet::juxtapose(move(aln_loc), move(tmp_loc), (overlap > 0 ? -long(overlap) : +10));
-        if (detailed_output)
-            loc_.details_ss << "merger\t" << aln_loc.ref() << "\nEND contig\n";
-
-        delete stree;
-        stree   = new SuffixTree(aln_loc.ref());
-        stree->build_tree();
-
-        //
-        // Align the paired-end reads.
-        //
-        this->ctg_stats_.n_tot_reads += loc.pe_reads().size();
-        if (detailed_output)
-            loc_.details_ss << "BEGIN pe_alns\n";
-        for (SRead& r : loc.pe_reads()) {
-            if (add_read_to_aln(aln_loc, aln_res, move(r), &aligner, stree)) {
-                this->ctg_stats_.n_aln_reads++;
+        for (SRead& r : loc.reads()) {
+            if (!align_reads_to_contig(stree, &aligner, r.seq, aln_res))
+                continue;
+            // Read did align. Check start position & break.
+            if (aln_res.subj_pos > 0) {
+                DNASeq4 new_ctg;
+                DNASeq4::iterator itr = aln_loc.ref().begin();
+                for (size_t i=0; i<aln_res.subj_pos; ++i) {
+                    assert(itr != aln_loc.ref().end());
+                    ++itr;
+                }
+                new_ctg.append(itr, aln_loc.ref().end());
                 if (detailed_output)
-                    loc_.details_ss << "pe_aln_local"
-                                    << '\t' << aln_loc.reads().back().name
-                                    << '\t' << aln_res.subj_pos + 1 << ':' << aln_res.cigar
-                                    << '\n';
-            } else {
-                if (detailed_output)
-                    // `r` hasn't been moved.
-                    loc_.details_ss << "pe_aln_fail\t" << r.name << '\n';
+                    loc_.details_ss
+                        << "orig_contig\t" << aln_loc.ref() << '\n'
+                        << "first_fw_read_aln\t" << r.name << "\tpos:" << aln_res.subj_pos << '\n';
+                aln_loc.ref(move(new_ctg));
+                delete stree;
+                stree = new SuffixTree(aln_loc.ref());
+                stree->build_tree();
             }
+            break;
         }
-        if (detailed_output)
-            loc_.details_ss << "END pe_alns\n";
-        delete stree;
-        timers_.olap_aligning.stop();
+    }
+    ctg_stats_.length_ctg_tot += aln_loc.ref().length();
+    if (detailed_output)
+        loc_.details_ss << "contig\t" << aln_loc.ref() << '\n'
+            << "END contig\n";
 
-        aln_loc.merge_paired_reads();
+    //
+    // Align the reads.
+    //
+    this->ctg_stats_.n_tot_reads += loc.reads().size();
+    this->ctg_stats_.n_tot_reads += loc.pe_reads().size();
+    if (detailed_output)
+        loc_.details_ss << "BEGIN pe_alns\n";
+    for (SRead& r : loc.reads()) { // FORWARD READS
+        if(add_read_to_aln(aln_loc, aln_res, move(r), &aligner, stree)) {
+            this->ctg_stats_.n_aln_reads++;
+            if (detailed_output)
+                loc_.details_ss << "fw_aln_local"
+                                << '\t' << aln_loc.reads().back().name
+                                << '\t' << aln_res.subj_pos + 1 << ':' << aln_res.cigar
+                                << '\n';
+        } else {
+            if (detailed_output)
+                // `r` hasn't been moved.
+                loc_.details_ss << "fw_aln_fail\t" << r.name << '\n';
+        }
+    }
+    for (SRead& r : loc.pe_reads()) {
+        if (add_read_to_aln(aln_loc, aln_res, move(r), &aligner, stree)) {
+            this->ctg_stats_.n_aln_reads++;
+            if (detailed_output)
+                loc_.details_ss << "pe_aln_local"
+                                << '\t' << aln_loc.reads().back().name
+                                << '\t' << aln_res.subj_pos + 1 << ':' << aln_res.cigar
+                                << '\n';
+        } else {
+            if (detailed_output)
+                // `r` hasn't been moved.
+                loc_.details_ss << "pe_aln_fail\t" << r.name << '\n';
+        }
+    }
+    if (detailed_output)
+        loc_.details_ss << "END pe_alns\n";
+    delete stree;
+    timers_.olap_aligning.stop();
 
-    } while (false);
+    aln_loc.merge_paired_reads();
     loc.clear();
-
     process(aln_loc);
 }
 
@@ -1165,6 +1136,9 @@ LocusProcessor::align_reads_to_contig(SuffixTree *st, GappedAln *g_aln, DNASeq4 
     if (g_aln->align_constrained(query, st->seq_str(), final_alns)) {
         aln_res = g_aln->result();
     }
+
+    if (aln_res.pct_id < min_aln_cov)
+        return false;
 
     return true;
 }
@@ -1415,29 +1389,214 @@ LocusProcessor::find_locus_overlap(SuffixTree *stree, GappedAln *g_aln, const DN
     return overlap;
 }
 
-string
-LocusProcessor::assemble_contig(const vector<const DNASeq4*>& seqs)
-{
-    Graph graph (km_length);
-    graph.rebuild(seqs, min_km_count);
-    if (graph.empty()) {
-        ++ctg_stats_.n_loci_almost_no_pe_reads;
-        return string();
+DNASeq4
+LocusProcessor::assemble_locus_contig(
+    const vector<SRead>& fw_reads,
+    const vector<SRead>& pe_reads
+) {
+    //
+    // List the sequences that will enter the graph.
+    //
+    array<vector<const DNASeq4*>, 3> seqs_to_assemble;
+    array<const vector<SRead>*, 2> reads = {{&fw_reads, &pe_reads}};
+    size_t fw = 0, pe = 1, both = 2;
+    for (size_t i : {fw, pe}) {
+        if (reads[i]->size() <= max_debruijn_reads) {
+            for (const Read& r : *reads[i])
+                seqs_to_assemble[i].push_back(&r.seq);
+        } else {
+            double seq_i = 0.0;
+            double step = (double) reads[i]->size() / max_debruijn_reads;
+            for (size_t j=0; j<max_debruijn_reads; ++j) {
+                seqs_to_assemble[i].push_back(&(*reads[i])[(size_t)seq_i].seq);
+                seq_i += step;
+            }
+        }
     }
+    seqs_to_assemble[both] = seqs_to_assemble[fw];
+    seqs_to_assemble[both].insert(
+        seqs_to_assemble[both].end(),
+        seqs_to_assemble[pe].begin(), seqs_to_assemble[pe].end());
 
+    //
+    // Build the graph.
+    //
+    Graph graph (km_length);
+    graph.rebuild(seqs_to_assemble[both], min_km_count);
+    if (graph.empty())
+        return DNASeq4();
     if (dbg_write_gfa) {
         graph.dump_gfa(out_dir + "gstacks." + to_string(loc_.id) + ".spaths.gfa");
         graph.dump_gfa(out_dir + "gstacks." + to_string(loc_.id) + ".nodes.gfa", true);
     }
 
+    //
+    // Find the best path in the graph.
+    //
     vector<const SPath*> best_path;
     if (!graph.find_best_path(best_path)) {
-        // Not a DAG.
         ++ctg_stats_.n_loci_pe_graph_not_dag;
-        return string();
+        if (detailed_output)
+            loc_.details_ss << "not_dag\n";
+        return DNASeq4();
     }
+    if (detailed_output)
+        loc_.details_ss << "is_dag\n"; //TODO:
+    DNASeq4 contig = DNASeq4(SPath::contig_str(best_path.begin(), best_path.end(), km_length));
 
-    return SPath::contig_str(best_path.begin(), best_path.end(), km_length);
+    //
+    // Handle the case where there are paired-end reads and the main
+    // corresponding subgraph is distinct from that of the forward reads.
+    //
+    if (!pe_reads.empty()) {
+        //
+        // Extract the components and map the fw & pe reads to them.
+        //
+        vector<vector<const SPath*>> components = graph.components();
+        unordered_map<Kmer,size_t> component_kmers;
+        for (size_t i=0; i<components.size(); ++i) {
+            size_t n_nodes = 0;
+            for (const SPath* sp : components[i]) {
+                for (const Node* n=sp->first(); ; n=n->first_succ()) {
+                    component_kmers[n->km()] = i;
+                    ++n_nodes;
+                    if (n == sp->last())
+                        break;
+                }
+            }
+        }
+        array<vector<size_t>, 2> comp_depths;
+        for (size_t i : {fw, pe}) {
+            comp_depths[i] = vector<size_t>(components.size(), 0);
+            for (const DNASeq4* s : seqs_to_assemble[i]) {
+                Kmerizer kmers {km_length, *s};
+                Kmer km;
+                decltype(component_kmers.begin()) itr;
+                while ((km = kmers.next()))
+                    if ((itr = component_kmers.find(km)) != component_kmers.end())
+                        ++comp_depths[i][itr->second];
+            }
+        }
+        //
+        // Check that there actually exist kmers for the forward and paired-end reads.
+        //
+        if (accumulate(comp_depths[fw].begin(), comp_depths[fw].end(), 0) == 0) {
+            if (detailed_output)
+                loc_.details_ss << "fw_reads_absent_from_graph\n";
+            return DNASeq4();
+        }
+        if (accumulate(comp_depths[pe].begin(), comp_depths[pe].end(), 0) == 0) {
+            if (detailed_output)
+                // FIXME:
+                loc_.details_ss << "pe_reads_absent_from_graph\n";
+        } else {
+            //
+            // Check that the main forward and paired-end components are the same one.
+            //
+            array<size_t, 2> best_comp;
+            for (size_t i : {fw, pe}) {
+                size_t best_depth = 0;
+                for (size_t c=0; c<components.size(); ++c) {
+                    if (comp_depths[i][c] > best_depth) {
+                        best_comp[i] = c;
+                        best_depth = comp_depths[i][c];
+                    }
+                }
+            }
+            if (best_comp[fw] == best_comp[pe]) {
+                loc_.ctg_status = LocData::overlapped;
+                loc_.olap_length = km_length;
+                ctg_stats_.n_overlaps++;
+                ctg_stats_.length_overlap_tot += loc_.olap_length;
+                ctg_stats_.length_olapd_loci_tot += contig.length();
+                if (detailed_output)
+                    loc_.details_ss << "one_debruijn_subgraph\n"
+                        << "overlap\t" << km_length << '\n';
+            } else {
+                if (detailed_output)
+                    loc_.details_ss << "two_debruijn_subgraphs\n";
+                //
+                // Determine the component the best path corresponds to.
+                //
+                Kmer km = Kmerizer(km_length, contig).next();
+                assert(km);
+                auto comp_itr = component_kmers.find(km);
+                assert(comp_itr != component_kmers.end());
+                size_t comp = comp_itr->second;
+                //
+                // Get two contigs, one for forward and one for paired-end.
+                //
+                DNASeq4 fw_contig, pe_contig;
+                DNASeq4* todo_contig;
+                const vector<const DNASeq4*>* todo_seqs;
+                if (comp == best_comp[fw]) {
+                    if (detailed_output)
+                        loc_.details_ss << "best_path_is_best_fw_compo\n";
+                    fw_contig = move(contig);
+                    todo_contig = &pe_contig;
+                    todo_seqs = &seqs_to_assemble[pe];
+                } else if (comp == best_comp[pe]) {
+                    if (detailed_output)
+                        loc_.details_ss << "best_path_is_best_pe_compo\n";
+                    pe_contig = move(contig);
+                    todo_contig = &fw_contig;
+                    todo_seqs = &seqs_to_assemble[fw];
+                } else {
+                    if (detailed_output)
+                        loc_.details_ss << "best_path_is_neither_best_fw_compo_nor_best_pe_compo\n";
+                    ++ctg_stats_.n_loci_pe_graph_not_dag;
+                    return DNASeq4();
+                }
+                graph.rebuild(*todo_seqs, min_km_count);
+                if (graph.empty())
+                    DOES_NOT_HAPPEN;
+                if (!graph.find_best_path(best_path))
+                    DOES_NOT_HAPPEN;
+                *todo_contig = DNASeq4(SPath::contig_str(best_path.begin(), best_path.end(), km_length));
+                if(detailed_output)
+                    loc_.details_ss << "contig_fw\t" << fw_contig << '\n'
+                                    << "contig_pe\t" << pe_contig << '\n';
+                //
+                // Try to overlap the two contigs.
+                //
+                SuffixTree stree {pe_contig};
+                stree.build_tree();
+                GappedAln aligner;
+                AlignRes  aln_res;
+                string overlap_cigar;
+                int overlap;
+                if (dbg_no_overlaps)
+                    overlap = 0;
+                else
+                    overlap = this->find_locus_overlap(&stree, &aligner, fw_contig, overlap_cigar);
+                if (overlap > 0) {
+                    if(detailed_output)
+                        loc_.details_ss << "overlap\t" << overlap << '\t' << overlap_cigar << "\n";
+                    this->loc_.ctg_status = LocData::overlapped;
+                    this->loc_.olap_length = overlap;
+                    this->ctg_stats_.n_overlaps++;
+                    this->ctg_stats_.length_overlap_tot += overlap;
+                    this->ctg_stats_.length_olapd_loci_tot += fw_contig.length() + pe_contig.length() - overlap;
+                    contig = move(fw_contig);
+                    auto seq_itr = pe_contig.begin();
+                    for(size_t i=0; i<size_t(overlap); ++i) {
+                        assert(seq_itr != pe_contig.end());
+                        ++seq_itr;
+                    }
+                    contig.append(seq_itr, pe_contig.end());
+                } else {
+                    if(detailed_output)
+                        loc_.details_ss << "no_overlap\n";
+                    this->loc_.ctg_status = LocData::separate;
+                    contig = move(fw_contig);
+                    for(size_t i=0; i<10; ++i)
+                        contig.push_back(Nt4::n);
+                    contig.append(pe_contig.begin(), pe_contig.end());
+                }
+            }
+        }
+    }
+    return contig;
 }
 
 bool LocusProcessor::add_read_to_aln(
@@ -1449,9 +1608,6 @@ bool LocusProcessor::add_read_to_aln(
 ) {
 
     if (!this->align_reads_to_contig(stree, aligner, r.seq, aln_res))
-        return false;
-
-    if (aln_res.pct_id < min_aln_cov)
         return false;
 
     Cigar cigar;

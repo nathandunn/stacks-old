@@ -20,12 +20,11 @@
 // Up to 31-mers. 32 is possible in principle but `empty()` would be true for a
 // series of 32 T's.
 //
-
 class Kmer {
     NtArray<Nt2> a_;
 
 public:
-    Kmer() : a_(-1) {}
+    Kmer() : a_(~uint64_t(0)) {}
 
     // Given a sequence iterator, builds the first valid kmer (i.e. skipping Ns).
     // If no kmer can be found, an empty object is returned.
@@ -49,8 +48,20 @@ public:
         return s;
     }
 
+    operator bool() const {return !empty();}
     bool operator==(const Kmer& other) const {return a_ == other.a_;}
     friend struct std::hash<Kmer>;
+};
+
+class Kmerizer {
+    size_t km_len_;
+    const DNASeq4* seq_;
+    DNASeq4::iterator next_nt_;
+    Kmer km_;
+
+public:
+    Kmerizer(size_t km_len, const DNASeq4& seq) : km_len_(km_len), seq_(&seq), next_nt_(seq_->begin()) {}
+    Kmer next();
 };
 
 namespace std { template<>
@@ -152,6 +163,7 @@ public:
     size_t km_cumcount() const {return d_.km_cumcount;}
 
     const Node* first() const {return first_;}
+    const Node* last() const  {return last_;}
 
     template<typename SPathIt>
     static string contig_str(SPathIt first, SPathIt past, size_t km_len);
@@ -181,9 +193,6 @@ class Graph {
     vector<SPath> simple_paths_;
 
     vector<SPath*> sorted_spaths_; // The simple paths, sorted topologically, with the terminal (no successors) ones first.
-    map<const void*,set<SPath*>> components_; // The simple paths, by component;
-                                              // one simple path address serves as an ID for each component.
-    map<const SPath*,const void*> sp_to_component_;
 
 public:
     Graph(size_t km_length) : km_len_(km_length) {}
@@ -194,12 +203,7 @@ public:
     size_t km_count() const {size_t cnt=0; for(auto& n: nodes_) cnt+=n.count(); return cnt;}
 
     // Find all connected components. This uses an undirected depth first search.
-    void compute_components();
-    vector<const void*> components() const;
-    size_t component_n_nodes(const void* c) const;
-    size_t component_n_spaths(const void* c) const;
-    size_t component_km_count(const void* c) const;
-    //void components_of(vector<pair<const void*,size_t>>& comps, const DNASeq4& seq); //TODO
+    vector<vector<const SPath*>> components();
 
     // Finds the best path in the graph.
     // Return false if the graph is not a DAG.
@@ -235,13 +239,13 @@ void Graph::clear() {
     map_.clear();
     simple_paths_.resize(0);
     sorted_spaths_.resize(0);
-    components_.clear();
-    sp_to_component_.clear();
 }
 
 inline
-Kmer::Kmer(size_t km_len, DNASeq4::iterator& first, DNASeq4::iterator past) : a_() {
-
+Kmer::Kmer(size_t km_len, DNASeq4::iterator& first, DNASeq4::iterator past)
+:
+    Kmer()
+{
     if (km_len > 31)
         DOES_NOT_HAPPEN;
 
@@ -261,6 +265,7 @@ Kmer::Kmer(size_t km_len, DNASeq4::iterator& first, DNASeq4::iterator past) : a_
     }
     // Build the kmer.
     if (n_good == km_len) {
+        a_ = NtArray<Nt2>();
         for (size_t i=0; i<km_len; ++i) {
             a_.set(i, Nt2(*km_start));
             ++km_start;
@@ -268,31 +273,34 @@ Kmer::Kmer(size_t km_len, DNASeq4::iterator& first, DNASeq4::iterator past) : a_
     }
 }
 
+inline
+Kmer Kmerizer::next()
+{
+    if (next_nt_ == seq_->end()) {
+        km_ = Kmer();
+    } else if (next_nt_ == seq_->begin() || *next_nt_ == Nt4::n) {
+        km_ = Kmer(km_len_, next_nt_, seq_->end());
+    } else {
+        km_ = km_.succ(km_len_, Nt2(*next_nt_));
+        ++next_nt_;
+    }
+    return km_;
+}
+
 template<typename SPathIt>
 string SPath::contig_str(SPathIt first, SPathIt past, size_t km_len) {
-
-    // Compute the final size.
-    size_t ctg_len = km_len - 1;
-    for (SPathIt sp=first; sp!=past; ++sp)
-        ctg_len += (*sp)->n_nodes();
-
     // Initialize the contig with the contents of the first kmer minus its last
     // nucleotide.
-    string ctg = (*first)->first_->km().str(km_len);
+    string ctg = (*first)->first()->km().str(km_len);
     ctg.pop_back();
-    ctg.reserve(ctg_len);
-
     // Extend the contig; loop over every Node of every SPath.
-    while (first != past) {
-        Node* n = (*first)->first_;
-        while (n != (*first)->last_) {
+    for (SPathIt sp=first; sp!=past; ++sp) {
+        for (const Node* n = (**sp).first(); ; n=n->first_succ()) {
             ctg.push_back(char(n->km().back(km_len)));
-            n = n->first_succ();
+            if (n == (**sp).last())
+                break;
         }
-        ctg.push_back(char(n->km().back(km_len)));
-        ++first;
     }
-
     return ctg;
 }
 

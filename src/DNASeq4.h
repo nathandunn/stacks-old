@@ -12,7 +12,7 @@ class NtArray {
 
 public:
     NtArray() : a_(0) {}
-    NtArray(int) : a_(-1) {}
+    NtArray(uint64_t x) : a_(x) {}
     NtArray(const NtArray<Nt>& other) : a_(other.a_) {}
     NtArray<Nt>& operator= (const NtArray<Nt>& other) {a_ = other.a_; return *this;}
 
@@ -97,6 +97,7 @@ public:
     DNASeq4 rev_compl() const;
     string str() const;
 
+    void remove_Ns();
     void shift_Ns_towards_the_end();
 
     Nt4 operator[] (size_t i) const {return i%2==0 ? v_[i/2].first() : v_[i/2].second();}
