@@ -76,6 +76,26 @@ void DNASeq4::append(iterator first, iterator past) {
     }
 }
 
+void DNASeq4::remove_Ns() {
+    auto itr = begin();
+    while (itr != end() && *itr != Nt4::n)
+        ++itr;
+    if (itr == end())
+        // Sequence didn't contain N's.
+        return;
+    DNASeq4 seq;
+    auto start = begin();
+    while (start != end()) {
+        while (itr != end() && *itr != Nt4::n)
+            ++itr;
+        seq.append(start, itr);
+        while (itr != end() && *itr == Nt4::n)
+            ++itr;
+        start = itr;
+    }
+    *this = move(seq);
+}
+
 void DNASeq4::shift_Ns_towards_the_end() {
     vector<DiNuc>::iterator v_itr = v_.begin();
     iterator first = begin();

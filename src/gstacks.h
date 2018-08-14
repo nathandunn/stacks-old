@@ -243,7 +243,9 @@ private:
     Timers timers_;
     mutable LocData loc_;
 
-    string assemble_contig(const vector<const DNASeq4*>& seqs);
+    DNASeq4 assemble_locus_contig(
+        const vector<SRead>& fw_reads,
+        const vector<SRead>& pe_reads);
     bool add_read_to_aln(
             CLocAlnSet& aln_loc,
             AlignRes& aln_res,
