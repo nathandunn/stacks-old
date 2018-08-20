@@ -1,5 +1,11 @@
+Stacks 2.2
+--------------------------
+    Feature: Added the --bestrad flag to process_radtags. When used it will look for reads that need transposed
+             before they are processed.
+    Bugfix: Added run number to output FASTQ headers in process_radtags to make sure read IDs are always unique.
+
 Stacks 2.1 - June 25, 2018
--------------------------
+--------------------------
     Bugfix: Fixed a performance regression in sstacks. Recent changes in sstacks made it more likely to
             invoke the gapped algorithm to match to the catalog. In some cases, matches to the catalog
             would be marked as ambiguous alignments and dropped from the next stages of analysis due to 

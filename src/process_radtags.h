@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010-2015, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2010-2018, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -67,6 +67,8 @@ int  process_paired_reads(string, string,
 int  process_singlet(RawRead *,
                      string, bool,
                      map<string, long> &, map<string, long> &);
+int  transpose_reads(RawRead **, RawRead **);
+int  check_for_transposed_reads(RawRead *, RawRead *, string);
 int  correct_radtag(RawRead *, string, map<string, long> &);
 int  check_quality_scores(RawRead *, bool);
 int  dist(const char *, char *);

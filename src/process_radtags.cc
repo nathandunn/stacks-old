@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2011-2016, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2011-2018, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -51,6 +51,7 @@ char  *adapter_2;
 barcodet barcode_type    = null_null;
 bool     retain_header   = false;
 bool     filter_adapter  = false;
+bool     bestrad         = false;
 bool     paired          = false;
 bool     clean           = false;
 bool     quality         = false;
@@ -250,7 +251,7 @@ process_paired_reads(string prefix_1,
                      map<string, long> &counter,
                      map<BarcodePair, map<string, long> > &barcode_log) {
     Input    *fh_1=NULL, *fh_2=NULL;
-    RawRead     *r_1=NULL, *r_2=NULL;
+    RawRead   *r_1=NULL,  *r_2=NULL;
     ofstream *discard_fh_1=NULL, *discard_fh_2=NULL;
 
     int return_val = 1;
@@ -338,6 +339,15 @@ process_paired_reads(string prefix_1,
         parse_input_record(s_2, r_2);
         counter["total"] += 2;
 
+        //
+        // If a BestRAD protocol was used, check which read the barcode/restriction cutsite is on
+        // and transpose the reads if necessary.
+        //
+        if (bestrad) {
+            if (check_for_transposed_reads(r_1, r_2, renz_1))
+                transpose_reads(&r_1, &r_2);
+        }
+
         if (barcode_type != null_null &&
             barcode_type != inline_null &&
             barcode_type != index_null)
@@ -359,9 +369,9 @@ process_paired_reads(string prefix_1,
             if (truncate_seq + r_2->inline_bc_len <= r_2->len)
                 r_2->set_len(truncate_seq + r_2->inline_bc_len);
         } else {
-            if (barcode_type == inline_null || barcode_type == inline_inline ||        barcode_type == inline_index)
+            if (barcode_type == inline_null || barcode_type == inline_inline || barcode_type == inline_index)
                 r_1->set_len(r_1->len - (max_bc_size_1 - r_1->inline_bc_len));
-            if (barcode_type == index_inline ||        barcode_type == inline_inline)
+            if (barcode_type == index_inline || barcode_type == inline_inline)
                 r_2->set_len(r_2->len - (max_bc_size_2 - r_2->inline_bc_len));
         }
 
@@ -713,6 +723,125 @@ process_singlet(RawRead *href,
 }
 
 int
+check_for_transposed_reads(RawRead *r_1, RawRead *r_2, string res_enz) {
+    const char *p, *q, *stop;
+    int max_se_cnt = 0;
+    int max_pe_cnt = 0;
+    int cnt = 0;
+
+    //
+    // Check if restriction enzyme cutsite is on single-end read.
+    //
+    for (int i = 0; i < renz_cnt[res_enz]; i++)
+        for (uint j = min_bc_size_1; j <= max_bc_size_1; j++) { 
+            p    = r_1->seq + j;
+            q    = renz[res_enz][i];
+            stop = q + renz_len[res_enz];
+            cnt  = 0;
+            //
+            // Account for sequencing errors in cut site.
+            //
+            while (q < stop) {
+                if (*p == *q) cnt++;
+                p++;
+                q++;
+            }
+            if (cnt == renz_len[res_enz]) {
+                //
+                // Found a match, stop looking, do not transpose.
+                //
+                return 0;
+            }
+            if (cnt > max_se_cnt) max_se_cnt = cnt;
+    }
+
+    //
+    // Check if restriction enzyme cutsite is on the paired-end read.
+    //
+    for (int i = 0; i < renz_cnt[res_enz]; i++)
+        for (uint j = min_bc_size_1; j <= max_bc_size_1; j++) { 
+            p    = r_2->seq + j;
+            q    = renz[res_enz][i];
+            stop = q + renz_len[res_enz];
+            cnt  = 0;
+            //
+            // Account for sequencing errors in cut site.
+            //
+            while (q < stop) {
+                if (*p == *q) cnt++;
+                p++;
+                q++;
+            }
+            if (cnt == renz_len[res_enz]) {
+                //
+                // Found a match, stop looking and return.
+                //
+                return 1;
+            }
+            if (cnt > max_pe_cnt) max_pe_cnt = cnt;
+    }
+
+    //
+    // If we got here, guess which read contains the restriction enzyme cutsite.
+    //
+    if (max_pe_cnt > max_se_cnt)
+        return 1;
+ 
+    return 0;
+}
+
+int
+transpose_reads(RawRead **r_1, RawRead **r_2) {
+    RawRead *tmp = *r_1;
+    *r_1 = *r_2;
+    *r_2 = tmp;
+    (*r_1)->read = 1;
+    (*r_2)->read = 2;
+
+    (*r_1)->inline_bc[0] = '\0';
+    (*r_2)->inline_bc[0] = '\0';
+
+    switch (barcode_type) {
+    case inline_null:
+        (*r_1)->inline_bc_len = min_bc_size_1;
+        strncpy((*r_1)->inline_bc, (*r_1)->seq, max_bc_size_1);
+        (*r_1)->inline_bc[max_bc_size_1] = '\0';
+        (*r_1)->se_bc = (*r_1)->inline_bc;
+        break;
+    case inline_inline:
+        (*r_1)->inline_bc_len = min_bc_size_1;
+        strncpy((*r_1)->inline_bc, (*r_1)->seq, max_bc_size_1);
+        (*r_1)->inline_bc[max_bc_size_1] = '\0';
+        (*r_1)->se_bc = (*r_1)->inline_bc;
+
+        (*r_2)->inline_bc_len = min_bc_size_2;
+        strncpy((*r_2)->inline_bc, (*r_2)->seq, max_bc_size_2);
+        (*r_2)->inline_bc[max_bc_size_2] = '\0';
+        (*r_2)->se_bc = (*r_2)->inline_bc;
+        break;
+    case inline_index:
+        (*r_1)->inline_bc_len = min_bc_size_1;
+        strncpy((*r_1)->inline_bc, (*r_1)->seq, max_bc_size_1);
+        (*r_1)->inline_bc[max_bc_size_1] = '\0';
+        (*r_1)->se_bc = (*r_1)->inline_bc;
+                    
+        (*r_2)->pe_bc = (*r_2)->index_bc;
+        break;
+    case index_inline:
+        (*r_1)->se_bc = (*r_1)->index_bc;
+                    
+        (*r_2)->inline_bc_len = min_bc_size_2;
+        strncpy((*r_2)->inline_bc, (*r_2)->seq, max_bc_size_2);
+        (*r_2)->inline_bc[max_bc_size_2] = '\0';
+        (*r_2)->pe_bc = (*r_2)->inline_bc;
+        break;
+    default:
+        break;
+    }
+    return 0;
+}
+
+int
 correct_radtag(RawRead *href, string res_enz, map<string, long> &counter)
 {
     if (recover == false)
@@ -793,8 +922,8 @@ print_results(int argc, char **argv,
     if (filter_adapter)
         log << "Adapter Seq" << "\t";
     log << "Low Quality\t"
-        << "Ambiguous Barcodes\t"
-        << "Ambiguous RAD-Tag\t"
+        << "Barcode Not Found\t"
+        << "RAD cutsite Not Found\t"
         << "Total\n";
 
     for (it = counters.begin(); it != counters.end(); it++) {
@@ -842,9 +971,9 @@ print_results(int argc, char **argv,
         print_nreads(c["ill_filtered"], "failed Illumina filtered reads");
     if (filter_adapter)
         print_nreads(c["adapter"], "reads contained adapter sequence");
-    print_nreads(c["ambiguous"], "ambiguous barcode drops");
+    print_nreads(c["ambiguous"], "barcode not found drops");
     print_nreads(c["low_quality"], "low quality read drops");
-    print_nreads(c["noradtag"], "ambiguous RAD-Tag drops");
+    print_nreads(c["noradtag"], "RAD cutsite not found drops");
     print_nreads(c["retained"], "retained reads");
 
     log        << "\n"
@@ -853,10 +982,10 @@ print_results(int argc, char **argv,
         log << "Failed Illumina filtered reads\t" << c["ill_filtered"] << "\n";
     if (filter_adapter)
         log << "Reads containing adapter sequence\t" << c["adapter"] << "\n";
-    log << "Ambiguous Barcodes\t"   << c["ambiguous"]   << "\n"
-        << "Low Quality\t"          << c["low_quality"] << "\n"
-        << "Ambiguous RAD-Tag\t"    << c["noradtag"]    << "\n"
-        << "Retained Reads\t"       << c["retained"]    << "\n";
+    log << "Barcode Not Found\t"     << c["ambiguous"]   << "\n"
+        << "Low Quality\t"           << c["low_quality"] << "\n"
+        << "RAD Cutsite Not Found\t" << c["noradtag"]    << "\n"
+        << "Retained Reads\t"        << c["retained"]    << "\n";
 
     if (max_bc_size_1 == 0) return 0;
 
@@ -940,7 +1069,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"version",              no_argument, NULL, 'v'},
             {"quality",              no_argument, NULL, 'q'},
             {"clean",                no_argument, NULL, 'c'},
-            {"recover",              no_argument, NULL, 'r'},
+            {"rescue",               no_argument, NULL, 'r'},
             {"discards",             no_argument, NULL, 'D'},
             {"paired",               no_argument, NULL, 'P'},
             {"interleaved",          no_argument, NULL, 'I'},
@@ -948,6 +1077,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"disable_rad_check",    no_argument, NULL, 'R'},
             {"filter_illumina",      no_argument, NULL, 'F'},
             {"retain_header",        no_argument, NULL, 'H'},
+            {"bestrad",              no_argument, NULL, 1000},
             {"null_index",           no_argument, NULL, 'U'},
             {"index_null",           no_argument, NULL, 'u'},
             {"inline_null",          no_argument, NULL, 'V'},
@@ -1041,6 +1171,9 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 'I':
             interleaved = true;
+            break;
+        case 1000:
+            bestrad = true;
             break;
         case 'B':
             barcode_dist_1 = is_integer(optarg);
@@ -1261,43 +1394,43 @@ void version() {
 
 void help() {
     cerr << "process_radtags " << VERSION << "\n"
-              << "process_radtags -p in_dir [--paired [--interleaved]] [-i format] -b barcode_file -o out_dir -e enz [-c] [-q] [-r] [-t len] [-D] [-w size] [-s lim]\n"
-              << "process_radtags -f in_file [-i format] -b barcode_file -o out_dir -e enz [-c] [-q] [-r] [-t len] [-D] [-w size] [-s lim]\n"
-              << "process_radtags -1 pair_1 -2 pair_2 [-i format] -b barcode_file -o out_dir -e enz [-c] [-q] [-r] [-t len] [-D] [-w size] [-s lim]\n"
-              << "\n"
-              << "  p: path to a directory of files.\n"
-              << "  P,--paired: files contained within the directory are paired.\n"
-              << "  I,--interleaved: specify that the paired-end reads are interleaved in single files.\n"
-              << "  i: input file type, either 'fastq', 'gzfastq' (gzipped fastq), 'bam', or 'bustard' (default: guess, or gzfastq if unable to).\n"
-              << "  b: path to a file containing barcodes for this run.\n"
-              << "  o: path to output the processed files.\n"
-              << "  f: path to the input file if processing single-end sequences.\n"
-              << "  1: first input file in a set of paired-end sequences.\n"
-              << "  2: second input file in a set of paired-end sequences.\n"
-              << "  c: clean data, remove any read with an uncalled base.\n"
-              << "  q: discard reads with low quality scores.\n"
-              << "  r: rescue barcodes and RAD-Tags.\n"
-              << "  t: truncate final read length to this value.\n"
-              << "  D: capture discarded reads to a file.\n"
-              << "  E: specify how quality scores are encoded, 'phred33' (Illumina 1.8+/Sanger, default) or 'phred64' (Illumina 1.3-1.5).\n"
-              << "  w: set the size of the sliding window as a fraction of the read length, between 0 and 1 (default 0.15).\n"
-              << "  s: set the score limit. If the average score within the sliding window drops below this value, the read is discarded (default 10).\n"
-              << "  y: output type, either 'fastq', 'gzfastq', 'fasta', or 'gzfasta' (default: match input type).\n"
-              << "\n"
-              << "  Barcode options:\n"
-              << "    --inline_null:   barcode is inline with sequence, occurs only on single-end read (default).\n"
-              << "    --index_null:    barcode is provded in FASTQ header (Illumina i5 or i7 read).\n"
-              << "    --null_index:    barcode is provded in FASTQ header (Illumina i7 read if both i5 and i7 read are provided).\n"
-              << "    --inline_inline: barcode is inline with sequence, occurs on single and paired-end read.\n"
-              << "    --index_index:   barcode is provded in FASTQ header (Illumina i5 and i7 reads).\n"
-              << "    --inline_index:  barcode is inline with sequence on single-end read and occurs in FASTQ header (from either i5 or i7 read).\n"
-              << "    --index_inline:  barcode occurs in FASTQ header (Illumina i5 or i7 read) and is inline with single-end sequence (for single-end data) on paired-end read (for paired-end data).\n"
-              << "\n"
-              << "  Restriction enzyme options:\n"
-              << "    -e <enz>, --renz_1 <enz>: provide the restriction enzyme used (cut site occurs on single-end read)\n"
-              << "    --renz_2 <enz>: if a double digest was used, provide the second restriction enzyme used (cut site occurs on the paired-end read).\n"
-              << "    Currently supported enzymes include:\n"
-              << "      ";
+         << "process_radtags -p in_dir [--paired [--interleaved]] [-b barcode_file] -o out_dir -e enz [-c] [-q] [-r] [-t len]\n"
+         << "process_radtags -f in_file [-b barcode_file] -o out_dir -e enz [-c] [-q] [-r] [-t len]\n"
+         << "process_radtags -1 pair_1 -2 pair_2 [-b barcode_file] -o out_dir -e enz [-c] [-q] [-r] [-t len]\n"
+         << "\n"
+         << "  p: path to a directory of files.\n"
+         << "  P,--paired: files contained within the directory are paired.\n"
+         << "  I,--interleaved: specify that the paired-end reads are interleaved in single files.\n"
+         << "  i: input file type, either 'fastq', 'gzfastq' (gzipped fastq), 'bam', or 'bustard' (default: guess, or gzfastq if unable to).\n"
+         << "  b: path to a file containing barcodes for this run, omit to ignore any barcoding.\n"
+         << "  o: path to output the processed files.\n"
+         << "  f: path to the input file if processing single-end sequences.\n"
+         << "  1: first input file in a set of paired-end sequences.\n"
+         << "  2: second input file in a set of paired-end sequences.\n"
+         << "  c,--clean: clean data, remove any read with an uncalled base.\n"
+         << "  q,--quality: discard reads with low quality scores.\n"
+         << "  r,--rescue: rescue barcodes and RAD-Tags.\n"
+         << "  t: truncate final read length to this value.\n"
+         << "  D: capture discarded reads to a file.\n"
+         << "  E: specify how quality scores are encoded, 'phred33' (Illumina 1.8+/Sanger, default) or 'phred64' (Illumina 1.3-1.5).\n"
+         << "  w: set the size of the sliding window as a fraction of the read length, between 0 and 1 (default 0.15).\n"
+         << "  s: set the score limit. If the average score within the sliding window drops below this value, the read is discarded (default 10).\n"
+         << "  y: output type, either 'fastq', 'gzfastq', 'fasta', or 'gzfasta' (default: match input type).\n"
+         << "\n"
+         << "  Barcode options:\n"
+         << "    --inline_null:   barcode is inline with sequence, occurs only on single-end read (default).\n"
+         << "    --index_null:    barcode is provded in FASTQ header (Illumina i5 or i7 read).\n"
+         << "    --null_index:    barcode is provded in FASTQ header (Illumina i7 read if both i5 and i7 read are provided).\n"
+         << "    --inline_inline: barcode is inline with sequence, occurs on single and paired-end read.\n"
+         << "    --index_index:   barcode is provded in FASTQ header (Illumina i5 and i7 reads).\n"
+         << "    --inline_index:  barcode is inline with sequence on single-end read and occurs in FASTQ header (from either i5 or i7 read).\n"
+         << "    --index_inline:  barcode occurs in FASTQ header (Illumina i5 or i7 read) and is inline with single-end sequence (for single-end data) on paired-end read (for paired-end data).\n"
+         << "\n"
+         << "  Restriction enzyme options:\n"
+         << "    -e <enz>, --renz_1 <enz>: provide the restriction enzyme used (cut site occurs on single-end read)\n"
+         << "    --renz_2 <enz>: if a double digest was used, provide the second restriction enzyme used (cut site occurs on the paired-end read).\n"
+         << "    Currently supported enzymes include:\n"
+         << "      ";
 
     map<string, int>::iterator it;
     uint cnt = renz_cnt.size();
@@ -1317,19 +1450,21 @@ void help() {
     cerr << "\n";
 
     cerr << "\n"
-              << "  Adapter options:\n"
-              << "    --adapter_1 <sequence>: provide adaptor sequence that may occur on the single-end read for filtering.\n"
-              << "    --adapter_2 <sequence>: provide adaptor sequence that may occur on the paired-read for filtering.\n"
-              << "      --adapter_mm <mismatches>: number of mismatches allowed in the adapter sequence.\n\n"
-              << "  Output options:\n"
-              << "    --retain_header: retain unmodified FASTQ headers in the output.\n"
-              << "    --merge: if no barcodes are specified, merge all input files into a single output file.\n\n"
-              << "  Advanced options:\n"
-              << "    --filter_illumina: discard reads that have been marked by Illumina's chastity/purity filter as failing.\n"
-              << "    --disable_rad_check: disable checking if the RAD site is intact.\n"
-              << "    --len_limit <limit>: specify a minimum sequence length (useful if your data has already been trimmed).\n"
-              << "    --barcode_dist_1: the number of allowed mismatches when rescuing single-end barcodes (default 1).\n"
-              << "    --barcode_dist_2: the number of allowed mismatches when rescuing paired-end barcodes (defaults to --barcode_dist_1).\n";
+         << "  Protocol-specific options:\n"
+         << "    --bestrad: library was generated using BestRAD, check for restriction enzyme on either read and potentially tranpose reads.\n\n"
+         << "  Adapter options:\n"
+         << "    --adapter_1 <sequence>: provide adaptor sequence that may occur on the single-end read for filtering.\n"
+         << "    --adapter_2 <sequence>: provide adaptor sequence that may occur on the paired-read for filtering.\n"
+         << "      --adapter_mm <mismatches>: number of mismatches allowed in the adapter sequence.\n\n"
+         << "  Output options:\n"
+         << "    --retain_header: retain unmodified FASTQ headers in the output.\n"
+         << "    --merge: if no barcodes are specified, merge all input files into a single output file.\n\n"
+         << "  Advanced options:\n"
+         << "    --filter_illumina: discard reads that have been marked by Illumina's chastity/purity filter as failing.\n"
+         << "    --disable_rad_check: disable checking if the RAD site is intact.\n"
+         << "    --len_limit <limit>: specify a minimum sequence length (useful if your data has already been trimmed).\n"
+         << "    --barcode_dist_1: the number of allowed mismatches when rescuing single-end barcodes (default 1).\n"
+         << "    --barcode_dist_2: the number of allowed mismatches when rescuing paired-end barcodes (defaults to --barcode_dist_1).\n";
 
     exit(1);
 }
