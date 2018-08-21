@@ -646,7 +646,7 @@ process_singlet(RawRead *href,
     }
 
     //
-    // Is the RADTAG intact?
+    // Is the RADTAG cutsite intact?
     //
     if (check_radtag && res_enz.length() > 0) {
         bool rad_cor = false;
@@ -659,7 +659,7 @@ process_singlet(RawRead *href,
         }
         if (rad_cor == false) {
             //
-            // Try to correct the RAD-Tag.
+            // Try to correct the RAD cutsite.
             //
             if (!correct_radtag(href, res_enz, counter)) {
                 if (barcode_type != null_null) bc_log["noradtag"]++;
@@ -798,8 +798,10 @@ transpose_reads(RawRead **r_1, RawRead **r_2) {
     (*r_1)->read = 1;
     (*r_2)->read = 2;
 
-    (*r_1)->inline_bc[0] = '\0';
-    (*r_2)->inline_bc[0] = '\0';
+    (*r_1)->inline_bc[0]  = '\0';
+    (*r_2)->inline_bc[0]  = '\0';
+    (*r_1)->inline_bc_len = 0;
+    (*r_2)->inline_bc_len = 0;
 
     switch (barcode_type) {
     case inline_null:
