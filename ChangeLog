@@ -4,6 +4,7 @@ Stacks 2.2 - Aug 22, 2018
              before they are processed.
     Feature: gstacks: New option --max-debrujin-reads to control the construction of the de Bruijn graph; replaces 
              --min-kmer-freq which is now deprecated
+    Bugfix: Fixed a breaking circumstantial segmentation fault in populations
     Bugfix: Added run number to output FASTQ headers in process_radtags to make sure read IDs are always unique.
 
 Stacks 2.1 - June 25, 2018
