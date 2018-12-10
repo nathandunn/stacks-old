@@ -334,18 +334,25 @@ public:
 inline
 void strip_read_number(string& read_name) {
     if (read_name.size() >= 2) {
-        char last = read_name[read_name.size()-1];
-        char ante = read_name[read_name.size()-2];
-        if ((last == '1' || last == '2') && (ante == '/' || ante == '_')) {
+        // Check for ".../1" or ".../2"
+        if ((*read_name.rbegin() == '1' || *read_name.rbegin() == '2')
+            && (*++read_name.rbegin() == '/' || *++read_name.rbegin() == '_')
+        ) {
             // Remove the suffix & return.
             read_name.resize(read_name.size()-2);
             return;
         }
+        // Check for "... 1:..." or "... 2:..."
+        const char *p, *q;
+        if ((p = q = strchr(read_name.c_str(), ' ')) != NULL) {
+            if ((*++q == '1' || *q == '2') && *++q == ':') {
+                read_name.resize(p - read_name.c_str());
+                return;
+            }
+        }
     }
-
     // Unexpected suffix.
-    cerr << "Error: Unrecognized read name format: expected '"
-         << read_name << "' to end with /1, /2, _1 or _2.\n";
+    cerr << "Error: Unrecognized paired-end read name format, at '" << read_name << "'.\n";
     throw exception();
 }
 
