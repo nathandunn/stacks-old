@@ -38,7 +38,8 @@ write_fasta(ofstream *fh, RawRead *href, bool overhang) {
 
     if (href->fastq_type != generic_fastq)
         *fh <<
-            ">" << href->lane <<
+            ">" << href->run <<
+            "_" << href->lane <<
             "_" << tile <<
             "_" << href->x <<
             "_" << href->y <<
@@ -66,7 +67,8 @@ write_fasta(gzFile *fh, RawRead *href, bool overhang) {
 
     if (href->fastq_type != generic_fastq)
         sstr <<
-            ">" << href->lane <<
+            ">" << href->run <<
+            "_" << href->lane <<
             "_" << tile <<
             "_" << href->x <<
             "_" << href->y <<
@@ -122,7 +124,8 @@ write_fastq(ofstream *fh, RawRead *href, bool overhang) {
 
     if (href->fastq_type != generic_fastq)
         *fh <<
-            "@" << href->lane <<
+            "@" << href->run <<
+            "_" << href->lane <<
             "_" << tile <<
             "_" << href->x <<
             "_" << href->y <<
@@ -157,7 +160,8 @@ write_fastq(gzFile *fh, RawRead *href, bool overhang) {
 
     if (href->fastq_type != generic_fastq)
         sstr <<
-            "@" << href->lane <<
+            "@" << href->run <<
+            "_" << href->lane <<
             "_" << tile <<
             "_" << href->x <<
             "_" << href->y <<
