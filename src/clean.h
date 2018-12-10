@@ -149,6 +149,7 @@ public:
     char  *se_bc;
     char  *pe_bc;
     char  *machine;
+    int    run;
     int    lane;
     int    tile;
     int    x;
@@ -179,6 +180,7 @@ public:
         this->retain        = 1;
         this->inline_bc_len = 0;
         this->tile          = 0;
+        this->run           = 0;
         this->lane          = 0;
         this->x             = 0;
         this->y             = 0;

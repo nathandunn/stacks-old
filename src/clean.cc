@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2011-2014, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2011-2018, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -145,7 +145,11 @@ parse_input_record(Seq *s, RawRead *r)
 
         // Run number.
         for (p = q+1, q = p; *q != ':' && q < stop; q++);
-        //*q = '\0';
+        if (q < stop) {
+            *q = '\0';
+            r->run = atoi(p);
+            *q = ':';
+        }
 
         // Flowcell ID.
         for (p = q+1, q = p; *q != ':' && q < stop; q++);
@@ -160,9 +164,9 @@ parse_input_record(Seq *s, RawRead *r)
 
         for (p = q+1, q = p; *q != ':' && q < stop; q++);
         if (q < stop) {
-        *q = '\0';
-        r->tile = atoi(p);
-        *q = ':';
+            *q = '\0';
+            r->tile = atoi(p);
+            *q = ':';
         }
 
         for (p = q+1, q = p; *q != ':' && q < stop; q++);
