@@ -350,11 +350,11 @@ sub parse_command_line {
 
         } elsif ($_ =~ /^--var-alpha$/) {
             $arg = shift @ARGV;
-            push(@_gstacks, "--var_alpha " . $arg);
+            push(@_gstacks, "--var-alpha " . $arg);
 
         } elsif ($_ =~ /^--gt-alpha$/) {
             $arg = shift @ARGV;
-            push(@_gstacks, "--gt_alpha " . $arg);
+            push(@_gstacks, "--gt-alpha " . $arg);
 
         } elsif ($_ =~ /^-X$/) {
             #
