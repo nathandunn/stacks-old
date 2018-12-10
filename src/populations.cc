@@ -67,9 +67,7 @@ bool      smooth_popstats   = false;
 bool      loci_ordered      = false;
 bool      log_fst_comp      = false;
 bool      verbose           = false;
-bool      filter_lnl        = false;
 size_t    min_gt_depth      = 0;
-double    lnl_limit         = 0.0;
 double    merge_prune_lim   = 1.0;
 double    minor_allele_freq = 0.0;
 long      minor_allele_cnt  = 0;
@@ -3700,7 +3698,6 @@ output_parameters(ostream &fh)
     fh
         << "  Percent samples limit per population: " << sample_limit << "\n"
         << "  Locus Population limit: " << population_limit << "\n"
-        << "  Log liklihood filtering: " << (filter_lnl == true ? "on"  : "off") << "; threshold: " << lnl_limit << "\n"
         << "  Minor allele frequency cutoff: " << minor_allele_freq << "\n"
         << "  Maximum observed heterozygosity cutoff: " << max_obs_het << "\n"
         << "  Applying Fst correction: ";
@@ -3793,11 +3790,11 @@ parse_command_line(int argc, char* argv[])
             {"min_maf",           required_argument, NULL, 'a'},
             {"min_mac",           required_argument, NULL, 1016},
             {"max_obs_het",       required_argument, NULL, 1013},
-            {"lnl_lim",           required_argument, NULL, 'c'},
             {"merge_prune_lim",   required_argument, NULL, 'i'},
             {"fst_correction",    required_argument, NULL, 'f'},
             {"p_value_cutoff",    required_argument, NULL, 'u'},
             {"debug_flags",       required_argument, NULL, 1000},
+            {"lnl_lim",           required_argument, NULL, 7000}, // (deprecated)
             {0, 0, 0, 0}
         };
 
@@ -3946,9 +3943,8 @@ parse_command_line(int argc, char* argv[])
             bs_wl_file = optarg;
             bootstrap_wl = true;
             break;
-        case 'c':
-            lnl_limit  = is_double(optarg);
-            filter_lnl = true;
+        case 7000:
+            cerr << "WARNING: --lnl_lim is deprecated and has no effect.\n";
             break;
         case 'I':
             write_single_snp = true;
@@ -4197,7 +4193,6 @@ void help() {
          << "  --min_maf [float]: specify a minimum minor allele frequency required to process a nucleotide site at a locus (0 < min_maf < 0.5).\n"
          << "  --min_mac [int]: specify a minimum minor allele count required to process a nucleotide site at a locus.\n"
          << "  --max_obs_het [float]: specify a maximum observed heterozygosity required to process a nucleotide site at a locus.\n"
-         << "  --lnl_lim [float]: filter loci with log likelihood values below this threshold.\n"
          << "  --write_single_snp: restrict data analysis to only the first SNP per locus (implies --no-haps).\n"
          << "  --write_random_snp: restrict data analysis to one random SNP per locus (implies --no-haps).\n"
          << "  -B: path to a file containing Blacklisted markers to be excluded from the export.\n"
