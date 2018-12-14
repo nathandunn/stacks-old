@@ -104,6 +104,7 @@ public:
         size_t ns_weighted_n_read_pairs_used;
     };
     vector<PerSampleStats> per_sample_stats;
+    vector<size_t> pcr_clone_size_distrib;
     size_t n_unpaired_reads_rm() const {size_t n=0; for(auto& s: per_sample_stats) n+=s.n_unpaired_reads; return n;}
     size_t n_read_pairs_pcr_dupl() const {size_t n=0; for(auto& s: per_sample_stats) n+=s.n_read_pairs_pcr_dupl; return n;}
     size_t n_read_pairs_used() const {size_t n=0; for(auto& s: per_sample_stats) n+=s.n_read_pairs_used; return n;}

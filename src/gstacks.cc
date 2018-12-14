@@ -566,6 +566,22 @@ try {
     }
     logger->x << "END effective_coverages_per_sample\n";
 
+    // pcr_clone_size_distrib
+    if(rm_pcr_duplicates) {
+        const vector<size_t>& cz_d = gt_stats.pcr_clone_size_distrib;
+        assert(!cz_d.empty());
+        assert(cz_d[0] == 0); // (We can't observe a clone of 0 reads.)
+        logger->x << "\n"
+                  << "BEGIN pcr_clone_size_distrib\n"
+                  <<"clone_size\tn_clones\tn_reads\n";
+        for(size_t clone_size=1; clone_size<cz_d.size(); ++clone_size)
+            logger->x << clone_size
+                      << '\t' << cz_d[clone_size]
+                      << '\t' << cz_d[clone_size] * clone_size
+                      << '\n';
+        logger->x << "END pcr_clone_size_distrib\n";
+    }
+
     // phasing_rates_samples
     logger->x << "\n"
               << "BEGIN phasing_rates_per_sample\n"
@@ -728,6 +744,10 @@ void SnpAlleleCooccurrenceCounter::clear() {
 GenotypeStats& GenotypeStats::operator+= (const GenotypeStats& other) {
     this->n_genotyped_loci += other.n_genotyped_loci;
     this->n_sites_tot      += other.n_sites_tot;
+    if (pcr_clone_size_distrib.size() < other.pcr_clone_size_distrib.size())
+        pcr_clone_size_distrib.resize(other.pcr_clone_size_distrib.size());
+    for (size_t i=0; i<other.pcr_clone_size_distrib.size(); ++i)
+        pcr_clone_size_distrib[i] += other.pcr_clone_size_distrib[i];
     for (size_t sample=0; sample<per_sample_stats.size(); ++sample) {
         per_sample_stats[sample].n_unpaired_reads += other.per_sample_stats[sample].n_unpaired_reads;
         per_sample_stats[sample].n_read_pairs_pcr_dupl += other.per_sample_stats[sample].n_read_pairs_pcr_dupl;
@@ -979,7 +999,8 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
         assert(rm_unpaired_reads);
         for (size_t sample=0; sample<gt_stats_.per_sample_stats.size(); ++sample)
             gt_stats_.per_sample_stats[sample].n_read_pairs_pcr_dupl += aln_loc.sample_reads(sample).size();
-        aln_loc.remove_pcr_duplicates(detailed_output ? &this->loc_.details_ss : NULL);
+        aln_loc.remove_pcr_duplicates(&gt_stats_.pcr_clone_size_distrib,
+                                      detailed_output ? &this->loc_.details_ss : NULL);
         for (size_t sample=0; sample<gt_stats_.per_sample_stats.size(); ++sample)
             gt_stats_.per_sample_stats[sample].n_read_pairs_pcr_dupl -= aln_loc.sample_reads(sample).size();
     }
