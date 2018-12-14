@@ -2591,7 +2591,7 @@ const string help_string = string() +
         "Model options:\n"
         "  --model: model to use to call variants and genotypes; one of\n"
         "           marukilow (default), marukihigh, or snp\n"
-        "  --var-alpha: alpha threshold for discovering SNPs (default: 0.05 for marukilow)\n"
+        "  --var-alpha: alpha threshold for discovering SNPs (default: 0.01 for marukilow)\n"
         "  --gt-alpha: alpha threshold for calling genotypes (default: 0.05)\n"
         "\n"
         "Advanced options:\n"
@@ -2683,7 +2683,7 @@ try {
     string suffix = ".bam";
 
     double gt_alpha = 0.05;
-    double var_alpha = 0.05;
+    double var_alpha = 0.0;
 
     // bool pcr_dupl_measures = true;
     // auto pcr_duplicates_measures = [&](){
@@ -2957,6 +2957,15 @@ try {
         if (!dir->empty() && dir->back() != '/')
             *dir += '/';
 
+    if (var_alpha == 0.0) {
+        if (model_type == marukilow) {
+            var_alpha = 0.01;
+        } else {
+            cerr << "Error: No value was provided for --var-alpha"
+                 << " (and there is no default for this model).\n";
+            bad_args();
+        }
+    }
     switch (model_type) {
     case snp:        model.reset(new MultinomialModel(gt_alpha)); break;
     case marukihigh: model.reset(new MarukiHighModel(gt_alpha, var_alpha));  break;
