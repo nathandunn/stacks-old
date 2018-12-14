@@ -1631,24 +1631,24 @@ int parse_command_line(int argc, char* argv[]) {
             {"help",         no_argument,       NULL, 'h'},
             {"version",      no_argument,       NULL, 'v'},
             {"discards",     no_argument,       NULL, 'D'},
-            {"pair_1",       required_argument, NULL, '1'},
-            {"pair_2",       required_argument, NULL, '2'},
-            {"infile_type",  required_argument, NULL, 'i'},
-            {"outfile_type", required_argument, NULL, 'y'},
+            {"pair-1",       required_argument, NULL, '1'}, {"pair_1",       required_argument, NULL, '1'},
+            {"pair-2",       required_argument, NULL, '2'}, {"pair_2",       required_argument, NULL, '2'},
+            {"infile-type",  required_argument, NULL, 'i'}, {"infile_type",  required_argument, NULL, 'i'},
+            {"outfile-type", required_argument, NULL, 'y'}, {"outfile_type", required_argument, NULL, 'y'},
             {"file",         required_argument, NULL, 'f'},
             {"path",         required_argument, NULL, 'p'},
             {"outpath",      required_argument, NULL, 'o'},
-            {"k_dist",       no_argument,       NULL, 'I'},
+            {"k-dist",       no_argument,       NULL, 'I'}, {"k_dist",       no_argument,       NULL, 'I'},
             {"rare",         no_argument,       NULL, 'R'},
             {"abundant",     no_argument,       NULL, 'A'},
             {"normalize",    required_argument, NULL, 'N'},
-            {"k_len",        required_argument, NULL, 'K'},
-            {"max_k_freq",   required_argument, NULL, 'M'},
-            {"min_lim",      required_argument, NULL, 'F'},
-            {"max_lim",      required_argument, NULL, 'G'},
-            {"min_k_pct",    required_argument, NULL, 'P'},
-            {"read_k_freq",  required_argument, NULL, 'r'},
-            {"write_k_freq", required_argument, NULL, 'w'},
+            {"k-len",        required_argument, NULL, 'K'}, {"k_len",        required_argument, NULL, 'K'},
+            {"max-k-freq",   required_argument, NULL, 'M'}, {"max_k_freq",   required_argument, NULL, 'M'},
+            {"min-lim",      required_argument, NULL, 'F'}, {"min_lim",      required_argument, NULL, 'F'},
+            {"max-lim",      required_argument, NULL, 'G'}, {"max_lim",      required_argument, NULL, 'G'},
+            {"min-k-pct",    required_argument, NULL, 'P'}, {"min_k_pct",    required_argument, NULL, 'P'},
+            {"read-k-freq",  required_argument, NULL, 'r'}, {"read_k_freq",  required_argument, NULL, 'r'},
+            {"write-k-freq", required_argument, NULL, 'w'}, {"write_k_freq", required_argument, NULL, 'w'},
             {0, 0, 0, 0}
         };
 
@@ -1820,18 +1820,18 @@ void help() {
               << "  Filtering options:\n"
               << "    --rare: turn on filtering based on rare k-mers.\n"
               << "    --abundant: turn on filtering based on abundant k-mers.\n"
-              << "    --k_len <len>: specify k-mer size (default 15).\n\n"
+              << "    --k-len <len>: specify k-mer size (default 15).\n\n"
               << "  Advanced filtering options:\n"
-              << "    --max_k_freq <value>: specify the number of times a kmer must occur to be considered abundant (default 20,000).\n"
-              << "    --min_lim <value>: specify number of rare kmers occuring in a row required to discard a read (default 80% of the k-mer length).\n"
-              << "    --max_lim <value>: specify number of abundant kmers required to discard a read (default 80% of the k-mers in a read).\n\n"
+              << "    --max-k-freq <value>: specify the number of times a kmer must occur to be considered abundant (default 20,000).\n"
+              << "    --min-lim <value>: specify number of rare kmers occuring in a row required to discard a read (default 80% of the k-mer length).\n"
+              << "    --max-lim <value>: specify number of abundant kmers required to discard a read (default 80% of the k-mers in a read).\n\n"
               << "  Normalize data:\n"
               << "    --normalize <depth>: normalize read depth according to k-mer coverage.\n\n"
               << "  Characterizing K-mers:\n"
-              << "    --write_k_freq: write kmers along with their frequency of occurrence and exit.\n"
-              << "    --k_dist: print k-mer frequency distribution and exit.\n\n"
+              << "    --write-k-freq: write kmers along with their frequency of occurrence and exit.\n"
+              << "    --k-dist: print k-mer frequency distribution and exit.\n\n"
               << "  Advanced input options:\n"
-              << "    --read_k_freq <path>: read a set of kmers along with their frequencies of occurrence instead of reading raw input files.\n"
+              << "    --read-k-freq <path>: read a set of kmers along with their frequencies of occurrence instead of reading raw input files.\n"
               << "\n";
 
     exit(1);

@@ -1824,18 +1824,18 @@ int parse_command_line(int argc, char* argv[]) {
         static struct option long_options[] = {
             {"help",            no_argument, NULL, 'h'},
             {"version",         no_argument, NULL, 1000},
-            {"uniq_haplotypes", no_argument, NULL, 'u'},
-            {"report_mmatches", no_argument, NULL, 'R'},
-            {"disable_gapped",  no_argument, NULL, 'G'},
-            {"max_gaps",        required_argument, NULL, 'X'},
-            {"min_aln_len",     required_argument, NULL, 'x'},
-            {"ctag_dist",       required_argument, NULL, 'n'},
-            {"k_len",           required_argument, NULL, 'k'},
-            {"in_path",         required_argument, NULL, 'P'},
+            {"uniq-haplotypes", no_argument, NULL, 'u'}, {"uniq_haplotypes", no_argument, NULL, 'u'},
+            {"report-mmatches", no_argument, NULL, 'R'}, {"report_mmatches", no_argument, NULL, 'R'},
+            {"disable-gapped",  no_argument, NULL, 'G'}, {"disable_gapped",  no_argument, NULL, 'G'},
+            {"max-gaps",        required_argument, NULL, 'X'}, {"max_gaps",        required_argument, NULL, 'X'},
+            {"min-aln-len",     required_argument, NULL, 'x'}, {"min_aln_len",     required_argument, NULL, 'x'},
+            {"ctag-dist",       required_argument, NULL, 'n'}, {"ctag_dist",       required_argument, NULL, 'n'},
+            {"k-len",           required_argument, NULL, 'k'}, {"k_len",           required_argument, NULL, 'k'},
+            {"in-path",         required_argument, NULL, 'P'}, {"in_path",         required_argument, NULL, 'P'},
             {"popmap",          required_argument, NULL, 'M'},
             {"catalog",         required_argument, NULL, 'c'},
             {"sample",          required_argument, NULL, 's'},
-            {"out_path",        required_argument, NULL, 'o'},
+            {"out-path",        required_argument, NULL, 'o'}, {"out_path",        required_argument, NULL, 'o'},
             {"threads",         required_argument, NULL, 'p'},
             {0, 0, 0, 0}
         };
@@ -1963,7 +1963,7 @@ void help() {
               << "cstacks -P in_dir -M popmap [-n num_mismatches] [-p num_threads]" << "\n"
               << "cstacks -s sample1_path [-s sample2_path ...] -o path [-n num_mismatches] [-p num_threads]" << "\n"
               << "\n"
-              << "  -P,--in_path: path to the directory containing Stacks files.\n"
+              << "  -P,--in-path: path to the directory containing Stacks files.\n"
               << "  -M,--popmap: path to a population map file.\n"
               << "  -n: number of mismatches allowed between sample loci when build the catalog (default 1; suggested: set to ustacks -M)." << "\n"
               << "  -p,--threads: enable parallel execution with num_threads threads.\n"
@@ -1972,13 +1972,13 @@ void help() {
               << "  -c,--catalog <path>: add to an existing catalog.\n"
               << "\n"
               << "Gapped assembly options:\n"
-              << "  --max_gaps: number of gaps allowed between stacks before merging (default: 2).\n"
-              << "  --min_aln_len: minimum length of aligned sequence in a gapped alignment (default: 0.80).\n"
-              << "  --disable_gapped: disable gapped alignments between stacks (default: use gapped alignments).\n"
+              << "  --max-gaps: number of gaps allowed between stacks before merging (default: 2).\n"
+              << "  --min-aln-len: minimum length of aligned sequence in a gapped alignment (default: 0.80).\n"
+              << "  --disable-gapped: disable gapped alignments between stacks (default: use gapped alignments).\n"
               << "\n"
               << "Advanced options:\n"
-              << "  --k_len <len>: specify k-mer size for matching between between catalog loci (automatically calculated by default).\n"
-              << "  --report_mmatches: report query loci that match more than one catalog locus.\n";
+              << "  --k-len <len>: specify k-mer size for matching between between catalog loci (automatically calculated by default).\n"
+              << "  --report-mmatches: report query loci that match more than one catalog locus.\n";
 
     exit(1);
 }

@@ -712,7 +712,7 @@ int verify_sequence_match(map<int, Locus *> &sample_1, QLocus *query,
     for (auto it = haplo_hits.begin(); it != haplo_hits.end(); it++) {
         const string   &query_seq    = it->first;
         vector<string> &catalog_hits = it->second;
-        
+
         query_hap[query_seq] = catalog_hits.size();
         for (uint j = 0; j < catalog_hits.size(); j++)
             cat_hap[catalog_hits[j]]++;
@@ -732,7 +732,7 @@ int verify_sequence_match(map<int, Locus *> &sample_1, QLocus *query,
                 snprintf(cigar, id_len - 1, "%uM", query->len);
                 // Record the match.
                 query->add_match(cat->id, catalog_hits[j], query_seq, 0, cigar);
-                
+
                 //
                 // If the matching haplotype was imputed, record the depths of the query alleles
                 // under the new, imputed alleles.
@@ -746,7 +746,7 @@ int verify_sequence_match(map<int, Locus *> &sample_1, QLocus *query,
             }
         }
     }
-    
+
     if (verified == 0) {
         if (write_all_matches)
             query->add_match(cat->id, "none_verified");
@@ -1011,7 +1011,7 @@ verify_gapped_match(map<int, Locus *> &catalog, QLocus *query,
     AlignRes aln_res;
     string   query_allele, cat_allele, converted_query_allele, qseq;
     uint     verified = 0;
-    
+
     //
     // 2. We have aligned multiple query alleles against multiple catalog alleles for each locus.
     //    Different alleles may have slightly different CIGARs due to placement of gaps. Assign
@@ -1033,7 +1033,7 @@ verify_gapped_match(map<int, Locus *> &catalog, QLocus *query,
              });
 
         for (uint i = 0; i < cat_hits.size(); i++)
-            if (cat_alleles_matched.count(cat_hits[i].first) == 0) {                
+            if (cat_alleles_matched.count(cat_hits[i].first) == 0) {
                 query_it->second.clear();
                 query_it->second.insert(cat_hits[i]);
                 cat_alleles_matched.insert(cat_hits[i].first);
@@ -1288,14 +1288,14 @@ int parse_command_line(int argc, char* argv[]) {
             {"help",              no_argument, NULL, 'h'},
             {"version",           no_argument, NULL, 'v'},
             {"aligned",           no_argument, NULL, 'g'},
-            {"verify_hap",        no_argument, NULL, 'x'},
-            {"uniq_haplotypes",   no_argument, NULL, 'u'},
-            {"disable_gapped",    no_argument, NULL, 'G'},
+            {"verify-hap",        no_argument, NULL, 'x'}, {"verify_hap",        no_argument, NULL, 'x'},
+            {"uniq-haplotypes",   no_argument, NULL, 'u'}, {"uniq_haplotypes",   no_argument, NULL, 'u'},
+            {"disable-gapped",    no_argument, NULL, 'G'}, {"disable_gapped",    no_argument, NULL, 'G'},
             {"threads",     required_argument, NULL, 'p'},
             {"catalog",     required_argument, NULL, 'c'},
             {"sample",      required_argument, NULL, 's'},
-            {"out_path",    required_argument, NULL, 'o'},
-            {"in_path",     required_argument, NULL, 'P'},
+            {"out-path",    required_argument, NULL, 'o'}, {"out_path",    required_argument, NULL, 'o'},
+            {"in-path",     required_argument, NULL, 'P'}, {"in_path",     required_argument, NULL, 'P'},
             {"popmap",      required_argument, NULL, 'M'},
             {"write-all-matches", no_argument, NULL, 2001},
             {0, 0, 0, 0}
@@ -1427,16 +1427,16 @@ void help() {
     cerr << "sstacks " << VERSION << "\n"
               << "sstacks -P dir -M popmap [-p n_threads]" << "\n"
               << "sstacks -c catalog_path -s sample_path [-s sample_path ...] -o path [-p n_threads]" << "\n"
-              << "  -P,--in_path: path to the directory containing Stacks files.\n"
+              << "  -P,--in-path: path to the directory containing Stacks files.\n"
               << "  -M,--popmap: path to a population map file from which to take sample names.\n"
               << "  -s,--sample: filename prefix from which to load sample loci." << "\n"
               << "  -c,--catalog: path to the catalog." << "\n"
-              << "  -p,--threads: enable parallel execution with num_threads threads.\n"
-              << "  -o,--out_path: output path to write results." << "\n"
+              << "  -p,--threads: enable parallel execution with n_threads threads.\n"
+              << "  -o,--out-path: output path to write results." << "\n"
               << "  -x: don't verify haplotype of matching locus." << "\n"
               << "\n"
               << "Gapped assembly options:\n"
-              << "  --disable_gapped: disable gapped alignments between stacks (default: enable gapped alignments).\n"
+              << "  --disable-gapped: disable gapped alignments between stacks (default: enable gapped alignments).\n"
               ;
 
 #ifdef DEBUG

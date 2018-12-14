@@ -1823,17 +1823,17 @@ int parse_command_line(int argc, char* argv[]) {
             {"help",        no_argument,       NULL, 'h'},
             {"version",     no_argument,       NULL, 'v'},
             {"haplotypes",  no_argument,       NULL, 'H'},
-            {"skip_zeros",  no_argument,       NULL, 'Z'},
-            {"infile_type", required_argument, NULL, 't'},
-            {"num_threads", required_argument, NULL, 'p'},
-            {"in_path",     required_argument, NULL, 'P'},
-            {"cat_path",    required_argument, NULL, 'S'},
-            {"pop_map",     required_argument, NULL, 'M'},
-            {"batch_id",    required_argument, NULL, 'b'},
-            {"dprime_bin_size",   required_argument, NULL, 'B'},
-            {"minor_allele_freq", required_argument, NULL, 'a'},
-            {"min_inform_pairs",  required_argument, NULL, 'm'},
-            {"dprime_threshold",  required_argument, NULL, 'T'},
+            {"skip-zeros",  no_argument,       NULL, 'Z'}, {"skip_zeros",  no_argument,       NULL, 'Z'},
+            {"infile-type", required_argument, NULL, 't'}, {"infile_type", required_argument, NULL, 't'},
+            {"num-threads", required_argument, NULL, 'p'}, {"num_threads", required_argument, NULL, 'p'},
+            {"in-path",     required_argument, NULL, 'P'}, {"in_path",     required_argument, NULL, 'P'},
+            {"cat-path",    required_argument, NULL, 'S'}, {"cat_path",    required_argument, NULL, 'S'},
+            {"pop-map",     required_argument, NULL, 'M'}, {"pop_map",     required_argument, NULL, 'M'},
+            {"batch-id",    required_argument, NULL, 'b'}, {"batch_id",    required_argument, NULL, 'b'},
+            {"dprime-bin-size",   required_argument, NULL, 'B'}, {"dprime_bin_size",   required_argument, NULL, 'B'},
+            {"minor-allele-freq", required_argument, NULL, 'a'}, {"minor_allele_freq", required_argument, NULL, 'a'},
+            {"min-inform-pairs",  required_argument, NULL, 'm'}, {"min_inform_pairs",  required_argument, NULL, 'm'},
+            {"dprime-threshold",  required_argument, NULL, 'T'}, {"dprime_threshold",  required_argument, NULL, 'T'},
             {0, 0, 0, 0}
         };
 
@@ -1955,12 +1955,12 @@ void help() {
               << "  v: print program version." << "\n"
               << "  h: display this help messsage." << "\n"
               << "  --haplotypes: data were phased as RAD locus haplotypes.\n"
-              << "  --dprime_bin_size: size of buckets for binning SNPs at a particular distance to calculate the mean D' value.\n"
-              << "  --dprime_threshold <val>: if D' values fall above <val>, set the D' to 1, otherwise set D' to 0.\n\n"
+              << "  --dprime-bin-size: size of buckets for binning SNPs at a particular distance to calculate the mean D' value.\n"
+              << "  --dprime-threshold <val>: if D' values fall above <val>, set the D' to 1, otherwise set D' to 0.\n\n"
               << "  Filtering options:\n"
-              << "  --skip_zeros: do not include D' values of zero in the D' output.\n"
-              << "  --minor_allele_freq: specify a minimum minor allele frequency required to process a nucleotide site (0 < a < 0.5).\n"
-              << "  --min_inform_pairs: when building D' haplotype blocks, the minimum number of informative D' measures to combine two blocks (default 0.9).\n\n";
+              << "  --skip-zeros: do not include D' values of zero in the D' output.\n"
+              << "  --minor-allele-freq: specify a minimum minor allele frequency required to process a nucleotide site (0 < a < 0.5).\n"
+              << "  --min-inform-pairs: when building D' haplotype blocks, the minimum number of informative D' measures to combine two blocks (default 0.9).\n\n";
 
 
     exit(1);

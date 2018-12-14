@@ -1102,24 +1102,24 @@ int parse_command_line(int argc, char* argv[]) {
             {"version",       no_argument,       NULL, 'v'},
             {"discards",      no_argument,       NULL, 'D'},
             {"paired",        no_argument,       NULL, 'P'},
-            {"null_index",    no_argument,       NULL, 'U'},
-            {"null_inline",   no_argument,       NULL, 'X'},
-            {"index_null",    no_argument,       NULL, 'u'},
-            {"inline_null",   no_argument,       NULL, 'V'},
-            {"index_index",   no_argument,       NULL, 'W'},
-            {"inline_inline", no_argument,       NULL, 'x'},
-            {"index_inline",  no_argument,       NULL, 'Y'},
-            {"inline_index",  no_argument,       NULL, 'Z'},
-            {"infile_type",   required_argument, NULL, 'i'},
-            {"outfile_type",  required_argument, NULL, 'y'},
+            {"null-index",    no_argument,       NULL, 'U'}, {"null_index",    no_argument,       NULL, 'U'},
+            {"null-inline",   no_argument,       NULL, 'X'}, {"null_inline",   no_argument,       NULL, 'X'},
+            {"index-null",    no_argument,       NULL, 'u'}, {"index_null",    no_argument,       NULL, 'u'},
+            {"inline-null",   no_argument,       NULL, 'V'}, {"inline_null",   no_argument,       NULL, 'V'},
+            {"index-index",   no_argument,       NULL, 'W'}, {"index_index",   no_argument,       NULL, 'W'},
+            {"inline-inline", no_argument,       NULL, 'x'}, {"inline_inline", no_argument,       NULL, 'x'},
+            {"index-inline",  no_argument,       NULL, 'Y'}, {"index_inline",  no_argument,       NULL, 'Y'},
+            {"inline-index",  no_argument,       NULL, 'Z'}, {"inline_index",  no_argument,       NULL, 'Z'},
+            {"infile-type",   required_argument, NULL, 'i'}, {"infile_type",   required_argument, NULL, 'i'},
+            {"outfile-type",  required_argument, NULL, 'y'}, {"outfile_type",  required_argument, NULL, 'y'},
             {"file",          required_argument, NULL, 'f'},
             {"path",          required_argument, NULL, 'p'},
-            {"file_p1",       required_argument, NULL, '1'},
-            {"file_p2",       required_argument, NULL, '2'},
+            {"file-p1",       required_argument, NULL, '1'}, {"file_p1",       required_argument, NULL, '1'},
+            {"file-p2",       required_argument, NULL, '2'}, {"file_p2",       required_argument, NULL, '2'},
             {"outpath",       required_argument, NULL, 'o'},
-            {"oligo_len_1",   required_argument, NULL, 'O'},
-            {"oligo_len_2",   required_argument, NULL, 'L'},
-            {"retain_oligo",  required_argument, NULL, 'R'},
+            {"oligo-len-1",   required_argument, NULL, 'O'}, {"oligo_len_1",   required_argument, NULL, 'O'},
+            {"oligo-len-2",   required_argument, NULL, 'L'}, {"oligo_len_2",   required_argument, NULL, 'L'},
+            {"retain-oligo",  required_argument, NULL, 'R'}, {"retain_oligo",  required_argument, NULL, 'R'},
             {0, 0, 0, 0}
         };
 
@@ -1275,7 +1275,7 @@ int parse_command_line(int argc, char* argv[]) {
     }
 
     if (barcode_type != null_null && oligo_len_1 == 0 && oligo_len_2 == 0) {
-        cerr << "You must specify the length of the oligo sequences (--oligo_len_1 / --oligo_len_2).\n";
+        cerr << "You must specify the length of the oligo sequences (--oligo-len-1 / --oligo-len-2).\n";
         help();
     }
 
@@ -1301,18 +1301,18 @@ void help() {
               << "  y: output type, either 'fastq', 'fasta', 'gzfasta', or 'gzfastq' (default same as input type).\n"
               << "  D: capture discarded reads to a file.\n"
               << "  h: display this help messsage.\n"
-              << "  --oligo_len_1 len: length of the single-end oligo sequence in data set.\n"
-              << "  --oligo_len_2 len: length of the paired-end oligo sequence in data set.\n"
-              << "  --retain_oligo: do not trim off the random oligo sequence (if oligo is inline).\n\n"
+              << "  --oligo-len-1 len: length of the single-end oligo sequence in data set.\n"
+              << "  --oligo-len-2 len: length of the paired-end oligo sequence in data set.\n"
+              << "  --retain-oligo: do not trim off the random oligo sequence (if oligo is inline).\n\n"
               << "  Oligo sequence options:\n"
-              << "    --inline_null:   random oligo is inline with sequence, occurs only on single-end read (default).\n"
-              << "    --null_inline:   random oligo is inline with sequence, occurs only on the paired-end read.\n"
-              << "    --null_index:    random oligo is provded in FASTQ header (Illumina i7 read if both i5 and i7 read are provided).\n"
-              << "    --index_null:    random oligo is provded in FASTQ header (Illumina i5 or i7 read).\n"
-              << "    --inline_inline: random oligo is inline with sequence, occurs on single and paired-end read.\n"
-              << "    --index_index:   random oligo is provded in FASTQ header (Illumina i5 and i7 read).\n"
-              << "    --inline_index:  random oligo is inline with sequence on single-end read and second oligo occurs in FASTQ header.\n"
-              << "    --index_inline:  random oligo occurs in FASTQ header (Illumina i5 or i7 read) and is inline with sequence on single-end read (if single read data) or paired-end read (if paired data).\n\n";
+              << "    --inline-null:   random oligo is inline with sequence, occurs only on single-end read (default).\n"
+              << "    --null-inline:   random oligo is inline with sequence, occurs only on the paired-end read.\n"
+              << "    --null-index:    random oligo is provded in FASTQ header (Illumina i7 read if both i5 and i7 read are provided).\n"
+              << "    --index-null:    random oligo is provded in FASTQ header (Illumina i5 or i7 read).\n"
+              << "    --inline-inline: random oligo is inline with sequence, occurs on single and paired-end read.\n"
+              << "    --index-index:   random oligo is provded in FASTQ header (Illumina i5 and i7 read).\n"
+              << "    --inline-index:  random oligo is inline with sequence on single-end read and second oligo occurs in FASTQ header.\n"
+              << "    --index-inline:  random oligo occurs in FASTQ header (Illumina i5 or i7 read) and is inline with sequence on single-end read (if single read data) or paired-end read (if paired data).\n\n";
 
     exit(1);
 }

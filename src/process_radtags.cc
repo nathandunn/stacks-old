@@ -733,7 +733,7 @@ check_for_transposed_reads(RawRead *r_1, RawRead *r_2, string res_enz) {
     // Check if restriction enzyme cutsite is on single-end read.
     //
     for (int i = 0; i < renz_cnt[res_enz]; i++)
-        for (uint j = min_bc_size_1; j <= max_bc_size_1; j++) { 
+        for (uint j = min_bc_size_1; j <= max_bc_size_1; j++) {
             p    = r_1->seq + j;
             q    = renz[res_enz][i];
             stop = q + renz_len[res_enz];
@@ -759,7 +759,7 @@ check_for_transposed_reads(RawRead *r_1, RawRead *r_2, string res_enz) {
     // Check if restriction enzyme cutsite is on the paired-end read.
     //
     for (int i = 0; i < renz_cnt[res_enz]; i++)
-        for (uint j = min_bc_size_1; j <= max_bc_size_1; j++) { 
+        for (uint j = min_bc_size_1; j <= max_bc_size_1; j++) {
             p    = r_2->seq + j;
             q    = renz[res_enz][i];
             stop = q + renz_len[res_enz];
@@ -786,7 +786,7 @@ check_for_transposed_reads(RawRead *r_1, RawRead *r_2, string res_enz) {
     //
     if (max_pe_cnt > max_se_cnt)
         return 1;
- 
+
     return 0;
 }
 
@@ -826,12 +826,12 @@ transpose_reads(RawRead **r_1, RawRead **r_2) {
         strncpy((*r_1)->inline_bc, (*r_1)->seq, max_bc_size_1);
         (*r_1)->inline_bc[max_bc_size_1] = '\0';
         (*r_1)->se_bc = (*r_1)->inline_bc;
-                    
+
         (*r_2)->pe_bc = (*r_2)->index_bc;
         break;
     case index_inline:
         (*r_1)->se_bc = (*r_1)->index_bc;
-                    
+
         (*r_2)->inline_bc_len = min_bc_size_2;
         strncpy((*r_2)->inline_bc, (*r_2)->seq, max_bc_size_2);
         (*r_2)->inline_bc[max_bc_size_2] = '\0';
@@ -1076,37 +1076,37 @@ int parse_command_line(int argc, char* argv[]) {
             {"paired",               no_argument, NULL, 'P'},
             {"interleaved",          no_argument, NULL, 'I'},
             {"merge",                no_argument, NULL, 'm'},
-            {"disable_rad_check",    no_argument, NULL, 'R'},
-            {"filter_illumina",      no_argument, NULL, 'F'},
-            {"retain_header",        no_argument, NULL, 'H'},
+            {"disable-rad-check",    no_argument, NULL, 'R'}, {"disable_rad_check",    no_argument, NULL, 'R'},
+            {"filter-illumina",      no_argument, NULL, 'F'}, {"filter_illumina",      no_argument, NULL, 'F'},
+            {"retain-header",        no_argument, NULL, 'H'}, {"retain_header",        no_argument, NULL, 'H'},
             {"bestrad",              no_argument, NULL, 1000},
-            {"null_index",           no_argument, NULL, 'U'},
-            {"index_null",           no_argument, NULL, 'u'},
-            {"inline_null",          no_argument, NULL, 'V'},
-            {"index_index",          no_argument, NULL, 'W'},
-            {"inline_inline",        no_argument, NULL, 'x'},
-            {"index_inline",         no_argument, NULL, 'Y'},
-            {"inline_index",         no_argument, NULL, 'Z'},
-            {"barcode_dist_1", required_argument, NULL, 'B'},
-            {"barcode_dist_2", required_argument, NULL, 'C'},
-            {"infile_type",    required_argument, NULL, 'i'},
-            {"outfile_type",   required_argument, NULL, 'y'},
+            {"null-index",           no_argument, NULL, 'U'}, {"null_index",           no_argument, NULL, 'U'},
+            {"index-null",           no_argument, NULL, 'u'}, {"index_null",           no_argument, NULL, 'u'},
+            {"inline-null",          no_argument, NULL, 'V'}, {"inline_null",          no_argument, NULL, 'V'},
+            {"index-index",          no_argument, NULL, 'W'}, {"index_index",          no_argument, NULL, 'W'},
+            {"inline-inline",        no_argument, NULL, 'x'}, {"inline_inline",        no_argument, NULL, 'x'},
+            {"index-inline",         no_argument, NULL, 'Y'}, {"index_inline",         no_argument, NULL, 'Y'},
+            {"inline-index",         no_argument, NULL, 'Z'}, {"inline_index",         no_argument, NULL, 'Z'},
+            {"barcode-dist-1", required_argument, NULL, 'B'}, {"barcode_dist_1", required_argument, NULL, 'B'},
+            {"barcode-dist-2", required_argument, NULL, 'C'}, {"barcode_dist_2", required_argument, NULL, 'C'},
+            {"infile-type",    required_argument, NULL, 'i'}, {"infile_type",    required_argument, NULL, 'i'},
+            {"outfile-type",   required_argument, NULL, 'y'}, {"outfile_type",   required_argument, NULL, 'y'},
             {"file",           required_argument, NULL, 'f'},
-            {"file_p1",        required_argument, NULL, '1'},
-            {"file_p2",        required_argument, NULL, '2'},
+            {"file-p1",        required_argument, NULL, '1'}, {"file_p1",        required_argument, NULL, '1'},
+            {"file-p2",        required_argument, NULL, '2'}, {"file_p2",        required_argument, NULL, '2'},
             {"path",           required_argument, NULL, 'p'},
             {"outpath",        required_argument, NULL, 'o'},
             {"truncate",       required_argument, NULL, 't'},
-            {"renz_1",         required_argument, NULL, 'e'},
-            {"renz_2",         required_argument, NULL, 'z'},
+            {"renz-1",         required_argument, NULL, 'e'}, {"renz_1",         required_argument, NULL, 'e'},
+            {"renz-2",         required_argument, NULL, 'z'}, {"renz_2",         required_argument, NULL, 'z'},
             {"barcodes",       required_argument, NULL, 'b'},
-            {"window_size",    required_argument, NULL, 'w'},
-            {"score_limit",    required_argument, NULL, 's'},
+            {"window-size",    required_argument, NULL, 'w'}, {"window_size",    required_argument, NULL, 'w'},
+            {"score-limit",    required_argument, NULL, 's'}, {"score_limit",    required_argument, NULL, 's'},
             {"encoding",       required_argument, NULL, 'E'},
-            {"len_limit",      required_argument, NULL, 'L'},
-            {"adapter_1",      required_argument, NULL, 'A'},
-            {"adapter_2",      required_argument, NULL, 'G'},
-            {"adapter_mm",     required_argument, NULL, 'T'},
+            {"len-limit",      required_argument, NULL, 'L'}, {"len_limit",      required_argument, NULL, 'L'},
+            {"adapter-1",      required_argument, NULL, 'A'}, {"adapter_1",      required_argument, NULL, 'A'},
+            {"adapter-2",      required_argument, NULL, 'G'}, {"adapter_2",      required_argument, NULL, 'G'},
+            {"adapter-mm",     required_argument, NULL, 'T'}, {"adapter_mm",     required_argument, NULL, 'T'},
             {0, 0, 0, 0}
         };
 
@@ -1420,17 +1420,17 @@ void help() {
          << "  y: output type, either 'fastq', 'gzfastq', 'fasta', or 'gzfasta' (default: match input type).\n"
          << "\n"
          << "  Barcode options:\n"
-         << "    --inline_null:   barcode is inline with sequence, occurs only on single-end read (default).\n"
-         << "    --index_null:    barcode is provded in FASTQ header (Illumina i5 or i7 read).\n"
-         << "    --null_index:    barcode is provded in FASTQ header (Illumina i7 read if both i5 and i7 read are provided).\n"
-         << "    --inline_inline: barcode is inline with sequence, occurs on single and paired-end read.\n"
-         << "    --index_index:   barcode is provded in FASTQ header (Illumina i5 and i7 reads).\n"
-         << "    --inline_index:  barcode is inline with sequence on single-end read and occurs in FASTQ header (from either i5 or i7 read).\n"
-         << "    --index_inline:  barcode occurs in FASTQ header (Illumina i5 or i7 read) and is inline with single-end sequence (for single-end data) on paired-end read (for paired-end data).\n"
+         << "    --inline-null:   barcode is inline with sequence, occurs only on single-end read (default).\n"
+         << "    --index-null:    barcode is provded in FASTQ header (Illumina i5 or i7 read).\n"
+         << "    --null-index:    barcode is provded in FASTQ header (Illumina i7 read if both i5 and i7 read are provided).\n"
+         << "    --inline-inline: barcode is inline with sequence, occurs on single and paired-end read.\n"
+         << "    --index-index:   barcode is provded in FASTQ header (Illumina i5 and i7 reads).\n"
+         << "    --inline-index:  barcode is inline with sequence on single-end read and occurs in FASTQ header (from either i5 or i7 read).\n"
+         << "    --index-inline:  barcode occurs in FASTQ header (Illumina i5 or i7 read) and is inline with single-end sequence (for single-end data) on paired-end read (for paired-end data).\n"
          << "\n"
          << "  Restriction enzyme options:\n"
-         << "    -e <enz>, --renz_1 <enz>: provide the restriction enzyme used (cut site occurs on single-end read)\n"
-         << "    --renz_2 <enz>: if a double digest was used, provide the second restriction enzyme used (cut site occurs on the paired-end read).\n"
+         << "    -e <enz>, --renz-1 <enz>: provide the restriction enzyme used (cut site occurs on single-end read)\n"
+         << "    --renz-2 <enz>: if a double digest was used, provide the second restriction enzyme used (cut site occurs on the paired-end read).\n"
          << "    Currently supported enzymes include:\n"
          << "      ";
 
@@ -1455,18 +1455,18 @@ void help() {
          << "  Protocol-specific options:\n"
          << "    --bestrad: library was generated using BestRAD, check for restriction enzyme on either read and potentially tranpose reads.\n\n"
          << "  Adapter options:\n"
-         << "    --adapter_1 <sequence>: provide adaptor sequence that may occur on the single-end read for filtering.\n"
-         << "    --adapter_2 <sequence>: provide adaptor sequence that may occur on the paired-read for filtering.\n"
-         << "      --adapter_mm <mismatches>: number of mismatches allowed in the adapter sequence.\n\n"
+         << "    --adapter-1 <sequence>: provide adaptor sequence that may occur on the single-end read for filtering.\n"
+         << "    --adapter-2 <sequence>: provide adaptor sequence that may occur on the paired-read for filtering.\n"
+         << "      --adapter-mm <mismatches>: number of mismatches allowed in the adapter sequence.\n\n"
          << "  Output options:\n"
-         << "    --retain_header: retain unmodified FASTQ headers in the output.\n"
+         << "    --retain-header: retain unmodified FASTQ headers in the output.\n"
          << "    --merge: if no barcodes are specified, merge all input files into a single output file.\n\n"
          << "  Advanced options:\n"
-         << "    --filter_illumina: discard reads that have been marked by Illumina's chastity/purity filter as failing.\n"
-         << "    --disable_rad_check: disable checking if the RAD site is intact.\n"
-         << "    --len_limit <limit>: specify a minimum sequence length (useful if your data has already been trimmed).\n"
-         << "    --barcode_dist_1: the number of allowed mismatches when rescuing single-end barcodes (default 1).\n"
-         << "    --barcode_dist_2: the number of allowed mismatches when rescuing paired-end barcodes (defaults to --barcode_dist_1).\n";
+         << "    --filter-illumina: discard reads that have been marked by Illumina's chastity/purity filter as failing.\n"
+         << "    --disable-rad-check: disable checking if the RAD site is intact.\n"
+         << "    --len-limit <limit>: specify a minimum sequence length (useful if your data has already been trimmed).\n"
+         << "    --barcode-dist-1: the number of allowed mismatches when rescuing single-end barcodes (default 1).\n"
+         << "    --barcode-dist-2: the number of allowed mismatches when rescuing paired-end barcodes (defaults to --barcode-dist-1).\n";
 
     exit(1);
 }
