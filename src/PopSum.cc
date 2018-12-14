@@ -45,7 +45,7 @@ LocPopSum::~LocPopSum()
 }
 
 int
-LocPopSum::sum_pops(const CSLocus *cloc, const Datum **d, const MetaPopInfo &mpopi,
+LocPopSum::sum_pops(const CSLocus *cloc, Datum const*const* d, const MetaPopInfo &mpopi,
                     bool verbose, ostream &log_fh)
 {
     uint len = strlen(cloc->con);
@@ -113,7 +113,7 @@ LocPopSum::sum_pops(const CSLocus *cloc, const Datum **d, const MetaPopInfo &mpo
 }
 
 int
-LocPopSum::tally_fixed_pos(const CSLocus *cloc, const Datum **d, LocSum *s,
+LocPopSum::tally_fixed_pos(const CSLocus *cloc, Datum const*const* d, LocSum *s,
                            int pos, uint start, uint end)
 {
     double num_indv = 0.0;
@@ -160,7 +160,7 @@ LocPopSum::tally_fixed_pos(const CSLocus *cloc, const Datum **d, LocSum *s,
 }
 
 int
-LocPopSum::tally_heterozygous_pos(const CSLocus *cloc, const Datum **d, LocSum *s,
+LocPopSum::tally_heterozygous_pos(const CSLocus *cloc, Datum const*const* d, LocSum *s,
                                   int pos, int snp_index, uint start, uint end)
 {
     //
@@ -450,7 +450,7 @@ LocPopSum::hwe(double n, double p, double q, double p_hom, double q_hom, double 
         s_hets  -= 2;
         s_p_hom += 1;
         s_q_hom += 1;
-    } 
+    }
 
     return hwe_pr;
 }
@@ -484,7 +484,7 @@ LocPopSum::log_hwp_pr(double n_fac, double p_fac, double q_fac, double pp, doubl
     //      << " den: " << den
     //      << " log(hwe_pr): " << num - den
     //      << " hwe_pr: " << exp(num - den) << "\n";
-    
+
     return num - den;
 }
 
@@ -753,7 +753,7 @@ LocPopSum::calc_hapstats(const CSLocus *cloc, const Datum **d, const MetaPopInfo
                 GuoThompson_Hwp *hwp = new GuoThompson_Hwp(this->_hapstats_per_pop[j]->hap_cnt);
 
                 hwp->exec_locus(pops[j].first_sample, pops[j].last_sample, d, this->_hapstats_per_pop[j]->hap_cnt);
-            
+
                 this->_hapstats_per_pop[j]->stat[2] = hwp->_p_value;
                 this->_hapstats_per_pop[j]->stat[3] = hwp->_se;
 
@@ -766,7 +766,7 @@ LocPopSum::calc_hapstats(const CSLocus *cloc, const Datum **d, const MetaPopInfo
 }
 
 LocStat *
-LocPopSum::haplotype_diversity(int start, int end, const Datum **d)
+LocPopSum::haplotype_diversity(int start, int end, Datum const*const* d)
 {
     map<string, double>::iterator hit;
     vector<string>      haplotypes;
@@ -787,7 +787,7 @@ LocPopSum::haplotype_diversity(int start, int end, const Datum **d)
     //
     if (n == 0)
         return NULL;
-    
+
     //
     // Store a summary of the haplotype counts to output below.
     //
@@ -919,7 +919,7 @@ uncalled_haplotype(const char *haplotype)
 }
 
 double
-count_haplotypes_at_locus(int start, int end, const Datum **d, map<string, double> &hap_cnts)
+count_haplotypes_at_locus(int start, int end, Datum const*const* d, map<string, double> &hap_cnts)
 {
     double n = 0.0;
 
