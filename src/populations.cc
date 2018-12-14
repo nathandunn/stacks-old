@@ -564,55 +564,16 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
             loc->cloc, loc->d,
             seq, records,
             this->_cloc_reader.header(), this->_mpopi, this->_samples_vcf_to_mpopi);
+
+        //
+        // Apply locus & SNP filters.
+        //
         this->_dists.accumulate_pre_filtering(loc->cloc);
-
-        //
-        // Apply the -r/-p thresholds.
-        //
-        if (this->_loc_filter.filter(this->_mpopi, loc->d)) {
+        if (this->_loc_filter.apply_filters_stacks(*loc, log_fh, *this->_mpopi)) {
             delete loc;
             continue;
         }
-
-        //
-        // Filter genotypes for depth.
-        //
-        this->_loc_filter.gt_depth_filter(loc->d, loc->cloc);
-
-        //
-        // Create the PopSum object and compute the summary statistics for this locus.
-        //
-        loc->s = new LocPopSum(strlen(loc->cloc->con), *this->_mpopi);
-        loc->s->sum_pops(loc->cloc, (const Datum **) loc->d, *this->_mpopi, verbose, cout);
-        loc->s->tally_metapop(loc->cloc);
-
-        //
-        // Identify individual SNPs that are below the -r threshold or the minor allele
-        // frequency threshold (-a). In these cases we will remove the SNP, but keep the locus.
-        // If all SNPs are filtered, delete the locus.
-        //
-        if (this->_loc_filter.prune_sites_with_filters(this->_mpopi, loc->cloc, loc->d, loc->s, log_fh)) {
-            delete loc;
-            continue;
-        }
-
-        //
-        // If write_single_snp or write_random_snp has been specified, mark sites to be pruned using the whitelist.
-        //
-        if (write_single_snp)
-            this->_loc_filter.keep_single_snp(loc->cloc, loc->s->meta_pop());
-        else if (write_random_snp)
-            this->_loc_filter.keep_random_snp(loc->cloc, loc->s->meta_pop());
-        //
-        // Prune the sites according to the whitelist.
-        //
-        this->_loc_filter.prune_sites_with_whitelist(this->_mpopi, loc->cloc, loc->d, this->_user_supplied_whitelist);
-
-        //
-        // Regenerate summary statistics after pruning SNPs.
-        //
-        loc->s->sum_pops(loc->cloc, (const Datum **) loc->d, (const MetaPopInfo &) *this->_mpopi, verbose, cout);
-        loc->s->tally_metapop(loc->cloc);
+        assert(loc->s != NULL);
 
         //
         // Tabulate haplotypes present and in what combinations.
@@ -794,30 +755,14 @@ BatchLocusProcessor::next_batch_external_loci(ostream &log_fh)
         assert(loc->cloc->snps.size() == 1);
 
         //
-        // Apply locus constraints to remove entire loci below the -r/-p thresholds.
+        // Apply filters.
         //
         this->_dists.accumulate_pre_filtering(loc->cloc);
-        if (this->_loc_filter.filter(this->_mpopi, loc->d)) {
+        if (this->_loc_filter.apply_filters_external(*loc, log_fh, *this->_mpopi)) {
             delete loc;
             continue;
         }
-
-        //
-        // Create the PopSum object and compute the summary statistics for this locus.
-        //
-        loc->s = new LocPopSum(strlen(loc->cloc->con), *this->_mpopi);
-        loc->s->sum_pops(loc->cloc, (Datum const**) loc->d, *this->_mpopi, verbose, cout);
-        loc->s->tally_metapop(loc->cloc);
-
-        //
-        // Identify individual SNPs that are below the -r threshold or the minor allele
-        // frequency threshold (-a). In these cases we will remove the SNP, but keep the locus.
-        // If all SNPs are filtered, delete the locus.
-        //
-        if (this->_loc_filter.prune_sites_with_filters(this->_mpopi, loc->cloc, loc->d, loc->s, log_fh)) {
-            delete loc;
-            continue;
-        }
+        assert(loc->s != NULL);
 
         //
         // Tabulate haplotypes present and in what combinations.
@@ -1010,7 +955,79 @@ LocusFilter::blacklist_filter(size_t locus_id)
 }
 
 bool
-LocusFilter::filter(MetaPopInfo *mpopi, Datum **d)
+LocusFilter::apply_filters_stacks(LocBin& loc, ostream& log_fh, const MetaPopInfo& mpopi) {
+    //
+    // Apply the -r/-p thresholds.
+    //
+    if (this->filter(&mpopi, loc.d))
+        return true;
+
+    //
+    // Filter genotypes for depth.
+    //
+    this->gt_depth_filter(loc.d, loc.cloc);
+
+    //
+    // Create the PopSum object and compute the summary statistics for this locus.
+    //
+    loc.s = new LocPopSum(strlen(loc.cloc->con), mpopi);
+    loc.s->sum_pops(loc.cloc, loc.d, mpopi, verbose, cout);
+    loc.s->tally_metapop(loc.cloc);
+
+    //
+    // Identify individual SNPs that are below the -r threshold or the minor allele
+    // frequency threshold (-a). In these cases we will remove the SNP, but keep the locus.
+    // If all SNPs are filtered, delete the locus.
+    //
+    if (this->prune_sites_with_filters(&mpopi, loc.cloc, loc.d, loc.s, log_fh))
+        return true;
+
+    //
+    // If write_single_snp or write_random_snp has been specified, mark sites to be pruned using the whitelist.
+    //
+    if (write_single_snp)
+        this->keep_single_snp(loc.cloc, loc.s->meta_pop());
+    else if (write_random_snp)
+        this->keep_random_snp(loc.cloc, loc.s->meta_pop());
+    //
+    // Prune the sites according to the whitelist.
+    //
+    this->prune_sites_with_whitelist(&mpopi, loc.cloc, loc.d, true); // FIXME: this->_user_supplied_whitelist);
+
+    //
+    // Regenerate summary statistics after pruning SNPs.
+    //
+    loc.s->sum_pops(loc.cloc, loc.d, mpopi, verbose, cout);
+    loc.s->tally_metapop(loc.cloc);
+
+    return false;
+}
+
+bool
+LocusFilter::apply_filters_external(LocBin& loc, ostream& log_fh, const MetaPopInfo& mpopi) {
+    if (this->filter(&mpopi, loc.d))
+        return true;
+
+    //
+    // Create the PopSum object and compute the summary statistics for this locus.
+    //
+    loc.s = new LocPopSum(strlen(loc.cloc->con), mpopi);
+    loc.s->sum_pops(loc.cloc, loc.d, mpopi, verbose, cout);
+    loc.s->tally_metapop(loc.cloc);
+
+    //
+    // Identify individual SNPs that are below the -r threshold or the minor allele
+    // frequency threshold (-a). In these cases we will remove the SNP, but keep the locus.
+    // If all SNPs are filtered, delete the locus.
+    //
+    if (this->prune_sites_with_filters(&mpopi, loc.cloc, loc.d, loc.s, log_fh))
+        return true;
+
+    return false;
+}
+
+bool
+LocusFilter::filter(const MetaPopInfo *mpopi, Datum **d)
 {
     this->reset();
 
@@ -1217,7 +1234,7 @@ LocusFilter::keep_random_snp(const CSLocus *cloc, const LocTally *t)
 }
 
 int
-LocusFilter::prune_sites_with_whitelist(MetaPopInfo *mpopi, CSLocus *cloc, Datum **d, bool user_wl)
+LocusFilter::prune_sites_with_whitelist(const MetaPopInfo *mpopi, CSLocus *cloc, Datum ** d, bool user_wl)
 {
     if (user_wl == false && write_single_snp == false && write_random_snp == false)
         return 0;
@@ -1305,7 +1322,7 @@ LocusFilter::prune_sites(CSLocus *cloc, Datum **d, set<int> &keep)
 }
 
 bool
-LocusFilter::prune_sites_with_filters(MetaPopInfo *mpopi, CSLocus *cloc, Datum **d, LocPopSum *s, ostream &log_fh)
+LocusFilter::prune_sites_with_filters(const MetaPopInfo *mpopi, CSLocus *cloc, Datum **d, LocPopSum *s, ostream &log_fh)
 {
     set<int>    site_list;
     vector<int> pop_prune_list;
@@ -3727,6 +3744,7 @@ output_parameters(ostream &fh)
 }
 
 int
+
 parse_command_line(int argc, char* argv[])
 {
     bool no_hap_exports = false;
