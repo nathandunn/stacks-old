@@ -294,7 +294,7 @@ public:
     LocPopSum(size_t cloc_len, const MetaPopInfo& mpopi);
     ~LocPopSum();
 
-    int             sum_pops(const CSLocus *, const Datum **, const MetaPopInfo&, bool, ostream &);
+    int             sum_pops(const CSLocus *, Datum const*const*, const MetaPopInfo&, bool, ostream &);
     int             tally_metapop(const CSLocus *);
     int             calc_hapstats(const CSLocus *, const Datum **, const MetaPopInfo&);
     const LocSum  **all_pops()                         { return (const LocSum **) this->_per_pop; }
@@ -307,11 +307,11 @@ public:
     double          hwe(double, double, double, double, double, double);
 
 private:
-    int      tally_heterozygous_pos(const CSLocus *, const Datum **, LocSum *, int, int, uint, uint);
-    int      tally_fixed_pos(const CSLocus *, const Datum **, LocSum *, int, uint, uint);
+    int      tally_heterozygous_pos(const CSLocus *, Datum const*const*, LocSum *, int, int, uint, uint);
+    int      tally_fixed_pos(const CSLocus *, Datum const*const*, LocSum *, int, uint, uint);
     int      tally_ref_alleles(int, uint16_t &, char &, char &, uint16_t &, uint16_t &);
     int      tally_observed_haplotypes(const vector<char *> &, int);
-    LocStat *haplotype_diversity(int, int, const Datum **);
+    LocStat *haplotype_diversity(int, int, Datum const*const*);
     double   log_hwp_pr(double, double, double, double, double, double);
 };
 
@@ -388,7 +388,7 @@ private:
 // Utility functions for summary/haplotype statistics.
 //
 bool     uncalled_haplotype(const char *);
-double   count_haplotypes_at_locus(int, int, const Datum **, map<string, double> &);
+double   count_haplotypes_at_locus(int, int, Datum const*const*, map<string, double> &);
 int      nuc_substitution_dist(map<string, int> &, double **);
 
 
