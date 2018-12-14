@@ -198,12 +198,14 @@ public:
     void   init(MetaPopInfo *mpopi);
     bool   whitelist_filter(size_t locus_id);
     bool   blacklist_filter(size_t locus_id);
-    bool   filter(MetaPopInfo *mpopi, Datum **d);
+    bool   apply_filters_stacks(LocBin& loc, ostream& log_fh, const MetaPopInfo& mpopi);
+    bool   apply_filters_external(LocBin& loc, ostream& log_fh, const MetaPopInfo& mpopi);
+    bool   filter(const MetaPopInfo *mpopi, Datum **d);
     void   gt_depth_filter(Datum **d, const CSLocus *cloc);
     int    keep_single_snp(const CSLocus *cloc, const LocTally *t);
     int    keep_random_snp(const CSLocus *cloc, const LocTally *t);
-    int    prune_sites_with_whitelist(MetaPopInfo *mpopi, CSLocus *cloc, Datum **d, bool user_wl);
-    bool   prune_sites_with_filters(MetaPopInfo *mpopi, CSLocus *cloc, Datum **d, LocPopSum *s, ostream &log_fh);
+    int    prune_sites_with_whitelist(const MetaPopInfo *mpopi, CSLocus *cloc, Datum **d, bool user_wl);
+    bool   prune_sites_with_filters(const MetaPopInfo *mpopi, CSLocus *cloc, Datum **d, LocPopSum *s, ostream &log_fh);
 
     size_t filtered()       const { return this->_filtered_loci; }
     size_t total()          const { return this->_total_loci; }
