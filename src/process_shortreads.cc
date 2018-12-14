@@ -841,35 +841,35 @@ int parse_command_line(int argc, char* argv[]) {
             {"interleaved",          no_argument, NULL, 'I'},
             {"merge",                no_argument, NULL, 'm'},
             {"mate-pair",            no_argument, NULL, 'M'},
-            {"no_overhang",          no_argument, NULL, 'O'},
-            {"filter_illumina",      no_argument, NULL, 'F'},
-            {"retain_header",        no_argument, NULL, 'H'},
-            {"no_read_trimming",     no_argument, NULL, 'N'},
-            {"null_index",           no_argument, NULL, 'U'},
-            {"index_null",           no_argument, NULL, 'u'},
-            {"inline_null",          no_argument, NULL, 'V'},
-            {"index_index",          no_argument, NULL, 'W'},
-            {"inline_inline",        no_argument, NULL, 'x'},
-            {"index_inline",         no_argument, NULL, 'Y'},
-            {"inline_index",         no_argument, NULL, 'Z'},
-            {"barcode_dist_1", required_argument, NULL, 'B'},
-            {"barcode_dist_2", required_argument, NULL, 'C'},
-            {"infile_type",    required_argument, NULL, 'i'},
-            {"outfile_type",   required_argument, NULL, 'y'},
+            {"no-overhang",          no_argument, NULL, 'O'}, {"no_overhang",          no_argument, NULL, 'O'},
+            {"filter-illumina",      no_argument, NULL, 'F'}, {"filter_illumina",      no_argument, NULL, 'F'},
+            {"retain-header",        no_argument, NULL, 'H'}, {"retain_header",        no_argument, NULL, 'H'},
+            {"no-read-trimming",     no_argument, NULL, 'N'}, {"no_read_trimming",     no_argument, NULL, 'N'},
+            {"null-index",           no_argument, NULL, 'U'}, {"null_index",           no_argument, NULL, 'U'},
+            {"index-null",           no_argument, NULL, 'u'}, {"index_null",           no_argument, NULL, 'u'},
+            {"inline-null",          no_argument, NULL, 'V'}, {"inline_null",          no_argument, NULL, 'V'},
+            {"index-index",          no_argument, NULL, 'W'}, {"index_index",          no_argument, NULL, 'W'},
+            {"inline-inline",        no_argument, NULL, 'x'}, {"inline_inline",        no_argument, NULL, 'x'},
+            {"index-inline",         no_argument, NULL, 'Y'}, {"index_inline",         no_argument, NULL, 'Y'},
+            {"inline-index",         no_argument, NULL, 'Z'}, {"inline_index",         no_argument, NULL, 'Z'},
+            {"barcode-dist-1", required_argument, NULL, 'B'}, {"barcode_dist_1", required_argument, NULL, 'B'},
+            {"barcode-dist-2", required_argument, NULL, 'C'}, {"barcode_dist_2", required_argument, NULL, 'C'},
+            {"infile-type",    required_argument, NULL, 'i'}, {"infile_type",    required_argument, NULL, 'i'},
+            {"outfile-type",   required_argument, NULL, 'y'}, {"outfile_type",   required_argument, NULL, 'y'},
             {"file",           required_argument, NULL, 'f'},
-            {"file_p1",        required_argument, NULL, '1'},
-            {"file_p2",        required_argument, NULL, '2'},
+            {"file-p1",        required_argument, NULL, '1'}, {"file_p1",        required_argument, NULL, '1'},
+            {"file-p2",        required_argument, NULL, '2'}, {"file_p2",        required_argument, NULL, '2'},
             {"path",           required_argument, NULL, 'p'},
             {"outpath",        required_argument, NULL, 'o'},
             {"truncate",       required_argument, NULL, 't'},
             {"barcodes",       required_argument, NULL, 'b'},
-            {"window_size",    required_argument, NULL, 'w'},
-            {"score_limit",    required_argument, NULL, 's'},
+            {"window-size",    required_argument, NULL, 'w'}, {"window_size",    required_argument, NULL, 'w'},
+            {"score-limit",    required_argument, NULL, 's'}, {"score_limit",    required_argument, NULL, 's'},
             {"encoding",       required_argument, NULL, 'E'},
-            {"len_limit",      required_argument, NULL, 'L'},
-            {"adapter_1",      required_argument, NULL, 'A'},
-            {"adapter_2",      required_argument, NULL, 'G'},
-            {"adapter_mm",     required_argument, NULL, 'T'},
+            {"len-limit",      required_argument, NULL, 'L'}, {"len_limit",      required_argument, NULL, 'L'},
+            {"adapter-1",      required_argument, NULL, 'A'}, {"adapter_1",      required_argument, NULL, 'A'},
+            {"adapter-2",      required_argument, NULL, 'G'}, {"adapter_2",      required_argument, NULL, 'G'},
+            {"adapter-mm",     required_argument, NULL, 'T'}, {"adapter_mm",     required_argument, NULL, 'T'},
             {0, 0, 0, 0}
         };
 
@@ -1145,27 +1145,27 @@ void help() {
               << "  s: set the score limit. If the average score within the sliding window drops below this value, the read is discarded (default 10).\n"
               << "  h: display this help messsage.\n\n"
               << "  Barcode options:\n"
-              << "    --inline_null:   barcode is inline with sequence, occurs only on single-end read (default).\n"
-              << "    --index_null:    barcode is provded in FASTQ header (Illumina i5 or i7 read).\n"
-              << "    --null_index:    barcode is provded in FASTQ header (Illumina i7 read if both i5 and i7 read are provided).\n"
-              << "    --inline_inline: barcode is inline with sequence, occurs on single and paired-end read.\n"
-              << "    --index_index:   barcode is provded in FASTQ header (Illumina i5 and i7 reads).\n"
-              << "    --inline_index:  barcode is inline with sequence on single-end read and occurs in FASTQ header (from either i5 or i7 read).\n"
-              << "    --index_inline:  barcode occurs in FASTQ header (Illumina i5 or i7 read) and is inline with single-end sequence (for single-end data) on paired-end read (for paired-end data).\n\n"
+              << "    --inline-null:   barcode is inline with sequence, occurs only on single-end read (default).\n"
+              << "    --index-null:    barcode is provded in FASTQ header (Illumina i5 or i7 read).\n"
+              << "    --null-index:    barcode is provded in FASTQ header (Illumina i7 read if both i5 and i7 read are provided).\n"
+              << "    --inline-inline: barcode is inline with sequence, occurs on single and paired-end read.\n"
+              << "    --index-index:   barcode is provded in FASTQ header (Illumina i5 and i7 reads).\n"
+              << "    --inline-index:  barcode is inline with sequence on single-end read and occurs in FASTQ header (from either i5 or i7 read).\n"
+              << "    --index-inline:  barcode occurs in FASTQ header (Illumina i5 or i7 read) and is inline with single-end sequence (for single-end data) on paired-end read (for paired-end data).\n\n"
               << "  Adapter options:\n"
-              << "    --adapter_1 <sequence>: provide adaptor sequence that may occur on the first read for filtering.\n"
-              << "    --adapter_2 <sequence>: provide adaptor sequence that may occur on the paired-read for filtering.\n"
-              << "      --adapter_mm <mismatches>: number of mismatches allowed in the adapter sequence.\n\n"
+              << "    --adapter-1 <sequence>: provide adaptor sequence that may occur on the first read for filtering.\n"
+              << "    --adapter-2 <sequence>: provide adaptor sequence that may occur on the paired-read for filtering.\n"
+              << "      --adapter-mm <mismatches>: number of mismatches allowed in the adapter sequence.\n\n"
               << "  Output options:\n"
-              << "    --retain_header: retain unmodified FASTQ headers in the output.\n"
+              << "    --retain-header: retain unmodified FASTQ headers in the output.\n"
               << "    --merge: if no barcodes are specified, merge all input files into a single output file (or single pair of files).\n\n"
               << "  Advanced options:\n"
-              << "    --no_read_trimming: do not trim low quality reads, just discard them.\n"
-              << "    --len_limit <limit>: when trimming sequences, specify the minimum length a sequence must be to keep it (default 31bp).\n"
-              << "    --filter_illumina: discard reads that have been marked by Illumina's chastity/purity filter as failing.\n"
-              << "    --barcode_dist: provide the distace between barcodes to allow for barcode rescue (default 2)\n"
+              << "    --no-read-trimming: do not trim low quality reads, just discard them.\n"
+              << "    --len-limit <limit>: when trimming sequences, specify the minimum length a sequence must be to keep it (default 31bp).\n"
+              << "    --filter-illumina: discard reads that have been marked by Illumina's chastity/purity filter as failing.\n"
+              << "    --barcode-dist: provide the distace between barcodes to allow for barcode rescue (default 2)\n"
               << "    --mate-pair: raw reads are circularized mate-pair data, first read will be reverse complemented.\n"
-              << "    --no_overhang: data does not contain an overhang nucleotide between barcode and seqeunce.\n";
+              << "    --no-overhang: data does not contain an overhang nucleotide between barcode and seqeunce.\n";
 
     exit(1);
 }

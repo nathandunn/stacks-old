@@ -245,7 +245,7 @@ try {
         // Read the next set of loci to process.
         // - If data are denovo, load blim._batch_size loci.
         // - If data are reference aligned, load one chromosome.
-        // - Filter the loci according to command line parameters (-r, -p, --maf, --write_single_snp, etc.)
+        // - Filter the loci according to command line parameters (-r, -p, --maf, --write-single-snp, etc.)
         // - Sort the loci by basepair if they are ordered.
         //
         size_t loc_cnt = bloc.next_batch(logger->x);
@@ -3737,10 +3737,10 @@ parse_command_line(int argc, char* argv[])
             {"version",        no_argument,       NULL, 999},
             {"quiet",          no_argument,       NULL, 'q'},
             {"verbose",        no_argument,       NULL, 'd'},
-            {"vcf",            no_argument,       NULL, 1004}, {"vcf_haps", no_argument, NULL, 1004}, {"vcf_haplotypes", no_argument, NULL, 1004},
-            {"fasta_loci",     no_argument,       NULL, 1006},
-            {"fasta_samples",  no_argument,       NULL, 'J'}, {"fasta_strict", no_argument, NULL, 'J'},
-            {"fasta_samples_raw", no_argument,    NULL, 'F'}, {"fasta", no_argument, NULL, 'F'},
+            {"vcf",            no_argument,       NULL, 1004}, {"vcf-haps", no_argument, NULL, 1004}, {"vcf-haplotypes", no_argument, NULL, 1004}, {"vcf_haps", no_argument, NULL, 1004}, {"vcf_haplotypes", no_argument, NULL, 1004},
+            {"fasta-loci",     no_argument,       NULL, 1006}, {"fasta_loci",     no_argument,       NULL, 1006},
+            {"fasta-samples",  no_argument,       NULL, 'J'}, {"fasta-strict", no_argument, NULL, 'J'}, {"fasta_samples",  no_argument,       NULL, 'J'}, {"fasta_strict", no_argument, NULL, 'J'},
+            {"fasta-samples-raw", no_argument,    NULL, 'F'}, {"fasta", no_argument, NULL, 'F'}, {"fasta_samples_raw", no_argument,    NULL, 'F'},
             {"structure",      no_argument,       NULL, 'S'},
             {"radpainter",     no_argument,       NULL, 1015}, {"fineRADstructure", no_argument, NULL, 1015},
             {"fastphase",      no_argument,       NULL, 'A'},
@@ -3749,52 +3749,52 @@ parse_command_line(int argc, char* argv[])
             {"genepop",        no_argument,       NULL, 1010},
             {"genepop-haps-3digits", no_argument, NULL, 1011},
             {"phylip",         no_argument,       NULL, 'Y'},
-            {"phylip_var",     no_argument,       NULL, 'L'},
-            {"phylip_var_all", no_argument,       NULL, 'T'},
+            {"phylip-var",     no_argument,       NULL, 'L'}, {"phylip_var",     no_argument,       NULL, 'L'},
+            {"phylip-var-all", no_argument,       NULL, 'T'}, {"phylip_var_all", no_argument,       NULL, 'T'},
             {"hzar",           no_argument,       NULL, 'Z'},
             {"treemix",        no_argument,       NULL, 'U'},
-            {"merge_sites",    no_argument,       NULL, 'D'},
+            {"merge-sites",    no_argument,       NULL, 'D'}, {"merge_sites",    no_argument,       NULL, 'D'},
             {"sigma",          required_argument, NULL, 1005},
             {"threads",        required_argument, NULL, 't'},
-            {"in_path",        required_argument, NULL, 'P'},
+            {"in-path",        required_argument, NULL, 'P'}, {"in_path",        required_argument, NULL, 'P'},
             {"v1",             no_argument,       NULL, 2000},
-            {"out_path",       required_argument, NULL, 'O'},
-            {"in_vcf",         required_argument, NULL, 'V'},
+            {"out-path",       required_argument, NULL, 'O'}, {"out_path",       required_argument, NULL, 'O'},
+            {"in-vcf",         required_argument, NULL, 'V'}, {"in_vcf",         required_argument, NULL, 'V'},
             {"progeny",        required_argument, NULL, 'r'},
             {"renz",           required_argument, NULL, 'e'},
             {"popmap",         required_argument, NULL, 'M'},
             {"no-popmap",      no_argument,       NULL, 1017}, // Negates a previous -M/--popmap
             {"whitelist",      required_argument, NULL, 'W'},
             {"blacklist",      required_argument, NULL, 'B'},
-            {"batch_size",     required_argument, NULL, 1999},
+            {"batch-size",     required_argument, NULL, 1999}, {"batch_size",     required_argument, NULL, 1999},
             {"dbg-min-gt-depth", required_argument, NULL, 2001},
-            {"write_single_snp",  no_argument,       NULL, 'I'},
-            {"write_random_snp",  no_argument,       NULL, 'j'},
-            {"no_hap_exports",    no_argument,       NULL, 1012},
-            {"ordered_export",    no_argument,       NULL, 1002},
+            {"write-single-snp",  no_argument,       NULL, 'I'}, {"write_single_snp",  no_argument,       NULL, 'I'},
+            {"write-random-snp",  no_argument,       NULL, 'j'}, {"write_random_snp",  no_argument,       NULL, 'j'},
+            {"no-hap-exports",    no_argument,       NULL, 1012}, {"no_hap_exports",    no_argument,       NULL, 1012},
+            {"ordered-export",    no_argument,       NULL, 1002}, {"ordered_export",    no_argument,       NULL, 1002},
             {"smooth",            no_argument,       NULL, 'k'},
-            {"smooth_fstats",     no_argument,       NULL, 1007},
-            {"smooth_popstats",   no_argument,       NULL, 1008},
+            {"smooth-fstats",     no_argument,       NULL, 1007}, {"smooth_fstats",     no_argument,       NULL, 1007},
+            {"smooth-popstats",   no_argument,       NULL, 1008}, {"smooth_popstats",   no_argument,       NULL, 1008},
             {"fstats",            no_argument,       NULL, '6'},
             {"hwe",               no_argument,       NULL, 1014},
-            {"log_fst_comp",      no_argument,       NULL, 'l'},
-            {"bootstrap_type",    required_argument, NULL, 1001},
-            {"bootstrap_reps",    required_argument, NULL, 1003},
-            {"bootstrap_wl",      required_argument, NULL, 'Q'},
+            {"log-fst-comp",      no_argument,       NULL, 'l'}, {"log_fst_comp",      no_argument,       NULL, 'l'},
+            {"bootstrap-type",    required_argument, NULL, 1001}, {"bootstrap_type",    required_argument, NULL, 1001},
+            {"bootstrap-reps",    required_argument, NULL, 1003}, {"bootstrap_reps",    required_argument, NULL, 1003},
+            {"bootstrap-wl",      required_argument, NULL, 'Q'}, {"bootstrap_wl",      required_argument, NULL, 'Q'},
             {"bootstrap",         no_argument,       NULL, '1'},
-            {"bootstrap_fst",     no_argument,       NULL, '2'},
-            {"bootstrap_phist",   no_argument,       NULL, '3'},
-            {"bootstrap_div",     no_argument,       NULL, '4'},
-            {"bootstrap_pifis",   no_argument,       NULL, '5'},
-            {"min_populations",   required_argument, NULL, 'p'},
-            {"min_maf",           required_argument, NULL, 'a'},
-            {"min_mac",           required_argument, NULL, 1016},
-            {"max_obs_het",       required_argument, NULL, 1013},
-            {"merge_prune_lim",   required_argument, NULL, 'i'},
-            {"fst_correction",    required_argument, NULL, 'f'},
-            {"p_value_cutoff",    required_argument, NULL, 'u'},
-            {"debug_flags",       required_argument, NULL, 1000},
-            {"lnl_lim",           required_argument, NULL, 7000}, // (deprecated)
+            {"bootstrap-fst",     no_argument,       NULL, '2'}, {"bootstrap_fst",     no_argument,       NULL, '2'},
+            {"bootstrap-phist",   no_argument,       NULL, '3'}, {"bootstrap_phist",   no_argument,       NULL, '3'},
+            {"bootstrap-div",     no_argument,       NULL, '4'}, {"bootstrap_div",     no_argument,       NULL, '4'},
+            {"bootstrap-pifis",   no_argument,       NULL, '5'}, {"bootstrap_pifis",   no_argument,       NULL, '5'},
+            {"min-populations",   required_argument, NULL, 'p'}, {"min_populations",   required_argument, NULL, 'p'},
+            {"min-maf",           required_argument, NULL, 'a'}, {"min_maf",           required_argument, NULL, 'a'},
+            {"min-mac",           required_argument, NULL, 1016}, {"min_mac",           required_argument, NULL, 1016},
+            {"max-obs-het",       required_argument, NULL, 1013}, {"max_obs_het",       required_argument, NULL, 1013},
+            {"merge-prune-lim",   required_argument, NULL, 'i'}, {"merge_prune_lim",   required_argument, NULL, 'i'},
+            {"fst-correction",    required_argument, NULL, 'f'}, {"fst_correction",    required_argument, NULL, 'f'},
+            {"p-value-cutoff",    required_argument, NULL, 'u'}, {"p_value_cutoff",    required_argument, NULL, 'u'},
+            {"debug-flags",       required_argument, NULL, 1000}, {"debug_flags",       required_argument, NULL, 1000},
+            {"lnl-lim",           required_argument, NULL, 7000}, {"lnl_lim",           required_argument, NULL, 7000}, // (deprecated)
             {0, 0, 0, 0}
         };
 
@@ -3944,7 +3944,7 @@ parse_command_line(int argc, char* argv[])
             bootstrap_wl = true;
             break;
         case 7000:
-            cerr << "WARNING: --lnl_lim is deprecated and has no effect.\n";
+            cerr << "WARNING: --lnl-lim is deprecated and has no effect.\n";
             break;
         case 'I':
             write_single_snp = true;
@@ -4009,7 +4009,7 @@ parse_command_line(int argc, char* argv[])
             add_export<PhylipVarExport>();
             break;
         case 'T':
-            cerr << "BETA: Ignoring --phylip_var_all output request, which is not currently implemented.\n";
+            cerr << "BETA: Ignoring --phylip-var-all output request, which is not currently implemented.\n";
             break;
         case 'U':
             cerr << "BETA: Ignoring --treemix output request, which is not currently implemented.\n";
@@ -4084,7 +4084,7 @@ parse_command_line(int argc, char* argv[])
 
             if (debug_flags.count("VCFCOMP") && not write_random_snp) {
                 write_single_snp = true;
-                cout << "DEBUG: Added --write_single_snp.\n";
+                cout << "DEBUG: Added --write-single-snp.\n";
             }
 
             break;
@@ -4110,10 +4110,10 @@ parse_command_line(int argc, char* argv[])
     }
 
     if (!in_path.empty() && !in_vcf_path.empty()) {
-        cerr << "Error: Please specify either '-P/--in_path' or '-V/--in_vcf', not both.\n";
+        cerr << "Error: Please specify either '-P/--in-path' or '-V/--in-vcf', not both.\n";
         help();
     } else if (in_path.empty() && in_vcf_path.empty()) {
-        cerr << "Error: One of '-P/--in_path' or '-V/--in_vcf' is required.\n";
+        cerr << "Error: One of '-P/--in-path' or '-V/--in-vcf' is required.\n";
         help();
     } else if (not in_vcf_path.empty()) {
         input_mode = InputMode::vcf;
@@ -4128,7 +4128,7 @@ parse_command_line(int argc, char* argv[])
     } else if (input_mode == InputMode::vcf) {
 
         if (out_path.empty()) {
-            cerr << "Error: Malformed arguments: input mode 'vcf' requires an output directory (--out_path).\n";
+            cerr << "Error: Malformed arguments: input mode 'vcf' requires an output directory (--out-path).\n";
             help();
         }
 
@@ -4147,7 +4147,7 @@ parse_command_line(int argc, char* argv[])
 
     // Other
     if (write_single_snp && write_random_snp) {
-        cerr << "Error: Please specify either '--write_single_snp' or '--write_random_snp', not both.\n";
+        cerr << "Error: Please specify either '--write-single-snp' or '--write-random-snp', not both.\n";
         help();
     }
 
@@ -4179,56 +4179,56 @@ void help() {
          << "populations -P dir [-O dir] [-M popmap] (filters) [--fstats] [-k [--sigma=150000] [--bootstrap [-N 100]]] (output formats)\n"
          << "populations -V vcf -O dir [-M popmap] (filters) [--fstats] [-k [--sigma=150000] [--bootstrap [-N 100]]] (output formats)\n"
          << "\n"
-         << "  -P,--in_path: path to a directory containing GStacks ouput files.\n"
-         << "  -V,--in_vcf: path to a standalone input VCF file.\n"
-         << "  -O,--out_path: path to a directory where to write the output files. (Required by -V; otherwise defaults to value of -P.)\n"
+         << "  -P,--in-path: path to a directory containing GStacks ouput files.\n"
+         << "  -V,--in-vcf: path to a standalone input VCF file.\n"
+         << "  -O,--out-path: path to a directory where to write the output files. (Required by -V; otherwise defaults to value of -P.)\n"
          << "  -M,--popmap: path to a population map. (Format is 'SAMPLE1 \\t POP1 \\n SAMPLE2 ...'.)\n"
          << "  -t,--threads: number of threads to run in parallel sections of code.\n"
-         << "  --batch_size [int]: the number of loci to process in a batch (default: 10,000 in de novo mode; in reference mode, one chromosome\n"
+         << "  --batch-size [int]: the number of loci to process in a batch (default: 10,000 in de novo mode; in reference mode, one chromosome\n"
          << "                      per batch). Increase to speed analysis, uses more memory, decrease to save memory).\n"
          << "\n"
          << "Data Filtering:\n"
          << "  -p [int]: minimum number of populations a locus must be present in to process a locus.\n"
          << "  -r [float]: minimum percentage of individuals in a population required to process a locus for that population.\n"
-         << "  --min_maf [float]: specify a minimum minor allele frequency required to process a nucleotide site at a locus (0 < min_maf < 0.5).\n"
-         << "  --min_mac [int]: specify a minimum minor allele count required to process a nucleotide site at a locus.\n"
-         << "  --max_obs_het [float]: specify a maximum observed heterozygosity required to process a nucleotide site at a locus.\n"
-         << "  --write_single_snp: restrict data analysis to only the first SNP per locus (implies --no-haps).\n"
-         << "  --write_random_snp: restrict data analysis to one random SNP per locus (implies --no-haps).\n"
+         << "  --min-maf [float]: specify a minimum minor allele frequency required to process a nucleotide site at a locus (0 < min_maf < 0.5).\n"
+         << "  --min-mac [int]: specify a minimum minor allele count required to process a nucleotide site at a locus.\n"
+         << "  --max-obs-het [float]: specify a maximum observed heterozygosity required to process a nucleotide site at a locus.\n"
+         << "  --write-single-snp: restrict data analysis to only the first SNP per locus (implies --no-haps).\n"
+         << "  --write-random-snp: restrict data analysis to one random SNP per locus (implies --no-haps).\n"
          << "  -B: path to a file containing Blacklisted markers to be excluded from the export.\n"
          << "  -W: path to a file containing Whitelisted markers to include in the export.\n"
          << "\n"
          << "Merging and Phasing:\n"
          << "  -e,--renz: restriction enzyme name.\n"
-         << "  --merge_sites: merge loci that were produced from the same restriction enzyme cutsite (requires reference-aligned data).\n"
-         << "  --merge_prune_lim: when merging adjacent loci, if at least X% samples posses both loci prune the remaining samples out of the analysis.\n"
+         << "  --merge-sites: merge loci that were produced from the same restriction enzyme cutsite (requires reference-aligned data).\n"
+         << "  --merge-prune-lim: when merging adjacent loci, if at least X% samples posses both loci prune the remaining samples out of the analysis.\n"
          << "\n"
          << "Locus stats:\n"
          << "  --hwe: calculate divergence from Hardy-Weinberg equilibrium for each locus.\n"
          << "\n"
          << "Fstats:\n"
          << "  --fstats: enable SNP and haplotype-based F statistics.\n"
-         << "  --fst_correction: specify a correction to be applied to Fst values: 'p_value', 'bonferroni_win', or 'bonferroni_gen'. Default: off.\n"
-         << "  --p_value_cutoff [float]: maximum p-value to keep an Fst measurement. Default: 0.05. (Also used as base for Bonferroni correction.)\n"
+         << "  --fst-correction: specify a correction to be applied to Fst values: 'p_value', 'bonferroni_win', or 'bonferroni_gen'. Default: off.\n"
+         << "  --p-value-cutoff [float]: maximum p-value to keep an Fst measurement. Default: 0.05. (Also used as base for Bonferroni correction.)\n"
          << "\n"
          << "Kernel-smoothing algorithm:\n"
          << "  -k,--smooth: enable kernel-smoothed Pi, Fis, Fst, Fst', and Phi_st calculations.\n"
-         << "  --smooth_fstats: enable kernel-smoothed Fst, Fst', and Phi_st calculations.\n"
-         << "  --smooth_popstats: enable kernel-smoothed Pi and Fis calculations.\n"
-         << "    (Note: turning on smoothing implies --ordered_export.)\n"
+         << "  --smooth-fstats: enable kernel-smoothed Fst, Fst', and Phi_st calculations.\n"
+         << "  --smooth-popstats: enable kernel-smoothed Pi and Fis calculations.\n"
+         << "    (Note: turning on smoothing implies --ordered-export.)\n"
          << "  --sigma [int]: standard deviation of the kernel smoothing weight distribution. Default 150kb.\n"
          << "  --bootstrap: turn on boostrap resampling for all smoothed statistics.\n"
-         << "  -N,--bootstrap_reps [int]: number of bootstrap resamplings to calculate (default 100).\n"
-         << "  --bootstrap_pifis: turn on boostrap resampling for smoothed SNP-based Pi and Fis calculations.\n"
-         << "  --bootstrap_fst: turn on boostrap resampling for smoothed Fst calculations based on pairwise population comparison of SNPs.\n"
-         << "  --bootstrap_div: turn on boostrap resampling for smoothed haplotype diveristy and gene diversity calculations based on haplotypes.\n"
-         << "  --bootstrap_phist: turn on boostrap resampling for smoothed Phi_st calculations based on haplotypes.\n"
-         << "  --bootstrap_wl [path]: only bootstrap loci contained in this whitelist.\n"
+         << "  -N,--bootstrap-reps [int]: number of bootstrap resamplings to calculate (default 100).\n"
+         << "  --bootstrap-pifis: turn on boostrap resampling for smoothed SNP-based Pi and Fis calculations.\n"
+         << "  --bootstrap-fst: turn on boostrap resampling for smoothed Fst calculations based on pairwise population comparison of SNPs.\n"
+         << "  --bootstrap-div: turn on boostrap resampling for smoothed haplotype diveristy and gene diversity calculations based on haplotypes.\n"
+         << "  --bootstrap-phist: turn on boostrap resampling for smoothed Phi_st calculations based on haplotypes.\n"
+         << "  --bootstrap-wl [path]: only bootstrap loci contained in this whitelist.\n"
          << "\n"
          << "File output options:\n"
-         << "  --ordered_export: if data is reference aligned, exports will be ordered; only a single representative of each overlapping site.\n"
-         << "  --fasta_loci: output locus consensus sequences in FASTA format.\n"
-         << "  --fasta_samples: output the sequences of the two haplotypes of each (diploid) sample, for each locus, in FASTA format.\n"
+         << "  --ordered-export: if data is reference aligned, exports will be ordered; only a single representative of each overlapping site.\n"
+         << "  --fasta-loci: output locus consensus sequences in FASTA format.\n"
+         << "  --fasta-samples: output the sequences of the two haplotypes of each (diploid) sample, for each locus, in FASTA format.\n"
          << "  --vcf: output SNPs and haplotypes in Variant Call Format (VCF).\n"
          << "  --genepop: output SNPs and haplotypes in GenePop format.\n"
          << "  --structure: output results in Structure format.\n"
@@ -4238,18 +4238,18 @@ void help() {
          << "  --plink: output genotypes in PLINK format.\n"
          << "  --hzar*: output genotypes in Hybrid Zone Analysis using R (HZAR) format.\n"
          << "  --phylip: output nucleotides that are fixed-within, and variant among populations in Phylip format for phylogenetic tree construction.\n"
-         << "  --phylip_var: include variable sites in the phylip output encoded using IUPAC notation.\n"
-         << "  --phylip_var_all*: include all sequence as well as variable sites in the phylip output encoded using IUPAC notation.\n"
+         << "  --phylip-var: include variable sites in the phylip output encoded using IUPAC notation.\n"
+         << "  --phylip-var-all*: include all sequence as well as variable sites in the phylip output encoded using IUPAC notation.\n"
          << "  --treemix*: output SNPs in a format useable for the TreeMix program (Pickrell and Pritchard).\n"
-         << "  --no_hap_exports: omit haplotype outputs.\n"
-         << "  --fasta_samples_raw: output all haplotypes observed in each sample, for each locus, in FASTA format.\n"
+         << "  --no-hap-exports: omit haplotype outputs.\n"
+         << "  --fasta-samples-raw: output all haplotypes observed in each sample, for each locus, in FASTA format.\n"
          << "  (*not implemented as of v2.0Beta7)\n"
          << "\n"
          << "Additional options:\n"
          << "  -h,--help: display this help messsage.\n"
          << "  -v,--version: print program version.\n"
          << "  --verbose: turn on additional logging.\n"
-         << ("  --log_fst_comp: log components of Fst/Phi_st calculations to a file.\n")
+         << ("  --log-fst-comp: log components of Fst/Phi_st calculations to a file.\n")
          #ifdef DEBUG
          << "\n"
          << "DEBUG:\n"
@@ -4258,7 +4258,7 @@ void help() {
          #endif
          ;
 
-              // << "    --bootstrap_type [exact|approx]: enable bootstrap resampling for population statistics (reference genome required).\n"
+              // << "    --bootstrap-type [exact|approx]: enable bootstrap resampling for population statistics (reference genome required).\n"
 
     exit(1);
 }

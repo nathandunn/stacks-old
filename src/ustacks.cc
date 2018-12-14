@@ -2690,7 +2690,7 @@ void load_radtags(string in_file, DNASeqHashMap &radtags, size_t& n_reads) {
     }
     if (len_mismatch && !force_diff_len) {
         cerr << "Error: different sequence lengths detected, this will interfere with Stacks "
-             << "algorithms, trim reads to uniform length (override this check with --force_diff_len).\n";
+             << "algorithms, trim reads to uniform length (override this check with --force-diff-len).\n";
         exit(1);
     } else if (force_diff_len) {
         cerr << "Warning: different sequence lengths detected, this could interfere with Stacks algorithms.\n";
@@ -2756,33 +2756,33 @@ int parse_command_line(int argc, char* argv[]) {
         static struct option long_options[] = {
             {"help",             no_argument,       NULL, 'h'},
             {"version",          no_argument,       NULL, 'v'},
-            {"infile_type",      required_argument, NULL, 't'},
+            {"infile-type",      required_argument, NULL, 't'}, {"infile_type",      required_argument, NULL, 't'},
             {"file",             required_argument, NULL, 'f'},
             {"outpath",          required_argument, NULL, 'o'},
             {"name",             required_argument, NULL, 1002},
             {"id",               required_argument, NULL, 'i'},
-            {"min_cov",          required_argument, NULL, 'm'},
-            {"max_dist",         required_argument, NULL, 'M'},
-            {"max_sec_dist",     required_argument, NULL, 'N'},
-            {"max_locus_stacks", required_argument, NULL, 'K'},
-            {"k_len",            required_argument, NULL, 'k'},
-            {"num_threads",      required_argument, NULL, 'p'},
+            {"min-cov",          required_argument, NULL, 'm'}, {"min_cov",          required_argument, NULL, 'm'},
+            {"max-dist",         required_argument, NULL, 'M'}, {"max_dist",         required_argument, NULL, 'M'},
+            {"max-sec-dist",     required_argument, NULL, 'N'}, {"max_sec_dist",     required_argument, NULL, 'N'},
+            {"max-locus-stacks", required_argument, NULL, 'K'}, {"max_locus_stacks", required_argument, NULL, 'K'},
+            {"k-len",            required_argument, NULL, 'k'}, {"k_len",            required_argument, NULL, 'k'},
+            {"num-threads",      required_argument, NULL, 'p'}, {"num_threads",      required_argument, NULL, 'p'},
             {"deleverage",       no_argument,       NULL, 'd'},
-            {"keep_high_cov",    no_argument,       NULL, 1000},
-            {"high_cov_thres",   required_argument, NULL, 1001},
-            {"retain_rem",       no_argument,       NULL, 'R'},
+            {"keep-high-cov",    no_argument,       NULL, 1000}, {"keep_high_cov",    no_argument,       NULL, 1000},
+            {"high-cov-thres",   required_argument, NULL, 1001}, {"high_cov_thres",   required_argument, NULL, 1001},
+            {"retain-rem",       no_argument,       NULL, 'R'}, {"retain_rem",       no_argument,       NULL, 'R'},
             {"graph",            no_argument,       NULL, 'g'},
-            {"sec_hapl",         no_argument,       NULL, 'H'},
+            {"sec-hapl",         no_argument,       NULL, 'H'}, {"sec_hapl",         no_argument,       NULL, 'H'},
             {"disable-gapped",   no_argument,       NULL, 'G'},
-            {"max_gaps",         required_argument, NULL, 'X'},
-            {"min_aln_len",      required_argument, NULL, 'x'},
-            {"model_type",       required_argument, NULL, 'T'},
-            {"bc_err_freq",      required_argument, NULL, 'e'},
-            {"bound_low",        required_argument, NULL, 'L'},
-            {"bound_high",       required_argument, NULL, 'U'},
+            {"max-gaps",         required_argument, NULL, 'X'}, {"max_gaps",         required_argument, NULL, 'X'},
+            {"min-aln-len",      required_argument, NULL, 'x'}, {"min_aln_len",      required_argument, NULL, 'x'},
+            {"model-type",       required_argument, NULL, 'T'}, {"model_type",       required_argument, NULL, 'T'},
+            {"bc-err-freq",      required_argument, NULL, 'e'}, {"bc_err_freq",      required_argument, NULL, 'e'},
+            {"bound-low",        required_argument, NULL, 'L'}, {"bound_low",        required_argument, NULL, 'L'},
+            {"bound-high",       required_argument, NULL, 'U'}, {"bound_high",       required_argument, NULL, 'U'},
             {"alpha",            required_argument, NULL, 'A'},
             {"r-deprecated",     no_argument,       NULL, 'r'},
-            {"force_diff_len",   no_argument,       NULL, 1003},
+            {"force-diff-len",   no_argument,       NULL, 1003}, {"force_diff_len",   no_argument,       NULL, 1003},
             {0, 0, 0, 0}
         };
 
@@ -3016,23 +3016,23 @@ void help() {
          << "\n"
          << "  Stack assembly options:\n"
          << "    d,--deleverage: enable the Deleveraging algorithm, used for resolving over merged tags.\n"
-         << "    --keep_high_cov: disable the algorithm that removes highly-repetitive stacks and nearby errors.\n"
-         << "    --high_cov_thres: highly-repetitive stacks threshold, in standard deviation units (default: 3.0).\n"
-         << "    --max_locus_stacks <num>: maximum number of stacks at a single de novo locus (default 3).\n"
-         << "     --k_len <len>: specify k-mer size for matching between alleles and loci (automatically calculated by default).\n\n"
+         << "    --keep-high-cov: disable the algorithm that removes highly-repetitive stacks and nearby errors.\n"
+         << "    --high-cov-thres: highly-repetitive stacks threshold, in standard deviation units (default: 3.0).\n"
+         << "    --max-locus-stacks <num>: maximum number of stacks at a single de novo locus (default 3).\n"
+         << "     --k-len <len>: specify k-mer size for matching between alleles and loci (automatically calculated by default).\n\n"
          << "  Gapped assembly options:\n"
-         << "    --max_gaps: number of gaps allowed between stacks before merging (default: 2).\n"
-         << "    --min_aln_len: minimum length of aligned sequence in a gapped alignment (default: 0.80).\n\n"
+         << "    --max-gaps: number of gaps allowed between stacks before merging (default: 2).\n"
+         << "    --min-aln-len: minimum length of aligned sequence in a gapped alignment (default: 0.80).\n\n"
          << "    --disable-gapped: do not preform gapped alignments between stacks (default: gapped alignements enabled).\n"
          << "  Model options:\n"
-         << "    --model_type: either 'snp' (default), 'bounded', or 'fixed'\n"
+         << "    --model-type: either 'snp' (default), 'bounded', or 'fixed'\n"
          << "    For the SNP or Bounded SNP model:\n"
          << "      --alpha <num>: chi square significance level required to call a heterozygote or homozygote, either 0.1, 0.05 (default), 0.01, or 0.001.\n"
          << "    For the Bounded SNP model:\n"
-         << "      --bound_low <num>: lower bound for epsilon, the error rate, between 0 and 1.0 (default 0).\n"
-         << "      --bound_high <num>: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1).\n"
+         << "      --bound-low <num>: lower bound for epsilon, the error rate, between 0 and 1.0 (default 0).\n"
+         << "      --bound-high <num>: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1).\n"
          << "    For the Fixed model:\n"
-         << "      --bc_err_freq <num>: specify the barcode error frequency, between 0 and 1.0.\n"
+         << "      --bc-err-freq <num>: specify the barcode error frequency, between 0 and 1.0.\n"
          << "\n"
          << "  h: display this help messsage.\n";
 
