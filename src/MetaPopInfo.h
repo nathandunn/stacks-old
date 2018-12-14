@@ -82,6 +82,7 @@ public:
 
     // Retrieve information.
     const vector<Sample>& samples() const {return samples_;}
+    size_t n_samples() const {return samples().size();}
     const vector<Pop>& pops() const {return pops_;}
     const vector<Group>& groups() const {return groups_;}
 

@@ -147,7 +147,7 @@ try {
     if (!pmap_path.empty()) {
         cout << "Parsing population map...\n";
         mpopi.init_popmap(pmap_path);
-        cout << "The population map contained " << mpopi.samples().size() << " samples, "
+        cout << "The population map contained " << mpopi.n_samples() << " samples, "
              << mpopi.pops().size() << " population(s), " << mpopi.groups().size() << " group(s).\n";
     } else {
         cout << "A population map was not specified, all samples will be read from '"
@@ -470,9 +470,9 @@ BatchLocusProcessor::init_stacks_loci(string in_path, string pmap_path)
         cout << "No population map specified, using all samples...\n";
         this->_mpopi->init_names(this->cloc_reader().header().samples());
     } else {
-        size_t n_samples_before = this->_mpopi->samples().size();
+        size_t n_samples_before = this->_mpopi->n_samples();
         this->_mpopi->intersect_with(this->cloc_reader().header().samples());
-        size_t n_rm_samples = n_samples_before - this->_mpopi->samples().size();
+        size_t n_rm_samples = n_samples_before - this->_mpopi->n_samples();
 
         if (n_rm_samples > 0) {
             cerr << "Warning: No genotype data exists for " << n_rm_samples
@@ -554,10 +554,10 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
         //
         // Create and populate a new catalog locus & the associated genotypes.
         //
-        LocBin* loc = new LocBin(this->_mpopi->samples().size());
+        LocBin* loc = new LocBin(this->_mpopi->n_samples());
         loc->cloc = new CSLocus();
-        loc->d = new Datum *[this->_mpopi->samples().size()];
-        for (size_t i=0; i<this->_mpopi->samples().size(); ++i)
+        loc->d = new Datum *[this->_mpopi->n_samples()];
+        for (size_t i=0; i<this->_mpopi->n_samples(); ++i)
             loc->d[i] = NULL;
 
         PopMap<CSLocus>::populate_internal(
@@ -578,7 +578,7 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
         //
         // Tabulate haplotypes present and in what combinations.
         //
-        tabulate_locus_haplotypes(loc->cloc, loc->d, this->_mpopi->samples().size());
+        tabulate_locus_haplotypes(loc->cloc, loc->d, this->_mpopi->n_samples());
 
         //
         // Detect the end of batch.
@@ -656,11 +656,11 @@ BatchLocusProcessor::init_external_loci(string in_path, string pmap_path)
 
     } else {
         // Intersect the samples present in the population map and the VCF.
-        size_t n_samples_before = this->_mpopi->samples().size();
+        size_t n_samples_before = this->_mpopi->n_samples();
 
         this->_mpopi->intersect_with(this->_vcf_parser.header().samples());
 
-        size_t n_rm_samples = n_samples_before - this->_mpopi->samples().size();
+        size_t n_rm_samples = n_samples_before - this->_mpopi->n_samples();
         if (n_rm_samples > 0) {
             cerr << "Warning: Of the samples listed in the population map, "
                  << n_rm_samples << " could not be found in the VCF :";
@@ -672,7 +672,7 @@ BatchLocusProcessor::init_external_loci(string in_path, string pmap_path)
     }
 
     // Create arbitrary sample IDs.
-    for (size_t i = 0; i < this->_mpopi->samples().size(); ++i)
+    for (size_t i = 0; i < this->_mpopi->n_samples(); ++i)
         this->_mpopi->set_sample_id(i, i+1); //id=i+1
 
     //
@@ -736,10 +736,10 @@ BatchLocusProcessor::next_batch_external_loci(ostream &log_fh)
         //
         // Create and populate a new catalog locus.
         //
-        LocBin* loc = new LocBin(this->_mpopi->samples().size());
+        LocBin* loc = new LocBin(this->_mpopi->n_samples());
         loc->cloc = new CSLocus();
-        loc->d = new Datum *[this->_mpopi->samples().size()];
-        for (size_t i = 0; i < this->_mpopi->samples().size(); i++)
+        loc->d = new Datum *[this->_mpopi->n_samples()];
+        for (size_t i = 0; i < this->_mpopi->n_samples(); i++)
             loc->d[i] = NULL;
         if (!PopMap<CSLocus>::populate_external(
                 loc->cloc, loc->d,
@@ -767,7 +767,7 @@ BatchLocusProcessor::next_batch_external_loci(ostream &log_fh)
         //
         // Tabulate haplotypes present and in what combinations.
         //
-        tabulate_locus_haplotypes(loc->cloc, loc->d, this->_mpopi->samples().size());
+        tabulate_locus_haplotypes(loc->cloc, loc->d, this->_mpopi->n_samples());
 
         //
         // Detect the end of batch.
@@ -1111,7 +1111,7 @@ void
 LocusFilter::init(MetaPopInfo *mpopi)
 {
     this->_pop_cnt    = mpopi->pops().size();
-    this->_sample_cnt = mpopi->samples().size();
+    this->_sample_cnt = mpopi->n_samples();
 
     assert(this->_pop_cnt > 0);
     assert(this->_sample_cnt > 0);
