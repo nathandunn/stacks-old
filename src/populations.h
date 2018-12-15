@@ -162,7 +162,6 @@ public:
         this->_sample_cnt = 0;
         this->_pop_order  = NULL; // The array order of each population.
         this->_samples    = NULL; // Which population each sample belongs to.
-        this->_pop_cnts   = NULL; // For a locus, how many samples are present in each population.
         this->_pop_tot    = NULL; // The total number of samples in each population.
         this->_filtered_loci       = 0;
         this->_total_loci          = 0;
@@ -183,8 +182,6 @@ public:
             delete [] this->_pop_order;
         if (this->_samples != NULL)
             delete [] this->_samples;
-        if (this->_pop_cnts != NULL)
-            delete [] this->_pop_cnts;
         if (this->_pop_tot != NULL)
             delete [] this->_pop_tot;
     }
@@ -198,14 +195,14 @@ public:
     void   init(MetaPopInfo *mpopi);
     bool   whitelist_filter(size_t locus_id);
     bool   blacklist_filter(size_t locus_id);
+    void   whitelist_snp_filter(LocBin& loc) const;
     bool   apply_filters_stacks(LocBin& loc, ostream& log_fh, const MetaPopInfo& mpopi);
     bool   apply_filters_external(LocBin& loc, ostream& log_fh, const MetaPopInfo& mpopi);
     bool   filter(const MetaPopInfo *mpopi, Datum **d);
+    void   filter_sites(LocBin& loc, const MetaPopInfo& mpopi, ostream &log_fh);
     void   gt_depth_filter(Datum **d, const CSLocus *cloc);
-    int    keep_single_snp(const CSLocus *cloc, const LocTally *t);
-    int    keep_random_snp(const CSLocus *cloc, const LocTally *t);
-    int    prune_sites_with_whitelist(const MetaPopInfo *mpopi, CSLocus *cloc, Datum **d, bool user_wl);
-    bool   prune_sites_with_filters(const MetaPopInfo *mpopi, CSLocus *cloc, Datum **d, LocPopSum *s, ostream &log_fh);
+    void   keep_single_snp(CSLocus* cloc, Datum** d, size_t n_samples, const LocTally* t) const;
+    void   keep_random_snp(CSLocus* cloc, Datum** d, size_t n_samples, const LocTally* t) const;
 
     size_t filtered()       const { return this->_filtered_loci; }
     size_t total()          const { return this->_total_loci; }
@@ -225,11 +222,12 @@ public:
     const map<int, set<int>>&  whitelist() { return this->_whitelist; }
 
 private:
+    static void erase_snp(CSLocus *cloc, Datum **d, size_t n_samples, size_t snp_index);
+
     size_t  _pop_cnt;
     size_t  _sample_cnt;
     size_t *_pop_order;
     size_t *_samples;
-    size_t *_pop_cnts;
     size_t *_pop_tot;
     size_t  _filtered_loci;
     size_t  _total_loci;
@@ -243,9 +241,6 @@ private:
 
     set<int>           _blacklist;
     map<int, set<int>> _whitelist;
-
-    void reset();
-    int  prune_sites(CSLocus *, Datum **, set<int> &);
 };
 
 //
