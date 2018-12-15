@@ -546,10 +546,9 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
         //
         // Check if this locus is white/blacklisted.
         //
-        if ((this->_user_supplied_whitelist && this->_loc_filter.whitelist_filter(cloc_id))
-                || this->_loc_filter.blacklist_filter(cloc_id)) {
+        if (this->_loc_filter.whitelist_filter(cloc_id)
+                || this->_loc_filter.blacklist_filter(cloc_id))
             continue;
-        }
 
         //
         // Create and populate a new catalog locus & the associated genotypes.
@@ -569,6 +568,7 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
         // Apply locus & SNP filters.
         //
         this->_dists.accumulate_pre_filtering(loc->cloc);
+        this->_loc_filter.whitelist_snp_filter(*loc);
         if (this->_loc_filter.apply_filters_stacks(*loc, log_fh, *this->_mpopi)) {
             delete loc;
             continue;
@@ -889,6 +889,57 @@ BatchLocusProcessor::report_locus_overlap(size_t& n_sites, size_t& n_multiple_si
     }
 }
 
+void
+LocusFilter::erase_snp(CSLocus *cloc, Datum **d, size_t n_samples, size_t snp_index)
+{
+    //
+    // N.B. For this to work as expected we must be iterating over cloc->snps
+    // in reverse, e.g. for(size_t i=cloc->snps.size(); i!=0;) {--i; ...}
+    // because we're making vector::erase() calls.
+    //
+    // Prune out the given SNP. We need to update:
+    // * `Locus::snps`
+    // * `Locus::alleles`
+    // * `Datum::model`
+    // * `Datum::snpdata`
+    // * `Datum::obshap`
+    //
+
+    // Update the Datums.
+    uint col = cloc->snps[snp_index]->col;
+    for (size_t s=0; s<n_samples; ++s) {
+        if (d[s] == NULL)
+            continue;
+        assert(d[s]->model);
+        assert(!d[s]->obshap.empty() && strlen(d[s]->obshap[0]) == cloc->snps.size());
+        assert(d[s]->snpdata.size() == cloc->snps.size());
+        // Correct the model calls.
+        char& m = d[s]->model[col];
+        assert(m == 'O' || m == 'E' || m == 'U');
+        if (m == 'E' || (m == 'O' && d[s]->obshap[0][snp_index] != cloc->con[col]))
+            m = 'U';
+        // Erase the nucleotide in the haplotypes.
+        for (char* hap : d[s]->obshap) {
+            hap += snp_index;
+            while(*hap) {
+                *hap = *(hap+1);
+                ++hap;
+            }
+        }
+        // Splice the depths.
+        d[s]->snpdata.erase(d[s]->snpdata.begin() + snp_index);
+    }
+
+    // Update the CSLocus.
+    delete cloc->snps[snp_index];
+    cloc->snps.erase(cloc->snps.begin() + snp_index);
+    // Splice the haplotypes. (Why does this have to be a map?!)
+    vector<pair<string,int>> alleles (cloc->alleles.begin(), cloc->alleles.end());
+    cloc->alleles.clear();
+    for (pair<string,int>& allele : alleles)
+        allele.first.erase(snp_index, 1);
+    cloc->alleles.insert(std::make_move_iterator(alleles.begin()), std::make_move_iterator(alleles.end()));
+}
 
 void
 LocusFilter::batch_clear()
@@ -933,13 +984,13 @@ LocusFilter::keep_locus(LocBin *loc)
 bool
 LocusFilter::whitelist_filter(size_t locus_id)
 {
-    if (this->_whitelist.count(locus_id))
+    if (this->_whitelist.empty() || this->_whitelist.count(locus_id)) {
         return false;
-
-    this->_filtered_loci++;
-    this->_batch_filtered_loci++;
-
-    return true;
+    } else {
+        this->_filtered_loci++;
+        this->_batch_filtered_loci++;
+        return true;
+    }
 }
 
 bool
@@ -949,13 +1000,32 @@ LocusFilter::blacklist_filter(size_t locus_id)
         this->_filtered_loci++;
         this->_batch_filtered_loci++;
         return true;
+    } else {
+        return false;
     }
+}
 
-    return false;
+void
+LocusFilter::whitelist_snp_filter(LocBin& loc) const
+{
+    if (this->_whitelist.empty())
+        return;
+    CSLocus* cloc = loc.cloc;
+    assert(this->_whitelist.count(cloc->id));
+    const set<int>& snp_wl = this->_whitelist.at(cloc->id);
+    if (snp_wl.empty())
+        // Accept any SNP.
+        return;
+    for(size_t i=cloc->snps.size(); i!=0;) {
+        --i;
+        if (!snp_wl.count(cloc->snps[i]->col))
+            erase_snp(cloc, loc.d, loc.sample_cnt, i);
+    }
 }
 
 bool
-LocusFilter::apply_filters_stacks(LocBin& loc, ostream& log_fh, const MetaPopInfo& mpopi) {
+LocusFilter::apply_filters_stacks(LocBin& loc, ostream& log_fh, const MetaPopInfo& mpopi)
+{
     //
     // Apply the -r/-p thresholds.
     //
@@ -964,121 +1034,81 @@ LocusFilter::apply_filters_stacks(LocBin& loc, ostream& log_fh, const MetaPopInf
 
     //
     // Filter genotypes for depth.
+    // TODO: Shouldn't this be before -r/-p? And shouldn't this appear in external filters  as well?
     //
     this->gt_depth_filter(loc.d, loc.cloc);
 
     //
-    // Create the PopSum object and compute the summary statistics for this locus.
-    //
-    loc.s = new LocPopSum(strlen(loc.cloc->con), mpopi);
-    loc.s->sum_pops(loc.cloc, loc.d, mpopi, verbose, cout);
-    loc.s->tally_metapop(loc.cloc);
-
-    //
     // Identify individual SNPs that are below the -r threshold or the minor allele
     // frequency threshold (-a). In these cases we will remove the SNP, but keep the locus.
-    // If all SNPs are filtered, delete the locus.
     //
-    if (this->prune_sites_with_filters(&mpopi, loc.cloc, loc.d, loc.s, log_fh))
-        return true;
+    loc.s = new LocPopSum(strlen(loc.cloc->con), mpopi);
+    this->filter_sites(loc, mpopi, log_fh);
 
     //
     // If write_single_snp or write_random_snp has been specified, mark sites to be pruned using the whitelist.
     //
     if (write_single_snp)
-        this->keep_single_snp(loc.cloc, loc.s->meta_pop());
+        this->keep_single_snp(loc.cloc, loc.d, mpopi.n_samples(), loc.s->meta_pop());
     else if (write_random_snp)
-        this->keep_random_snp(loc.cloc, loc.s->meta_pop());
-    //
-    // Prune the sites according to the whitelist.
-    //
-    this->prune_sites_with_whitelist(&mpopi, loc.cloc, loc.d, true); // FIXME: this->_user_supplied_whitelist);
+        this->keep_random_snp(loc.cloc, loc.d, mpopi.n_samples(), loc.s->meta_pop());
 
     //
     // Regenerate summary statistics after pruning SNPs.
     //
     loc.s->sum_pops(loc.cloc, loc.d, mpopi, verbose, cout);
     loc.s->tally_metapop(loc.cloc);
-
     return false;
 }
 
 bool
-LocusFilter::apply_filters_external(LocBin& loc, ostream& log_fh, const MetaPopInfo& mpopi) {
+LocusFilter::apply_filters_external(LocBin& loc, ostream& log_fh, const MetaPopInfo& mpopi)
+{
+    //
+    // Apply the -r/-p thresholds.
+    //
     if (this->filter(&mpopi, loc.d))
         return true;
 
     //
-    // Create the PopSum object and compute the summary statistics for this locus.
-    //
-    loc.s = new LocPopSum(strlen(loc.cloc->con), mpopi);
-    loc.s->sum_pops(loc.cloc, loc.d, mpopi, verbose, cout);
-    loc.s->tally_metapop(loc.cloc);
-
-    //
     // Identify individual SNPs that are below the -r threshold or the minor allele
     // frequency threshold (-a). In these cases we will remove the SNP, but keep the locus.
-    // If all SNPs are filtered, delete the locus.
     //
-    if (this->prune_sites_with_filters(&mpopi, loc.cloc, loc.d, loc.s, log_fh))
-        return true;
+    loc.s = new LocPopSum(strlen(loc.cloc->con), mpopi);
+    this->filter_sites(loc, mpopi, log_fh);
 
+    loc.s->sum_pops(loc.cloc, loc.d, mpopi, verbose, cout);
+    loc.s->tally_metapop(loc.cloc);
     return false;
 }
 
 bool
 LocusFilter::filter(const MetaPopInfo *mpopi, Datum **d)
 {
-    this->reset();
-
-    //
-    // Tally up the count of samples in this population.
-    //
-    for (size_t i = 0; i < this->_sample_cnt; i++) {
-        if (d[i] != NULL)
-            this->_pop_cnts[this->_samples[i]]++;
-    }
-
-    //
-    // Check that the counts for each population are over sample_limit. If not, zero out
-    // the members of that population.
-    //
-    double pct = 0.0;
-
-    for (uint i = 0; i < this->_pop_cnt; i++) {
-        const Pop& pop = mpopi->pops()[this->_pop_order[i]];
-
-        pct = (double) this->_pop_cnts[i] / (double) this->_pop_tot[i];
-
-        if (this->_pop_cnts[i] > 0 && pct < sample_limit) {
-            for (uint j = pop.first_sample; j <= pop.last_sample; j++) {
-                if (d[j] != NULL) {
-                    delete d[j];
-                    d[j] = NULL;
-                    // loc->hcnt--;
+    size_t n_pops_present = 0;
+    for (const Pop& pop : mpopi->pops()) {
+        size_t n_samples_present = 0;
+        for (size_t s=pop.first_sample; s<=pop.last_sample; ++s)
+            if (d[s] != NULL)
+                ++n_samples_present;
+        if ((double) n_samples_present / pop.n_samples() >= sample_limit) {
+            ++n_pops_present;
+        } else {
+            // Remove all samples of that population.
+            for (size_t s=pop.first_sample; s<=pop.last_sample; ++s) {
+                if (d[s] != NULL) {
+                    delete d[s];
+                    d[s] = NULL;
                 }
             }
-            this->_pop_cnts[i] = 0;
         }
     }
-
-    //
-    // Check that this locus is present in enough populations.
-    //
-    bool pop_limit = false;
-    int  pops      = 0;
-
-    for (uint i = 0; i < this->_pop_cnt; i++)
-        if (this->_pop_cnts[i] > 0) pops++;
-    if (pops < population_limit)
-        pop_limit = true;
-
-    if (pop_limit) {
+    if (n_pops_present < population_limit) {
         this->_filtered_loci++;
         this->_batch_filtered_loci++;
+        return true;
     }
-
-    return pop_limit;
+    return false;
 }
 
 void
@@ -1120,14 +1150,11 @@ LocusFilter::init(MetaPopInfo *mpopi)
         delete [] this->_pop_order;
     if (this->_samples != NULL)
         delete [] this->_samples;
-    if (this->_pop_cnts != NULL)
-        delete [] this->_pop_cnts;
     if (this->_pop_tot != NULL)
         delete [] this->_pop_tot;
 
     this->_pop_order  = new size_t [this->_pop_cnt];
     this->_samples    = new size_t [this->_sample_cnt];
-    this->_pop_cnts   = new size_t [this->_pop_cnt];
     this->_pop_tot    = new size_t [this->_pop_cnt];
 
     this->_filtered_loci  = 0;
@@ -1151,241 +1178,96 @@ LocusFilter::init(MetaPopInfo *mpopi)
 }
 
 void
-LocusFilter::reset()
+LocusFilter::keep_single_snp(CSLocus* cloc, Datum** d, size_t n_samples, const LocTally* t) const
 {
-    memset(this->_pop_cnts, 0, this->_pop_cnt * sizeof(size_t));
-}
-
-int
-LocusFilter::keep_single_snp(const CSLocus *cloc, const LocTally *t)
-{
-    set<int> new_wl;
-
-    //
-    // If this locus is not in the whitelist, or it is in the whitelist but no specific
-    // SNPs are specified in the whitelist for this locus -- so all SNPs are included,
-    // choose the first variant.
-    //
-    if (this->_whitelist.count(cloc->id) == 0 || this->_whitelist[cloc->id].size() == 0) {
-        for (uint i = 0; i < cloc->snps.size(); i++)
-            if (t->nucs[cloc->snps[i]->col].fixed == false) {
-                new_wl.insert(cloc->snps[i]->col);
-                break;
-            }
-
-    } else {
-        //
-        // Otherwise, choose the first SNP that is already in the whitelist.
-        //
-        for (uint i = 0; i < cloc->snps.size(); i++) {
-            if (this->_whitelist[cloc->id].count(cloc->snps[i]->col) == 0 ||
-                t->nucs[cloc->snps[i]->col].fixed == true)
-                continue;
-            new_wl.insert(cloc->snps[i]->col);
+    size_t kept_snp = 0;;
+    while (kept_snp != cloc->snps.size())
+        if (!t->nucs[cloc->snps[kept_snp]->col].fixed)
             break;
-        }
+    for (size_t snp=cloc->snps.size(); snp!=0;) {
+        --snp;
+        if (snp != kept_snp)
+            erase_snp(cloc, d, n_samples, snp);
     }
-
-    this->_whitelist[cloc->id] = new_wl;
-
-    return 0;
 }
 
-int
-LocusFilter::keep_random_snp(const CSLocus *cloc, const LocTally *t)
+void
+LocusFilter::keep_random_snp(CSLocus* cloc, Datum** d, size_t n_samples, const LocTally* t) const
 {
-    set<int> new_wl, seen;
-    int      index;
-
-    if (this->_whitelist.count(cloc->id) == 0 && cloc->snps.size() == 0) {
-        this->_whitelist[cloc->id] = new_wl;
-        return 0;
-    }
-
-    //
-    // If no specific SNPs are specified in the whitelist for this locus,
-    // then all SNPs are included, choose a random variant.
-    //
-    if (this->_whitelist.count(cloc->id) == 0  || this->_whitelist[cloc->id].size() == 0) {
-        do {
-            index = rand() % cloc->snps.size();
-            seen.insert(index);
-        }  while (t->nucs[cloc->snps[index]->col].fixed == true && seen.size() < cloc->snps.size());
-
-        if (t->nucs[cloc->snps[index]->col].fixed == false)
-            new_wl.insert(cloc->snps[index]->col);
-
-    } else {
-        //
-        // Otherwise, choose a SNP that is already in the whitelist randomly.
-        //
-        do {
-            index = rand() % cloc->snps.size();
-            seen.insert(index);
-        } while (this->_whitelist.count(cloc->snps[index]->col) == 0 && seen.size() < cloc->snps.size());
-
-        if (t->nucs[cloc->snps[index]->col].fixed == false)
-            new_wl.insert(cloc->snps[index]->col);
-    }
-
-    this->_whitelist[cloc->id] = new_wl;
-
-    return 0;
-}
-
-int
-LocusFilter::prune_sites_with_whitelist(const MetaPopInfo *mpopi, CSLocus *cloc, Datum ** d, bool user_wl)
-{
-    if (user_wl == false && write_single_snp == false && write_random_snp == false)
-        return 0;
-
-    assert(this->_whitelist.count(cloc->id));
-
-    //
-    // When a user whitelist is not supplied but write_single_snp or write_random_snp is,
-    // there can be homozygous loci that end up in the whitelist.
-    //
-    if (cloc->snps.size() == 0)
-        return 0;
-
-    if (user_wl == true && this->_whitelist[cloc->id].size() == 0)
-        for (uint i = 0; i < cloc->snps.size(); i++)
-            this->_whitelist[cloc->id].insert(cloc->snps[i]->col);
-
-    prune_sites(cloc, d, this->_whitelist[cloc->id]);
-
-    return 0;
-}
-
-int
-LocusFilter::prune_sites(CSLocus *cloc, Datum **d, set<int> &keep)
-{
-    //
-    // Prune out SNP objects that are not in the whitelist.
-    // We need to update:
-    // * `Locus::snps`
-    // * `Locus::alleles`
-    // * `Datum::model`
-    // * `Datum::snpdata`
-    // * `Datum::obshap`
-    //
-
-    size_t n_snps = cloc->snps.size();
-    vector<pair<size_t,size_t>> rm;
-    for (size_t snp_i = n_snps; snp_i > 0;) {
+    size_t n_actual_snps = 0;
+    for (const SNP* snp : cloc->snps)
+        if (!t->nucs[snp->col].fixed)
+            ++n_actual_snps;
+    if (n_actual_snps == 0)
+        return;
+    size_t kept_snp_i;
+    do {
+        kept_snp_i = rand() % cloc->snps.size();
+    } while (!t->nucs[cloc->snps[kept_snp_i]->col].fixed);
+    for (auto snp_i=cloc->snps.size(); snp_i!=0; ) {
         --snp_i;
-        if (!keep.count(cloc->snps[snp_i]->col)) {
-            rm.push_back({snp_i, cloc->snps[snp_i]->col});
-            delete cloc->snps[snp_i];
-            cloc->snps.erase(cloc->snps.begin() + snp_i);
-        }
+        if (snp_i != kept_snp_i)
+            erase_snp(cloc, d, n_samples, snp_i);
     }
-
-    // Correct the Datums.
-    for (size_t s=0; s<this->_sample_cnt; ++s) {
-        if (d[s] == NULL)
-            continue;
-        assert(d[s]->model);
-        assert(!d[s]->obshap.empty() && strlen(d[s]->obshap[0]) == n_snps);
-        assert(d[s]->snpdata.size() == n_snps);
-
-        for (pair<size_t,size_t> snp : rm) {
-            // Correct the model calls.
-            char& m = d[s]->model[snp.second];
-            assert(m == 'O' || m == 'E' || m == 'U');
-            if (m == 'E' || (m == 'O' && d[s]->obshap[0][snp.first] != cloc->con[snp.second]))
-                m = 'U';
-
-            // Splice the Datum haplotypes.
-            for (char* hap : d[s]->obshap) {
-                hap += snp.first;
-                while(*hap) {
-                    *hap = *(hap+1);
-                    ++hap;
-                }
-            }
-
-            // Splice the depths.
-            d[s]->snpdata.erase(d[s]->snpdata.begin() + snp.first);
-        }
-    }
-
-    // Splice the Locus haplotypes.
-    vector<pair<string,int>> alleles (cloc->alleles.begin(), cloc->alleles.end());
-    for (pair<string,int>& allele : alleles)
-        for (pair<size_t,size_t> snp : rm)
-            allele.first.erase(snp.first, 1);
-    cloc->alleles.clear();
-    cloc->alleles.insert(std::make_move_iterator(alleles.begin()), std::make_move_iterator(alleles.end()));
-
-    return 0;
 }
 
-bool
-LocusFilter::prune_sites_with_filters(const MetaPopInfo *mpopi, CSLocus *cloc, Datum **d, LocPopSum *s, ostream &log_fh)
+void
+LocusFilter::filter_sites(LocBin& loc, const MetaPopInfo& mpopi, ostream &log_fh)
 {
-    set<int>    site_list;
-    vector<int> pop_prune_list;
-    bool        sample_prune, maf_prune, het_prune, inc_prune;
+    assert(loc.s != NULL);
+    CSLocus* cloc = loc.cloc;
+    Datum** d = loc.d;
+    LocPopSum* s = loc.s;
 
     //
     // If this locus is fixed, ignore it.
     //
     if (cloc->snps.size() == 0)
-        return false;
+        return;
 
-    const LocSum   *sum;
-    const LocTally *t;
+    // Tally individuals.
+    loc.s->sum_pops(loc.cloc, loc.d, mpopi, verbose, cout);
+    loc.s->tally_metapop(loc.cloc);
+    const LocTally *t = s->meta_pop();
 
-    t = s->meta_pop();
-    for (uint i = 0; i < cloc->snps.size(); i++) {
-        NucTally& nuct = t->nucs[cloc->snps[i]->col];
+    vector<int> pop_prune_list;
+    for (uint i = cloc->snps.size(); i>0;) { // Must be reverse because we `erase()` things.
+        --i;
+        uint col = cloc->snps[i]->col;
+        bool sample_prune = false;
+        bool maf_prune    = false;
+        bool het_prune    = false;
+        bool inc_prune    = false;
+        pop_prune_list.clear();
+
         //
         // If the site is fixed, ignore it.
         //
-        if (t->nucs[cloc->snps[i]->col].fixed == true)
+        NucTally& nuct = t->nucs[col];
+        if (t->nucs[col].fixed == true)
             continue;
 
-        sample_prune = false;
-        maf_prune    = false;
-        het_prune    = false;
-        inc_prune    = false;
-        pop_prune_list.clear();
-
+        size_t n_pruned_pops = 0;
         for (size_t p = 0; p < s->pop_cnt(); ++p) {
-            sum = s->per_pop(p);
-
-            if (sum->nucs[cloc->snps[i]->col].incompatible_site)
+            const LocSum* sum = s->per_pop(p);
+            if (sum->nucs[col].incompatible_site) {
                 inc_prune = true;
-
-            else if (sum->nucs[cloc->snps[i]->col].num_indv == 0 ||
-                     (double) sum->nucs[cloc->snps[i]->col].num_indv / (double) this->_pop_tot[p] < sample_limit)
-                pop_prune_list.push_back(p);
-        }
-
-        //
-        // Check how many populations have to be pruned out due to sample limit. If less than
-        // population limit, prune them; if more than population limit, mark locus for deletion.
-        //
-        if ((mpopi->pops().size() - pop_prune_list.size()) < (uint) population_limit) {
-            sample_prune = true;
-        } else {
-            for (size_t p : pop_prune_list) {
-                if (s->per_pop(p)->nucs[cloc->snps[i]->col].num_indv == 0)
-                    continue;
-
-                const Pop& pop = mpopi->pops()[p];
+            } else if ((double) sum->nucs[col].num_indv / this->_pop_tot[p] < sample_limit) {
+                ++n_pruned_pops;
+                const Pop& pop = mpopi.pops()[p];
                 for (uint k = pop.first_sample; k <= pop.last_sample; k++) {
-                    if (d[k] == NULL || cloc->snps[i]->col >= (uint) d[k]->len)
+                    if (d[k] == NULL || col >= (uint) d[k]->len)
                         continue;
                     if (d[k]->model != NULL) {
-                        d[k]->model[cloc->snps[i]->col] = 'U';
+                        d[k]->model[col] = 'U';
                     }
                 }
             }
         }
+        if (mpopi.pops().size() - n_pruned_pops < (uint) population_limit)
+            sample_prune = true;
 
-        if (t->nucs[cloc->snps[i]->col].allele_cnt > 1) {
+        if (t->nucs[col].allele_cnt > 1) {
             //
             // Test for minor allele frequency.
             //
@@ -1395,21 +1277,18 @@ LocusFilter::prune_sites_with_filters(const MetaPopInfo *mpopi, CSLocus *cloc, D
             //
             // Test for observed heterozygosity.
             //
-            if (t->nucs[cloc->snps[i]->col].obs_het > max_obs_het)
+            if (t->nucs[col].obs_het > max_obs_het)
                 het_prune = true;
         }
 
-        if (maf_prune == false && het_prune == false && sample_prune == false && inc_prune == false) {
-            site_list.insert(cloc->snps[i]->col);
-        } else {
+        if (maf_prune || het_prune || sample_prune || inc_prune) {
             this->_filtered_sites++;
-
             if (verbose) {
                 log_fh << "pruned_polymorphic_site\t"
                        << cloc->id << "\t"
                        << cloc->loc.chr() << "\t"
-                       << cloc->sort_bp(cloc->snps[i]->col) +1 << "\t"
-                       << cloc->snps[i]->col << "\t";
+                       << cloc->sort_bp(col) +1 << "\t"
+                       << col << "\t";
                 if (inc_prune)
                     log_fh << "incompatible_site\n";
                 else if (sample_prune)
@@ -1419,21 +1298,11 @@ LocusFilter::prune_sites_with_filters(const MetaPopInfo *mpopi, CSLocus *cloc, D
                 else if (het_prune)
                     log_fh << "obshet_limit\n";
                 else
-                    log_fh << "unknown_reason\n";
+                    DOES_NOT_HAPPEN;
             }
+            this->erase_snp(cloc, d, mpopi.n_samples(), i);
         }
     }
-
-    //
-    // Remove the filtered sites from this locus.
-    //
-    // (Note: Initially loci with "no_snps_remaining" would get filtered out;
-    // then the condition changed to all loci without SNPs regardless of whether
-    // they initially had SNPs; and now we don't remove loci anymore.)
-    //
-    this->prune_sites(cloc, d, site_list);
-
-    return false;
 }
 
 int
@@ -3555,8 +3424,9 @@ LocusFilter::load_whitelist(string path)
     uint col;
     char *e;
 
-    uint line_num = 1;
+    uint line_num = 0;
     while (fh.getline(line, id_len)) {
+        ++line_num;
 
         //
         // Skip blank & commented lines ; correct windows-style line ends.
@@ -3585,39 +3455,26 @@ LocusFilter::load_whitelist(string path)
         if (parts.size() > 2) {
             cerr << "Error: Too many columns in whitelist " << path << "' at line " << line_num << "\n";
             exit(1);
-
-        } else if (parts.size() == 2) {
-            int marker = (int) strtol(parts[0].c_str(), &e, 10);
-            if (*e != '\0') {
-                cerr << "Error: Unable to parse whitelist, '" << path << "' at line " << line_num << "\n";
-                exit(1);
-            }
+        }
+        int marker = (int) strtol(parts[0].c_str(), &e, 10);
+        if (*e != '\0') {
+            cerr << "Error: Unable to parse whitelist, '" << path << "' at line " << line_num << "\n";
+            exit(1);
+        }
+        this->_whitelist[marker];
+        if (parts.size() == 2) {
             col = (int) strtol(parts[1].c_str(), &e, 10);
             if (*e != '\0') {
                 cerr << "Error: Unable to parse whitelist, '" << path << "' at line " << line_num << "\n";
                 exit(1);
             }
             this->_whitelist[marker].insert(col);
-
-        } else {
-            int marker = (int) strtol(parts[0].c_str(), &e, 10);
-            if (*e != '\0') {
-                cerr << "Error: Unable to parse whitelist, '" << path << "' at line " << line_num << "\n";
-                exit(1);
-            }
-            this->_whitelist.insert(make_pair(marker, set<int>()));
         }
-
-        line_num++;
     }
-
-    fh.close();
-
     if (this->_whitelist.size() == 0) {
         cerr << "Error: Unable to load any markers from '" << path << "'\n";
         help();
     }
-
     return (int) this->_whitelist.size();
 }
 

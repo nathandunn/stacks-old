@@ -23,6 +23,7 @@ struct Pop {
     size_t group;
 
     Pop(const string& n) : name(n), first_sample(SIZE_MAX), last_sample(SIZE_MAX), group(SIZE_MAX) {}
+    size_t n_samples() const {return last_sample - first_sample + 1;}
     static const string default_name;
 };
 
