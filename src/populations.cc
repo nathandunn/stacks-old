@@ -44,6 +44,7 @@ string    wl_file;
 string    bs_wl_file;
 string    enz;
 double    sigma             = 150000.0;
+double    min_samples_overall   = 0.0;
 double    min_samples_per_pop   = 0.0;
 int       min_populations       = 1;
 int       batch_size        = 10000;
@@ -1085,6 +1086,7 @@ LocusFilter::apply_filters_external(LocBin& loc, ostream& log_fh, const MetaPopI
 bool
 LocusFilter::filter(const MetaPopInfo *mpopi, Datum **d)
 {
+    // Filter out populations that don't have enough samples.
     size_t n_pops_present = 0;
     for (const Pop& pop : mpopi->pops()) {
         size_t n_samples_present = 0;
@@ -1103,7 +1105,15 @@ LocusFilter::filter(const MetaPopInfo *mpopi, Datum **d)
             }
         }
     }
-    if (n_pops_present < min_populations) {
+    // Check the number of (remaining) samples.
+    size_t n_samples_present = 0;
+    for (size_t s=0; s<mpopi->n_samples(); ++s)
+        if (d[s] != NULL)
+            ++n_samples_present;
+    // Determine if the locus is to be kept.
+    if (n_pops_present < min_populations
+        || (double) n_samples_present / mpopi->n_samples() < min_samples_overall)
+    {
         this->_filtered_loci++;
         this->_batch_filtered_loci++;
         return true;
@@ -3635,6 +3645,7 @@ parse_command_line(int argc, char* argv[])
             {"v1",             no_argument,       NULL, 2000},
             {"out-path",       required_argument, NULL, 'O'}, {"out_path",       required_argument, NULL, 'O'},
             {"in-vcf",         required_argument, NULL, 'V'}, {"in_vcf",         required_argument, NULL, 'V'},
+            {"min-samples-overall", required_argument, NULL, 'R'},
             {"min-samples-per-pop", required_argument, NULL, 'r'}, {"progeny", required_argument, NULL, 'r'},
             {"min-populations",   required_argument, NULL, 'p'}, {"min_populations",   required_argument, NULL, 'p'},
             {"renz",           required_argument, NULL, 'e'},
@@ -3759,6 +3770,21 @@ parse_command_line(int argc, char* argv[])
                 min_samples_per_pop /= 100.0;
             if (min_samples_per_pop < 0.0 || min_samples_per_pop > 1.0) {
                 cerr << "Error: Invalid value for --min-samples-per-pop, \""
+                     << optarg << "\"\n";
+                help();
+            }
+            break;
+        case 'R':
+            min_samples_overall = stod(optarg);
+            if (!std::isfinite(min_samples_overall)) {
+                cerr << "Error: Invalid value for --min-samples-overall, \""
+                     << optarg << "\"\n";
+                help();
+            }
+            if (min_samples_overall > 1.0)
+                min_samples_overall /= 100.0;
+            if (min_samples_overall < 0.0 || min_samples_overall > 1.0) {
+                cerr << "Error: Invalid value for --min-samples-overall, \""
                      << optarg << "\"\n";
                 help();
             }
@@ -4068,6 +4094,7 @@ void help() {
          << "                      per batch). Increase to speed analysis, uses more memory, decrease to save memory).\n"
          << "\n"
          << "Data Filtering:\n"
+         << "  -R/--min-samples-overall [float]: minimum percentage of individuals across populations required to process a locus.\n"
          << "  -p/--min-populations [int]: minimum number of populations a locus must be present in to process a locus.\n"
          << "  -r/--min-samples-per-pop [float]: minimum percentage of individuals in a population required to process a locus for that population.\n"
          << "  --min-maf [float]: specify a minimum minor allele frequency required to process a SNP (0 < min_maf < 0.5).\n"
