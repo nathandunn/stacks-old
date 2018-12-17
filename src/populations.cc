@@ -44,8 +44,8 @@ string    wl_file;
 string    bs_wl_file;
 string    enz;
 double    sigma             = 150000.0;
-double    sample_limit      = 0.0;
-int       population_limit  = 1;
+double    min_samples_per_pop   = 0.0;
+int       min_populations       = 1;
 int       batch_size        = 10000;
 bool      calc_fstats       = false;
 bool      calc_hwp          = false;
@@ -166,11 +166,11 @@ try {
     //
     mpopi.status(cout);
 
-    if (size_t(population_limit) > mpopi.pops().size()) {
-        cout << "Notice: Population limit (" << population_limit << ")"
+    if (size_t(min_populations) > mpopi.pops().size()) {
+        cout << "Notice: Population limit (" << min_populations << ")"
              << " larger than number of popualtions present, adjusting parameter to "
              << mpopi.pops().size() << "\n";
-        population_limit = mpopi.pops().size();
+        min_populations = mpopi.pops().size();
     }
 
     //
@@ -1091,7 +1091,7 @@ LocusFilter::filter(const MetaPopInfo *mpopi, Datum **d)
         for (size_t s=pop.first_sample; s<=pop.last_sample; ++s)
             if (d[s] != NULL)
                 ++n_samples_present;
-        if ((double) n_samples_present / pop.n_samples() >= sample_limit) {
+        if ((double) n_samples_present / pop.n_samples() >= min_samples_per_pop) {
             ++n_pops_present;
         } else {
             // Remove all samples of that population.
@@ -1103,7 +1103,7 @@ LocusFilter::filter(const MetaPopInfo *mpopi, Datum **d)
             }
         }
     }
-    if (n_pops_present < population_limit) {
+    if (n_pops_present < min_populations) {
         this->_filtered_loci++;
         this->_batch_filtered_loci++;
         return true;
@@ -1252,7 +1252,7 @@ LocusFilter::filter_sites(LocBin& loc, const MetaPopInfo& mpopi, ostream &log_fh
             const LocSum* sum = s->per_pop(p);
             if (sum->nucs[col].incompatible_site) {
                 inc_prune = true;
-            } else if ((double) sum->nucs[col].num_indv / this->_pop_tot[p] < sample_limit) {
+            } else if ((double) sum->nucs[col].num_indv / this->_pop_tot[p] < min_samples_per_pop) {
                 ++n_pruned_pops;
                 const Pop& pop = mpopi.pops()[p];
                 for (uint k = pop.first_sample; k <= pop.last_sample; k++) {
@@ -1264,7 +1264,7 @@ LocusFilter::filter_sites(LocBin& loc, const MetaPopInfo& mpopi, ostream &log_fh
                 }
             }
         }
-        if (mpopi.pops().size() - n_pruned_pops < (uint) population_limit)
+        if (mpopi.pops().size() - n_pruned_pops < (uint) min_populations)
             sample_prune = true;
 
         if (t->nucs[col].allele_cnt > 1) {
@@ -1292,7 +1292,7 @@ LocusFilter::filter_sites(LocBin& loc, const MetaPopInfo& mpopi, ostream &log_fh
                 if (inc_prune)
                     log_fh << "incompatible_site\n";
                 else if (sample_prune)
-                    log_fh << "sample_limit\n";
+                    log_fh << "min_samples_per_pop\n";
                 else if (maf_prune)
                     log_fh << "maf_limit\n";
                 else if (het_prune)
@@ -3570,8 +3570,8 @@ output_parameters(ostream &fh)
     if (input_mode == InputMode::vcf)
         fh << "  Input mode: VCF\n";
     fh
-        << "  Percent samples limit per population: " << sample_limit << "\n"
-        << "  Locus Population limit: " << population_limit << "\n"
+        << "  Percent samples limit per population: " << min_samples_per_pop << "\n"
+        << "  Locus Population limit: " << min_populations << "\n"
         << "  Minor allele frequency cutoff: " << minor_allele_freq << "\n"
         << "  Maximum observed heterozygosity cutoff: " << max_obs_het << "\n"
         << "  Applying Fst correction: ";
@@ -3635,7 +3635,8 @@ parse_command_line(int argc, char* argv[])
             {"v1",             no_argument,       NULL, 2000},
             {"out-path",       required_argument, NULL, 'O'}, {"out_path",       required_argument, NULL, 'O'},
             {"in-vcf",         required_argument, NULL, 'V'}, {"in_vcf",         required_argument, NULL, 'V'},
-            {"progeny",        required_argument, NULL, 'r'},
+            {"min-samples-per-pop", required_argument, NULL, 'r'}, {"progeny", required_argument, NULL, 'r'},
+            {"min-populations",   required_argument, NULL, 'p'}, {"min_populations",   required_argument, NULL, 'p'},
             {"renz",           required_argument, NULL, 'e'},
             {"popmap",         required_argument, NULL, 'M'},
             {"no-popmap",      no_argument,       NULL, 1017}, // Negates a previous -M/--popmap
@@ -3661,7 +3662,6 @@ parse_command_line(int argc, char* argv[])
             {"bootstrap-phist",   no_argument,       NULL, '3'}, {"bootstrap_phist",   no_argument,       NULL, '3'},
             {"bootstrap-div",     no_argument,       NULL, '4'}, {"bootstrap_div",     no_argument,       NULL, '4'},
             {"bootstrap-pifis",   no_argument,       NULL, '5'}, {"bootstrap_pifis",   no_argument,       NULL, '5'},
-            {"min-populations",   required_argument, NULL, 'p'}, {"min_populations",   required_argument, NULL, 'p'},
             {"min-maf",           required_argument, NULL, 'a'}, {"min_maf",           required_argument, NULL, 'a'},
             {"min-mac",           required_argument, NULL, 1016}, {"min_mac",           required_argument, NULL, 1016},
             {"max-obs-het",       required_argument, NULL, 1013}, {"max_obs_het",       required_argument, NULL, 1013},
@@ -3749,17 +3749,22 @@ parse_command_line(int argc, char* argv[])
             }
             break;
         case 'r':
-            sample_limit = atof(optarg);
-            if (sample_limit > 1)
-                sample_limit = sample_limit / 100;
-
-            if (sample_limit > 1.0) {
-                cerr << "Error: Unable to parse the sample limit frequency\n";
+            min_samples_per_pop = stod(optarg);
+            if (!std::isfinite(min_samples_per_pop)) {
+                cerr << "Error: Invalid value for --min-samples-per-pop, \""
+                     << optarg << "\"\n";
+                help();
+            }
+            if (min_samples_per_pop > 1.0)
+                min_samples_per_pop /= 100.0;
+            if (min_samples_per_pop < 0.0 || min_samples_per_pop > 1.0) {
+                cerr << "Error: Invalid value for --min-samples-per-pop, \""
+                     << optarg << "\"\n";
                 help();
             }
             break;
         case 'p':
-            population_limit = atoi(optarg);
+            min_populations = stoi(optarg);
             break;
         case 'k':
             smooth_popstats = true;
@@ -4063,15 +4068,16 @@ void help() {
          << "                      per batch). Increase to speed analysis, uses more memory, decrease to save memory).\n"
          << "\n"
          << "Data Filtering:\n"
-         << "  -p [int]: minimum number of populations a locus must be present in to process a locus.\n"
-         << "  -r [float]: minimum percentage of individuals in a population required to process a locus for that population.\n"
-         << "  --min-maf [float]: specify a minimum minor allele frequency required to process a nucleotide site at a locus (0 < min_maf < 0.5).\n"
-         << "  --min-mac [int]: specify a minimum minor allele count required to process a nucleotide site at a locus.\n"
-         << "  --max-obs-het [float]: specify a maximum observed heterozygosity required to process a nucleotide site at a locus.\n"
+         << "  -p/--min-populations [int]: minimum number of populations a locus must be present in to process a locus.\n"
+         << "  -r/--min-samples-per-pop [float]: minimum percentage of individuals in a population required to process a locus for that population.\n"
+         << "  --min-maf [float]: specify a minimum minor allele frequency required to process a SNP (0 < min_maf < 0.5).\n"
+         << "  --min-mac [int]: specify a minimum minor allele count required to process a SNP.\n"
+         << "  --max-obs-het [float]: specify a maximum observed heterozygosity required to process a SNP.\n"
+         << "\n"
          << "  --write-single-snp: restrict data analysis to only the first SNP per locus (implies --no-haps).\n"
          << "  --write-random-snp: restrict data analysis to one random SNP per locus (implies --no-haps).\n"
-         << "  -B: path to a file containing Blacklisted markers to be excluded from the export.\n"
-         << "  -W: path to a file containing Whitelisted markers to include in the export.\n"
+         << "  -B/--blacklist: path to a file containing Blacklisted markers to be excluded from the export.\n"
+         << "  -W/--whitelist: path to a file containing Whitelisted markers to include in the export.\n"
          << "\n"
          << "Merging and Phasing:\n"
          << "  -e,--renz: restriction enzyme name.\n"
