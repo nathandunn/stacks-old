@@ -84,7 +84,6 @@ LocPopSum::sum_pops(const CSLocus *cloc, Datum const*const* d, const MetaPopInfo
             //
             if (res < 0) {
                 s->nucs[cloc->snps[k]->col].incompatible_site = true;
-
                 incompatible_loci++;
                 if (verbose)
                     log_fh << "within_population\t"
@@ -94,6 +93,10 @@ LocPopSum::sum_pops(const CSLocus *cloc, Datum const*const* d, const MetaPopInfo
                            << cloc->sort_bp(cloc->snps[k]->col) +1 << "\t"
                            << cloc->snps[k]->col << "\t"
                            << pop.name << "\n";
+                DOES_NOT_HAPPEN;
+                // @nick 2018-12-17: I don't think this should ever happen with genotypes
+                // provided by gstacks, or generally, loaded from a VCF (as diploidy is
+                // implicit in the format).
             }
 
             snp_cols.insert(cloc->snps[k]->col);
@@ -122,16 +125,13 @@ LocPopSum::tally_fixed_pos(const CSLocus *cloc, Datum const*const* d, LocSum *s,
     s->nucs[pos].reset();
 
     for (uint i = start; i <= end; i++) {
-        if (d[i] == NULL || pos >= d[i]->len) continue;
+        if (d[i] == NULL || pos >= d[i]->len)
+            continue;
         //
         // Before counting this individual, make sure the model definitively called this
         // position as hEterozygous or hOmozygous.
         //
-        if (d[i]->model[pos] == 'E') {
-            cout << "Model: " << d[i]->model << "\n";
-            cerr << "Warning: heterozygous model call at fixed nucleotide position: "
-                 << "locus " << cloc->id << " individual " << d[i]->id << "; position: " << pos << "\n";
-        }
+        assert(d[i]->model[pos] != 'E');
         num_indv++;
         p_nuc = cloc->con[pos];
     }
