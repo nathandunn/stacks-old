@@ -167,7 +167,7 @@ class SumStat: public PopStat {
     // PopStat[1]: fis
     // PopStat[2]: HWE p-value
 public:
-    bool    incompatible_site;
+    bool    incompatible_site; // Deprecated? c.f. Note from 2018-12-17 in LocPopSum::sum_pops().
     bool    filtered_site;
     double  num_indv;
     char    p_nuc;
@@ -209,6 +209,7 @@ public:
         filtered_site     = false;
         return 0;
     }
+    ~SumStat() {assert(incompatible_site == false);} // c.f. Note from 2018-12-17 in LocPopSum::sum_pops().
 };
 
 class LocSum {
