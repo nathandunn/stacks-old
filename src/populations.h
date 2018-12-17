@@ -199,7 +199,7 @@ public:
     bool   apply_filters_stacks(LocBin& loc, ostream& log_fh, const MetaPopInfo& mpopi);
     bool   apply_filters_external(LocBin& loc, ostream& log_fh, const MetaPopInfo& mpopi);
     bool   filter(const MetaPopInfo *mpopi, Datum **d);
-    void   filter_sites(LocBin& loc, const MetaPopInfo& mpopi, ostream &log_fh);
+    void   filter_snps(LocBin& loc, const MetaPopInfo& mpopi, ostream &log_fh);
     void   gt_depth_filter(Datum **d, const CSLocus *cloc);
     void   keep_single_snp(CSLocus* cloc, Datum** d, size_t n_samples, const LocTally* t) const;
     void   keep_random_snp(CSLocus* cloc, Datum** d, size_t n_samples, const LocTally* t) const;

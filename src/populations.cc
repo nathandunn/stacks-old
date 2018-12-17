@@ -1028,14 +1028,13 @@ bool
 LocusFilter::apply_filters_stacks(LocBin& loc, ostream& log_fh, const MetaPopInfo& mpopi)
 {
     //
-    // Apply the -r/-p thresholds.
+    // Apply the -r/-p thresholds at the locus level.
     //
     if (this->filter(&mpopi, loc.d))
         return true;
 
     //
     // Filter genotypes for depth.
-    // TODO: Shouldn't this be before -r/-p? And shouldn't this appear in external filters  as well?
     //
     this->gt_depth_filter(loc.d, loc.cloc);
 
@@ -1044,7 +1043,7 @@ LocusFilter::apply_filters_stacks(LocBin& loc, ostream& log_fh, const MetaPopInf
     // frequency threshold (-a). In these cases we will remove the SNP, but keep the locus.
     //
     loc.s = new LocPopSum(strlen(loc.cloc->con), mpopi);
-    this->filter_sites(loc, mpopi, log_fh);
+    this->filter_snps(loc, mpopi, log_fh);
 
     //
     // If write_single_snp or write_random_snp has been specified, mark sites to be pruned using the whitelist.
@@ -1066,7 +1065,7 @@ bool
 LocusFilter::apply_filters_external(LocBin& loc, ostream& log_fh, const MetaPopInfo& mpopi)
 {
     //
-    // Apply the -r/-p thresholds.
+    // Apply the -r/-p thresholds at the locus level.
     //
     if (this->filter(&mpopi, loc.d))
         return true;
@@ -1076,7 +1075,7 @@ LocusFilter::apply_filters_external(LocBin& loc, ostream& log_fh, const MetaPopI
     // frequency threshold (-a). In these cases we will remove the SNP, but keep the locus.
     //
     loc.s = new LocPopSum(strlen(loc.cloc->con), mpopi);
-    this->filter_sites(loc, mpopi, log_fh);
+    this->filter_snps(loc, mpopi, log_fh);
 
     loc.s->sum_pops(loc.cloc, loc.d, mpopi, verbose, cout);
     loc.s->tally_metapop(loc.cloc);
@@ -1222,7 +1221,7 @@ LocusFilter::keep_random_snp(CSLocus* cloc, Datum** d, size_t n_samples, const L
 }
 
 void
-LocusFilter::filter_sites(LocBin& loc, const MetaPopInfo& mpopi, ostream &log_fh)
+LocusFilter::filter_snps(LocBin& loc, const MetaPopInfo& mpopi, ostream &log_fh)
 {
     assert(loc.s != NULL);
     CSLocus* cloc = loc.cloc;
@@ -1247,7 +1246,6 @@ LocusFilter::filter_sites(LocBin& loc, const MetaPopInfo& mpopi, ostream &log_fh
         bool sample_prune = false;
         bool maf_prune    = false;
         bool het_prune    = false;
-        bool inc_prune    = false;
         pop_prune_list.clear();
 
         //
@@ -1261,7 +1259,7 @@ LocusFilter::filter_sites(LocBin& loc, const MetaPopInfo& mpopi, ostream &log_fh
         for (size_t p = 0; p < s->pop_cnt(); ++p) {
             const LocSum* sum = s->per_pop(p);
             if (sum->nucs[col].incompatible_site) {
-                inc_prune = true;
+                DOES_NOT_HAPPEN;
             } else if ((double) sum->nucs[col].num_indv / this->_pop_tot[p] < min_samples_per_pop) {
                 ++n_pruned_pops;
                 const Pop& pop = mpopi.pops()[p];
@@ -1291,7 +1289,7 @@ LocusFilter::filter_sites(LocBin& loc, const MetaPopInfo& mpopi, ostream &log_fh
                 het_prune = true;
         }
 
-        if (maf_prune || het_prune || sample_prune || inc_prune) {
+        if (maf_prune || het_prune || sample_prune) {
             this->_filtered_sites++;
             if (verbose) {
                 log_fh << "pruned_polymorphic_site\t"
@@ -1299,9 +1297,7 @@ LocusFilter::filter_sites(LocBin& loc, const MetaPopInfo& mpopi, ostream &log_fh
                        << cloc->loc.chr() << "\t"
                        << cloc->sort_bp(col) +1 << "\t"
                        << col << "\t";
-                if (inc_prune)
-                    log_fh << "incompatible_site\n";
-                else if (sample_prune)
+                if (sample_prune)
                     log_fh << "min_samples_per_pop\n";
                 else if (maf_prune)
                     log_fh << "maf_limit\n";
