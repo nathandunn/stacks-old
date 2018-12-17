@@ -47,6 +47,7 @@ double    sigma             = 150000.0;
 double    min_samples_overall   = 0.0;
 double    min_samples_per_pop   = 0.0;
 int       min_populations       = 1;
+bool      filter_haplotype_wise = false;
 int       batch_size        = 10000;
 bool      calc_fstats       = false;
 bool      calc_hwp          = false;
@@ -1046,12 +1047,16 @@ LocusFilter::apply_filters_stacks(LocBin& loc, ostream& log_fh, const MetaPopInf
     this->filter_snps(loc, mpopi, log_fh);
 
     //
-    // If write_single_snp or write_random_snp has been specified, mark sites to be pruned using the whitelist.
+    // If write_single_snp, write_random_snp or filter_haplotype_wise has been specified,
+    // mark sites to be pruned using the whitelist.
     //
+    assert(write_single_snp + write_random_snp + filter_haplotype_wise <= 1);
     if (write_single_snp)
         this->keep_single_snp(loc.cloc, loc.d, mpopi.n_samples(), loc.s->meta_pop());
     else if (write_random_snp)
         this->keep_random_snp(loc.cloc, loc.d, mpopi.n_samples(), loc.s->meta_pop());
+    else if (filter_haplotype_wise)
+        this->filter_haps(loc, mpopi, log_fh);
 
     //
     // Regenerate summary statistics after pruning SNPs.
@@ -1308,6 +1313,58 @@ LocusFilter::filter_snps(LocBin& loc, const MetaPopInfo& mpopi, ostream &log_fh)
             }
             this->erase_snp(cloc, d, mpopi.n_samples(), i);
         }
+    }
+}
+
+void
+LocusFilter::filter_haps(LocBin& loc, const MetaPopInfo& mpopi, ostream &log_fh)
+{
+    CSLocus* cloc = loc.cloc;
+    Datum** d = loc.d;
+
+    // Tally SNP abundancies.
+    vector<pair<size_t,size_t>> snps_n_samples;
+    for (size_t i=0; i<cloc->snps.size(); ++i) {
+        snps_n_samples.push_back({0, i});
+        uint col = cloc->snps[i]->col;
+        for (size_t s=0; s<mpopi.n_samples(); ++s)
+            if (d[s] != NULL
+                    && d[s]->len > col && (d[s]->model[col] == 'O' || d[s]->model[col] == 'E'))
+                ++snps_n_samples.back().first;
+    }
+    std::sort(snps_n_samples.rbegin(), snps_n_samples.rend());
+
+    // Prune SNPs until enough samples have fully resolved haplotypes.
+    // (N.B. This is applied after snp-wise -r/-R as any individual SNP failing
+    // these filters would cause them to fail at the haplotype level as well anyway.)
+    while (!cloc->snps.empty()) {
+        // Tally haplotypes.
+        size_t n_pops_present_hapwise = 0;
+        size_t n_samples_w_haps = 0;
+        for (const Pop& pop : mpopi.pops()) {
+            size_t n_pop_samples = 0;
+            for (size_t s=pop.first_sample; s<=pop.last_sample; ++s) {
+                if (d[s] == NULL)
+                    continue;
+                assert(d[s]->obshap.size() == 2);
+                if (strchr(d[s]->obshap[0], 'N') == NULL)
+                    ++n_pop_samples;
+            }
+            if ((double) n_pop_samples / pop.n_samples() >= min_samples_per_pop) {
+                ++n_pops_present_hapwise;
+                n_samples_w_haps += n_pop_samples;
+            }
+        }
+        // Check the number of haplotypes.
+        if (n_pops_present_hapwise >= min_populations
+                && (double) n_samples_w_haps / mpopi.n_samples() >= min_samples_overall)
+            // Filters are satisfied.
+            break;
+        // Prune the SNP that is present in the fewest samples.
+        assert(!snps_n_samples.empty());
+        this->erase_snp(cloc, d, mpopi.n_samples(), snps_n_samples.rbegin()->second);
+        snps_n_samples.erase(--snps_n_samples.end());
+        assert(snps_n_samples.size() == cloc->snps.size());
     }
 }
 
@@ -3644,6 +3701,7 @@ parse_command_line(int argc, char* argv[])
             {"min-samples-overall", required_argument, NULL, 'R'},
             {"min-samples-per-pop", required_argument, NULL, 'r'}, {"progeny", required_argument, NULL, 'r'},
             {"min-populations",   required_argument, NULL, 'p'}, {"min_populations",   required_argument, NULL, 'p'},
+            {"filter-haplotype-wise", no_argument, NULL, 1018},
             {"renz",           required_argument, NULL, 'e'},
             {"popmap",         required_argument, NULL, 'M'},
             {"no-popmap",      no_argument,       NULL, 1017}, // Negates a previous -M/--popmap
@@ -3787,6 +3845,9 @@ parse_command_line(int argc, char* argv[])
             break;
         case 'p':
             min_populations = stoi(optarg);
+            break;
+        case 1018:
+            filter_haplotype_wise = true;
             break;
         case 'k':
             smooth_popstats = true;
@@ -4048,8 +4109,9 @@ parse_command_line(int argc, char* argv[])
     }
 
     // Other
-    if (write_single_snp && write_random_snp) {
-        cerr << "Error: Please specify either '--write-single-snp' or '--write-random-snp', not both.\n";
+    if (write_single_snp + write_random_snp + filter_haplotype_wise > 1) {
+        cerr << "Error: At most one of --write-single-snp, --write-random-snp"
+             << " or --filter-haplotype-wise may be specified.\n";
         help();
     }
 
@@ -4093,6 +4155,8 @@ void help() {
          << "  -R/--min-samples-overall [float]: minimum percentage of individuals across populations required to process a locus.\n"
          << "  -p/--min-populations [int]: minimum number of populations a locus must be present in to process a locus.\n"
          << "  -r/--min-samples-per-pop [float]: minimum percentage of individuals in a population required to process a locus for that population.\n"
+         << "  --filter-haplotype-wise: apply the above filters haplotype wise\n"
+         << "                           (unshared SNPs will be pruned to reduce haplotype-wise missing data).\n"
          << "  --min-maf [float]: specify a minimum minor allele frequency required to process a SNP (0 < min_maf < 0.5).\n"
          << "  --min-mac [int]: specify a minimum minor allele count required to process a SNP.\n"
          << "  --max-obs-het [float]: specify a maximum observed heterozygosity required to process a SNP.\n"
