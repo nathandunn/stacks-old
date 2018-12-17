@@ -1366,10 +1366,15 @@ LocusFilter::filter_haps(LocBin& loc, const MetaPopInfo& mpopi, ostream &log_fh)
             // Filters are satisfied.
             break;
         // Prune the SNP that is present in the fewest samples.
+        ++this->_filtered_sites;
         assert(!snps_n_samples.empty());
-        this->erase_snp(cloc, d, mpopi.n_samples(), snps_n_samples.rbegin()->second);
+        size_t snp_i = snps_n_samples.rbegin()->second;
+        this->erase_snp(cloc, d, mpopi.n_samples(), snp_i);
         snps_n_samples.erase(--snps_n_samples.end());
         assert(snps_n_samples.size() == cloc->snps.size());
+        for (pair<size_t,size_t>& snp : snps_n_samples)
+            if (snp.second > snp_i)
+                --snp.second;
     }
 }
 
@@ -3745,7 +3750,7 @@ parse_command_line(int argc, char* argv[])
         };
 
         // getopt_long stores the option index here.
-        int c = getopt_long(argc, argv, "ACDFJKLNSTUV:YZ123456dhjklnqa:c:e:f:i:o:p:r:t:u:w:B:I:M:O:P:R:Q:W:", long_options, NULL);
+        int c = getopt_long(argc, argv, "ACDFHJKLNSTUV:YZ123456dhjklnqa:c:e:f:i:o:p:r:t:u:w:B:I:M:O:P:R:Q:W:", long_options, NULL);
 
         // Detect the end of the options.
         if (c == -1)
