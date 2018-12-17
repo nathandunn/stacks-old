@@ -1239,19 +1239,16 @@ LocusFilter::filter_snps(LocBin& loc, const MetaPopInfo& mpopi, ostream &log_fh)
     if (cloc->snps.size() == 0)
         return;
 
-    // Tally individuals.
     loc.s->sum_pops(loc.cloc, loc.d, mpopi, verbose, cout);
     loc.s->tally_metapop(loc.cloc);
     const LocTally *t = s->meta_pop();
-
-    vector<int> pop_prune_list;
     for (uint i = cloc->snps.size(); i>0;) { // Must be reverse because we `erase()` things.
         --i;
         uint col = cloc->snps[i]->col;
         bool sample_prune = false;
+        bool overall_sample_prune = false;
         bool maf_prune    = false;
         bool het_prune    = false;
-        pop_prune_list.clear();
 
         //
         // If the site is fixed, ignore it.
@@ -1261,11 +1258,15 @@ LocusFilter::filter_snps(LocBin& loc, const MetaPopInfo& mpopi, ostream &log_fh)
             continue;
 
         size_t n_pruned_pops = 0;
+        size_t n_samples_left = 0;
         for (size_t p = 0; p < s->pop_cnt(); ++p) {
             const LocSum* sum = s->per_pop(p);
             if (sum->nucs[col].incompatible_site) {
                 DOES_NOT_HAPPEN;
-            } else if ((double) sum->nucs[col].num_indv / this->_pop_tot[p] < min_samples_per_pop) {
+            }
+            if ((double) sum->nucs[col].num_indv / this->_pop_tot[p] >= min_samples_per_pop) {
+                n_samples_left += sum->nucs[col].num_indv;
+            } else {
                 ++n_pruned_pops;
                 const Pop& pop = mpopi.pops()[p];
                 for (uint k = pop.first_sample; k <= pop.last_sample; k++) {
@@ -1279,6 +1280,8 @@ LocusFilter::filter_snps(LocBin& loc, const MetaPopInfo& mpopi, ostream &log_fh)
         }
         if (mpopi.pops().size() - n_pruned_pops < (uint) min_populations)
             sample_prune = true;
+        else if ((double) n_samples_left / mpopi.n_samples() < min_samples_overall)
+            overall_sample_prune = true;
 
         if (t->nucs[col].allele_cnt > 1) {
             //
@@ -1294,7 +1297,7 @@ LocusFilter::filter_snps(LocBin& loc, const MetaPopInfo& mpopi, ostream &log_fh)
                 het_prune = true;
         }
 
-        if (maf_prune || het_prune || sample_prune) {
+        if (maf_prune || het_prune || sample_prune || overall_sample_prune) {
             this->_filtered_sites++;
             if (verbose) {
                 log_fh << "pruned_polymorphic_site\t"
@@ -1304,6 +1307,8 @@ LocusFilter::filter_snps(LocBin& loc, const MetaPopInfo& mpopi, ostream &log_fh)
                        << col << "\t";
                 if (sample_prune)
                     log_fh << "min_samples_per_pop\n";
+                else if (overall_sample_prune)
+                    log_fh << "min_samples_overall\n";
                 else if (maf_prune)
                     log_fh << "maf_limit\n";
                 else if (het_prune)
@@ -3635,6 +3640,7 @@ output_parameters(ostream &fh)
     fh
         << "  Percent samples limit per population: " << min_samples_per_pop << "\n"
         << "  Locus Population limit: " << min_populations << "\n"
+        << "  Percent samples overall: " << min_samples_overall << "\n"
         << "  Minor allele frequency cutoff: " << minor_allele_freq << "\n"
         << "  Maximum observed heterozygosity cutoff: " << max_obs_het << "\n"
         << "  Applying Fst correction: ";
@@ -3701,7 +3707,7 @@ parse_command_line(int argc, char* argv[])
             {"min-samples-overall", required_argument, NULL, 'R'},
             {"min-samples-per-pop", required_argument, NULL, 'r'}, {"progeny", required_argument, NULL, 'r'},
             {"min-populations",   required_argument, NULL, 'p'}, {"min_populations",   required_argument, NULL, 'p'},
-            {"filter-haplotype-wise", no_argument, NULL, 1018},
+            {"filter-haplotype-wise", no_argument, NULL, 'H'},
             {"renz",           required_argument, NULL, 'e'},
             {"popmap",         required_argument, NULL, 'M'},
             {"no-popmap",      no_argument,       NULL, 1017}, // Negates a previous -M/--popmap
@@ -3846,7 +3852,7 @@ parse_command_line(int argc, char* argv[])
         case 'p':
             min_populations = stoi(optarg);
             break;
-        case 1018:
+        case 'H':
             filter_haplotype_wise = true;
             break;
         case 'k':
@@ -4152,11 +4158,11 @@ void help() {
          << "                      per batch). Increase to speed analysis, uses more memory, decrease to save memory).\n"
          << "\n"
          << "Data Filtering:\n"
-         << "  -R/--min-samples-overall [float]: minimum percentage of individuals across populations required to process a locus.\n"
          << "  -p/--min-populations [int]: minimum number of populations a locus must be present in to process a locus.\n"
          << "  -r/--min-samples-per-pop [float]: minimum percentage of individuals in a population required to process a locus for that population.\n"
-         << "  --filter-haplotype-wise: apply the above filters haplotype wise\n"
-         << "                           (unshared SNPs will be pruned to reduce haplotype-wise missing data).\n"
+         << "  -R/--min-samples-overall [float]: minimum percentage of individuals across populations required to process a locus.\n"
+         << "  -H/--filter-haplotype-wise: apply the above filters haplotype wise\n"
+         << "                              (unshared SNPs will be pruned to reduce haplotype-wise missing data).\n"
          << "  --min-maf [float]: specify a minimum minor allele frequency required to process a SNP (0 < min_maf < 0.5).\n"
          << "  --min-mac [int]: specify a minimum minor allele count required to process a SNP.\n"
          << "  --max-obs-het [float]: specify a maximum observed heterozygosity required to process a SNP.\n"
