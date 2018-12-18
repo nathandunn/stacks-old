@@ -70,6 +70,7 @@ long phasing_min_mac = 1;
 bool   dbg_no_overlaps     = false;
 bool   dbg_no_haplotypes   = false;
 bool   dbg_write_gfa       = false;
+bool   dbg_write_gfa_notdag = false;
 bool   dbg_write_alns      = false;
 bool   dbg_write_hapgraphs = false;
 bool   dbg_write_nt_depths = false;
@@ -1459,6 +1460,10 @@ LocusProcessor::assemble_locus_contig(
         ++ctg_stats_.n_loci_pe_graph_not_dag;
         if (detailed_output)
             loc_.details_ss << "not_dag\n";
+        if (dbg_write_gfa_notdag) {
+            graph.dump_gfa(out_dir + "gstacks." + to_string(loc_.id) + ".spaths.gfa");
+            graph.dump_gfa(out_dir + "gstacks." + to_string(loc_.id) + ".nodes.gfa", true);
+        }
         return DNASeq4();
     }
     if (detailed_output)
@@ -2617,6 +2622,7 @@ const string help_string = string() +
         "  --dbg-no-overlaps: disable overlapping\n"
         "  --dbg-no-haps: disable phasing\n"
         "  --dbg-gfa: output a GFA file for each locus\n"
+        "  --dbg-gfa-not-dag: output a GFA file for failed assemblies\n"
         "  --dbg-alns: output a file showing the contigs & alignments\n"
         "  --dbg-phasing-min-mac: minimum SNP MAC.\n"
         "  --dbg-phasing-no-2ndpass: don't try a second pass.\n"
@@ -2668,6 +2674,7 @@ try {
         {"dbg-phasing-min-mac", required_argument, NULL,  2018},
         {"dbg-phasing-no-2ndpass", no_argument, NULL, 2019},
         {"dbg-gfa",      no_argument,       NULL,  2003},
+        {"dbg-gfa-not-dag",  no_argument,   NULL,  2015},
         {"dbg-alns",     no_argument,       NULL,  2004}, {"alns", no_argument, NULL, 2004},
         {"dbg-depths",   no_argument,       NULL,  2007},
         {"dbg-hapgraphs", no_argument,      NULL,  2010},
@@ -2851,6 +2858,9 @@ try {
             break;
         case 2003://dbg-gfa
             dbg_write_gfa = true;
+            break;
+        case 2015://dbg-gfa-not-dag
+            dbg_write_gfa_notdag = true;
             break;
         case 2004://dbg-alns
             dbg_write_alns = true;
