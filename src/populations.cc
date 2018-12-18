@@ -1368,9 +1368,9 @@ LocusFilter::filter_haps(LocBin& loc, const MetaPopInfo& mpopi, ostream &log_fh)
         // Prune the SNP that is present in the fewest samples.
         ++this->_filtered_sites;
         assert(!snps_n_samples.empty());
-        size_t snp_i = snps_n_samples.rbegin()->second;
+        size_t snp_i = snps_n_samples.back().second;
         this->erase_snp(cloc, d, mpopi.n_samples(), snp_i);
-        snps_n_samples.erase(--snps_n_samples.end());
+        snps_n_samples.pop_back();
         assert(snps_n_samples.size() == cloc->snps.size());
         for (pair<size_t,size_t>& snp : snps_n_samples)
             if (snp.second > snp_i)
