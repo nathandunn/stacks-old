@@ -100,7 +100,7 @@ void Graph::rebuild(const vector<const DNASeq4*>& reads, size_t min_kmer_count) 
     //cerr << "Built " << simple_paths_.size() << " simple paths.\n"; //debug
 }
 
-bool Graph::topo_sort() {
+bool Graph::topo_sort() const {
     if (!sorted_spaths_.empty())
         // Already sorted.
         return true;
@@ -110,7 +110,7 @@ bool Graph::topo_sort() {
     for (const SPath& p : simple_paths_)
         p.visitdata = NULL;
 
-    for (SPath& p : simple_paths_) {
+    for (const SPath& p : simple_paths_) {
         if(!topo_sort(&p, visitdata)) {
             sorted_spaths_.resize(0);
             return false;
@@ -120,7 +120,7 @@ bool Graph::topo_sort() {
     return true;
 }
 
-bool Graph::topo_sort(SPath* p, vector<uchar>& visitdata) {
+bool Graph::topo_sort(const SPath* p, vector<uchar>& visitdata) const {
     if (p->visitdata != NULL) {
         if (*(uchar*) p->visitdata)
             // The recursion looped; not a DAG.
@@ -132,7 +132,7 @@ bool Graph::topo_sort(SPath* p, vector<uchar>& visitdata) {
         visitdata.push_back(true); // n.b. Enough memory was reserved.
         p->visitdata = (void*)&visitdata.back();
         for (size_t nt2=0; nt2<4; ++nt2) {
-            SPath* s = p->succ(nt2);
+            const SPath* s = p->succ(nt2);
             if (s != NULL)
                 if (!topo_sort(s, visitdata))
                     return false;
@@ -145,7 +145,7 @@ bool Graph::topo_sort(SPath* p, vector<uchar>& visitdata) {
     return true;
 }
 
-bool Graph::find_best_path(vector<const SPath*>& best_path) {
+bool Graph::find_best_path(vector<const SPath*>& best_path) const {
     best_path.resize(0);
 
     assert(!empty());

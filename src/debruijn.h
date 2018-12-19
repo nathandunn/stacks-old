@@ -192,7 +192,7 @@ class Graph {
     vector<Node> nodes_;
     vector<SPath> simple_paths_;
 
-    vector<SPath*> sorted_spaths_; // The simple paths, sorted topologically, with the terminal (no successors) ones first.
+    mutable vector<const SPath*> sorted_spaths_; // The simple paths, sorted topologically, with the terminal (no successors) ones first.
 
 public:
     Graph(size_t km_length) : km_len_(km_length) {}
@@ -207,7 +207,7 @@ public:
 
     // Finds the best path in the graph.
     // Return false if the graph is not a DAG.
-    bool find_best_path(vector<const SPath*>& best_path);
+    bool find_best_path(vector<const SPath*>& best_path) const;
 
     void dump_gfa(const string& path, bool individual_nodes=false) const;
 
@@ -220,8 +220,8 @@ private:
     // Sort topologically. Returns false if the graph is not a DAG.
     // The nodes record whether they are a parent in the current recursion
     // (and we use uchars instead of bools because vector<bool> is specialized).
-    bool topo_sort();
-    bool topo_sort(SPath* p, vector<uchar>& visitdata);
+    bool topo_sort() const;
+    bool topo_sort(const SPath* p, vector<uchar>& visitdata) const;
 
     // c.f. find_components()
     void propagate_component_id(const SPath* p, void* id);
