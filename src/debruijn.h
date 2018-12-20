@@ -205,6 +205,9 @@ public:
     // Find all connected components. This uses an undirected depth first search.
     vector<vector<const SPath*>> components();
 
+    // Attempts to remove cycles. Returns whether the graph has been edited.
+    bool remove_cycles();
+
     // Finds the best path in the graph.
     // Return false if the graph is not a DAG.
     bool find_best_path(vector<const SPath*>& best_path) const;

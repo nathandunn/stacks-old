@@ -100,6 +100,10 @@ void Graph::rebuild(const vector<const DNASeq4*>& reads, size_t min_kmer_count) 
     //cerr << "Built " << simple_paths_.size() << " simple paths.\n"; //debug
 }
 
+bool Graph::remove_cycles() {
+    return false;
+}
+
 bool Graph::topo_sort() const {
     if (!sorted_spaths_.empty())
         // Already sorted.
