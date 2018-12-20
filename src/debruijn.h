@@ -41,6 +41,7 @@ public:
 
     bool empty() const {return *this == Kmer();}
     string str(size_t km_len) const {
+        assert(!empty());
         string s;
         s.reserve(km_len);
         for (size_t i=0; i<km_len; ++i)
@@ -51,6 +52,9 @@ public:
     operator bool() const {return !empty();}
     bool operator==(const Kmer& other) const {return a_ == other.a_;}
     friend struct std::hash<Kmer>;
+    friend ostream& operator<< (ostream& os, const Kmer& km) = delete; // Can't pass the kmer length.
+
+    static Kmer homopolymer(size_t km_len, Nt2 nt);
 };
 
 class Kmerizer {
@@ -288,6 +292,17 @@ Kmer Kmerizer::next()
         ++next_nt_;
     }
     return km_;
+}
+
+inline
+Kmer Kmer::homopolymer(size_t km_len, Nt2 nt) {
+    if (km_len > 31)
+        DOES_NOT_HAPPEN;
+    Kmer km;
+    km.a_ = NtArray<Nt2>();
+    for (size_t i=0; i<km_len; ++i)
+        km.a_.set(i, nt);
+    return km;
 }
 
 template<typename SPathIt>
