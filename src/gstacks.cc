@@ -1457,14 +1457,16 @@ LocusProcessor::assemble_locus_contig(
     //
     vector<const SPath*> best_path;
     if (!graph.find_best_path(best_path)) {
-        ++ctg_stats_.n_loci_pe_graph_not_dag;
-        if (detailed_output)
-            loc_.details_ss << "not_dag\n";
-        if (dbg_write_gfa_notdag) {
-            graph.dump_gfa(out_dir + "gstacks." + to_string(loc_.id) + ".spaths.gfa");
-            graph.dump_gfa(out_dir + "gstacks." + to_string(loc_.id) + ".nodes.gfa", true);
+        if(!graph.remove_cycles() || !graph.find_best_path(best_path)) {
+            ++ctg_stats_.n_loci_pe_graph_not_dag;
+            if (detailed_output)
+                loc_.details_ss << "not_dag\n";
+            if (dbg_write_gfa_notdag) {
+                graph.dump_gfa(out_dir + "gstacks." + to_string(loc_.id) + ".spaths.gfa");
+                graph.dump_gfa(out_dir + "gstacks." + to_string(loc_.id) + ".nodes.gfa", true);
+            }
+            return DNASeq4();
         }
-        return DNASeq4();
     }
     if (detailed_output)
         loc_.details_ss << "is_dag\n"; //TODO:
