@@ -177,7 +177,7 @@ bool Graph::remove_microsat_dimer_cycles() {
             // This is actually a degenerate case of the above. If no additional paths break the
             // simple path, the two dimer nodes may, depending on the oddness of the kmer
             // size and of the microsatellite tract length, collapse in one single simple
-            // path that loops on itself. (e.g. GATATG/k=3: GAT-ATA-TAT-ATG.)
+            // path that loops on itself. (e.g. GATATG/k=3: GAT->ATA<->TAT->ATG.)
             for (size_t nt2=0; nt2<4; ++nt2) {
                 if (p.succ(nt2) == &p) {
                     p.erase(km_len_);
@@ -213,9 +213,18 @@ bool Graph::remove_microsat_dimer_cycle(SPath& p, SPath& q) {
         #endif
         return false;
     } else if (p_external < 2 && q_external < 2) {
-        DOES_NOT_HAPPEN;
-        // Because this is the degenerate case when the two nodes of the cycle are
-        // in the same SPath, and it is handled as we detect the cycle.
+        // Most of these cases correspond to the degenerate case when the two nodes
+        // of the cycle are in the same SPath, which is handled as we detect the cycle.
+        // DOES_NOT_HAPPEN; -- However, this fails.
+        // There's an extra limit case that brings us here -- if the microsat node pair
+        // is the termination of two otherwise disconnected subgraphs going in opposite
+        // directions.
+        // e.g. AGTGT,CTGT/k=3: AGT->GTG<->TGT<-CTG or TGTGA,TGTC/k=3: TGA<-GTG<->TGT->GTC.
+        assert(( (p.n_succ()-1) == 0 && (q.n_succ()-1) == 0 )
+            || ( (p.n_pred()-1) == 0 && (q.n_pred()-1) == 0 ));
+        p.erase(km_len_);
+        q.erase(km_len_);
+        return true;
     } else if (p_external < 2) {
         assert(q_external == 2);
         rm = &p;
