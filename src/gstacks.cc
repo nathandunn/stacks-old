@@ -518,16 +518,16 @@ try {
             ecov_max = cov;
     }
     o_fp1 << "\n"
-         << "Genotyped " << gt_stats.n_genotyped_loci << " loci:\n"
-         << "  effective per-sample coverage: mean=" << ecov_mean.mean() << "x, stdev="
+         << "Genotyped " << gt_stats.n_genotyped_loci << " loci:\n";
+    if (gt_stats.n_genotyped_loci == 0) {
+        cerr << "Error: There wasn't any locus to genotype; check input/arguments.\n";
+        throw exception();
+    o_fp1 << "  effective per-sample coverage: mean=" << ecov_mean.mean() << "x, stdev="
          << ecov_mean.sd_p() << "x, min=" << ecov_min << "x, max=" << ecov_max << "x\n"
          << "  mean number of sites per locus: " << gt_stats.mean_n_sites_per_loc() << "\n"
          << "  a consistent phasing was found for " << n_hap_pairs << " of out " << n_hap_attempts
          << " (" << as_percentage((double) n_hap_pairs / n_hap_attempts)
          << ") diploid loci needing phasing\n";
-    if (gt_stats.n_genotyped_loci == 0) {
-        cerr << "Error: There wasn't any locus to genotype (c.f. above; check input/arguments).\n";
-        throw exception();
     }
 
     // effective_coverages_per_sample
@@ -800,6 +800,7 @@ ContigStats& ContigStats::operator+= (const ContigStats& other) {
     this->n_loci_w_pe_reads         += other.n_loci_w_pe_reads;
     this->n_loci_almost_no_pe_reads += other.n_loci_almost_no_pe_reads;
     this->n_loci_pe_graph_not_dag   += other.n_loci_pe_graph_not_dag;
+    this->n_loci_pe_graph_fixed_to_dag += other.n_loci_pe_graph_fixed_to_dag;
     this->length_ctg_tot            += other.length_ctg_tot;
     this->n_aln_reads               += other.n_aln_reads;
     this->n_tot_reads               += other.n_tot_reads;
@@ -870,7 +871,6 @@ LocusProcessor::process(CLocReadSet& loc)
     DNASeq4 ctg = assemble_locus_contig(loc.reads(), loc.pe_reads());
     timers_.assembling.stop();
     if (ctg.empty()) {
-        //FIXME:
         if (detailed_output) {
             loc_.details_ss << "contig_assembly_failed\n"
                 << "END contig\n"
@@ -1456,20 +1456,34 @@ LocusProcessor::assemble_locus_contig(
     // Find the best path in the graph.
     //
     vector<const SPath*> best_path;
-    if (!graph.find_best_path(best_path)) {
-        if(!graph.remove_cycles() || !graph.find_best_path(best_path)) {
-            ++ctg_stats_.n_loci_pe_graph_not_dag;
+    do {
+        if (graph.find_best_path(best_path))
+            break;
+
+        // The graph wasn't a DAG, try to fix it.
+        if(graph.remove_cycles() && graph.find_best_path(best_path)) {
+            ++ctg_stats_.n_loci_pe_graph_fixed_to_dag;
             if (detailed_output)
-                loc_.details_ss << "not_dag\n";
-            if (dbg_write_gfa_notdag) {
-                graph.dump_gfa(out_dir + "gstacks." + to_string(loc_.id) + ".spaths.gfa");
-                graph.dump_gfa(out_dir + "gstacks." + to_string(loc_.id) + ".nodes.gfa", true);
+                loc_.details_ss << "fixed_to_dag\n";
+            if (dbg_write_gfa) {
+                graph.dump_gfa(out_dir + "gstacks." + to_string(loc_.id) + ".fixed.spaths.gfa");
+                graph.dump_gfa(out_dir + "gstacks." + to_string(loc_.id) + ".fixed.nodes.gfa", true);
             }
-            return DNASeq4();
+            break;
         }
-    }
+
+        // Contig contruction failed.
+        ++ctg_stats_.n_loci_pe_graph_not_dag;
+        if (detailed_output)
+            loc_.details_ss << "not_dag\n";
+        if (dbg_write_gfa_notdag) {
+            graph.dump_gfa(out_dir + "gstacks." + to_string(loc_.id) + ".spaths.gfa");
+            graph.dump_gfa(out_dir + "gstacks." + to_string(loc_.id) + ".nodes.gfa", true);
+        }
+        return DNASeq4();
+    } while (false);
     if (detailed_output)
-        loc_.details_ss << "is_dag\n"; //TODO:
+        loc_.details_ss << "is_dag\n";
     DNASeq4 contig = DNASeq4(SPath::contig_str(best_path.begin(), best_path.end(), km_length));
 
     //
@@ -1515,7 +1529,6 @@ LocusProcessor::assemble_locus_contig(
         }
         if (accumulate(comp_depths[pe].begin(), comp_depths[pe].end(), 0) == 0) {
             if (detailed_output)
-                // FIXME:
                 loc_.details_ss << "pe_reads_absent_from_graph\n";
         } else {
             //

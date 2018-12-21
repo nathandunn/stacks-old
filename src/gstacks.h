@@ -148,6 +148,7 @@ public:
     size_t n_loci_w_pe_reads;
     size_t n_loci_almost_no_pe_reads;
     size_t n_loci_pe_graph_not_dag;
+    size_t n_loci_pe_graph_fixed_to_dag;
     size_t length_ctg_tot;
 
     size_t n_aln_reads;
