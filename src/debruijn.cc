@@ -37,7 +37,7 @@ void SPath::erase(size_t km_len) {
             last_->rm_succ(nt2, s->first_);
     }
     // Clear the SPath.
-    Node* next;
+    Node* next = NULL;
     for (Node* n = first_; ; n = next) {
         if (n != last_) {
             assert(n->n_succ() == 1);
@@ -88,7 +88,7 @@ void Graph::rebuild(const vector<const DNASeq4*>& reads, size_t min_kmer_count) 
     for (Nt2 nt : Nt2::all) {
         if (map_.erase(Kmer::homopolymer(km_len_, nt))) {
             #ifdef DEBUG
-            cout << "DEBUG: Graph::rebuild: Removed a " << Kmer::homopolymer(km_len_, nt) << km_len_ << "} kmer.\n";
+            cout << "DEBUG: Graph::rebuild: Removed a " << Kmer::homopolymer(km_len_, nt).str(km_len_) << " kmer.\n";
             #endif
         }
     }
