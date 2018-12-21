@@ -98,8 +98,10 @@ public:
     Node() : d_(), pred_(), succ_(), sp_() {}
     Node(const NodeData& d) : d_(d), pred_(), succ_(), sp_() {}
     ~Node() {}
+    bool empty() const {return d_.km == Kmer();}
 
     void set_succ(size_t nt2, Node* n) {succ_[nt2] = n; n->pred_[size_t(d_.km.front())] = this;}
+    void rm_succ(size_t nt2, Node* n) {succ_[nt2] = NULL; n->pred_[size_t(d_.km.front())] = NULL;}
 
     size_t n_pred() const {return size_t(pred_[0]!=NULL) + size_t(pred_[1]!=NULL) + size_t(pred_[2]!=NULL) + size_t(pred_[3]!=NULL);}
     size_t n_succ() const {return size_t(succ_[0]!=NULL) + size_t(succ_[1]!=NULL) + size_t(succ_[2]!=NULL) + size_t(succ_[3]!=NULL);}
@@ -152,7 +154,10 @@ public:
 
     SPath() : first_(), last_(), d_(), visitdata() {}
     SPath(Node* first);
+    bool empty() const {return first_ == NULL;};
     void update_ptrs() {first_->sp_ = this; last_->sp_ = this;}
+    void erase(size_t km_len);
+    void merge_forward(); // (As a consequence of erasing.)
 
     size_t n_pred() const {return first_->n_pred();}
     size_t n_succ() const {return last_->n_succ();}
@@ -229,6 +234,10 @@ private:
     // (and we use uchars instead of bools because vector<bool> is specialized).
     bool topo_sort() const;
     bool topo_sort(const SPath* p, vector<uchar>& visitdata) const;
+
+    // Removes microsat dimer 2-cycles. Returns whether the graph has been edited.
+    bool remove_microsat_dimer_cycles();
+    bool remove_microsat_dimer_cycle(SPath& p, SPath& q);
 
     // c.f. find_components()
     void propagate_component_id(const SPath* p, void* id);
