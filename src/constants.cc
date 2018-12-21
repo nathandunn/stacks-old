@@ -8,8 +8,12 @@ using namespace std;
 
 int stacks_handle_exceptions(const exception& e) {
     std::cerr << "Aborted.";
-    if (typeid(e) != typeid(std::exception))
-        std::cerr << " (" << e.what() << ")";
+    if (typeid(e) != typeid(std::exception)) {
+        std::cerr << " (" << e.what();
+        if (typeid(e) == typeid(std::bad_alloc))
+            cerr << " -- did you run out of memory?";
+        std::cerr << ")";
+    }
     std::cerr << "\n";
     return 1;
 }
