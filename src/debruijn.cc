@@ -85,13 +85,9 @@ void Graph::rebuild(const vector<const DNASeq4*>& reads, size_t min_kmer_count) 
             ++map_[km].count;
     }
     //cerr << "Found " << map_.size() << " kmers in " << readset.reads().size() <<" reads.\n"; //debug
-    for (Nt2 nt : Nt2::all) {
-        if (map_.erase(Kmer::homopolymer(km_len_, nt))) {
-            #ifdef DEBUG
-            cout << "DEBUG: Graph::rebuild: Removed a " << Kmer::homopolymer(km_len_, nt).str(km_len_) << " kmer.\n";
-            #endif
-        }
-    }
+    // Remove homopolymers.
+    for (Nt2 nt : Nt2::all)
+        map_.erase(Kmer::homopolymer(km_len_, nt));
 
     //
     // Build the standalone nodes.
