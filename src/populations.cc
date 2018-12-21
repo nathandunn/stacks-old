@@ -1115,7 +1115,7 @@ LocusFilter::filter(const MetaPopInfo *mpopi, Datum **d)
         if (d[s] != NULL)
             ++n_samples_present;
     // Determine if the locus is to be kept.
-    if (n_pops_present < min_populations
+    if (n_pops_present < size_t(min_populations)
         || (double) n_samples_present / mpopi->n_samples() < min_samples_overall)
     {
         this->_filtered_loci++;
@@ -1334,7 +1334,7 @@ LocusFilter::filter_haps(LocBin& loc, const MetaPopInfo& mpopi, ostream &log_fh)
         uint col = cloc->snps[i]->col;
         for (size_t s=0; s<mpopi.n_samples(); ++s)
             if (d[s] != NULL
-                    && d[s]->len > col && (d[s]->model[col] == 'O' || d[s]->model[col] == 'E'))
+                    && size_t(d[s]->len) > col && (d[s]->model[col] == 'O' || d[s]->model[col] == 'E'))
                 ++snps_n_samples.back().first;
     }
     std::sort(snps_n_samples.rbegin(), snps_n_samples.rend());
@@ -1361,7 +1361,7 @@ LocusFilter::filter_haps(LocBin& loc, const MetaPopInfo& mpopi, ostream &log_fh)
             }
         }
         // Check the number of haplotypes.
-        if (n_pops_present_hapwise >= min_populations
+        if (n_pops_present_hapwise >= size_t(min_populations)
                 && (double) n_samples_w_haps / mpopi.n_samples() >= min_samples_overall)
             // Filters are satisfied.
             break;
