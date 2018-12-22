@@ -1591,7 +1591,8 @@ LocusProcessor::assemble_locus_contig(
                 graph.rebuild(*todo_seqs, min_km_count);
                 if (graph.empty())
                     DOES_NOT_HAPPEN;
-                if (!graph.find_best_path(best_path))
+                if (!graph.find_best_path(best_path)
+                        && !(graph.remove_cycles() && graph.find_best_path(best_path)))
                     DOES_NOT_HAPPEN;
                 *todo_contig = DNASeq4(SPath::contig_str(best_path.begin(), best_path.end(), km_length));
                 if(detailed_output)
