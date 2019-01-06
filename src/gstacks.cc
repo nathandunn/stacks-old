@@ -946,6 +946,21 @@ LocusProcessor::process(CLocReadSet& loc)
     for (SRead& r : loc.pe_reads()) {
         if (add_read_to_aln(aln_loc, aln_res, move(r), &aligner, stree)) {
             this->ctg_stats_.n_aln_reads++;
+            if (loc_.ctg_status == LocData::overlapped) {
+                // Record the insert length. (Insert lengths are just based on
+                // reverse reads but they should all have matching foward reads
+                // starting at the restriction site so it makes sense.)
+                const Cigar& cigar = aln_loc.reads().back().cigar;
+                size_t insert_length = aln_loc.ref().length();
+                assert(!cigar.empty());
+                if (cigar.back().first == 'D') {
+                    insert_length -= cigar.back().second;
+                    if (cigar.size() >=2 && (*++cigar.rbegin()).first == 'I')
+                        // Soft clipping on the far end.
+                        insert_length += (*++cigar.rbegin()).second;
+                }
+                ctg_stats_.insert_length_olap_mv.increment(insert_length);
+            }
             if (detailed_output)
                 loc_.details_ss << "pe_aln_local"
                                 << '\t' << aln_loc.reads().back().name
@@ -1648,29 +1663,16 @@ bool LocusProcessor::add_read_to_aln(
         GappedAln* aligner,
         SuffixTree* stree
 ) {
-
     if (!this->align_reads_to_contig(stree, aligner, r.seq, aln_res))
         return false;
 
     Cigar cigar;
     parse_cigar(aln_res.cigar.c_str(), cigar);
+    assert(!cigar.empty());
     simplify_cigar_to_MDI(cigar);
     cigar_extend_left(cigar, aln_res.subj_pos);
     assert(cigar_length_ref(cigar) <= aln_loc.ref().length());
     cigar_extend_right(cigar, aln_loc.ref().length() - cigar_length_ref(cigar));
-
-    if (loc_.ctg_status == LocData::overlapped) {
-        // Record the insert length.
-        assert(!cigar.empty());
-        size_t insert_length = aln_loc.ref().length();
-        if (cigar.back().first == 'D') {
-            insert_length -= cigar.back().second;
-            if (cigar.size() >=2 && (*++cigar.rbegin()).first == 'I')
-                // Soft clipping on the far end.
-                insert_length += (*++cigar.rbegin()).second;
-        }
-        ctg_stats_.insert_length_olap_mv.increment(insert_length);
-    }
 
     aln_loc.add(SAlnRead(move((Read&)r), move(cigar), r.sample));
     return true;
