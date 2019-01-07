@@ -522,13 +522,13 @@ try {
     if (gt_stats.n_genotyped_loci == 0) {
         cerr << "Error: There wasn't any locus to genotype; check input/arguments.\n";
         throw exception();
+    }
     o_fp1 << "  effective per-sample coverage: mean=" << ecov_mean.mean() << "x, stdev="
          << ecov_mean.sd_p() << "x, min=" << ecov_min << "x, max=" << ecov_max << "x\n"
          << "  mean number of sites per locus: " << gt_stats.mean_n_sites_per_loc() << "\n"
          << "  a consistent phasing was found for " << n_hap_pairs << " of out " << n_hap_attempts
          << " (" << as_percentage((double) n_hap_pairs / n_hap_attempts)
          << ") diploid loci needing phasing\n";
-    }
 
     // effective_coverages_per_sample
     logger->x << "\n"
