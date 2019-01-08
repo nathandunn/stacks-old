@@ -1088,20 +1088,11 @@ int write_catalog(map<int, CLocus *> &catalog) {
         #endif
     } else {
         tags.open(tag_file.c_str());
-        if (tags.fail()) {
-            cerr << "Error: Unable to open catalog tag file for writing.\n";
-            exit(1);
-        }
         snps.open(snp_file.c_str());
-        if (snps.fail()) {
-            cerr << "Error: Unable to open catalog SNPs file for writing.\n";
-            exit(1);
-        }
         alle.open(all_file.c_str());
-        if (alle.fail()) {
-            cerr << "Error: Unable to open catalog alleles file for writing.\n";
-            exit(1);
-        }
+        check_open(tags, tag_file);
+        check_open(snps, snp_file);
+        check_open(alle, all_file);
     }
 
     //
@@ -1118,9 +1109,9 @@ int write_catalog(map<int, CLocus *> &catalog) {
     strftime(date, 32, "%F %T", timeinfo);
     log << "# cstacks version " << VERSION << "; catalog generated on " << date << "\n";
     if (gzip) {
-        gzputs(gz_tags, log.str().c_str());
-        gzputs(gz_snps, log.str().c_str());
-        gzputs(gz_alle, log.str().c_str());
+        gzputs_throwing(gz_tags, log.str().c_str());
+        gzputs_throwing(gz_snps, log.str().c_str());
+        gzputs_throwing(gz_alle, log.str().c_str());
     } else {
         tags << log.str();
         snps << log.str();
@@ -1137,9 +1128,9 @@ int write_catalog(map<int, CLocus *> &catalog) {
     }
 
     if (gzip) {
-        gzclose(gz_tags);
-        gzclose(gz_snps);
-        gzclose(gz_alle);
+        gzclose_throwing(gz_tags);
+        gzclose_throwing(gz_snps);
+        gzclose_throwing(gz_alle);
     } else {
         tags.close();
         snps.close();

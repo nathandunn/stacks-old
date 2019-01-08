@@ -367,6 +367,12 @@ void VersatileWriter::close() {
 }
 
 inline
+void gzclose_throwing(gzFile f) {
+    if (gzclose(f) != Z_OK)
+        throw ios::failure("gzclose");
+}
+
+inline
 VersatileWriter& operator<< (VersatileWriter& w, char c) {
     if (w.is_gzipped_) {
         if (gzputc(w.gzfile_, c) == -1)
@@ -389,6 +395,12 @@ VersatileWriter& operator<< (VersatileWriter& w, const char* s) {
 inline
 void VersatileWriter::gzputs_(const char* s) {
     if (gzputs(gzfile_, s) == -1)
+        throw ios::failure("gzputs");
+}
+
+inline
+void gzputs_throwing(gzFile f, const char* s) {
+    if (gzputs(f, s) == -1)
         throw ios::failure("gzputs");
 }
 

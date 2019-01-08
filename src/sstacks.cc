@@ -1217,10 +1217,7 @@ write_matches(string sample_path, map<int, QLocus *> &sample)
         #endif
     } else {
         matches.open(out_file.c_str());
-        if (matches.fail()) {
-            cerr << "Error: Unable to open matches file for writing.\n";
-            exit(1);
-        }
+        check_open(matches, out_file);
     }
 
     //
@@ -1237,7 +1234,7 @@ write_matches(string sample_path, map<int, QLocus *> &sample)
     strftime(date, 32, "%F %T", timeinfo);
     log << "# sstacks version " << VERSION << "; generated on " << date << "\n";
     if (in_file_type == FileT::gzsql)
-        gzputs(gz_matches, log.str().c_str());
+        gzputs_throwing(gz_matches, log.str().c_str());
     else
         matches << log.str();
 
@@ -1267,12 +1264,12 @@ write_matches(string sample_path, map<int, QLocus *> &sample)
                  << qloc->matches[j]->cigar    << "\n";
         }
 
-        if (in_file_type == FileT::gzsql) gzputs(gz_matches, sstr.str().c_str()); else matches << sstr.str();
+        if (in_file_type == FileT::gzsql) gzputs_throwing(gz_matches, sstr.str().c_str()); else matches << sstr.str();
         sstr.str("");
     }
 
     if (in_file_type == FileT::gzsql)
-        gzclose(gz_matches);
+        gzclose_throwing(gz_matches);
     else
         matches.close();
 
