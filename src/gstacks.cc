@@ -243,7 +243,7 @@ try {
             } catch (exception& e) {
                 omp_return = stacks_handle_exceptions(e);
             }}
-            t.reading.stop();
+            t.reading.update();
             if (thread_eof || omp_return != 0)
                 break;
 
@@ -262,7 +262,7 @@ try {
                     aln_loc.merge_paired_reads();
                 loc_proc.process(aln_loc);
             }
-            t.processing.stop();
+            t.processing.update();
 
             // Write the FASTA output.
             t.writing_fa.restart();
@@ -280,7 +280,7 @@ try {
                     ++next_fa_to_write;
                 }
             }
-            t.writing_fa.stop();
+            t.writing_fa.update();
 
             // Write the VCF output.
             t.writing_vcf.restart();
@@ -304,10 +304,10 @@ try {
                             ++progress;
                         ++next_vcf_to_write;
                     } while (!vcf_outputs.empty() && vcf_outputs.front().first);
-                    t_writing_vcf.stop();
+                    t_writing_vcf.update();
                 }
             }
-            t.writing_vcf.stop();
+            t.writing_vcf.update();
 
             // Write the detailed output.
             if (detailed_output) {
@@ -324,7 +324,7 @@ try {
                         ++next_det_to_write;
                     }
                 }
-                t.writing_details.stop();
+                t.writing_details.update();
             }
         }
 
@@ -342,7 +342,7 @@ try {
     }}
     if (omp_return != 0)
         return omp_return;
-    t_parallel.stop();
+    t_parallel.update();
     progress.done();
 
     //
@@ -632,8 +632,10 @@ try {
         double w_v = t_threads_totals.writing_vcf.elapsed() / num_threads;
         double w_d = t_threads_totals.writing_details.elapsed() / num_threads;
 
+        double ppr = t_threads_totals.processing_pre_alns.elapsed() / num_threads;
         double a   = t_threads_totals.assembling.elapsed() / num_threads;
         double o   = t_threads_totals.olap_aligning.elapsed() / num_threads;
+        double ppo = t_threads_totals.processing_post_alns.elapsed() / num_threads;
         double cnt = t_threads_totals.counting_nts.elapsed() / num_threads;
         double g   = t_threads_totals.genotyping.elapsed() / num_threads;
         double h   = t_threads_totals.haplotyping.elapsed() / num_threads;
@@ -646,9 +648,11 @@ try {
                  + t_threads_totals.writing_fa.consumed() / num_threads
                  + t_threads_totals.writing_vcf.consumed() / num_threads
                  + t_threads_totals.writing_details.consumed() / num_threads
+                 + t_threads_totals.processing_pre_alns.consumed() / num_threads
                  + t_threads_totals.assembling.consumed() / num_threads
-                 + t_threads_totals.counting_nts.consumed() / num_threads
                  + t_threads_totals.olap_aligning.consumed() / num_threads
+                 + t_threads_totals.processing_post_alns.consumed() / num_threads
+                 + t_threads_totals.counting_nts.consumed() / num_threads
                  + t_threads_totals.genotyping.consumed() / num_threads
                  + t_threads_totals.haplotyping.consumed() / num_threads
                  + t_threads_totals.cpt_consensus.consumed() / num_threads
@@ -665,9 +669,13 @@ try {
            << std::setw(8) << p << "  processing (" << as_percentage(p / ll) << ")\n";
         if (a != 0.0)
             // De novo mode & paired-ends.
-            x_fp1 << std::setw(16) << a << "  assembling (" << as_percentage(a / ll) << ")\n"
+            x_fp1
+               << std::setw(16) << ppr << " pre-alignments block (" << as_percentage(ppr / ll) << ")\n"
+               << std::setw(16) << a << "  assembling (" << as_percentage(a / ll) << ")\n"
                << std::setw(16) << o << "  aligning/overlapping (" << as_percentage(o / ll) << ")\n";
-        x_fp1 << std::setw(16) << cnt << "  counting nucleotides (" << as_percentage(cnt / ll) << ")\n"
+        x_fp1
+           << std::setw(16) << ppo << " post-alignments block (" << as_percentage(ppo / ll) << ")\n"
+           << std::setw(16) << cnt << "  counting nucleotides (" << as_percentage(cnt / ll) << ")\n"
            << std::setw(16) << g << "  genotyping (" << as_percentage(g / ll) << ")\n"
            << std::setw(16) << h << "  haplotyping (" << as_percentage(h / ll) << ")\n"
            << std::setw(16) << u << "  computing consensus (" << as_percentage(u / ll) << ")\n"
@@ -837,12 +845,15 @@ void LocData::clear() {
 void
 LocusProcessor::process(CLocReadSet& loc)
 {
+    timers_.processing_pre_alns.restart();
     loc_.clear();
     if (dbg_denovo_min_loc_samples > 0
             && loc.n_samples() < dbg_denovo_min_loc_samples)
         loc.clear();
-    if (loc.reads().empty())
+    if (loc.reads().empty()) {
+        timers_.processing_pre_alns.update();
         return;
+    }
     if (detailed_output)
         loc_.details_ss << "BEGIN locus " << loc.id() << "\n";
 
@@ -859,8 +870,10 @@ LocusProcessor::process(CLocReadSet& loc)
     //
     // Remove N's in the forward reads.
     //
+    timers_.rm_Ns.restart();
     for (SRead& r : loc.reads())
         r.seq.remove_Ns();
+    timers_.rm_Ns.update();
 
     //
     // Assemble a contig.
@@ -869,7 +882,8 @@ LocusProcessor::process(CLocReadSet& loc)
     if (detailed_output)
         loc_.details_ss << "BEGIN contig\n";
     DNASeq4 ctg = assemble_locus_contig(loc.reads(), loc.pe_reads());
-    timers_.assembling.stop();
+    timers_.assembling.update();
+    timers_.processing_pre_alns.update();
     if (ctg.empty()) {
         if (detailed_output) {
             loc_.details_ss << "contig_assembly_failed\n"
@@ -880,14 +894,13 @@ LocusProcessor::process(CLocReadSet& loc)
         return;
     }
     aln_loc.ref(move(ctg));
+    timers_.assembling.update();
 
     timers_.olap_aligning.restart();
     SuffixTree* stree = new SuffixTree(aln_loc.ref());
     stree->build_tree();
     GappedAln aligner;
     AlignRes aln_res;
-
-    timers_.olap_aligning.stop();
     if (!loc.pe_reads().empty()) {
         //
         // Check that the contig starts at the cutsite (and not in the
@@ -975,16 +988,20 @@ LocusProcessor::process(CLocReadSet& loc)
     if (detailed_output)
         loc_.details_ss << "END pe_alns\n";
     delete stree;
-    timers_.olap_aligning.stop();
+    timers_.olap_aligning.update();
 
+    timers_.merge_paired_reads.restart();
     aln_loc.merge_paired_reads();
+    timers_.merge_paired_reads.update();
     loc.clear();
+    timers_.processing_pre_alns.update();
     process(aln_loc);
 }
 
 void
 LocusProcessor::process(CLocAlnSet& aln_loc)
 {
+    timers_.processing_post_alns.restart();
     if (input_type == GStacksInputT::denovo_popmap || input_type == GStacksInputT::denovo_merger) {
         // Called from process(CLocReadSet&).
         assert(this->loc_.id == aln_loc.id());
@@ -1000,6 +1017,7 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
     //
     // Remove unpaired reads/PCR duplicates.
     //
+    timers_.rm_reads.restart();
     if (rm_unpaired_reads) {
         for (size_t sample=0; sample<gt_stats_.per_sample_stats.size(); ++sample)
             gt_stats_.per_sample_stats[sample].n_unpaired_reads += aln_loc.sample_reads(sample).size();
@@ -1008,6 +1026,7 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
             gt_stats_.per_sample_stats[sample].n_unpaired_reads -= aln_loc.sample_reads(sample).size();
         if(aln_loc.reads().empty()) {
             loc_.clear();
+            timers_.processing_post_alns.update();
             return;
         }
     }
@@ -1020,6 +1039,7 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
         for (size_t sample=0; sample<gt_stats_.per_sample_stats.size(); ++sample)
             gt_stats_.per_sample_stats[sample].n_read_pairs_pcr_dupl -= aln_loc.sample_reads(sample).size();
     }
+    timers_.rm_reads.update();
     assert(!aln_loc.reads().empty());
     ++gt_stats_.n_genotyped_loci;
     size_t n_samples = aln_loc.n_samples();
@@ -1052,7 +1072,7 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
             ++gt_stats_.n_sites_tot; // Sites "with data".
     }
     assert(depths.size() == aln_loc.ref().length());
-    timers_.counting_nts.stop();
+    timers_.counting_nts.update();
 
     //
     // Call SNPs.
@@ -1067,7 +1087,7 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
         if (calls.back().alleles().size() > 1)
             calls.back().filter_mac(1);
     }
-    timers_.genotyping.stop();
+    timers_.genotyping.update();
 
     //
     // Call haplotypes; amend SNP/genotype calls.
@@ -1076,7 +1096,7 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
     if (!dbg_no_haplotypes) {
         timers_.haplotyping.restart();
         phase_hets(phase_data, calls, aln_loc, hap_stats_);
-        timers_.haplotyping.stop();
+        timers_.haplotyping.update();
     }
 
     //
@@ -1100,7 +1120,7 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
         }
     }
     aln_loc.ref(move(consensus));
-    timers_.cpt_consensus.stop();
+    timers_.cpt_consensus.update();
 
     //
     // Create the outputs.
@@ -1117,6 +1137,7 @@ LocusProcessor::process(CLocAlnSet& aln_loc)
                 << aln_loc
                 << "\nEND " << loc_.id << "\n";
     }
+    timers_.processing_post_alns.update();
 }
 
 bool
@@ -2429,11 +2450,12 @@ void LocusProcessor::write_one_locus (
         vcf_records << rec;
     }
     loc_.o_vcf = vcf_records.str();
-    timers_.building_vcf.stop();
+    timers_.building_vcf.update();
 
     //
     // Fasta output.
     //
+    timers_.building_fa.restart();
 
     // Determine the number of samples for this locus. Some samples may have
     // been discarded (as of May 26, 2017, this would be because their haplotypes
@@ -2490,6 +2512,7 @@ void LocusProcessor::write_one_locus (
     fa += '\n';
     fa += ref.str();
     fa += '\n';
+    timers_.building_fa.update();
 }
 
 void LocusProcessor::write_sample_hapgraph(
@@ -2554,18 +2577,24 @@ void LocusProcessor::write_sample_hapgraph(
     os << "\t}\n";
 }
 
-Timers& Timers::operator+= (const Timers& other) {
+Timers& Timers::operator+= (const Timers& other) { //TODO:
     reading += other.reading;
     processing += other.processing;
     writing_fa += other.writing_fa;
     writing_vcf += other.writing_vcf;
     writing_details += other.writing_details;
     // Within processing:
+    processing_pre_alns += other.processing_pre_alns;
+    rm_Ns += other.rm_Ns;
     assembling += other.assembling;
     olap_aligning += other.olap_aligning;
+    merge_paired_reads += other.merge_paired_reads;
+    processing_post_alns += other.processing_post_alns;
+    rm_reads += other.rm_reads;
     genotyping += other.genotyping;
     haplotyping += other.haplotyping;
     building_vcf += other.building_vcf;
+    building_fa += other.building_fa;
     cpt_consensus += other.cpt_consensus;
     counting_nts += other.counting_nts;
     return *this;

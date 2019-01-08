@@ -204,11 +204,17 @@ struct Timers {
     Timer writing_vcf;
     Timer writing_details;
 
+    Timer processing_pre_alns;
+    Timer rm_Ns;
     Timer assembling;
     Timer olap_aligning;
+    Timer merge_paired_reads;
+    Timer processing_post_alns;
+    Timer rm_reads;
     Timer genotyping;
     Timer haplotyping;
     Timer building_vcf;
+    Timer building_fa;
     Timer cpt_consensus;
     Timer counting_nts;
 
