@@ -207,7 +207,8 @@ struct Timers {
     Timer processing_pre_alns;
     Timer rm_Ns;
     Timer assembling;
-    Timer olap_aligning;
+    Timer init_alignments;
+    Timer aligning;
     Timer merge_paired_reads;
     Timer processing_post_alns;
     Timer rm_reads;
