@@ -633,14 +633,19 @@ try {
         double w_d = t_threads_totals.writing_details.elapsed() / num_threads;
 
         double ppr = t_threads_totals.processing_pre_alns.elapsed() / num_threads;
-        double a   = t_threads_totals.assembling.elapsed() / num_threads;
-        double o   = t_threads_totals.olap_aligning.elapsed() / num_threads;
+        double rn   = t_threads_totals.rm_Ns.elapsed() / num_threads;
+        double as   = t_threads_totals.assembling.elapsed() / num_threads;
+        double ia   = t_threads_totals.init_alignments.elapsed() / num_threads;
+        double al   = t_threads_totals.aligning.elapsed() / num_threads;
+        double me   = t_threads_totals.merge_paired_reads.elapsed() / num_threads;
         double ppo = t_threads_totals.processing_post_alns.elapsed() / num_threads;
+        double rr = t_threads_totals.rm_reads.elapsed() / num_threads;
         double cnt = t_threads_totals.counting_nts.elapsed() / num_threads;
         double g   = t_threads_totals.genotyping.elapsed() / num_threads;
         double h   = t_threads_totals.haplotyping.elapsed() / num_threads;
         double u   = t_threads_totals.cpt_consensus.elapsed() / num_threads;
         double b_v = t_threads_totals.building_vcf.elapsed() / num_threads;
+        double b_f = t_threads_totals.building_fa.elapsed() / num_threads;
 
         double c = t_parallel.consumed()
                  + t_threads_totals.reading.consumed() / num_threads
@@ -649,14 +654,19 @@ try {
                  + t_threads_totals.writing_vcf.consumed() / num_threads
                  + t_threads_totals.writing_details.consumed() / num_threads
                  + t_threads_totals.processing_pre_alns.consumed() / num_threads
+                 + t_threads_totals.rm_Ns.consumed() / num_threads
                  + t_threads_totals.assembling.consumed() / num_threads
-                 + t_threads_totals.olap_aligning.consumed() / num_threads
+                 + t_threads_totals.init_alignments.consumed() / num_threads
+                 + t_threads_totals.aligning.consumed() / num_threads
+                 + t_threads_totals.merge_paired_reads.consumed() / num_threads
                  + t_threads_totals.processing_post_alns.consumed() / num_threads
+                 + t_threads_totals.rm_reads.consumed() / num_threads
                  + t_threads_totals.counting_nts.consumed() / num_threads
                  + t_threads_totals.genotyping.consumed() / num_threads
                  + t_threads_totals.haplotyping.consumed() / num_threads
                  + t_threads_totals.cpt_consensus.consumed() / num_threads
                  + t_threads_totals.building_vcf.consumed() / num_threads
+                 + t_threads_totals.building_fa.consumed() / num_threads
                  + t_writing_vcf.consumed()
                  ;
 
@@ -667,18 +677,24 @@ try {
            << "Average thread time spent:\n"
            << std::setw(8) << r  << "  reading (" << as_percentage(r / ll) << ")\n"
            << std::setw(8) << p << "  processing (" << as_percentage(p / ll) << ")\n";
-        if (a != 0.0)
+        if (as != 0.0)
             // De novo mode & paired-ends.
             x_fp1
                << std::setw(16) << ppr << " pre-alignments block (" << as_percentage(ppr / ll) << ")\n"
-               << std::setw(16) << a << "  assembling (" << as_percentage(a / ll) << ")\n"
-               << std::setw(16) << o << "  aligning/overlapping (" << as_percentage(o / ll) << ")\n";
+               << std::setw(16) << rn << "  reformatting fw-reads (" << as_percentage(rn / ll) << ")\n"
+               << std::setw(16) << as << "  assembling (" << as_percentage(as / ll) << ")\n"
+               << std::setw(16) << ia << "  initializing alignments (" << as_percentage(ia / ll) << ")\n"
+               << std::setw(16) << al << "  aligning (" << as_percentage(al / ll) << ")\n"
+               << std::setw(16) << me << "  merging read pairs (" << as_percentage(me / ll) << ")\n"
+               ;
         x_fp1
            << std::setw(16) << ppo << " post-alignments block (" << as_percentage(ppo / ll) << ")\n"
+           << std::setw(16) << rr << "  filtering reads (" << as_percentage(rr / ll) << ")\n"
            << std::setw(16) << cnt << "  counting nucleotides (" << as_percentage(cnt / ll) << ")\n"
            << std::setw(16) << g << "  genotyping (" << as_percentage(g / ll) << ")\n"
            << std::setw(16) << h << "  haplotyping (" << as_percentage(h / ll) << ")\n"
            << std::setw(16) << u << "  computing consensus (" << as_percentage(u / ll) << ")\n"
+           << std::setw(16) << b_f << "  building_fa (" << as_percentage(b_f / ll) << ")\n"
            << std::setw(16) << b_v << "  building_vcf (" << as_percentage(b_v / ll) << ")\n"
            << std::setw(8) << w_f << "  writing_fa (" << as_percentage(w_f / ll) << ")\n"
            << std::setw(8) << w_v << "  writing_vcf (" << as_percentage(w_v / ll) << ")\n";
@@ -896,7 +912,7 @@ LocusProcessor::process(CLocReadSet& loc)
     aln_loc.ref(move(ctg));
     timers_.assembling.update();
 
-    timers_.olap_aligning.restart();
+    timers_.init_alignments.restart();
     SuffixTree* stree = new SuffixTree(aln_loc.ref());
     stree->build_tree();
     GappedAln aligner;
@@ -934,10 +950,12 @@ LocusProcessor::process(CLocReadSet& loc)
     if (detailed_output)
         loc_.details_ss << "contig\t" << aln_loc.ref() << '\n'
             << "END contig\n";
+    timers_.init_alignments.update();
 
     //
     // Align the reads.
     //
+    timers_.aligning.restart();
     this->ctg_stats_.n_tot_reads += loc.reads().size();
     this->ctg_stats_.n_tot_reads += loc.pe_reads().size();
     if (detailed_output)
@@ -988,7 +1006,7 @@ LocusProcessor::process(CLocReadSet& loc)
     if (detailed_output)
         loc_.details_ss << "END pe_alns\n";
     delete stree;
-    timers_.olap_aligning.update();
+    timers_.aligning.update();
 
     timers_.merge_paired_reads.restart();
     aln_loc.merge_paired_reads();
@@ -2577,7 +2595,7 @@ void LocusProcessor::write_sample_hapgraph(
     os << "\t}\n";
 }
 
-Timers& Timers::operator+= (const Timers& other) { //TODO:
+Timers& Timers::operator+= (const Timers& other) {
     reading += other.reading;
     processing += other.processing;
     writing_fa += other.writing_fa;
@@ -2587,7 +2605,8 @@ Timers& Timers::operator+= (const Timers& other) { //TODO:
     processing_pre_alns += other.processing_pre_alns;
     rm_Ns += other.rm_Ns;
     assembling += other.assembling;
-    olap_aligning += other.olap_aligning;
+    init_alignments += other.init_alignments;
+    aligning += other.aligning;
     merge_paired_reads += other.merge_paired_reads;
     processing_post_alns += other.processing_post_alns;
     rm_reads += other.rm_reads;
