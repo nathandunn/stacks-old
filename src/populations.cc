@@ -611,6 +611,11 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
             //
             // De novo.
             //
+            if (ordered_export) {
+                cerr << "Error: Options --ordered-export/--smooth/--bootstrap"
+                    << " are for reference-aligned data only.\n";
+                throw exception();
+            }
             loc->cloc->loc.set("un", this->_unordered_bp, strand_plus);
             this->_unordered_bp += loc->cloc->len;
             this->_loci.push_back(loc);
@@ -3882,6 +3887,7 @@ parse_command_line(int argc, char* argv[])
             log_fst_comp = true;
             break;
         case '1':
+            ordered_export  = true;
             bootstrap       = true;
             bootstrap_fst   = true;
             bootstrap_phist = true;
@@ -3889,15 +3895,19 @@ parse_command_line(int argc, char* argv[])
             bootstrap_div   = true;
             break;
         case '2':
+            ordered_export  = true;
             bootstrap_fst   = true;
             break;
         case '3':
+            ordered_export  = true;
             bootstrap_phist = true;
             break;
         case '4':
+            ordered_export  = true;
             bootstrap_div = true;
             break;
         case '5':
+            ordered_export  = true;
             bootstrap_pifis = true;
             break;
         case 1001:
@@ -3911,6 +3921,8 @@ parse_command_line(int argc, char* argv[])
             }
             break;
         case 1003:
+            ordered_export  = true;
+            bootstrap = true;
             bootstrap_reps = atoi(optarg);
             break;
         case 'Q':
