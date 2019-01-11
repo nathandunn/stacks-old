@@ -2533,6 +2533,61 @@ PlinkExport::close()
     return;
 }
 
+int
+TreemixExport::open(const MetaPopInfo *mpopi)
+{
+    _mpopi = mpopi;
+    _path = out_path + out_prefix + ".treemix";
+    cout << "Per-population SNP allele counts will be written to '" << _path << "'\n";
+    _writer.open(_path);
+    check_open(_writer, _path);
+    bool first = true;
+    for (const Pop& p : _mpopi->pops()) {
+        if (first)
+            first = false;
+        else
+            _writer << ' ';
+        _writer << p.name;
+
+    }
+    _writer << '\n';
+    return 0;
+}
+
+int
+TreemixExport::write_site(const CSLocus* cloc,
+                      const LocPopSum* psum,
+                      Datum const*const* d,
+                      size_t col,
+                      size_t index)
+{
+    const LocTally* t = psum->meta_pop();
+
+    bool first = true;
+    for (size_t pop=0; pop<_mpopi->pops().size(); ++pop) {
+        const LocSum* s = psum->per_pop(pop);
+        if (first)
+            first = false;
+        else
+            _writer << ' ';
+        if (s->nucs[col].num_indv == 0 ||
+            s->nucs[col].incompatible_site ||
+            s->nucs[col].filtered_site) {
+            _writer << "0,0";
+            continue;
+        }
+        double p_freq = (t->nucs[col].p_allele == s->nucs[col].p_nuc) ?
+            s->nucs[col].p :
+            1 - s->nucs[col].p;
+        size_t allele_cnt = 2 * s->nucs[col].num_indv;
+        size_t p_cnt = round(p_freq * allele_cnt);
+        size_t q_cnt = allele_cnt - p_cnt;
+        _writer << p_cnt << ',' << q_cnt;
+    }
+    _writer << '\n';
+    return 0;
+}
+
 /*
 int
 write_hzar(map<int, CSLocus *> &catalog,

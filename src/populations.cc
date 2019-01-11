@@ -3998,7 +3998,7 @@ parse_command_line(int argc, char* argv[])
             cerr << "BETA: Ignoring --phylip-var-all output request, which is not currently implemented.\n";
             break;
         case 'U':
-            cerr << "BETA: Ignoring --treemix output request, which is not currently implemented.\n";
+            add_export<TreemixExport>();
             break;
         case 'W':
             wl_file = optarg;
@@ -4231,10 +4231,10 @@ void help() {
          << "  --phylip: output nucleotides that are fixed-within, and variant among populations in Phylip format for phylogenetic tree construction.\n"
          << "  --phylip-var: include variable sites in the phylip output encoded using IUPAC notation.\n"
          << "  --phylip-var-all*: include all sequence as well as variable sites in the phylip output encoded using IUPAC notation.\n"
-         << "  --treemix*: output SNPs in a format useable for the TreeMix program (Pickrell and Pritchard).\n"
+         << "  --treemix: output SNPs in a format useable for the TreeMix program (Pickrell and Pritchard).\n"
          << "  --no-hap-exports: omit haplotype outputs.\n"
          << "  --fasta-samples-raw: output all haplotypes observed in each sample, for each locus, in FASTA format.\n"
-         << "  (*not implemented as of v2.0Beta7)\n"
+         << "  (*not implemented as of v2.3)\n"
          << "\n"
          << "Additional options:\n"
          << "  -h,--help: display this help messsage.\n"
