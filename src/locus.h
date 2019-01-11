@@ -247,7 +247,6 @@ public:
     const PhyLoc& pos() const {return aln_pos_;}
     const DNASeq4& ref() const {return ref_;}
     const vector<SAlnRead>& reads() const {return reads_;}
-          vector<SAlnRead>& reads()       {return reads_;} //TODO remove (but --talns)
     const vector<size_t>& sample_reads(size_t sample) const {return reads_per_sample_.at(sample);}
 
     void clear();
@@ -256,6 +255,8 @@ public:
     void add(SAlnRead&& r);
 
     void recompute_consensus();
+    void sort_by_read_name();
+    void sort_by_alignment_offset();
     void hard_clip_right_Ns();
     void merge_paired_reads();
     void remove_unmerged_reads(ostream* log = NULL);

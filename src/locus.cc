@@ -435,15 +435,55 @@ void CLocAlnSet::hard_clip_right_Ns() {
 }
 
 void
+CLocAlnSet::sort_by_read_name()
+{
+    sort(this->reads_.begin(), this->reads_.end(),
+        [] (const SAlnRead& r1, const SAlnRead& r2) { return r1.name < r2.name; }
+        );
+
+    for (auto& s : reads_per_sample_)
+        s.clear();
+    for (size_t i=0; i<reads_.size(); ++i)
+        reads_per_sample_[reads_[i].sample].push_back(i);
+}
+
+void
+CLocAlnSet::sort_by_alignment_offset()
+{
+    auto aln_offset = [] (const Cigar& c) ->size_t {
+        assert(!c.empty());
+        assert(cigar_is_MDI(c));
+        if (c[0].first == 'D') {
+            return c[0].second;
+        } else if (c[0].first == 'I'
+            && c.size() >= 2
+            && c[1].first == 'D')
+        {
+            return c[1].second;
+        } else {
+            return 0;
+        }
+    };
+
+    sort(this->reads_.begin(), this->reads_.end(),
+        [&aln_offset] (const SAlnRead& r1, const SAlnRead& r2) {
+            return aln_offset(r1.cigar) < aln_offset(r2.cigar);
+        });
+
+    for (auto& s : reads_per_sample_)
+        s.clear();
+    for (size_t i=0; i<reads_.size(); ++i)
+        reads_per_sample_[reads_[i].sample].push_back(i);
+}
+
+void
 CLocAlnSet::merge_paired_reads()
 {
     //
     // Sort reads by name. Paired reads should have the same name but end with
     // respectively "/1" and "/2".
     //
-    sort(this->reads_.begin(), this->reads_.end(),
-         [](const SAlnRead& r1, const SAlnRead& r2) { return r1.name < r2.name; }
-         );
+    sort_by_read_name();
 
     // Merge paired reads.
     for (auto r1 = this->reads_.begin(); r1 != this->reads_.end(); ++r1) {

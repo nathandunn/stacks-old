@@ -87,13 +87,13 @@ void BamRecord::assign(
     r_->core.bin = hts_reg2bin(r_->core.pos, r_->core.pos + bam_cigar2rlen(r_->core.n_cigar, cigar), 14, 5);
 }
 
-BamHeader::BamHeader(const string& text) {
-    h_ = sam_hdr_parse(text.length()+1, text.c_str());
+BamHeader::BamHeader(const char* text, size_t len) {
+    h_ = sam_hdr_parse(len+1, text); // null-terminated
     if (h_ == NULL)
         throw ios::failure("sam_hdr_parse");
-    h_->l_text = text.length()+1; // null-terminated
+    h_->l_text = len+1;
     h_->text = (char*) malloc(h_->l_text);
-    strcpy(h_->text, text.c_str());
+    strcpy(h_->text, text);
 }
 
 void BamHeader::check_same_ref_chroms(
