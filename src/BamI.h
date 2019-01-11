@@ -51,12 +51,12 @@ int bam_edit_gaps(const Cigar&, char*);
 class BamRecord {
     bam1_t* r_;
 
-    BamRecord(const BamRecord&) = delete;
     BamRecord& operator= (const BamRecord&) = delete;
 
 public:
     BamRecord()                              : r_(NULL) {}
-    BamRecord(BamRecord&& other)             : BamRecord() {std::swap(r_, other.r_);}
+    BamRecord(BamRecord&& other) noexcept    : BamRecord() {std::swap(r_, other.r_);} // noexcept necessary for std::vector to use it...
+    explicit BamRecord(const BamRecord&)     : BamRecord() {DOES_NOT_HAPPEN;} // Necessary for std::vector to compile...
     ~BamRecord()                             {destroy();}
     BamRecord& operator= (BamRecord&& other) {std::swap(r_, other.r_); return *this;}
     void reinit()                            {destroy(); r_=bam_init1(); r_->data=NULL; r_->m_data=0;}
@@ -118,12 +118,13 @@ private:
 class BamHeader {
     bam_hdr_t* h_;
 
-    BamHeader(BamHeader&) = delete;
     BamHeader& operator= (BamHeader&) = delete;
 
 public:
     BamHeader()                             : h_(NULL) {}
-    BamHeader(const string& text);
+    BamHeader(const char* text, size_t len);
+    BamHeader(const string& text)           : BamHeader(text.c_str(), text.length()) {}
+    explicit BamHeader(const BamHeader& other) : BamHeader(other.text(), strlen(other.text())) {}
     BamHeader(BamHeader&& other)            : BamHeader() {std::swap(h_, other.h_);}
     ~BamHeader()                            {destroy();}
     BamHeader& operator=(BamHeader&& other) {std::swap(h_, other.h_); return *this;}
@@ -158,13 +159,14 @@ public:
     Bam(const char* path);
     Bam(const string& path) : Bam(path.c_str()) {}
     Bam(const string& path, BamHeader&& header);
-    ~Bam() {hts_close(bam_fh);};
+    ~Bam() {if (bam_fh) hts_close(bam_fh);}
 
     const BamHeader& h() const {return hdr;}
 
     bool next_record(BamRecord& rec);
     bool next_record_ordered(BamRecord& rec);
     bool eof() const {return eof_;}
+    void close() { assert(bam_fh); if(hts_close(bam_fh) != 0) throw ios::failure("hts_close"); bam_fh = NULL;}
     size_t n_records_read() const {return n_records_read_;}
 
     Seq *next_seq();

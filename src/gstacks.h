@@ -25,6 +25,7 @@
 #include "models.h"
 #include "SuffixTree.h"
 #include "GappedAln.h"
+#include "BamI.h"
 
 string parse_command_line(int argc, char* argv[]);
 
@@ -187,6 +188,7 @@ public:
     string o_vcf;
     string o_fa;
     string o_details;
+    vector<vector<BamRecord>> o_bam;
     stringstream details_ss;
 
     void clear();
@@ -203,12 +205,14 @@ struct Timers {
     Timer writing_fa;
     Timer writing_vcf;
     Timer writing_details;
+    Timer writing_bams;
 
     Timer processing_pre_alns;
     Timer rm_Ns;
     Timer assembling;
     Timer init_alignments;
     Timer aligning;
+    Timer building_bams;
     Timer merge_paired_reads;
     Timer processing_post_alns;
     Timer rm_reads;
@@ -244,6 +248,7 @@ public:
     string& vcf_out() {return loc_.o_vcf;}
     string& fasta_out() {return loc_.o_fa;}
     string& details_out() {return loc_.o_details;}
+    vector<vector<BamRecord>>& bam_out() {return loc_.o_bam;}
 
 private:
     GenotypeStats gt_stats_;

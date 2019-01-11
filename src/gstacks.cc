@@ -39,7 +39,8 @@
 GStacksInputT  input_type = GStacksInputT::unknown;
 string         popmap_path;  // Set if --popmap is given. For logging purposes.
 vector<string> sample_names; // Set if --popmap is given.
-vector<string> in_bams;      // Set if -B is given, or if -P is given without -M.
+vector<string> in_bams;
+vector<string> out_bams;
 
 string out_dir;
 
@@ -51,6 +52,7 @@ bool   ignore_pe_reads    = false;
 double min_aln_cov        = 0.75;
 int    min_se_pe_overlap  = 5;
 double overlap_min_pct_id = 0.80;
+bool   bam_output         = false;
 bool   detailed_output    = false;
 bool   rm_unpaired_reads  = false;
 bool   rm_pcr_duplicates  = false;
@@ -120,15 +122,15 @@ try {
     string opts_report = parse_command_line(argc, argv);
 
     //
-    // Open the input BAM file(s).
+    // Open the BAM file(s).
     //
     vector<Bam*> bam_f_ptrs;
 try {
     for (const string& in_bam : in_bams)
-        bam_f_ptrs.push_back(new Bam(in_bam.c_str()));
+        bam_f_ptrs.push_back(new Bam(in_bam));
 } catch(exception& e) {
-    if (bam_f_ptrs.size() >= 1000)
-        cerr << "Error: You may need to increase your system's max-open-files limit,"
+    if (bam_f_ptrs.size() >= 250)
+        cerr << "Error: You might need to increase your system's max-open-files limit,"
                 " see https://groups.google.com/d/msg/stacks-users/GZqJM_WkMhI/m9Hreg4oBgAJ\n";
     throw;
 }
@@ -177,6 +179,34 @@ try {
         *o_details_f << "# show_loc() { loc=$1; zcat ./gstacks.details.gz | sed -rn \"/^BEGIN locus $loc\\b/,\\$ p; /^END locus $loc\\b/ q;\"; }\n";
     }
 
+    vector<unique_ptr<Bam>> bam_of_ptrs;
+    if (bam_output) {
+    try {
+        stringstream header_ss;
+        header_ss << "@HD\tVN:1.5\tSO:coordinate\n";
+        for (const Sample& s : bam_cloc_reader->mpopi().samples())
+            header_ss << "@RG\tID:" << s.id << "\tSM:" << s.name << "\tid:" << s.id << '\n';
+        for (size_t target_i=0; target_i<bam_cloc_reader->n_loci(); ++target_i)
+            header_ss << "@SQ\tSN:" << bam_cloc_reader->target2id(target_i) << "\tLN:10000\n";
+        BamHeader header = BamHeader(header_ss.str());
+        if (input_type == GStacksInputT::denovo_merger) {
+            assert(out_bams.size() == 1);
+            bam_of_ptrs.emplace_back(new Bam(out_bams[0], BamHeader(header)));
+        } else if (input_type == GStacksInputT::denovo_popmap) {
+            assert(out_bams.size() == bam_cloc_reader->bam_fs().size());
+            for(size_t i=0; i<out_bams.size(); ++i) {
+                bam_of_ptrs.emplace_back(new Bam(out_bams[i], BamHeader(header)));
+            }
+        } else {
+            DOES_NOT_HAPPEN;
+        }
+    } catch(exception& e) {
+        if (bam_f_ptrs.size() + bam_of_ptrs.size() >= 250)
+            cerr << "Error: You might need to increase your system's max-open-files limit,"
+                    " see https://groups.google.com/d/msg/stacks-users/GZqJM_WkMhI/m9Hreg4oBgAJ\n";
+        throw;
+    }}
+
     if (dbg_write_alns) {
         string o_aln_path = out_dir + "gstacks.alns";
         o_aln_f.open(o_aln_path);
@@ -210,9 +240,11 @@ try {
     std::deque<pair<bool,string>> fa_outputs;
     std::deque<pair<bool,string>> vcf_outputs;
     std::deque<pair<bool,string>> det_outputs; // (details)
+    std::deque<pair<bool,vector<vector<BamRecord>>>> bam_outputs;
     size_t next_fa_to_write = 0; // locus index, in the input BAM file.
     size_t next_vcf_to_write = 0;
     size_t next_det_to_write = 0;
+    size_t next_bam_to_write = 0;
 
     cout << "Processing all loci...\n" << flush;
     ProgressMeter progress =
@@ -308,6 +340,30 @@ try {
                 }
             }
             t.writing_vcf.update();
+
+            // Write the alignments.
+            if (bam_output) {
+                t.writing_bams.restart();
+                #pragma omp critical(write_bams)
+                {
+                    for (size_t i=next_bam_to_write+bam_outputs.size(); i<=loc_i; ++i)
+                        bam_outputs.push_back( make_pair(false, vector<vector<BamRecord>>()) );
+                    bam_outputs[loc_i - next_bam_to_write] = make_pair(true, move(loc_proc.bam_out()));
+
+                    while (!bam_outputs.empty() && bam_outputs.front().first) {
+                        vector<vector<BamRecord>>& recs = bam_outputs.front().second;
+                        if (!recs.empty()) {
+                            assert(recs.size() == bam_of_ptrs.size());
+                            for (size_t i=0; i<recs.size(); ++i)
+                                for (const BamRecord& r : recs[i])
+                                    bam_of_ptrs[i]->write(r);
+                        }
+                        bam_outputs.pop_front();
+                        ++next_bam_to_write;
+                    }
+                }
+                t.writing_bams.update();
+            }
 
             // Write the detailed output.
             if (detailed_output) {
@@ -631,6 +687,7 @@ try {
         double w_f = t_threads_totals.writing_fa.elapsed() / num_threads;
         double w_v = t_threads_totals.writing_vcf.elapsed() / num_threads;
         double w_d = t_threads_totals.writing_details.elapsed() / num_threads;
+        double w_b = t_threads_totals.writing_bams.elapsed() / num_threads;
 
         double ppr = t_threads_totals.processing_pre_alns.elapsed() / num_threads;
         double rn   = t_threads_totals.rm_Ns.elapsed() / num_threads;
@@ -646,6 +703,7 @@ try {
         double u   = t_threads_totals.cpt_consensus.elapsed() / num_threads;
         double b_v = t_threads_totals.building_vcf.elapsed() / num_threads;
         double b_f = t_threads_totals.building_fa.elapsed() / num_threads;
+        double b_b = t_threads_totals.building_bams.elapsed() / num_threads;
 
         double c = t_parallel.consumed()
                  + t_threads_totals.reading.consumed() / num_threads
@@ -653,6 +711,7 @@ try {
                  + t_threads_totals.writing_fa.consumed() / num_threads
                  + t_threads_totals.writing_vcf.consumed() / num_threads
                  + t_threads_totals.writing_details.consumed() / num_threads
+                 + t_threads_totals.writing_bams.consumed() / num_threads
                  + t_threads_totals.processing_pre_alns.consumed() / num_threads
                  + t_threads_totals.rm_Ns.consumed() / num_threads
                  + t_threads_totals.assembling.consumed() / num_threads
@@ -667,6 +726,7 @@ try {
                  + t_threads_totals.cpt_consensus.consumed() / num_threads
                  + t_threads_totals.building_vcf.consumed() / num_threads
                  + t_threads_totals.building_fa.consumed() / num_threads
+                 + t_threads_totals.building_bams.consumed() / num_threads
                  + t_writing_vcf.consumed()
                  ;
 
@@ -695,8 +755,11 @@ try {
            << std::setw(16) << h << "  haplotyping (" << as_percentage(h / ll) << ")\n"
            << std::setw(16) << u << "  computing consensus (" << as_percentage(u / ll) << ")\n"
            << std::setw(16) << b_f << "  building_fa (" << as_percentage(b_f / ll) << ")\n"
-           << std::setw(16) << b_v << "  building_vcf (" << as_percentage(b_v / ll) << ")\n"
-           << std::setw(8) << w_f << "  writing_fa (" << as_percentage(w_f / ll) << ")\n"
+           << std::setw(16) << b_v << "  building_vcf (" << as_percentage(b_v / ll) << ")\n";
+        if (bam_output)
+            x_fp1 << std::setw(16) << b_b << "  building_bam (" << as_percentage(b_b / ll) << ")\n"
+                << std::setw(8) << w_b << "  writing_bam (" << as_percentage(w_b / ll) << ")\n";
+        x_fp1 << std::setw(8) << w_f << "  writing_fa (" << as_percentage(w_f / ll) << ")\n"
            << std::setw(8) << w_v << "  writing_vcf (" << as_percentage(w_v / ll) << ")\n";
         if (detailed_output)
             x_fp1 << std::setw(8) << w_d << "  writing_details (" << as_percentage(w_d / ll) << ")\n";
@@ -729,6 +792,10 @@ try {
     gzclose(o_gzfasta_f);
     o_vcf_f->file().close();
     o_vcf_f.reset();
+    for (unique_ptr<Bam>& b : bam_of_ptrs) {
+        b->close();
+        b.reset();
+    }
     if (o_details_f) {
         o_details_f->close();
         o_details_f.reset();
@@ -1007,6 +1074,44 @@ LocusProcessor::process(CLocReadSet& loc)
         loc_.details_ss << "END pe_alns\n";
     delete stree;
     timers_.aligning.update();
+
+    if (bam_output) {
+        timers_.building_bams.restart();
+        assert(input_type == GStacksInputT::denovo_popmap || input_type == GStacksInputT::denovo_merger);
+        const bool merged_input = input_type == GStacksInputT::denovo_merger;
+        if (loc_.o_bam.empty())
+            loc_.o_bam.resize(merged_input ? 1 : loc_.mpopi->n_samples());
+        aln_loc.sort_by_alignment_offset();
+        for (const SAlnRead& read : aln_loc.reads()) {
+            BamRecord rec;
+            assert(read.name.length() >= 2 && *++read.name.rbegin() == '/');
+            Cigar c = read.cigar;
+            size_t offset = 0;
+            assert(!c.empty());
+            if (c.back().first == 'D')
+                c.pop_back();
+            else if (c.back().first == 'I' && c.size() >= 2 && (*----c.end()).first == 'D')
+                c.erase(----c.end());
+            if (c[0].first == 'D') {
+                offset = c[0].second;
+                c.erase(c.begin());
+            } else if (c[0].first == 'I' && c.size() >= 2 && c[1].first == 'D') {
+                offset = c[1].second;
+                c.erase(++c.begin());
+            }
+            rec.assign(
+                read.name.substr(0, read.name.length() - 2),
+                *read.name.rbegin() == '1' ? BAM_FREAD1 : BAM_FREAD2,
+                aln_loc.id(),
+                offset,
+                c,
+                read.seq,
+                read.sample
+                );
+            loc_.o_bam.at(merged_input ? 0 : read.sample).push_back(move(rec));
+        }
+        timers_.building_bams.update();
+    }
 
     timers_.merge_paired_reads.restart();
     aln_loc.merge_paired_reads();
@@ -2601,12 +2706,14 @@ Timers& Timers::operator+= (const Timers& other) {
     writing_fa += other.writing_fa;
     writing_vcf += other.writing_vcf;
     writing_details += other.writing_details;
+    writing_bams += other.writing_bams;
     // Within processing:
     processing_pre_alns += other.processing_pre_alns;
     rm_Ns += other.rm_Ns;
     assembling += other.assembling;
     init_alignments += other.init_alignments;
     aligning += other.aligning;
+    building_bams += other.building_bams;
     merge_paired_reads += other.merge_paired_reads;
     processing_post_alns += other.processing_post_alns;
     rm_reads += other.rm_reads;
@@ -2670,6 +2777,7 @@ const string help_string = string() +
         "  --kmer-length: kmer length for the de Bruijn graph (default: 31, max. 31)\n"
         "  --max-debruijn-reads: maximum number of reads to use in the de Bruijn graph (default: 1000)\n"
         "  --min-kmer-cov: minimum coverage to consider a kmer (default: 2)\n"
+        "  --write-alignments: save read alignments (heavy BAM files)\n"
         "\n"
         "  (Reference-based mode)\n"
         "  --min-mapq: minimum PHRED-scaled mapping quality to consider a read (default: 10)\n"
@@ -2727,6 +2835,7 @@ try {
         {"max-debruijn-reads", required_argument, NULL, 1024},
         {"min-kmer-cov", required_argument, NULL,  1002},
         {"ignore-pe-reads", no_argument,    NULL,  1012},
+        {"write-alignments", no_argument,   NULL,  1021},
         {"details",      no_argument,       NULL,  1013},
         {"min-mapq",     required_argument, NULL,  1014},
         {"max-clipped",  required_argument, NULL,  1015},
@@ -2855,6 +2964,9 @@ try {
             break;
         case 1002://min-kmer-cov
             min_km_count = atoi(optarg);
+            break;
+        case 1021://write-alignments
+            bam_output = true;
             break;
         case 1013://details
             detailed_output = true;
@@ -3021,6 +3133,10 @@ try {
             cerr << "Error: --min-kmer-count, --max-debruijn-reads are for the denovo mode.\n";
             bad_args();
         }
+        if (bam_output) {
+            cerr << "Error: --write-alignments is for the denovo mode.\n";
+            bad_args();
+        }
     } else {
         DOES_NOT_HAPPEN;
     }
@@ -3060,12 +3176,17 @@ try {
     }
 
     if (input_type == In::denovo_popmap) {
-        for (const string& s : sample_names)
+        for (const string& s : sample_names) {
             in_bams.push_back(stacks_dir + s + ".matches.bam");
+            if (bam_output)
+                out_bams.push_back(stacks_dir + s + ".alns.bam");
+        }
         if (out_dir.empty())
             out_dir = stacks_dir;
     } else if (input_type == In::denovo_merger) {
         in_bams.push_back(stacks_dir + "catalog.bam");
+        if (bam_output)
+            out_bams.push_back(stacks_dir + "alignments.bam");
         if (out_dir.empty())
             out_dir = stacks_dir;
     } else if (input_type == In::refbased_popmap) {
