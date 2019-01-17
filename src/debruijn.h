@@ -52,7 +52,8 @@ public:
     operator bool() const {return !empty();}
     bool operator==(const Kmer& other) const {return a_ == other.a_;}
     friend struct std::hash<Kmer>;
-    friend ostream& operator<< (ostream& os, const Kmer& km) = delete; // Can't pass the kmer length.
+    // friend ostream& operator<< (ostream& os, const Kmer& km) = delete; // Can't pass the kmer length.
+    // p.s. 2019-01-16: c.f. mailing list; a bug in GCC<5.1 causes a compilation error for friend ... = delete.
 
     static Kmer homopolymer(size_t km_len, Nt2 nt);
 };
