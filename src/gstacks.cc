@@ -71,6 +71,7 @@ long phasing_min_mac = 1;
 
 bool   dbg_no_overlaps     = false;
 bool   dbg_no_haplotypes   = false;
+bool   dbg_print_cloc_ids  = false;
 bool   dbg_write_gfa       = false;
 bool   dbg_write_gfa_notdag = false;
 bool   dbg_write_alns      = false;
@@ -284,12 +285,16 @@ try {
             size_t loc_i;
             if (input_type == GStacksInputT::denovo_popmap || input_type == GStacksInputT::denovo_merger) {
                 loc_i = loc.bam_i();
+                if (dbg_print_cloc_ids)
+                    cerr << (to_string(loc.id()) + '\n') << flush;
                 if (ignore_pe_reads)
                     loc.pe_reads().clear();
                 loc_proc.process(loc);
             } else {
                 assert(aln_loc.id() >= 1);
                 loc_i = aln_loc.id() - 1;
+                if (dbg_print_cloc_ids)
+                    cerr << (to_string(aln_loc.id()) + '\n') << flush;
                 if (refbased_cfg.paired)
                     aln_loc.merge_paired_reads();
                 loc_proc.process(aln_loc);
@@ -2848,6 +2853,7 @@ try {
         {"min-kmer-freq", required_argument, NULL, 3021},
         {"dbg-phasing-min-mac", required_argument, NULL,  2018},
         {"dbg-phasing-no-2ndpass", no_argument, NULL, 2019},
+        {"dbg-print-cloc-ids", no_argument, NULL,  2000},
         {"dbg-gfa",      no_argument,       NULL,  2003},
         {"dbg-gfa-not-dag",  no_argument,   NULL,  2015},
         {"dbg-alns",     no_argument,       NULL,  2004}, {"alns", no_argument, NULL, 2004},
@@ -3033,6 +3039,9 @@ try {
             break;
         case 2019: //dbg-phasing-no-2ndpass
             dbg_phasing_no_2ndpass = true;
+            break;
+        case 2000://dbg-print-cloc-ids
+            dbg_print_cloc_ids = true;
             break;
         case 2003://dbg-gfa
             dbg_write_gfa = true;
