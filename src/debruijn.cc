@@ -12,7 +12,7 @@ SPath::SPath(Node* first) : first_(first), last_(NULL), d_(), visitdata(NULL) {
     d_.km_cumcount = first->count();
     Node* n = first_;
     Node* s = n->first_succ();
-    while (n->n_succ() == 1 && s->n_pred() == 1) {
+    while (n->n_succ() == 1 && s->n_pred() == 1 && s != first_) {
         // Extend the simple path.
         n = s;
         ++d_.n_nodes;
@@ -23,18 +23,24 @@ SPath::SPath(Node* first) : first_(first), last_(NULL), d_(), visitdata(NULL) {
 }
 
 void SPath::erase(size_t km_len) {
+    assert(!empty());
     if (first_ != last_) {
         assert(first_->n_succ() == 1);
         assert(last_->n_pred() == 1);
     }
-    // Disconnect the SPath from the graph.
+    // Disconnect the SPath from the graph. Record neighbors.
+    array<SPath*,4> preds{}, succs{};
     for (size_t nt2=0; nt2<4; ++nt2) {
         SPath* p = pred(nt2);
         SPath* s = succ(nt2);
-        if (p != NULL && p != this)
+        if (p != NULL && p != this) {
+            preds[nt2] = p;
             p->last_->rm_succ(size_t(first_->km().back(km_len)), first_);
-        if (s != NULL && s != this)
+        }
+        if (s != NULL && s != this) {
+            succs[nt2] = s;
             last_->rm_succ(nt2, s->first_);
+        }
     }
     // Clear the SPath.
     Node* next = NULL;
@@ -48,24 +54,56 @@ void SPath::erase(size_t km_len) {
             break;
     }
     *this = SPath();
+    // Finally, check if we need to merge some SPaths (i.e. if we created some
+    // new "simple edges").
+    for (size_t nt2=0; nt2<4; ++nt2) {
+        SPath* p = preds[nt2];
+        if (p != NULL && !p->empty())
+            p->merge_forward();
+    }
+    for (size_t nt2=0; nt2<4; ++nt2) {
+        SPath* s = succs[nt2];
+        if (s != NULL && !s->empty() && s->n_pred() == 1) {
+            SPath* s_pred = NULL;
+            for (size_t nt22=0; nt22<4; ++nt22) {
+                if (s->pred(nt22) != NULL) {
+                    s_pred = s->pred(nt22);
+                    break;
+                }
+            }
+            assert(s_pred != NULL && !s_pred->empty());
+            s_pred->merge_forward();
+        }
+    }
 }
 
-void SPath::merge_forward() {
-    assert(n_succ() == 1);
-    SPath& s = *first_succ();
-    assert(s.n_pred() == 1);
-    assert(s.pred(size_t(this->last()->km().front())) == this);
+bool SPath::merge_forward() {
+    assert(!empty());
+    if (!is_mergeable_forward())
+        return false;
+    // Clear the SPaths we can merge into. (Keep track of the predicted end.)
+    SPath* s = first_succ();
+    assert(s != this);
+    Node* end_node = s->last_;
+    while (s->is_mergeable_forward()) {
+        SPath* tmp = s->first_succ();
+        if (tmp == this)
+            break;
+        *s = SPath();
+        s = tmp;
+        end_node = s->last_;
+    }
+    *s = SPath();
     // Rebuild the path.
     *this = SPath(first_);
-    assert(last_ == s.last_);
-    // Clear the successor SPath.
-    s = SPath();
+    assert(last_ == end_node);
     // Update the Node::sp_'s.
     for (Node* n = first_; ; n = n->first_succ()) {
         n->sp_ = this;
         if (n == last_)
             break;
     }
+    return true;
 }
 
 void Graph::rebuild(const vector<const DNASeq4*>& reads, size_t min_kmer_count) {
@@ -123,16 +161,11 @@ void Graph::rebuild(const vector<const DNASeq4*>& reads, size_t min_kmer_count) 
 
     //
     // Build the simple paths.
-    // There are three types of simple path starts:
-    // * convergence nodes (several predecessors)
-    // * nodes without predecessors
-    // * successors of divergence nodes (one predecessor that has several successors)
     //
     for (Node& n : nodes_) {
         assert(!n.empty());
         if (n.n_pred() != 1)
             simple_paths_.push_back(SPath(&n));
-
         if (n.n_succ() > 1) {
             for (size_t nt2=0; nt2<4; ++nt2) {
                 Node* s = n.succ(nt2);
@@ -191,16 +224,14 @@ bool Graph::remove_microsat_dimer_cycles() {
 }
 
 bool Graph::remove_microsat_dimer_cycle(SPath& p, SPath& q) {
-    // Make sure we god this right.
-    size_t p_front = size_t(p.first()->km().front());
-    size_t q_front = size_t(q.first()->km().front());
-    size_t p_back = size_t(p.last()->km().back(km_len_));
-    size_t q_back = size_t(q.last()->km().back(km_len_));
-    assert(p.succ(q_back) == &q && p.pred(q_front) == &q);
-    assert(q.succ(p_back) == &p && q.pred(p_front) == &p);
+    // Make sure we got this right.
+    Nt2 p_front = p.first()->km().front();
+    Nt2 q_front = q.first()->km().front();
+    Nt2 p_back = p.last()->km().back(km_len_);
+    Nt2 q_back = q.last()->km().back(km_len_);
+    assert(p.succ(size_t(q_back)) == &q && p.pred(size_t(q_front)) == &q);
+    assert(q.succ(size_t(p_back)) == &p && q.pred(size_t(p_front)) == &p);
     // Detect the configuration we're in.
-    SPath* rm;
-    SPath* keep;
     assert(p.n_succ() >= 1 && p.n_pred() >= 1); // c.f. above.
     assert(q.n_succ() >= 1 && q.n_pred() >= 1);
     size_t p_external = bool(p.n_succ() - 1) + bool(p.n_pred() - 1);
@@ -217,43 +248,25 @@ bool Graph::remove_microsat_dimer_cycle(SPath& p, SPath& q) {
         // of the cycle are in the same SPath, which is handled as we detect the cycle.
         // DOES_NOT_HAPPEN; -- However, this fails.
         // There's an extra limit case that brings us here -- if the microsat node pair
-        // is the termination of two otherwise disconnected subgraphs going in opposite
+        // is the extremity of two otherwise disconnected subgraphs going in opposite
         // directions.
         // e.g. AGTGT,CTGT/k=3: AGT->GTG<->TGT<-CTG or TGTGA,TGTC/k=3: TGA<-GTG<->TGT->GTC.
+        //
+        // In that case, we erase the "first" of the two nodes (whatever that means depends
+        // on std::unordered_map); the other one usually will be merged with its in/outcoming
+        // simple path).
         assert(( (p.n_succ()-1) == 0 && (q.n_succ()-1) == 0 )
             || ( (p.n_pred()-1) == 0 && (q.n_pred()-1) == 0 ));
         p.erase(km_len_);
-        q.erase(km_len_);
-        return true;
+        // Note: q.empty() is often true at this point.
     } else if (p_external < 2) {
         assert(q_external == 2);
-        rm = &p;
-        keep = &q;
+        p.erase(km_len_);
     } else if (q_external < 2) {
         assert(p_external == 2);
-        rm = &q;
-        keep = &p;
+        q.erase(km_len_);
     } else {
         DOES_NOT_HAPPEN;
-    }
-    // Erase one of the two SPaths.
-    rm->erase(km_len_);
-    // Merge the other SPath as necessary.
-    if (keep->n_succ() == 1 && keep->first_succ()->n_pred() == 1)
-        keep->merge_forward();
-    if (keep->n_pred() == 1) {
-        SPath* pred = NULL;
-        for (size_t nt2=0; nt2<4; ++nt2) {
-            if (keep->pred(nt2) != NULL) {
-                pred = keep->pred(nt2);
-                break;
-            }
-        }
-        assert(pred != NULL);
-        if (pred->n_succ() == 1) {
-            pred->merge_forward();
-            assert(keep->empty());
-        }
     }
     return true;
 }
@@ -262,7 +275,6 @@ bool Graph::topo_sort() const {
     if (!sorted_spaths_.empty())
         // Already sorted.
         return true;
-
     vector<uchar> visitdata; // 0/1s; whether each spath is a parent in the recursion
     visitdata.reserve(simple_paths_.size());
     for (const SPath& p : simple_paths_)
@@ -277,7 +289,6 @@ bool Graph::topo_sort() const {
             return false;
         }
     }
-
     return true;
 }
 
