@@ -127,6 +127,15 @@ private:
 // ==========
 //
 // Node-like object for a 'simple path'.
+// A simple path connects a set of nodes connected by 'simple edges', i.e.
+// edges for which the the anterior node has a single successor and the
+// posterior node has a single predecessor (non-branching paths).
+//
+// As a consequence, simple paths may start at:
+// * nodes without predecessors
+// * convergence nodes (several predecessors)
+// * successors of divergence nodes (one predecessor has several successors)
+// (Also, perfectly linear loops are simple paths that don't start anywhere in particular.)
 //
 // Each node includes a SPath pointer so as to not have to maintain
 // separate edge information. This pointer is handled by the methods in
@@ -158,7 +167,8 @@ public:
     bool empty() const {return first_ == NULL;};
     void update_ptrs() {first_->sp_ = this; last_->sp_ = this;}
     void erase(size_t km_len);
-    void merge_forward(); // (As a consequence of erasing.)
+    bool merge_forward(); // (As a consequence of erasing.)
+    bool is_mergeable_forward() {return n_succ() == 1 && first_succ() != this && first_succ()->n_pred() == 1;}
 
     size_t n_pred() const {return first_->n_pred();}
     size_t n_succ() const {return last_->n_succ();}
@@ -166,7 +176,7 @@ public:
           SPath* pred(size_t nt2)       {return (SPath*) ((const SPath*)this)->pred(nt2);}
     const SPath* succ(size_t nt2) const {const Node* n = last_->succ(nt2); return n == NULL ? NULL : n->sp_;}
           SPath* succ(size_t nt2)       {return (SPath*) ((const SPath*)this)->succ(nt2);}
-    const SPath* first_succ() const {const Node* n = last_->first_succ(); return n == NULL ? NULL : n->sp_;}
+    const SPath* first_succ() const {const Node* n = last_->first_succ(); if (n==NULL) return NULL; else {assert(!n->sp_->empty()); return n->sp_;}}
           SPath* first_succ()       {return (SPath*) ((const SPath*)this)->first_succ();}
 
     size_t n_nodes() const {return d_.n_nodes;}
