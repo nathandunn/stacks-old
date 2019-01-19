@@ -1753,8 +1753,18 @@ LocusProcessor::assemble_locus_contig(
                     return DNASeq4();
                 }
                 graph.rebuild(*todo_seqs, min_km_count);
-                if (graph.empty())
-                    DOES_NOT_HAPPEN;
+                if (graph.empty()) {
+                    // DOES_NOT_HAPPEN; // May fail, c.f. mailing list 2019-01-18.
+                    // We can arrive here in some limit cases. Especially, if the forward and reverse
+                    // regions overlap but the graph is still disconnected, which may happen e.g. if
+                    // there are very few reads and some sequencing errors/SNPs (e.g. two 150bp forward
+                    // reads and one 150bp reverse read with a 50bp overlap, and the two forward reads
+                    // differ at position 100 and min_km_count is 2; with enough errors in the forward
+                    // reads it's probably also possible to make this happen with the graph's best path
+                    // being in the reverse region.)
+                    loc_.details_ss << "limit_case_the_other_compo_disappeared\n";
+                    return DNASeq4();
+                }
                 if (!graph.find_best_path(best_path)
                         && !(graph.remove_cycles() && graph.find_best_path(best_path)))
                     DOES_NOT_HAPPEN;
