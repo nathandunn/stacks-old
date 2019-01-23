@@ -12,11 +12,18 @@ Stacks 2.3 - Jan 11, 2019
              where they previously were).
     Feature: cstacks/sstacks now report an error when the disk becomes full.
 
+	2.3b - Jan 23, 2019
+	----------
+	Bugfix: Fixed some limit cases causing an abort at gstacks.cc:1752.
+	Bugfix: Fixed some limit cases causing an abort at debruijn.cc:60.
+	Bugfix: Fixed some limit cases apparently causing an infinite loop in the de Bruijn code.
+	Bugfix: Restored compilation with the oldest C++11 GCC versions (4.9 and 5.0).
+
 Stacks 2.2 - Aug 22, 2018
 --------------------------
     Feature: Added the --bestrad flag to process_radtags. When used it will look for reads that need transposed
              before they are processed.
-    Feature: gstacks: New option --max-debrujin-reads to control the construction of the de Bruijn graph; replaces 
+    Feature: gstacks: New option --max-debrujin-reads to control the construction of the de Bruijn graph; replaces
              --min-kmer-freq which is now deprecated
     Bugfix: Fixed a breaking circumstantial segmentation fault in populations
     Bugfix: Added run number to output FASTQ headers in process_radtags to make sure read IDs are always unique.
@@ -25,8 +32,8 @@ Stacks 2.1 - June 25, 2018
 --------------------------
     Bugfix: Fixed a performance regression in sstacks. Recent changes in sstacks made it more likely to
             invoke the gapped algorithm to match to the catalog. In some cases, matches to the catalog
-            would be marked as ambiguous alignments and dropped from the next stages of analysis due to 
-            differences in CIGAR strings from the gapped alignment. 
+            would be marked as ambiguous alignments and dropped from the next stages of analysis due to
+            differences in CIGAR strings from the gapped alignment.
     Feature: ustacks Changed --high_cov_thres default value from 2.0 to 3.0.
     Feature: gstacks: Changed --min-kmer-freq default value from 0.05 to 0.01.
     Feature: Added further checks on zlib calls.
