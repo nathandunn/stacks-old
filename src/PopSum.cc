@@ -357,7 +357,9 @@ LocPopSum::tally_heterozygous_pos(const CSLocus *cloc, Datum const*const* d, Loc
     s->nucs[pos].exp_het  = exp_het;
 
     //
-    // Calculate F_is, the inbreeding coefficient of an individual (I) relative to the subpopulation (S):
+    // Calculate F_is, the inbreeding coefficient of an individual (I) relative to the subpopulation (S).
+    // F_is measures reductions in observed heterozygosity with respect to that expected under Hardy-Weinberg
+    // Equilibrium.
     //   Fis = (exp_het - obs_het) / exp_het
     //
     double fis = s->nucs[pos].pi == 0 ? -7 : (s->nucs[pos].pi - obs_het) / s->nucs[pos].pi;

@@ -1,3 +1,6 @@
+    Bugfix: inadvertantly compiling out BAM support from process_radtags due to the removal of the HAVE_BAM 
+            config option, which occurred when we moved the BAM library internally to Stacks.
+
 Stacks 2.3 - Jan 11, 2019
 --------------------------
     Feature: populations: Backwards-compatibly worked on filtering options; added long names for -r and -p and
