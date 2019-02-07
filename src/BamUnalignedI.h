@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2015, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2015-2019, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -25,8 +25,6 @@
 // Code to parse binary BAM format. This format is created for
 // reads that have NOT been aligned to a reference genome.
 //
-
-#ifdef HAVE_BAM
 
 #include "input.h"
 #include "htslib/sam.h"
@@ -152,20 +150,5 @@ BamUnAln::next_seq(Seq& s)
 
     return 1;
 }
-
-#else  // If HAVE_BAM is undefined and BAM library is not present.
-
-#include "input.h"
-
-class BamUnAln: public Input {
- public:
-    BamUnAln(const char *path) : Input() { cerr << "BAM support was not enabled when Stacks was compiled.\n"; };
-    BamUnAln(string path) : Input() { cerr << "BAM support was not enabled when Stacks was compiled.\n"; };
-    ~BamUnAln() {};
-    Seq *next_seq()      { return NULL; };
-    int  next_seq(Seq &) { return 0; };
-};
-
-#endif // HAVE_BAM
 
 #endif // __BAMUNALIGNEDI_H__
