@@ -1123,12 +1123,18 @@ LocusProcessor::process(CLocReadSet& loc)
     timers_.merge_paired_reads.update();
     loc.clear();
     timers_.processing_pre_alns.update();
+    if (aln_loc.reads().empty()) {
+       if (detailed_output)
+           loc_.details_ss << "no_reads_were_aligned\n";
+        return;
+    }
     process(aln_loc);
 }
 
 void
 LocusProcessor::process(CLocAlnSet& aln_loc)
 {
+    assert(!aln_loc.reads().empty());
     timers_.processing_post_alns.restart();
     if (input_type == GStacksInputT::denovo_popmap || input_type == GStacksInputT::denovo_merger) {
         // Called from process(CLocReadSet&).
