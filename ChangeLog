@@ -1,6 +1,3 @@
-    Bugfix: inadvertantly compiling out BAM support from process_radtags due to the removal of the HAVE_BAM 
-            config option, which occurred when we moved the BAM library internally to Stacks.
-
 Stacks 2.3 - Jan 11, 2019
 --------------------------
     Feature: populations: Backwards-compatibly worked on filtering options; added long names for -r and -p and
@@ -21,6 +18,13 @@ Stacks 2.3 - Jan 11, 2019
 	Bugfix: Fixed some limit cases causing an abort at debruijn.cc:60.
 	Bugfix: Fixed some limit cases apparently causing an infinite loop in the de Bruijn code.
 	Bugfix: Restored compilation with the oldest C++11 GCC versions (4.9 and 5.0).
+
+	2.3c - Feb 27, 2019
+	---------
+	Bugfix: Fixed assert failure at gstacks.cc:1171 (corrected with a return on gstacks.cc:1126)
+	Bugfix: inadvertantly compiling out BAM support from process_radtags due to the removal of the HAVE_BAM
+                config option, which occurred when we moved the BAM library internally to Stacks.
+	Bugfix: corrected infinite loop in populations when --write-single-snp and -r were enabled.
 
 Stacks 2.2 - Aug 22, 2018
 --------------------------

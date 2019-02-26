@@ -1199,10 +1199,29 @@ LocusFilter::init(MetaPopInfo *mpopi)
 void
 LocusFilter::keep_single_snp(CSLocus* cloc, Datum** d, size_t n_samples, const LocTally* t) const
 {
-    size_t kept_snp = 0;;
-    while (kept_snp != cloc->snps.size())
-        if (!t->nucs[cloc->snps[kept_snp]->col].fixed)
+    //
+    // Check that we have at least one variable site within this population for this locus.
+    //
+    size_t n_actual_snps = 0;
+    for (const SNP* snp : cloc->snps)
+        if (!t->nucs[snp->col].fixed)
+            ++n_actual_snps;
+    if (n_actual_snps == 0)
+        return;
+
+    //
+    // Find the first SNP that is not fixed in this subpopulation.
+    //
+    size_t kept_snp = 0;
+    while (kept_snp != cloc->snps.size()) {
+        if (t->nucs[cloc->snps[kept_snp]->col].fixed == false)
             break;
+        kept_snp++;
+    }
+
+    //
+    // Remove all the SNPs except for the one marked previously.
+    //
     for (size_t snp=cloc->snps.size(); snp!=0;) {
         --snp;
         if (snp != kept_snp)
