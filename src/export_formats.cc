@@ -1005,7 +1005,7 @@ FastaLociExport::write_header()
     timeinfo = localtime(&rawtime);
     strftime(date, 32, "%B %d, %Y", timeinfo);
 
-    this->_fh << "Stacks version " << VERSION << "; " << date << "\n";
+    this->_fh << "# Stacks version " << VERSION << "; " << date << "\n";
     return 0;
 }
 
@@ -1017,7 +1017,7 @@ FastaLociExport::write_batch(const vector<LocBin *> &loci)
 
         this->_fh << ">CLocus_" << loc->cloc->id;
         if (strcmp(loc->cloc->loc.chr(), "un") != 0)
-            this->_fh << " [" << loc->cloc->loc.chr() << ", " << loc->cloc->sort_bp() + 1 << ", " << (loc->cloc->loc.strand == strand_plus ? "+" : "-");
+            this->_fh << " [" << loc->cloc->loc.chr() << ", " << loc->cloc->sort_bp() + 1 << ", " << (loc->cloc->loc.strand == strand_plus ? "+" : "-") << "]";
         this->_fh << '\n' << loc->cloc->con << '\n';
 
 #ifdef DEBUG
@@ -1046,7 +1046,7 @@ FastaRawExport::write_header()
     timeinfo = localtime(&rawtime);
     strftime(date, 32, "%B %d, %Y", timeinfo);
 
-    this->_fh << "Stacks version " << VERSION << "; " << date << "\n";
+    this->_fh << "# Stacks version " << VERSION << "; " << date << "\n";
     return 0;
 }
 
@@ -1123,7 +1123,7 @@ FastaSamplesExport::write_header()
     timeinfo = localtime(&rawtime);
     strftime(date, 32, "%B %d, %Y", timeinfo);
 
-    this->_fh << "Stacks version " << VERSION << "; " << date << "\n";
+    this->_fh << "# Stacks version " << VERSION << "; " << date << "\n";
     return 0;
 }
 
