@@ -25,6 +25,7 @@ Stacks 2.3 - Jan 11, 2019
 	Bugfix: inadvertantly compiling out BAM support from process_radtags due to the removal of the HAVE_BAM
                 config option, which occurred when we moved the BAM library internally to Stacks.
 	Bugfix: corrected infinite loop in populations when --write-single-snp and -r were enabled.
+        Bugfix: correct missing comment marker in population's FASTA exports and missing ']' character in FASTA comments.
 
 Stacks 2.2 - Aug 22, 2018
 --------------------------
