@@ -569,7 +569,7 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
         //
         // Apply locus & SNP filters.
         //
-        this->_dists.accumulate_pre_filtering(loc->cloc);
+        this->_dists.accumulate_pre_filtering(loc->sample_cnt, loc->cloc);
         this->_loc_filter.whitelist_snp_filter(*loc);
         if (this->_loc_filter.apply_filters_stacks(*loc, log_fh, *this->_mpopi)) {
             delete loc;
@@ -764,7 +764,7 @@ BatchLocusProcessor::next_batch_external_loci(ostream &log_fh)
         //
         // Apply filters.
         //
-        this->_dists.accumulate_pre_filtering(loc->cloc);
+        this->_dists.accumulate_pre_filtering(loc->sample_cnt, loc->cloc);
         if (this->_loc_filter.apply_filters_external(*loc, log_fh, *this->_mpopi)) {
             delete loc;
             continue;
@@ -1048,7 +1048,7 @@ LocusFilter::apply_filters_stacks(LocBin& loc, ostream& log_fh, const MetaPopInf
     //
     // Apply the -r/-p thresholds at the locus level.
     //
-    if (this->filter(&mpopi, loc.d))
+    if (this->filter(&mpopi, loc.d, loc.cloc))
         return true;
 
     //
@@ -1089,7 +1089,7 @@ LocusFilter::apply_filters_external(LocBin& loc, ostream& log_fh, const MetaPopI
     //
     // Apply the -r/-p thresholds at the locus level.
     //
-    if (this->filter(&mpopi, loc.d))
+    if (this->filter(&mpopi, loc.d, loc.cloc))
         return true;
 
     //
@@ -1105,7 +1105,7 @@ LocusFilter::apply_filters_external(LocBin& loc, ostream& log_fh, const MetaPopI
 }
 
 bool
-LocusFilter::filter(const MetaPopInfo *mpopi, Datum **d)
+LocusFilter::filter(const MetaPopInfo *mpopi, Datum **d, CSLocus *cloc)
 {
     // Filter out populations that don't have enough samples.
     size_t n_pops_present = 0;
@@ -1122,6 +1122,7 @@ LocusFilter::filter(const MetaPopInfo *mpopi, Datum **d)
                 if (d[s] != NULL) {
                     delete d[s];
                     d[s] = NULL;
+                    cloc->cnt--;
                 }
             }
         }
@@ -1418,16 +1419,16 @@ LocusFilter::filter_haps(LocBin& loc, const MetaPopInfo& mpopi, ostream &log_fh)
 }
 
 int
-CatalogDists::accumulate_pre_filtering(const CSLocus *loc)
+CatalogDists::accumulate_pre_filtering(const size_t sample_cnt, const CSLocus *loc)
 {
     size_t missing;
 
-    if (this->_pre_valid.count(loc->hcnt) == 0)
-        this->_pre_valid[loc->hcnt] = 1;
+    if (this->_pre_valid.count(loc->cnt) == 0)
+        this->_pre_valid[loc->cnt] = 1;
     else
-        this->_pre_valid[loc->hcnt]++;
+        this->_pre_valid[loc->cnt]++;
 
-    missing = loc->cnt - loc->hcnt;
+    missing = sample_cnt - loc->cnt;
 
     if (this->_pre_absent.count(missing) == 0)
         this->_pre_absent[missing] = 1;
@@ -1452,12 +1453,12 @@ CatalogDists::accumulate(const vector<LocBin *> &loci)
     for (uint i = 0; i < loci.size(); i++) {
         loc = loci[i]->cloc;
 
-        if (this->_post_valid.count(loc->hcnt) == 0)
-            this->_post_valid[loc->hcnt] = 1;
+        if (this->_post_valid.count(loc->cnt) == 0)
+            this->_post_valid[loc->cnt] = 1;
         else
-            this->_post_valid[loc->hcnt]++;
+            this->_post_valid[loc->cnt]++;
 
-        missing = loc->cnt - loc->hcnt;
+        missing = loci[i]->sample_cnt - loc->cnt;
 
         if (this->_post_absent.count(missing) == 0)
             this->_post_absent[missing] = 1;
@@ -1536,46 +1537,6 @@ CatalogDists::write_results(ostream &log_fh)
     for (cnt_it = this->_post_snps_per_loc.begin(); cnt_it != this->_post_snps_per_loc.end(); cnt_it++)
         log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
     end_section();
-
-    return 0;
-}
-
-int
-log_haplotype_cnts(map<int, CSLocus *> &catalog, ofstream &log_fh)
-{
-    map<int, CSLocus *>::iterator it;
-    map<int, int> valid, absent;
-
-    CSLocus *loc;
-    int missing;
-
-    for (it = catalog.begin(); it != catalog.end(); it++) {
-        loc = it->second;
-
-        if (valid.count(loc->hcnt) == 0)
-            valid[loc->hcnt] = 1;
-        else
-            valid[loc->hcnt]++;
-
-        missing = loc->cnt - loc->hcnt;
-
-        if (absent.count(missing) == 0)
-            absent[missing] = 1;
-        else
-            absent[missing]++;
-    }
-
-    map<int, int>::iterator cnt_it;
-
-    log_fh << "# Distribution of valid loci matched to catalog locus.\n"
-           << "# Valid samples at locus\tCount\n";
-    for (cnt_it = valid.begin(); cnt_it != valid.end(); cnt_it++)
-        log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
-
-    log_fh << "# Distribution of missing loci at catalog loci.\n"
-           << "# Absent samples at locus\tCount\n";
-    for (cnt_it = absent.begin(); cnt_it != absent.end(); cnt_it++)
-        log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
 
     return 0;
 }

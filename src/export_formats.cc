@@ -881,7 +881,7 @@ GenotypesExport::write_batch(const vector<LocBin *> &loci)
         if (write_gtypes)
             this->_fh << "\t" << cloc->marker;
 
-        write_gtypes ? this->_fh << "\t" << cloc->gcnt : this->_fh << "\t" << cloc->hcnt;
+        write_gtypes ? this->_fh << "\t" << cloc->gcnt : this->_fh << "\t" << cloc->cnt;
 
         Datum **d = loci[i]->d;
         string  obshap;

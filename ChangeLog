@@ -32,7 +32,8 @@ Stacks 2.3 - Jan 11, 2019
 	Bugfix: the snps_per_loc_postfilters distribution in the populations.log.distrib file was slightly off due to counting
                 the number of SNPs at loci where despite SNP objects present at the locus, all sites were fixed in the
 	        focal populations.
-	Bugifx: Some haplotypes could pass through the filter, even after particular SNPs were filtered from them.
+	Bugfix: Some haplotypes could pass through the filter, even after particular SNPs were filtered from them.
+	Bufgix: Corrected the samples per locus and absent-samples per locus distributions from populations. 
 
 Stacks 2.2 - Aug 22, 2018
 --------------------------

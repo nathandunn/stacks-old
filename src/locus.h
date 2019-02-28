@@ -160,7 +160,6 @@ public:
         this->f              = 0.0;
         this->chisq          = 1.0;
         this->cnt            = 0;
-        this->hcnt           = 0;
         this->gcnt           = 0;
         this->trans_gcnt     = 0;
         this->pe_ctg         = false;
@@ -173,7 +172,6 @@ public:
     map<string, string> gmap;     // Observed haplotype to genotype map for this locus.
     bool     pe_ctg;              // Was a paired-end contig constructed for this locus?
     uint16_t overlap;             // Size of overlap between single and paired-end contigs for this locus.
-    uint16_t hcnt;                // Number of samples containing a haplotype for this locus.
     uint16_t cnt;                 // Number of samples containing data for this locus.
     uint16_t gcnt;                // Number of progeny containing a valid genotype.
     uint16_t trans_gcnt;          // Number of progeny containing a valid
