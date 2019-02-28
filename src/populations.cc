@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2012-2018, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2012-2019, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -548,8 +548,8 @@ BatchLocusProcessor::next_batch_stacks_loci(ostream &log_fh)
         //
         // Check if this locus is white/blacklisted.
         //
-        if (this->_loc_filter.whitelist_filter(cloc_id)
-                || this->_loc_filter.blacklist_filter(cloc_id))
+        if (this->_loc_filter.whitelist_filter(cloc_id) ||
+            this->_loc_filter.blacklist_filter(cloc_id))
             continue;
 
         //
@@ -912,32 +912,44 @@ LocusFilter::erase_snp(CSLocus *cloc, Datum **d, size_t n_samples, size_t snp_in
     // * `Datum::obshap`
     //
 
+    //
     // Update the Datums.
+    //
     uint col = cloc->snps[snp_index]->col;
     for (size_t s=0; s<n_samples; ++s) {
         if (d[s] == NULL)
             continue;
+
         assert(d[s]->model);
         assert(!d[s]->obshap.empty() && strlen(d[s]->obshap[0]) == cloc->snps.size());
         assert(d[s]->snpdata.size() == cloc->snps.size());
+        
+        //
         // Correct the model calls.
+        //
         char& m = d[s]->model[col];
         assert(m == 'O' || m == 'E' || m == 'U');
         if (m == 'E' || (m == 'O' && d[s]->obshap[0][snp_index] != cloc->con[col]))
             m = 'U';
+        //
         // Erase the nucleotide in the haplotypes.
+        //
         for (char* hap : d[s]->obshap) {
             hap += snp_index;
-            while(*hap) {
+            while(*hap != '\0') {
                 *hap = *(hap+1);
                 ++hap;
             }
         }
+        //
         // Splice the depths.
+        //
         d[s]->snpdata.erase(d[s]->snpdata.begin() + snp_index);
     }
 
+    //
     // Update the CSLocus.
+    //
     delete cloc->snps[snp_index];
     cloc->snps.erase(cloc->snps.begin() + snp_index);
     // Splice the haplotypes. (Why does this have to be a map?!)
@@ -1266,9 +1278,10 @@ LocusFilter::filter_snps(LocBin& loc, const MetaPopInfo& mpopi, ostream &log_fh)
     loc.s->sum_pops(loc.cloc, loc.d, mpopi, verbose, cout);
     loc.s->tally_metapop(loc.cloc);
     const LocTally *t = s->meta_pop();
-    for (uint i = cloc->snps.size(); i>0;) { // Must be reverse because we `erase()` things.
-        --i;
-        uint col = cloc->snps[i]->col;
+    
+    for (uint snp_index = cloc->snps.size(); snp_index > 0;) { // Must be reverse because we `erase()` things.
+        --snp_index;
+        uint col = cloc->snps[snp_index]->col;
         bool sample_prune = false;
         bool overall_sample_prune = false;
         bool maf_prune    = false;
@@ -1296,9 +1309,11 @@ LocusFilter::filter_snps(LocBin& loc, const MetaPopInfo& mpopi, ostream &log_fh)
                 for (uint k = pop.first_sample; k <= pop.last_sample; k++) {
                     if (d[k] == NULL || col >= (uint) d[k]->len)
                         continue;
-                    if (d[k]->model != NULL) {
+
+                    if (d[k]->model != NULL)
                         d[k]->model[col] = 'U';
-                    }
+                    for(size_t j=0; j < 2; ++j)
+                        d[k]->obshap[j][snp_index] = 'N';
                 }
             }
         }
@@ -1340,7 +1355,7 @@ LocusFilter::filter_snps(LocBin& loc, const MetaPopInfo& mpopi, ostream &log_fh)
                 else
                     DOES_NOT_HAPPEN;
             }
-            this->erase_snp(cloc, d, mpopi.n_samples(), i);
+            this->erase_snp(cloc, d, mpopi.n_samples(), snp_index);
         }
     }
 }
@@ -1431,6 +1446,7 @@ int
 CatalogDists::accumulate(const vector<LocBin *> &loci)
 {
     const CSLocus *loc;
+    const LocTally *t;
     size_t missing;
 
     for (uint i = 0; i < loci.size(); i++) {
@@ -1448,11 +1464,19 @@ CatalogDists::accumulate(const vector<LocBin *> &loci)
         else
             this->_post_absent[missing]++;
 
-        if (this->_post_snps_per_loc.count(loc->snps.size()) == 0)
-            this->_post_snps_per_loc[loc->snps.size()] = 1;
-        else
-            this->_post_snps_per_loc[loc->snps.size()]++;
+        //
+        // Don't count SNPs that are fixed in the metapopulation.
+        //
+        t = loci[i]->s->meta_pop();
+        size_t n_actual_snps = 0;
+        for (const SNP* snp : loc->snps)
+            if (!t->nucs[snp->col].fixed)
+                ++n_actual_snps;
 
+        if (this->_post_snps_per_loc.count(n_actual_snps) == 0)
+            this->_post_snps_per_loc[n_actual_snps] = 1;
+        else
+            this->_post_snps_per_loc[n_actual_snps]++;
     }
 
     return 0;
@@ -1479,7 +1503,7 @@ CatalogDists::write_results(ostream &log_fh)
     end_section();
 
     begin_section("missing_samples_per_loc_prefilters");
-    log_fh << "\n# Distribution of missing samples for each catalog locus prior to filtering.\n"
+    log_fh << "# Distribution of missing samples for each catalog locus prior to filtering.\n"
            << "# Absent samples at locus\tCount\n";
     for (cnt_it = this->_pre_absent.begin(); cnt_it != this->_pre_absent.end(); cnt_it++)
         log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
@@ -1500,7 +1524,7 @@ CatalogDists::write_results(ostream &log_fh)
     end_section();
 
     begin_section("missing_samples_per_loc_postfilters");
-    log_fh << "\n# Distribution of missing samples for each catalog locus after filtering.\n"
+    log_fh << "# Distribution of missing samples for each catalog locus after filtering.\n"
            << "# Absent samples at locus\tCount\n";
     for (cnt_it = this->_post_absent.begin(); cnt_it != this->_post_absent.end(); cnt_it++)
         log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";

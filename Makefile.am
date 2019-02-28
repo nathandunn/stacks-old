@@ -89,22 +89,11 @@ dist_bin_SCRIPTS = scripts/denovo_map.pl scripts/ref_map.pl \
 
 dist_noinst_SCRIPTS = autogen.sh scripts/extract_interpop_chars.pl scripts/convert_stacks.pl
 
-nobase_pkgdata_DATA = sql/mysql.cnf.dist sql/catalog_index.sql sql/stacks.sql sql/tag_index.sql sql/chr_index.sql \
-	php/CatalogClass.php php/annotate_marker.php php/constants.php.dist php/index.php php/tags.php php/tag.php \
-	php/Locus.php php/catalog.php php/correct_genotypes.php php/correct_genotype.php php/export_batch.php php/last_modified.php  \
-	php/version.php php/catalog_genotypes.php php/db_functions.php php/header.php php/samples.php \
-	php/stacks_functions.php php/view_sequence.php php/sequence_blast.php \
-	php/pop_view.php php/sumstat_view.php php/hapstat_view.php php/fst_view.php php/phist_view.php php/stack_view.php \
-	php/population_view.js php/ajax.js php/annotate.js php/stacks.js php/export.js php/stacks.css \
-	php/images/caret-d.png php/images/caret-u.png php/images/excel_icon.png php/images/l-arrow-disabled.png \
-	php/images/l-arrow.png php/images/r-arrow-disabled.png php/images/r-arrow.png php/images/stacks_bg.png \
-	php/images/stacks_logo_rev_small.png
-
 LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) $(abs_top_srcdir)/tests/tap-driver.sh
 
 TESTS = tests/process_radtags.t tests/kmer_filter.t tests/ustacks.t tests/pstacks.t
 
-EXTRA_DIST = $(nobase_pkgdata_DATA) LICENSE INSTALL README ChangeLog $(TESTS)
+EXTRA_DIST = LICENSE INSTALL README ChangeLog $(TESTS)
 
 pkglocalstatedir = $(localstatedir)/$(PACKAGE)
 
@@ -118,11 +107,6 @@ install-data-hook:
 	sed -e 's,_VERSION_,$(VERSION),' -e 's,_BINDIR_,$(bindir)/,g' -e 's,_PKGDATADIR_,$(pkgdatadir)/,g' $(DESTDIR)$(bindir)/ref_map.pl > $(DESTDIR)$(bindir)/ref_map.pl.subst
 	mv $(DESTDIR)$(bindir)/ref_map.pl.subst $(DESTDIR)$(bindir)/ref_map.pl
 	chmod +x $(DESTDIR)$(bindir)/ref_map.pl
-	sed -e 's,_PKGDATADIR_,$(pkgdatadir)/,g' -e 's,_BINDIR_,$(bindir)/,g' \
-		$(DESTDIR)$(pkgdatadir)/php/constants.php.dist > $(DESTDIR)$(pkgdatadir)/php/constants.php.dist.subst
-	mv $(DESTDIR)$(pkgdatadir)/php/constants.php.dist.subst $(DESTDIR)$(pkgdatadir)/php/constants.php.dist
-	echo $(VERSION) > $(DESTDIR)$(pkgdatadir)/php/version.php
-	$(install_sh) -d -m 755 $(DESTDIR)$(pkgdatadir)/php/export
 	sed -i.bkp -e 's,_VERSION_,$(VERSION),' $(DESTDIR)$(bindir)/stacks-integrate-alignments
 	rm -f $(DESTDIR)$(bindir)/stacks-integrate-alignments.bkp
 	chmod +x $(DESTDIR)$(bindir)/stacks-integrate-alignments
