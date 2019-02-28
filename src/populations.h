@@ -104,7 +104,7 @@ class CatalogDists {
     map<size_t, size_t> _pre_snps_per_loc, _post_snps_per_loc;
 
 public:
-    int accumulate_pre_filtering(const CSLocus *);
+    int accumulate_pre_filtering(const size_t, const CSLocus *);
     int accumulate(const vector<LocBin *> &);
     int write_results(ostream &log_fh);
 };
@@ -198,7 +198,7 @@ public:
     void   whitelist_snp_filter(LocBin& loc) const;
     bool   apply_filters_stacks(LocBin& loc, ostream& log_fh, const MetaPopInfo& mpopi);
     bool   apply_filters_external(LocBin& loc, ostream& log_fh, const MetaPopInfo& mpopi);
-    bool   filter(const MetaPopInfo *mpopi, Datum **d);
+    bool   filter(const MetaPopInfo *mpopi, Datum **d, CSLocus *cloc);
     void   filter_snps(LocBin& loc, const MetaPopInfo& mpopi, ostream &log_fh);
     void   filter_haps(LocBin& loc, const MetaPopInfo& mpopi, ostream &log_fh);
     void   gt_depth_filter(Datum **d, const CSLocus *cloc);
@@ -335,7 +335,6 @@ void    open_log(ofstream &);
 int     build_file_list();
 int     load_marker_list(string, set<int> &);
 int     load_marker_column_list(string, map<int, set<int> > &);
-int     log_haplotype_cnts(map<int, CSLocus *> &, ofstream &);
 //int     merge_shared_cutsite_loci(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<merget, int> > &, ofstream &);
 phaset  merge_and_phase_loci(PopMap<CSLocus> *, CSLocus *, CSLocus *, set<int> &, ofstream &);
 int     merge_datums(int, int, Datum **, Datum **, set<string> &, int);
