@@ -1245,16 +1245,27 @@ LocusFilter::keep_single_snp(CSLocus* cloc, Datum** d, size_t n_samples, const L
 void
 LocusFilter::keep_random_snp(CSLocus* cloc, Datum** d, size_t n_samples, const LocTally* t) const
 {
+    //
+    // Check that we have at least one variable site within this population for this locus.
+    //
     size_t n_actual_snps = 0;
     for (const SNP* snp : cloc->snps)
         if (!t->nucs[snp->col].fixed)
             ++n_actual_snps;
     if (n_actual_snps == 0)
         return;
+
+    //
+    // Identify a random SNP that isn't fixed in this subset of populations.
+    //
     size_t kept_snp_i;
     do {
         kept_snp_i = rand() % cloc->snps.size();
-    } while (!t->nucs[cloc->snps[kept_snp_i]->col].fixed);
+    } while (t->nucs[cloc->snps[kept_snp_i]->col].fixed);
+
+    //
+    // Remove all the SNPs except for the one marked previously.
+    //
     for (auto snp_i=cloc->snps.size(); snp_i!=0; ) {
         --snp_i;
         if (snp_i != kept_snp_i)
