@@ -52,7 +52,6 @@ public:
     int init_sites(vector<const StatT *> &, map<uint, uint> &, const vector<LocBin *> &, uint);
     int init_sites(vector<const StatT *> &, map<uint, uint> &, const vector<LocBin *> &, uint, uint);
     int init_haplotypes(vector<const StatT *> &, map<uint, uint> &, const vector<LocBin *> &);
-    int init_haplotypes(vector<const StatT *> &, map<uint, uint> &, const vector<LocBin *> &, uint, uint);
 };
 
 template<class StatT>
