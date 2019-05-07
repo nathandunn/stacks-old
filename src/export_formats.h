@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2012-2018, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2012-2019, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -323,6 +323,24 @@ class PhylipFixedExport: public PhylipExport {
     int write_site(const CSLocus* cloc, const LocPopSum* psum, Datum const*const* datums, size_t col, size_t index);
 };
 
+class HzarExport: public OrderableExport {
+    const MetaPopInfo *_mpopi;
+    ofstream _tmpfh;
+    string   _tmp_path;
+    ifstream _intmpfh;
+
+ public:
+    HzarExport() : _mpopi(NULL) {}
+    ~HzarExport() {}
+    int  open(const MetaPopInfo *mpopi);
+    int  write_header();
+    int  post_processing();
+    void close();
+
+ private:
+    int write_site(const CSLocus* cloc, const LocPopSum* psum, Datum const*const* datums, size_t col, size_t index);
+};
+
 class FastaLociExport: public Export {
     //
     // Output a list of heterozygous loci and the associated haplotype frequencies.
@@ -411,7 +429,6 @@ int write_phase(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
 int write_fastphase(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
 int write_plink(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
 int write_hzar(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
-int write_treemix(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
 int write_fullseq_phylip(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
 */
 

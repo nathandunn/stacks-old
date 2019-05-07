@@ -3703,7 +3703,7 @@ parse_command_line(int argc, char* argv[])
     while (1) {
         static struct option long_options[] = {
             {"help",           no_argument,       NULL, 'h'},
-            {"version",        no_argument,       NULL, 999},
+            {"version",        no_argument,       NULL, 'v'},
             {"quiet",          no_argument,       NULL, 'q'},
             {"verbose",        no_argument,       NULL, 'd'},
             {"vcf",            no_argument,       NULL, 1004}, {"vcf-haps", no_argument, NULL, 1004}, {"vcf-haplotypes", no_argument, NULL, 1004}, {"vcf_haps", no_argument, NULL, 1004}, {"vcf_haplotypes", no_argument, NULL, 1004},
@@ -3770,14 +3770,14 @@ parse_command_line(int argc, char* argv[])
         };
 
         // getopt_long stores the option index here.
-        int c = getopt_long(argc, argv, "ACDFHJKLNSTUV:YZ123456dhjklnqa:c:e:f:i:o:p:r:t:u:w:B:I:M:O:P:R:Q:W:", long_options, NULL);
+        int c = getopt_long(argc, argv, "ACDFHJKLNSTUV:YZ123456dhjklnqva:c:e:f:i:o:p:r:t:u:w:B:I:M:O:P:R:Q:W:", long_options, NULL);
 
         // Detect the end of the options.
         if (c == -1)
             break;
 
         switch (c) {
-        case 999:
+        case 'v':
             version();
             exit(1);
             break;

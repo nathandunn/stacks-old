@@ -2084,6 +2084,98 @@ PhylipExport::close()
 }
 
 int
+HzarExport::open(const MetaPopInfo *mpopi)
+{
+    this->_mpopi = mpopi;
+
+    //
+    // Write a Hybrid Zone Analysis using R (HZAR) file as defined here:
+    //    http://cran.r-project.org/web/packages/hzar/hzar.pdf
+    //
+    this->_path = out_path + out_prefix + ".hzar.csv";
+
+    //
+    // Open a temporary file.
+    //
+    this->_tmp_path = out_path + out_prefix + ".hzar.part";
+    this->_tmpfh.open(this->_tmp_path);
+
+    cout << "Polymorphic sites in HZAR format will be written to '" << this->_path << "'\n";
+
+    return 0;
+}
+
+int
+HzarExport::write_header()
+{
+    return 0;
+}
+
+int
+HzarExport::write_site(const CSLocus *loc, const LocPopSum *lps, Datum const*const* d, size_t col, size_t snp_index)
+{
+    
+    return 0;
+}
+
+int
+HzarExport::post_processing()
+{
+    //
+    // Close the temporary output file.
+    //
+    this->_tmpfh.close();
+
+    //
+    // Obtain the current date.
+    //
+    time_t     rawtime;
+    struct tm *timeinfo;
+    char       date[32];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date, 32, "%B %d, %Y", timeinfo);
+
+    this->_fh.open(this->_path.c_str(), ofstream::out);
+    check_open(this->_fh, this->_path);
+
+    //
+    // Output the header line.
+    //
+    
+    this->_fh << "# Stacks v" << VERSION << "; " << " HZAR v0.2-5; " << date << "\n";
+
+    this->_intmpfh.open(this->_tmp_path.c_str(), ofstream::in);
+    check_open(this->_intmpfh, this->_tmp_path);
+
+    vector<string> transposed_lines;
+
+    Export::transpose(this->_intmpfh, transposed_lines);
+
+    assert(transposed_lines.size() == (this->_mpopi->samples().size() * 2) + 1);
+
+    for (size_t line_cnt = 0; line_cnt < transposed_lines.size(); line_cnt++)
+        this->_fh << transposed_lines[line_cnt] << "\n";
+
+    return 1;
+}
+
+void
+HzarExport::close()
+{
+    //
+    // Close and delete the temporary files.
+    //
+    this->_intmpfh.close();
+
+    remove(this->_tmp_path.c_str());
+
+    this->_fh.close();
+    return;
+
+}
+
+int
 VcfExport::open(const MetaPopInfo *mpopi)
 {
     this->_path = out_path + out_prefix + ".snps.vcf";
@@ -2271,7 +2363,7 @@ PlinkExport::open(const MetaPopInfo *mpopi)
     this->_mpopi = mpopi;
 
     //
-    // Write a GenePop file as defined here: http://kimura.univ-montp2.fr/~rousset/Genepop.htm
+    // Write a PLINK file as defined here: http://pngu.mgh.harvard.edu/~purcell/plink/data.shtml
     //
 
     //
@@ -2536,11 +2628,34 @@ PlinkExport::close()
 int
 TreemixExport::open(const MetaPopInfo *mpopi)
 {
+    //
+    // Write a TreeMix file (Pickrell and Pritchard, 2012 PLoS Genetics)
+    //    https://bitbucket.org/nygcresearch/treemix/wiki/Home
+    //
     _mpopi = mpopi;
     _path = out_path + out_prefix + ".treemix";
     cout << "Per-population SNP allele counts will be written to '" << _path << "'\n";
     _writer.open(_path);
     check_open(_writer, _path);
+
+    //
+    // Obtain the current date.
+    //
+    time_t     rawtime;
+    struct tm *timeinfo;
+    char       date[32];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date, 32, "%B %d, %Y", timeinfo);
+
+    //
+    // Output the header.
+    //
+    _writer << "# Stacks v" << VERSION << "; " << " TreeMix v1.1; " << date << "\n";
+
+    //
+    // Output a space-separated list of the populations on the first line.
+    //
     bool first = true;
     for (const Pop& p : _mpopi->pops()) {
         if (first)
