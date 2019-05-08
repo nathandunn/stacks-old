@@ -107,7 +107,7 @@ class Locus {
         for (uint i = 0; i < reads.size(); i++)
             delete [] reads[i];
     }
-    uint sort_bp() const {return this->loc.strand==strand_plus ? this->loc.bp : this->loc.bp - this->len + 1;}
+    uint sort_bp() const {return this->loc.bp;}
     uint sort_bp(uint col0) const {return this->loc.bp + (this->loc.strand==strand_plus ? col0 : -col0);}
     int snp_index(uint) const;
     int add_consensus(const char *);
