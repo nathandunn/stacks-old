@@ -333,7 +333,7 @@ class HzarExport: public OrderableExport {
     HzarExport() : _mpopi(NULL) {}
     ~HzarExport() {}
     int  open(const MetaPopInfo *mpopi);
-    int  write_header();
+    int  write_header() { return 0; };
     int  post_processing();
     void close();
 

@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2012-2018, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2012-2019, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -2106,15 +2106,41 @@ HzarExport::open(const MetaPopInfo *mpopi)
 }
 
 int
-HzarExport::write_header()
-{
-    return 0;
-}
-
-int
 HzarExport::write_site(const CSLocus *loc, const LocPopSum *lps, Datum const*const* d, size_t col, size_t snp_index)
 {
-    
+    const LocSum   *s;
+    const LocTally *t = lps->meta_pop();
+
+    this->_tmpfh << loc->id << "_" << col << ".A"
+                 << "," << loc->id << "_" << col << ".B"
+                 << "," << loc->id << "_" << col << ".N";
+
+    for (size_t p = 0; p < this->_mpopi->pops().size(); p++) {
+        const Pop& pop = this->_mpopi->pops()[p];
+        s = lps->per_pop(p);
+
+        this->_tmpfh << "\t" << pop.name;
+        
+        if (s->nucs[col].num_indv == 0 ||
+            s->nucs[col].incompatible_site ||
+            s->nucs[col].filtered_site) {
+            //
+            // This site contains more than two alleles in this population or was filtered
+            // due to a minor allele frequency that is too low.
+            //
+            this->_tmpfh << "\t" << "0\t0\t0";
+
+        } else {
+            if (t->nucs[col].p_allele == s->nucs[col].p_nuc)
+                this->_tmpfh << "\t" << s->nucs[col].p << "\t" << 1 - s->nucs[col].p << "\t";
+            else
+                this->_tmpfh << "\t" << 1 - s->nucs[col].p << "\t" << s->nucs[col].p << "\t";
+
+            this->_tmpfh << s->nucs[col].num_indv * 2;
+        }
+    }
+    this->_tmpfh << "\n";
+
     return 0;
 }
 
@@ -2126,6 +2152,73 @@ HzarExport::post_processing()
     //
     this->_tmpfh.close();
 
+    this->_fh.open(this->_path.c_str(), ofstream::out);
+    check_open(this->_fh, this->_path);
+
+    //
+    // Reopen the temporary output file to transpose it.
+    //
+    this->_intmpfh.open(this->_tmp_path.c_str(), ofstream::in);
+    check_open(this->_intmpfh, this->_tmp_path);
+
+    string header;
+    map<string, string> transposed_lines;
+    vector<string> fields;
+    string buf;
+    size_t len;
+    char   line[max_len];
+
+    uint num_pops = this->_mpopi->pops().size();
+
+    do {
+        buf.clear();
+
+        //
+        // Read the one line from the file.
+        //
+        this->_intmpfh.getline(line, max_len);
+
+        //
+        // Check if we read a full line.
+        //
+        while (this->_intmpfh.fail() && !this->_intmpfh.eof()) {
+            buf += line;
+            this->_intmpfh.clear();
+            this->_intmpfh.getline(line, max_len);
+        }
+
+        len = strlen(line);
+        if (len > 0 && line[len - 1] == '\r') line[len - 1] = '\0';
+
+        buf += line;
+
+        if (!this->_intmpfh.good() || buf.length() == 0)
+            break;
+
+        //
+        // Break the line up by tabs.
+        //
+        parse_tsv(buf.c_str(), fields);
+
+        //
+        // Each line should have the locus ID, plus four columns per population.
+        //
+        assert(num_pops * 4 + 1 == fields.size());
+        
+        header += "," + fields[0];
+        
+        // Have we seen this population before?
+        if (transposed_lines.count(fields[1]) == 0)
+            transposed_lines[fields[1]] = "";
+
+        size_t i = 1;
+        for (size_t j = 1; j <= num_pops; j++) {
+            transposed_lines[fields[i]] += "," + fields[i+1] + "," + fields[i+2] + "," + fields[i+3];
+            i += 4;
+        }
+    } while (!this->_intmpfh.eof());
+
+
     //
     // Obtain the current date.
     //
@@ -2135,28 +2228,17 @@ HzarExport::post_processing()
     time(&rawtime);
     timeinfo = localtime(&rawtime);
     strftime(date, 32, "%B %d, %Y", timeinfo);
-
-    this->_fh.open(this->_path.c_str(), ofstream::out);
-    check_open(this->_fh, this->_path);
-
     //
     // Output the header line.
     //
+    this->_fh << "# Stacks v" << VERSION << "; " << " HZAR v0.2-5; " << date << "\n"
+              << "Population" << "," << "Distance" << header << "\n";
+
+    for (size_t p = 0; p < this->_mpopi->pops().size(); p++) {
+        const Pop& pop = this->_mpopi->pops()[p];
+        this->_fh << pop.name << ",0" << transposed_lines[pop.name] << "\n";
+    }
     
-    this->_fh << "# Stacks v" << VERSION << "; " << " HZAR v0.2-5; " << date << "\n";
-
-    this->_intmpfh.open(this->_tmp_path.c_str(), ofstream::in);
-    check_open(this->_intmpfh, this->_tmp_path);
-
-    vector<string> transposed_lines;
-
-    Export::transpose(this->_intmpfh, transposed_lines);
-
-    assert(transposed_lines.size() == (this->_mpopi->samples().size() * 2) + 1);
-
-    for (size_t line_cnt = 0; line_cnt < transposed_lines.size(); line_cnt++)
-        this->_fh << transposed_lines[line_cnt] << "\n";
-
     return 1;
 }
 
@@ -2171,8 +2253,8 @@ HzarExport::close()
     remove(this->_tmp_path.c_str());
 
     this->_fh.close();
-    return;
 
+    return;
 }
 
 int
@@ -2704,233 +2786,6 @@ TreemixExport::write_site(const CSLocus* cloc,
 }
 
 /*
-int
-write_hzar(map<int, CSLocus *> &catalog,
-           PopMap<CSLocus> *pmap,
-           PopSum<CSLocus> *psum)
-{
-    //
-    // Write a Hybrid Zone Analysis using R (HZAR) file as defined here:
-    //    http://cran.r-project.org/web/packages/hzar/hzar.pdf
-    //
-    string file = out_path + out_prefix + ".hzar.csv";
-
-    cout << "Writing population data to HZAR file '" << file << "'...";
-
-    ofstream fh(file.c_str(), ofstream::out);
-
-    if (fh.fail()) {
-        cerr << "Error opening HZAR file '" << file << "'\n";
-        exit(1);
-    }
-
-    //
-    // Obtain the current date.
-    //
-    time_t     rawtime;
-    struct tm *timeinfo;
-    char       date[32];
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(date, 32, "%B %d, %Y", timeinfo);
-
-    //
-    // Output the header.
-    //
-    fh << "# Stacks v" << VERSION << "; " << " HZAR v0.2-5; " << date << "\n"
-       << "Population" << "," << "Distance";
-
-    map<string, vector<CSLocus *> >::const_iterator it;
-    CSLocus  *loc;
-    LocSum  **s;
-    LocTally *t;
-
-    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
-        for (uint pos = 0; pos < it->second.size(); pos++) {
-            loc = it->second[pos];
-            s   = psum->locus(loc->id);
-            t   = psum->locus_tally(loc->id);
-
-            for (uint i = 0; i < loc->snps.size(); i++) {
-                uint col = loc->snps[i]->col;
-                if (t->nucs[col].allele_cnt == 2) {
-                    fh << "," << loc->id << "_" << col << ".A"
-                       << "," << loc->id << "_" << col << ".B"
-                       << "," << loc->id << "_" << col << ".N";
-                }
-            }
-        }
-    }
-    fh << "\n";
-
-    for (size_t p=0; p<mpopi.pops().size(); ++p) {
-        const Pop& pop = mpopi.pops()[p];
-
-        fh << pop.name << ",";
-
-        for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
-            for (uint pos = 0; pos < it->second.size(); pos++) {
-                loc = it->second[pos];
-
-                s = psum->locus(loc->id);
-                t = psum->locus_tally(loc->id);
-
-                for (uint i = 0; i < loc->snps.size(); i++) {
-                    uint col = loc->snps[i]->col;
-
-                    //
-                    // If this site is fixed in all populations or has too many alleles don't output it.
-                    //
-                    if (t->nucs[col].allele_cnt != 2)
-                        continue;
-
-                    if (s[p]->nucs[col].num_indv == 0 ||
-                        s[p]->nucs[col].incompatible_site ||
-                        s[p]->nucs[col].filtered_site) {
-                        fh << ",0,0,0";
-                        continue;
-                    }
-
-                    if (t->nucs[col].p_allele == s[p]->nucs[col].p_nuc)
-                        fh << "," << s[p]->nucs[col].p << "," << 1 - s[p]->nucs[col].p << ",";
-                    else
-                        fh << "," << 1 - s[p]->nucs[col].p << "," << s[p]->nucs[col].p << ",";
-
-                    fh << s[p]->nucs[col].num_indv * 2;
-                }
-            }
-        }
-        fh << "\n";
-    }
-
-    fh.close();
-
-    cout << "done.\n";
-
-    return 0;
-}
-
-int
-write_treemix(map<int, CSLocus *> &catalog,
-              PopMap<CSLocus> *pmap,
-              PopSum<CSLocus> *psum)
-{
-    //
-    // Write a TreeMix file (Pickrell and Pritchard, 2012 PLoS Genetics)
-    //    https://bitbucket.org/nygcresearch/treemix/wiki/Home
-    //
-    string file = out_path + out_prefix + ".treemix";
-
-    cout << "Writing population data to TreeMix file '" << file << "'; ";
-
-    ofstream fh(file.c_str(), ofstream::out);
-
-    if (fh.fail()) {
-        cerr << "Error opening TreeMix file '" << file << "'\n";
-        exit(1);
-    }
-
-    file += ".log";
-
-    cout << "logging nucleotide positions to '" << file << "'...";
-
-    ofstream log_fh(file.c_str(), ofstream::out);
-
-    if (log_fh.fail()) {
-        cerr << "Error opening Phylip Log file '" << file << "'\n";
-        exit(1);
-    }
-
-    //
-    // Obtain the current date.
-    //
-    time_t     rawtime;
-    struct tm *timeinfo;
-    char       date[32];
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(date, 32, "%B %d, %Y", timeinfo);
-
-    log_fh << "# Stacks v" << VERSION << "; " << " TreeMix v1.1; " << date << "\n"
-           << "# Line\tLocus ID\tColumn\tChr\tBasepair\n";
-
-    //
-    // Output the header.
-    //
-    fh << "# Stacks v" << VERSION << "; " << " TreeMix v1.1; " << date << "\n";
-
-    map<string, vector<CSLocus *> >::const_iterator it;
-    CSLocus  *loc;
-    LocSum  **s;
-    LocTally *t;
-
-    //
-    // Output a space-separated list of the populations on the first line.
-    //
-    stringstream sstr;
-    for (auto& pop : mpopi.pops())
-        sstr << pop.name << " ";
-
-    fh << sstr.str().substr(0, sstr.str().length() - 1) << "\n";
-
-    double p_freq, p_cnt, q_cnt, allele_cnt;
-    long int line = 1;
-
-    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
-        for (uint pos = 0; pos < it->second.size(); pos++) {
-            loc = it->second[pos];
-
-            s = psum->locus(loc->id);
-            t = psum->locus_tally(loc->id);
-
-            for (uint i = 0; i < loc->snps.size(); i++) {
-                uint col = loc->snps[i]->col;
-
-                sstr.str("");
-
-                //
-                // If this site is fixed in all populations or has too many alleles don't output it.
-                //
-                if (t->nucs[col].allele_cnt != 2)
-                    continue;
-
-                for (size_t p=0; p<mpopi.pops().size(); ++p) {
-
-                    if (s[p]->nucs[col].num_indv == 0 ||
-                        s[p]->nucs[col].incompatible_site ||
-                        s[p]->nucs[col].filtered_site) {
-                        sstr << "0,0 ";
-                        continue;
-                    }
-
-                    p_freq = (t->nucs[col].p_allele == s[p]->nucs[col].p_nuc) ?
-                        s[p]->nucs[col].p :
-                        1 - s[p]->nucs[col].p;
-
-                    allele_cnt = s[p]->nucs[col].num_indv * 2;
-                    p_cnt      = round(allele_cnt * p_freq);
-                    q_cnt      = allele_cnt - p_cnt;
-                    sstr << (int) p_cnt << "," << (int) q_cnt << " ";
-                }
-
-                if (sstr.str().length() == 0)
-                    continue;
-
-                fh << sstr.str().substr(0, sstr.str().length() - 1) << "\n";
-                log_fh << line << "\t" << loc->id << "\t" << col << "\t" << loc->loc.chr() << "\t" << loc->sort_bp(col) + 1 << "\n";
-                line++;
-            }
-        }
-    }
-
-    fh.close();
-    log_fh.close();
-
-    cout << "done.\n";
-
-    return 0;
-}
-
 int
 write_fastphase(map<int, CSLocus *> &catalog,
                 PopMap<CSLocus> *pmap,
