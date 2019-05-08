@@ -47,7 +47,9 @@ GzFasta::open(const char *path)
         exit(EXIT_FAILURE);
     } else if (first != '>') {
         cerr << "Error: '" << path << "': not in fasta format (expected '>', got 0x"
-             << std::hex << first << " '" << flush << (char) first << "').\n";
+             << std::hex << first << " '" << flush << (char) first << "')."
+             << " (note: using zlib version " << zlibVersion()
+             << "; compiled with zlib version " << ZLIB_VERSION << ")\n" << flush;
         exit(EXIT_FAILURE);
     }
     gzrewind(gz_fh);

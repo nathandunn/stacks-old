@@ -56,7 +56,6 @@ class Match {
 };
 
 class Locus;
-bool bp_compare(Locus *, Locus *);
 int  adjust_snps_for_gaps(Cigar&, Locus*);
 int  adjust_and_add_snps_for_gaps(Cigar&, Locus*);
 int  remove_snps_from_gaps(Cigar&, Locus*);
@@ -108,7 +107,7 @@ class Locus {
         for (uint i = 0; i < reads.size(); i++)
             delete [] reads[i];
     }
-    uint sort_bp() const {return this->loc.bp - this->len + 1;}
+    uint sort_bp() const {return this->loc.bp;}
     uint sort_bp(uint col0) const {return this->loc.bp + (this->loc.strand==strand_plus ? col0 : -col0);}
     int snp_index(uint) const;
     int add_consensus(const char *);
