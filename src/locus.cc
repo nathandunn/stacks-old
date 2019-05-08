@@ -148,12 +148,6 @@ Locus::populate_alleles()
     return 0;
 }
 
-bool
-bp_compare(Locus *a, Locus *b)
-{
-    return (a->sort_bp() < b->sort_bp());
-}
-
 int
 adjust_snps_for_gaps(Cigar &cigar, Locus *loc)
 {
