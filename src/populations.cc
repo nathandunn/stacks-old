@@ -4001,7 +4001,7 @@ parse_command_line(int argc, char* argv[])
             add_export<PlinkExport>();
             break;
         case 'Z':
-            cerr << "BETA: Ignoring --hzar output request, which is not currently implemented.\n";
+            add_export<HzarExport>();
             break;
         case 'Y':
             add_export<PhylipFixedExport>();
@@ -4242,7 +4242,7 @@ void help() {
          << "  --phase*: output genotypes in PHASE format.\n"
          << "  --fastphase*: output genotypes in fastPHASE format.\n"
          << "  --plink: output genotypes in PLINK format.\n"
-         << "  --hzar*: output genotypes in Hybrid Zone Analysis using R (HZAR) format.\n"
+         << "  --hzar: output genotypes in Hybrid Zone Analysis using R (HZAR) format.\n"
          << "  --phylip: output nucleotides that are fixed-within, and variant among populations in Phylip format for phylogenetic tree construction.\n"
          << "  --phylip-var: include variable sites in the phylip output encoded using IUPAC notation.\n"
          << "  --phylip-var-all*: include all sequence as well as variable sites in the phylip output encoded using IUPAC notation.\n"
