@@ -4249,7 +4249,7 @@ void help() {
          << "  --treemix: output SNPs in a format useable for the TreeMix program (Pickrell and Pritchard).\n"
          << "  --no-hap-exports: omit haplotype outputs.\n"
          << "  --fasta-samples-raw: output all haplotypes observed in each sample, for each locus, in FASTA format.\n"
-         << "  (*not implemented as of v2.3)\n"
+         << "  (*not implemented as of v2.4)\n"
          << "\n"
          << "Additional options:\n"
          << "  -h,--help: display this help messsage.\n"
