@@ -624,7 +624,7 @@ CLocAlnSet::remove_pcr_duplicates(vector<vector<size_t>>* clone_size_distrib, os
                     << '\t';
             for (auto r2=group; r2!=r; ++r2)
                 *log << ',' << r2->name;;
-            *log << '\n';
+            *log << '\t' << group_len << '\n';
         }
     }
 
