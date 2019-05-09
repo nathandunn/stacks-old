@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 #
-# Copyright 2010-2018, Julian Catchen <jcatchen@illinois.edu>
+# Copyright 2010-2019, Julian Catchen <jcatchen@illinois.edu>
 #
 # This file is part of Stacks.
 #
@@ -517,11 +517,20 @@ sub parse_command_line {
             $cstacks_mismatch = shift @ARGV;
             push(@_cstacks, "-n " . $cstacks_mismatch);
 
+        } elsif ($_ =~ /^--rm-pcr-duplicates$/) {
+            push(@_gstacks, "--rm-pcr-duplicates");
+
         } elsif ($_ =~ /^--var-alpha$/) {
             push(@_gstacks, "--var-alpha " . shift @ARGV);
 
         } elsif ($_ =~ /^--gt-alpha$/) {
             push(@_gstacks, "--gt-alpha " . shift @ARGV);
+
+        } elsif ($_ =~ /^-r$/ || $_ =~ /^--min-samples-per-pop$/) {
+            push(@_populations,   "--min-samples-per-pop " . shift @ARGV);
+
+        } elsif ($_ =~ /^-p$/ || $_ =~ /^--min-populations$/) {
+            push(@_populations,   "--min-populations " . shift @ARGV);
 
         } elsif ($_ =~ /^-X$/) {
             #
@@ -581,12 +590,7 @@ sub parse_command_line {
     }
 
     if ($paired == true) {
-        if (length($sample_path) == 0) {
-            print STDERR "If you want to assemble paired-ends, you must use a population map to specify samples.\n";
-            usage();
-        } else {
-            push(@_tsv2bam, "-R $sample_path");
-        }
+        push(@_tsv2bam, "-R $sample_path");
     }
 
     #
@@ -605,7 +609,7 @@ sub usage {
     version();
 
     print STDERR <<EOQ;
-denovo_map.pl --samples dir --popmap path -o dir [--paired] (assembly options) [-X prog:"opts" ...]
+denovo_map.pl --samples dir --popmap path -o dir [--paired [--rm-pcr-duplicates]] (assembly options) (filtering options) [-X prog:"opts" ...]
 
   Input/Output files:
     --samples: path to the directory containing the samples reads files.
@@ -627,7 +631,13 @@ denovo_map.pl --samples dir --popmap path -o dir [--paired] (assembly options) [
 
   Paired-end options:
     --paired: after assembling RAD loci, assemble mini-contigs with paired-end reads.
+    --rm-pcr-duplicates: remove all but one set of read pairs of the same sample that have
+                         the same insert length.
 
+  Population filtering options:
+    -r,--min-populations: minimum number of populations a locus must be present in to process a locus (for populations; default: 1)
+    -p,--min-samples-per-pop: minimum percentage of individuals in a population required to process a locus for that population (for populations; default: 0)
+    
   Miscellaneous:
     --time-components (for benchmarking)
 EOQ

@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 #
-# Copyright 2010-2018, Julian Catchen <jcatchen@illinois.edu>
+# Copyright 2010-2019, Julian Catchen <jcatchen@illinois.edu>
 #
 # This file is part of Stacks.
 #
@@ -348,6 +348,9 @@ sub parse_command_line {
             push(@_gstacks,     "-t " . $arg);
             push(@_populations, "-t " . $arg);
 
+        } elsif ($_ =~ /^--rm-pcr-duplicates$/) {
+            push(@_gstacks, "--rm-pcr-duplicates");
+
         } elsif ($_ =~ /^--var-alpha$/) {
             $arg = shift @ARGV;
             push(@_gstacks, "--var-alpha " . $arg);
@@ -411,7 +414,7 @@ sub usage {
     version();
 
     print STDERR <<EOQ;
-ref_map.pl --samples dir --popmap path [-s spacer] [--paired] -o dir [-X prog:"opts" ...]
+ref_map.pl --samples path --popmap path [-s spacer] -o path [--rm-pcr-duplicates] [-X prog:"opts" ...]
 
   Input/Output files:
     --samples: path to the directory containing the samples BAM (or SAM) alignment files.
@@ -420,7 +423,7 @@ ref_map.pl --samples dir --popmap path [-s spacer] [--paired] -o dir [-X prog:"o
        named 'SAMPLE_NAME.bam'; if this option is given the program looks for files
        named 'SAMPLE_NAME.SPACER.bam'.
     o: path to an output directory.
-    --unpaired: ignore read pairing (for ddRAD; treat READ2's as if they were READ1's)
+    --unpaired: ignore read pairing (for paired-end GBS; treat READ2's as if they were READ1's)
     --ignore-pe-reads: ignore paired-end reads even if present in the input
 
   General options:
@@ -429,6 +432,10 @@ ref_map.pl --samples dir --popmap path [-s spacer] [--paired] -o dir [-X prog:"o
     d: Dry run. Do not actually execute anything, just print the individual pipeline commands
        that would be executed.
 
+  Paired-end options:
+    --rm-pcr-duplicates: remove all but one copy of read pairs of the same sample that have
+                         the same insert length.
+                                  
   SNP model options:
     --var-alpha: significance level at which to call variant sites (for gstacks; default: 0.05).
     --gt-alpha: significance level at which to call genotypes (for gstacks; default: 0.05).
