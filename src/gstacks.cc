@@ -630,18 +630,31 @@ try {
 
     // pcr_clone_size_distrib
     if(rm_pcr_duplicates) {
-        const vector<size_t>& cz_d = gt_stats.pcr_clone_size_distrib;
-        assert(!cz_d.empty());
-        assert(cz_d[0] == 0); // (We can't observe a clone of 0 reads.)
+        const vector<vector<size_t>>& cz_d = gt_stats.pcr_clone_size_distrib;
+        assert(cz_d.size() == bam_mpopi->samples().size());
+        for(size_t sample=0; sample<bam_mpopi->samples().size(); ++sample) {
+            assert(!cz_d.empty());
+            assert(cz_d[0].empty() || cz_d[0][0] == 0); // (We can't observe a clone of 0 reads.)
+        }
         logger->x << "\n"
-                  << "BEGIN pcr_clone_size_distrib\n"
-                  <<"clone_size\tn_clones\tn_reads\n";
-        for(size_t clone_size=1; clone_size<cz_d.size(); ++clone_size)
-            logger->x << clone_size
-                      << '\t' << cz_d[clone_size]
-                      << '\t' << cz_d[clone_size] * clone_size
-                      << '\n';
-        logger->x << "END pcr_clone_size_distrib\n";
+                  << "BEGIN pcr_clone_size_distribs\n"
+                  << "# This table reports, for each sample, the histogram of the number of PCR read clones of each size.\n"
+                  <<"clone_size";
+        for (auto& s : bam_mpopi->samples())
+            logger->x << "\t" << s.name;
+        logger->x << "\n";
+        size_t cz_max = 0;
+        for(size_t sample=0; sample<bam_mpopi->samples().size(); ++sample)
+            if (cz_d[sample].size() > cz_max)
+                cz_max = cz_d[sample].size() - 1;
+        for(size_t clone_size=1; clone_size<=cz_max; ++clone_size) {
+            logger->x << clone_size;
+            for(size_t sample=0; sample<bam_mpopi->samples().size(); ++sample)
+                logger->x << '\t'
+                    << (cz_d[sample].size() > clone_size ? cz_d[sample][clone_size] : 0);
+            logger->x << '\n';
+        }
+        logger->x << "END pcr_clone_size_distribs\n";
     }
 
     // phasing_rates_samples
@@ -841,10 +854,6 @@ void SnpAlleleCooccurrenceCounter::clear() {
 GenotypeStats& GenotypeStats::operator+= (const GenotypeStats& other) {
     this->n_genotyped_loci += other.n_genotyped_loci;
     this->n_sites_tot      += other.n_sites_tot;
-    if (pcr_clone_size_distrib.size() < other.pcr_clone_size_distrib.size())
-        pcr_clone_size_distrib.resize(other.pcr_clone_size_distrib.size());
-    for (size_t i=0; i<other.pcr_clone_size_distrib.size(); ++i)
-        pcr_clone_size_distrib[i] += other.pcr_clone_size_distrib[i];
     for (size_t sample=0; sample<per_sample_stats.size(); ++sample) {
         per_sample_stats[sample].n_unpaired_reads += other.per_sample_stats[sample].n_unpaired_reads;
         per_sample_stats[sample].n_read_pairs_pcr_dupl += other.per_sample_stats[sample].n_read_pairs_pcr_dupl;
@@ -852,6 +861,10 @@ GenotypeStats& GenotypeStats::operator+= (const GenotypeStats& other) {
         per_sample_stats[sample].n_loci_with_sample += other.per_sample_stats[sample].n_loci_with_sample;
         per_sample_stats[sample].ns_cumsum += other.per_sample_stats[sample].ns_cumsum;
         per_sample_stats[sample].ns_weighted_n_read_pairs_used += other.per_sample_stats[sample].ns_weighted_n_read_pairs_used;
+        if (pcr_clone_size_distrib[sample].size() < other.pcr_clone_size_distrib[sample].size())
+            pcr_clone_size_distrib[sample].resize(other.pcr_clone_size_distrib[sample].size());
+        for (size_t i=0; i<other.pcr_clone_size_distrib[sample].size(); ++i)
+            pcr_clone_size_distrib[sample][i] += other.pcr_clone_size_distrib[sample][i];
     }
     return *this;
 }
