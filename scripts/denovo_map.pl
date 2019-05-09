@@ -617,7 +617,7 @@ denovo_map.pl --samples dir --popmap path -o dir [--paired [--rm-pcr-duplicates]
     o: path to an output directory.
 
   General options:
-    X: additional options for specific pipeline components, e.g. -X "populations: -p 3 -r 0.50".
+    X: additional options for specific pipeline components, e.g. -X "populations: --min-maf 0.05".
     T: the number of threads/CPUs to use (default: 1).
     d: Dry run. Do not actually execute anything, just print the commands that would be executed.
 

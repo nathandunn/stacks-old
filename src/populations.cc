@@ -4190,10 +4190,10 @@ void help() {
          << "                      per batch). Increase to speed analysis, uses more memory, decrease to save memory).\n"
          << "\n"
          << "Data Filtering:\n"
-         << "  -p/--min-populations [int]: minimum number of populations a locus must be present in to process a locus.\n"
-         << "  -r/--min-samples-per-pop [float]: minimum percentage of individuals in a population required to process a locus for that population.\n"
-         << "  -R/--min-samples-overall [float]: minimum percentage of individuals across populations required to process a locus.\n"
-         << "  -H/--filter-haplotype-wise: apply the above filters haplotype wise\n"
+         << "  -p,--min-populations [int]: minimum number of populations a locus must be present in to process a locus.\n"
+         << "  -r,--min-samples-per-pop [float]: minimum percentage of individuals in a population required to process a locus for that population.\n"
+         << "  -R,--min-samples-overall [float]: minimum percentage of individuals across populations required to process a locus.\n"
+         << "  -H,--filter-haplotype-wise: apply the above filters haplotype wise\n"
          << "                              (unshared SNPs will be pruned to reduce haplotype-wise missing data).\n"
          << "  --min-maf [float]: specify a minimum minor allele frequency required to process a SNP (0 < min_maf < 0.5).\n"
          << "  --min-mac [int]: specify a minimum minor allele count required to process a SNP.\n"
@@ -4201,8 +4201,8 @@ void help() {
          << "\n"
          << "  --write-single-snp: restrict data analysis to only the first SNP per locus (implies --no-haps).\n"
          << "  --write-random-snp: restrict data analysis to one random SNP per locus (implies --no-haps).\n"
-         << "  -B/--blacklist: path to a file containing Blacklisted markers to be excluded from the export.\n"
-         << "  -W/--whitelist: path to a file containing Whitelisted markers to include in the export.\n"
+         << "  -B,--blacklist: path to a file containing Blacklisted markers to be excluded from the export.\n"
+         << "  -W,--whitelist: path to a file containing Whitelisted markers to include in the export.\n"
          << "\n"
          << "Merging and Phasing:\n"
          << "  -e,--renz: restriction enzyme name.\n"
@@ -4264,7 +4264,7 @@ void help() {
          #endif
          ;
 
-              // << "    --bootstrap-type [exact|approx]: enable bootstrap resampling for population statistics (reference genome required).\n"
+    // << "    --bootstrap-type [exact|approx]: enable bootstrap resampling for population statistics (reference genome required).\n"
 
     exit(1);
 }
