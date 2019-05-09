@@ -253,13 +253,13 @@ class BatchLocusProcessor {
 public:
     BatchLocusProcessor():
         _input_mode(InputMode::stacks2), _user_supplied_whitelist(false), _batch_size(0), _batch_num(0),
-        _mpopi(NULL), _next_loc(NULL), _unordered_bp(1) {}
+        _mpopi(NULL), _next_loc(NULL), _unordered_bp(0) {}
     BatchLocusProcessor(InputMode mode, size_t batch_size, MetaPopInfo *popi):
         _input_mode(mode), _user_supplied_whitelist(false), _batch_size(batch_size), _batch_num(0),
-        _mpopi(popi), _next_loc(NULL), _unordered_bp(1) {}
+        _mpopi(popi), _next_loc(NULL), _unordered_bp(0) {}
     BatchLocusProcessor(InputMode mode, size_t batch_size):
         _input_mode(mode), _user_supplied_whitelist(false), _batch_size(batch_size), _batch_num(0),
-        _mpopi(NULL), _next_loc(NULL), _unordered_bp(1) {}
+        _mpopi(NULL), _next_loc(NULL), _unordered_bp(0) {}
     ~BatchLocusProcessor() {
         for (uint i = 0; i < this->_loci.size(); i++)
             delete this->_loci[i];
