@@ -558,7 +558,7 @@ CLocAlnSet::remove_unmerged_reads(ostream* log)
 }
 
 void
-CLocAlnSet::remove_pcr_duplicates(vector<vector<size_t>>* clone_size_distrib, ostream* log)
+CLocAlnSet::remove_pcr_duplicates(vector<size_t>* clone_size_distrib, ostream* log)
 {
     if (log != NULL)
         *log << "BEGIN pcr_duplicates\n";
@@ -614,10 +614,10 @@ CLocAlnSet::remove_pcr_duplicates(vector<vector<size_t>>* clone_size_distrib, os
             for (auto r2=group+1; r2!=r; ++r2)
                 r2->seq.clear();
         if (clone_size_distrib != NULL) {
-            vector<size_t>& sample_cz_distrib = clone_size_distrib->at(group->sample);
-            if(sample_cz_distrib.size() < clone_size + 1)
-                sample_cz_distrib.resize(clone_size + 1);
-            ++sample_cz_distrib.at(clone_size);
+            if(clone_size_distrib->size() < clone_size + 1) {
+                clone_size_distrib->resize(clone_size + 1);
+            }
+            ++clone_size_distrib->at(clone_size);
         }
         if (log != NULL) {
             *log << "pcr_dupls\t" << mpopi().samples()[group->sample].name

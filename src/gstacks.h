@@ -105,14 +105,12 @@ public:
         size_t ns_weighted_n_read_pairs_used;
     };
     vector<PerSampleStats> per_sample_stats;
-    vector<vector<size_t>> pcr_clone_size_distrib;
+    vector<size_t> pcr_clone_size_distrib;
     size_t n_unpaired_reads_rm() const {size_t n=0; for(auto& s: per_sample_stats) n+=s.n_unpaired_reads; return n;}
     size_t n_read_pairs_pcr_dupl() const {size_t n=0; for(auto& s: per_sample_stats) n+=s.n_read_pairs_pcr_dupl; return n;}
     size_t n_read_pairs_used() const {size_t n=0; for(auto& s: per_sample_stats) n+=s.n_read_pairs_used; return n;}
 
-    GenotypeStats(size_t n_samples)
-        : n_genotyped_loci(0), n_sites_tot(0), per_sample_stats(n_samples, PerSampleStats()), pcr_clone_size_distrib(n_samples)
-        {}
+    GenotypeStats(size_t n_samples) : n_genotyped_loci(0), n_sites_tot(0), per_sample_stats(n_samples, PerSampleStats()) {}
     GenotypeStats& operator+= (const GenotypeStats& other);
 };
 

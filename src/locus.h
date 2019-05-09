@@ -257,7 +257,7 @@ public:
     void hard_clip_right_Ns();
     void merge_paired_reads();
     void remove_unmerged_reads(ostream* log = NULL);
-    void remove_pcr_duplicates(vector<vector<size_t>>* clone_size_distrib = NULL, ostream* log = NULL);
+    void remove_pcr_duplicates(vector<size_t>* clone_size_distrib = NULL, ostream* log = NULL);
     size_t n_samples() const {size_t n=0; for(auto& reads : reads_per_sample_) if (!reads.empty()) ++n; return n;}
 
     friend ostream& operator<< (ostream& os, const CLocAlnSet& loc);
