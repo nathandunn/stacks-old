@@ -1,3 +1,12 @@
+Stacks 2.4 - May 9, 2019
+------------------------
+    Feature: populations: re-implemented HZAR export.
+    Feature: added reporting code to detect issues with inconsistent versions of libz on a host system
+             causing Stacks components to fail to open compressed files.
+    Feature: gstacks: improved PCR duplicate reporting to be per-sample.
+    Bugfix:  populations: fixed an issues where the basepair position of a small number of loci was reported
+                          incorrectly -- they were shifted by a small, fixed offset.
+
 Stacks 2.3 - Jan 11, 2019
 --------------------------
     Feature: populations: Backwards-compatibly worked on filtering options; added long names for -r and -p and
