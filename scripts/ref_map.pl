@@ -423,8 +423,6 @@ ref_map.pl --samples path --popmap path [-s spacer] -o path [--rm-pcr-duplicates
        named 'SAMPLE_NAME.bam'; if this option is given the program looks for files
        named 'SAMPLE_NAME.SPACER.bam'.
     o: path to an output directory.
-    --unpaired: ignore read pairing (for paired-end GBS; treat READ2's as if they were READ1's)
-    --ignore-pe-reads: ignore paired-end reads even if present in the input
 
   General options:
     X: additional options for specific pipeline components, e.g. -X "populations: -p 3 -r 0.50"
@@ -435,6 +433,8 @@ ref_map.pl --samples path --popmap path [-s spacer] -o path [--rm-pcr-duplicates
   Paired-end options:
     --rm-pcr-duplicates: remove all but one copy of read pairs of the same sample that have
                          the same insert length.
+    --ignore-pe-reads: ignore paired-end reads even if present in the input
+    --unpaired: ignore read pairing (for paired-end GBS; treat READ2's as if they were READ1's)
                                   
   SNP model options:
     --var-alpha: significance level at which to call variant sites (for gstacks; default: 0.05).
