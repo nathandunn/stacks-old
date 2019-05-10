@@ -635,8 +635,8 @@ denovo_map.pl --samples dir --popmap path -o dir [--paired [--rm-pcr-duplicates]
                          the same insert length.
 
   Population filtering options:
-    -r,--min-populations: minimum number of populations a locus must be present in to process a locus (for populations; default: 1)
-    -p,--min-samples-per-pop: minimum percentage of individuals in a population required to process a locus for that population (for populations; default: 0)
+    -r,--min-samples-per-pop: minimum percentage of individuals in a population required to process a locus for that population (for populations; default: 0)
+    -p,--min-populations: minimum number of populations a locus must be present in to process a locus (for populations; default: 1)
     
   Miscellaneous:
     --time-components (for benchmarking)
