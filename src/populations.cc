@@ -4010,7 +4010,7 @@ parse_command_line(int argc, char* argv[])
             add_export<PhylipVarExport>();
             break;
         case 'T':
-            cerr << "BETA: Ignoring --phylip-var-all output request, which is not currently implemented.\n";
+            add_export<PhylipVarAllExport>();
             break;
         case 'U':
             add_export<TreemixExport>();
@@ -4103,13 +4103,8 @@ parse_command_line(int argc, char* argv[])
     }
 
     //
-    // Check argument constrains.
+    // Check argument constraints.
     //
-    if (input_mode == InputMode::stacks && in_path.empty()) {
-        cerr << "Error: Option --v1 requires -P to be given.\n";
-        help();
-    }
-
     if (!in_path.empty() && !in_vcf_path.empty()) {
         cerr << "Error: Please specify either '-P/--in-path' or '-V/--in-vcf', not both.\n";
         help();
@@ -4181,7 +4176,7 @@ void help() {
          << "populations -P dir [-O dir] [-M popmap] (filters) [--fstats] [-k [--sigma=150000] [--bootstrap [-N 100]]] (output formats)\n"
          << "populations -V vcf -O dir [-M popmap] (filters) [--fstats] [-k [--sigma=150000] [--bootstrap [-N 100]]] (output formats)\n"
          << "\n"
-         << "  -P,--in-path: path to a directory containing GStacks ouput files.\n"
+         << "  -P,--in-path: path to a directory containing Stacks ouput files.\n"
          << "  -V,--in-vcf: path to a standalone input VCF file.\n"
          << "  -O,--out-path: path to a directory where to write the output files. (Required by -V; otherwise defaults to value of -P.)\n"
          << "  -M,--popmap: path to a population map. (Format is 'SAMPLE1 \\t POP1 \\n SAMPLE2 ...'.)\n"
@@ -4245,7 +4240,7 @@ void help() {
          << "  --hzar: output genotypes in Hybrid Zone Analysis using R (HZAR) format.\n"
          << "  --phylip: output nucleotides that are fixed-within, and variant among populations in Phylip format for phylogenetic tree construction.\n"
          << "  --phylip-var: include variable sites in the phylip output encoded using IUPAC notation.\n"
-         << "  --phylip-var-all*: include all sequence as well as variable sites in the phylip output encoded using IUPAC notation.\n"
+         << "  --phylip-var-all: include all sequence as well as variable sites in the phylip output encoded using IUPAC notation.\n"
          << "  --treemix: output SNPs in a format useable for the TreeMix program (Pickrell and Pritchard).\n"
          << "  --no-hap-exports: omit haplotype outputs.\n"
          << "  --fasta-samples-raw: output all haplotypes observed in each sample, for each locus, in FASTA format.\n"

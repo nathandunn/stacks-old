@@ -303,7 +303,7 @@ protected:
 
  public:
     PhylipExport() : _mpopi(NULL), _site_index(0) {}
-    int open(const MetaPopInfo *mpopi);
+    int  open(const MetaPopInfo *mpopi);
     int  write_header();
     int  post_processing();
     void close();
@@ -321,6 +321,27 @@ class PhylipFixedExport: public PhylipExport {
     PhylipFixedExport() {}
  private:
     int write_site(const CSLocus* cloc, const LocPopSum* psum, Datum const*const* datums, size_t col, size_t index);
+};
+
+class PhylipVarAllExport: public Export {
+    const MetaPopInfo *_mpopi;
+    string   _log_path;
+    ofstream _logfh;
+    ofstream _parfh;
+    string   _partition_path;
+
+    size_t _seq_len;
+    size_t _site_index;
+    size_t _loc_cnt;
+    map<int, string> _outstrs;
+    
+public:
+    PhylipVarAllExport() : _mpopi(NULL), _seq_len(0), _site_index(1), _loc_cnt(1) {}
+    int  open(const MetaPopInfo *mpopi);
+    int  write_header();
+    int  write_batch(const vector<LocBin *> &);
+    int  post_processing();
+    void close();
 };
 
 class HzarExport: public OrderableExport {
