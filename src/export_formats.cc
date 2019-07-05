@@ -1799,6 +1799,87 @@ FineRADStructureExport::write_batch(const vector<LocBin *> &loci)
     return 0;
 }
 
+inline char
+iupac_encode(char p_nuc, char q_nuc)
+{
+    char nuc = '\0';
+    //
+    // Encode SNPs that are variable within a population using IUPAC notation:
+    //     http://en.wikipedia.org/wiki/Nucleic_acid_notation#IUPAC_notation
+    //
+    switch(p_nuc) {
+    case 0:
+        nuc = 'N';
+        break;
+    case 'A':
+        switch(q_nuc) {
+        case 'C':
+            nuc = 'M';
+            break;
+        case 'G':
+            nuc = 'R';
+            break;
+        case 'T':
+            nuc = 'W';
+            break;
+        case 0:
+            nuc = 'A';
+            break;
+        }
+        break;
+    case 'C':
+        switch(q_nuc) {
+        case 'A':
+            nuc = 'M';
+            break;
+        case 'G':
+            nuc = 'S';
+            break;
+        case 'T':
+            nuc = 'Y';
+            break;
+        case 0:
+            nuc = 'C';
+            break;
+        }
+        break;
+    case 'G':
+        switch(q_nuc) {
+        case 'A':
+            nuc = 'R';
+            break;
+        case 'C':
+            nuc = 'S';
+            break;
+        case 'T':
+            nuc = 'K';
+            break;
+        case 0:
+            nuc = 'G';
+            break;
+        }
+        break;
+    case 'T':
+        switch(q_nuc) {
+        case 'A':
+            nuc = 'W';
+            break;
+        case 'C':
+            nuc = 'Y';
+            break;
+        case 'G':
+            nuc = 'K';
+            break;
+        case 0:
+            nuc = 'T';
+            break;
+        }
+        break;
+    }
+
+    return nuc;
+}
+
 int
 PhylipExport::open(const MetaPopInfo *mpopi)
 {
@@ -1841,8 +1922,7 @@ PhylipExport::open(const MetaPopInfo *mpopi)
         cout << "Polymorphic";
     else
         cout << "Fixed difference";
-    cout << " sites in Phylip format will be written to '" << this->_path << "'\n"
-         << "   Individual sites written will be logged to '" << this->_log_path << "'\n";
+    cout << " sites in Phylip format will be written to '" << this->_path << "'\n";
 
     return 0;
 }
@@ -2018,6 +2098,7 @@ PhylipVarExport::write_site(const CSLocus *loc, const LocPopSum *lps, Datum cons
     return 0;
 }
 
+
 int
 PhylipExport::post_processing()
 {
@@ -2080,6 +2161,208 @@ PhylipExport::close()
     remove(this->_tmp_path.c_str());
 
     this->_fh.close();
+    return;
+}
+
+int
+PhylipVarAllExport::open(const MetaPopInfo *mpopi)
+{
+    this->_mpopi = mpopi;
+
+    //
+    // We will write those loci to a Phylip file as defined here:
+    //     http://evolution.genetics.washington.edu/phylip/doc/main.html#inputfiles
+    //
+    this->_path = out_path + out_prefix + ".all.phylip";
+    this->_fh.open(this->_path);
+    check_open(this->_fh, this->_path);
+
+    //
+    // We will also write a file that allows us to specify each RAD locus as a separate partition
+    // for use in phylogenetics programs.
+    //
+    this->_partition_path = out_path + out_prefix + ".all.partitions.phylip";
+    this->_parfh.open(this->_partition_path, ofstream::out);
+    check_open(this->_parfh, this->_partition_path);
+    
+    //
+    // Open a log file.
+    //
+    this->_log_path = this->_path + ".log";
+    this->_logfh.open(this->_log_path);
+
+    //
+    // Obtain the current date.
+    //
+    time_t     rawtime;
+    struct tm *timeinfo;
+    char       date[32];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date, 32, "%B %d, %Y", timeinfo);
+
+    this->_logfh << "# Stacks v" << VERSION << "; " << " Phylip interleaved; " << date << "\n"
+                 << "# Locus ID\tLocusCnt\tSequence position\tLength";
+    if (loci_ordered) this->_logfh << "\tChr\tBasepair";
+    this->_logfh << "\n";
+
+    cout << "All sites (fixed and variable) will be written in Phylip format to '" << this->_path << "'\n";
+
+    return 0;
+}
+
+int
+PhylipVarAllExport::write_header()
+{
+    char   s[id_len];
+    size_t len;
+    
+    for (size_t p = 0; p < this->_mpopi->pops().size(); ++p) {
+        const Pop& pop = this->_mpopi->pops()[p];
+        sprintf(s, "%s", pop.name.c_str());
+        len = pop.name.length();
+        while (len < 10) {
+            s[len] = ' ';
+            len++;
+        }
+        s[10] = '\0';
+        this->_outstrs[p] += string(s);
+    }
+
+    sprintf(s, "% 11d", 0);
+    this->_fh << this->_mpopi->pops().size() << " " << s << "\n";
+
+    return 0;
+}
+
+int
+PhylipVarAllExport::write_batch(const vector<LocBin*>& loci)
+{
+    //
+    // We want to write all nucleotides per locus per population in Phylip sequential format. Polymorphic
+    // positions will be encoded using IUPAC notation.
+    //
+    // We will write those loci to a Phylip file as defined here:
+    //     http://evolution.genetics.washington.edu/phylip/doc/main.html#inputfiles
+    //
+    size_t pop_cnt = this->_mpopi->pops().size();
+    char  *seq;
+
+    for (uint k = 0; k < loci.size(); k++) {
+        const LocBin*    loc = loci[k];
+        const CSLocus*  cloc = loc->cloc;
+
+        // bool include;
+        // include = true;
+        // for (uint i = 0; i < cloc->snps.size(); i++) {
+        //     uint col = cloc->snps[i]->col;
+
+        //     if (t->nucs[col].allele_cnt != 2)
+        //         include = false;
+        // }
+        // if (!include)
+        //     continue;
+
+        seq = new char[cloc->len + 1];
+        strcpy(seq, cloc->con);
+
+        for (uint j = 0; j < pop_cnt; j++) {
+            const LocSum *s = loc->s->per_pop(j);
+            
+            for (uint snp_index = 0; snp_index < cloc->snps.size(); snp_index++) {
+                uint col = cloc->snps[snp_index]->col;
+
+                // if (t->nucs[col].allele_cnt != 2)
+                //     continue;
+                
+                seq[col] = iupac_encode(s->nucs[col].p_nuc, s->nucs[col].q_nuc);
+            }
+
+            this->_outstrs[j] += string(seq);
+        }
+        delete [] seq;
+
+        this->_logfh << cloc->id << "\t" << this->_loc_cnt << "\t" << this->_site_index << "\t" << cloc->len;
+        if (loci_ordered) this->_logfh << "\t" << cloc->loc.chr() << "\t" << cloc->sort_bp() + 1;
+        this->_logfh << "\n";
+
+        this->_parfh << "DNA, p" << this->_loc_cnt << "=" << this->_site_index << "-" << this->_site_index + cloc->len - 1 << "\n";
+
+        this->_seq_len    += cloc->len;
+        this->_site_index += cloc->len;
+        this->_loc_cnt++;
+    }
+
+    size_t line_len = 120;
+    size_t i = 0;
+    size_t seql = this->_outstrs.begin()->second.length();
+    
+    while (i < seql) {
+        for (map<int, string>::iterator it = this->_outstrs.begin(); it != this->_outstrs.end(); it++) {
+            this->_fh << it->second.substr(i, line_len) << "\n";
+        }
+        this->_fh << "\n";
+        i += line_len;
+
+        if (seql - i < line_len)
+            break;
+    }
+
+    if (i < seql) {
+        for (map<int, string>::iterator it = this->_outstrs.begin(); it != this->_outstrs.end(); it++)
+            it->second = it->second.substr(i);
+    } else {
+        for (map<int, string>::iterator it = this->_outstrs.begin(); it != this->_outstrs.end(); it++)
+            it->second = "";
+    }
+    
+    return 0;
+}
+
+int
+PhylipVarAllExport::post_processing()
+{
+    //
+    // Output any remaining sequence in the buffer.
+    //
+    if (this->_outstrs.begin()->second.length() > 0) {
+        for (map<int, string>::iterator it = this->_outstrs.begin(); it != this->_outstrs.end(); it++)
+            this->_fh << it->second << "\n";
+    }
+    
+    //
+    // Obtain the current date.
+    //
+    time_t     rawtime;
+    struct tm *timeinfo;
+    char       date[32];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date, 32, "%B %d, %Y", timeinfo);
+
+    //
+    // Output the footer.
+    //
+    this->_fh << "# Stacks v" << VERSION << "; " << " Phylip interleaved; " << date << "\n";
+
+    //
+    // Rewind the file handle and write the sequence length back over top the first positions.
+    //
+    this->_fh.seekp(0);
+
+    char   s[id_len];
+    sprintf(s, "% 11lu", this->_seq_len);
+    this->_fh << this->_mpopi->pops().size() << " " << s << "\n";
+    
+    return 1;
+}
+
+void
+PhylipVarAllExport::close()
+{
+    this->_fh.close();
+    this->_logfh.close();
+
     return;
 }
 
@@ -3264,258 +3547,6 @@ write_phase(map<int, CSLocus *> &catalog,
 
         fh.close();
     }
-
-    cout << "done.\n";
-
-    return 0;
-}
-
-int
-write_fullseq_phylip(map<int, CSLocus *> &catalog,
-                     PopMap<CSLocus> *pmap,
-                     PopSum<CSLocus> *psum)
-{
-    //
-    // We want to write all variable loci in Phylip interleaved format. Polymorphic positions
-    // will be encoded using IUPAC notation.
-    //
-    // We will write those loci to a Phylip file as defined here:
-    //     http://evolution.genetics.washington.edu/phylip/doc/main.html#inputfiles
-    //
-    string file = out_path + out_prefix + ".fullseq.phylip";
-
-    cout << "Writing full sequence population data to Phylip file '" << file << "'; ";
-
-    ofstream fh(file.c_str(), ofstream::out);
-
-    if (fh.fail()) {
-        cerr << "Error opening Phylip file '" << file << "'\n";
-        exit(1);
-    }
-
-    //
-    // We will also write a file that allows us to specify each RAD locus as a separate partition
-    // for use in phylogenetics programs.
-    //
-    file = out_path + out_prefix + ".fullseq.partitions.phylip";
-
-    ofstream par_fh(file.c_str(), ofstream::out);
-
-    if (par_fh.fail()) {
-        cerr << "Error opening Phylip partitions file '" << file << "'\n";
-        exit(1);
-    }
-
-    file = out_path + out_prefix + ".fullseq.phylip.log";
-    cout << "logging nucleotide positions to '" << file << "'...";
-
-    ofstream log_fh(file.c_str(), ofstream::out);
-
-    if (log_fh.fail()) {
-        cerr << "Error opening Phylip Log file '" << file << "'\n";
-        exit(1);
-    }
-
-    //
-    // Obtain the current date.
-    //
-    time_t     rawtime;
-    struct tm *timeinfo;
-    char       date[32];
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(date, 32, "%B %d, %Y", timeinfo);
-
-    log_fh << "# Stacks v" << VERSION << "; " << " Phylip interleaved; " << date << "\n"
-           << "# Locus ID\tLine Number";
-    if (loci_ordered) log_fh << "\tChr\tBasepair";
-    log_fh << "\n";
-
-    map<string, vector<CSLocus *> >::const_iterator it;
-    CSLocus  *loc;
-    LocSum  **s;
-    LocTally *t;
-
-    int  pop_cnt = psum->pop_cnt();
-    char nuc = '\0';
-
-    bool include;
-    uint len = 0;
-
-    //
-    // Determine the length of sequence we will output.
-    //
-    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
-        for (uint pos = 0; pos < it->second.size(); pos++) {
-            loc = it->second[pos];
-
-            t = psum->locus_tally(loc->id);
-
-            include = true;
-            for (uint i = 0; i < loc->snps.size(); i++) {
-                uint col = loc->snps[i]->col;
-
-                if (t->nucs[col].allele_cnt != 2)
-                    include = false;
-            }
-
-            if (include)
-                len += strlen(loc->con);
-        }
-    }
-
-    map<int, string> outstrs;
-    fh << mpopi.pops().size() << "    " << len << "\n";
-    for (size_t i_pop=0; i_pop<mpopi.pops().size(); ++i_pop) {
-        const Pop& pop = mpopi.pops()[i_pop];
-
-        char id_str[id_len];
-        sprintf(id_str, "%s", pop.name.c_str());
-        len = strlen(id_str);
-        for (uint j = len; j < 10; j++)
-            id_str[j] = ' ';
-        id_str[9] = '\0';
-
-        outstrs[i_pop] = string(id_str) + " ";
-    }
-
-    char *seq;
-    int   line  = 1;
-    int   index = 1;
-    int   cnt   = 1;
-
-    for (it = pmap->ordered_loci().begin(); it != pmap->ordered_loci().end(); it++) {
-        for (uint pos = 0; pos < it->second.size(); pos++) {
-            loc = it->second[pos];
-
-            s = psum->locus(loc->id);
-            t = psum->locus_tally(loc->id);
-
-            include = true;
-            for (uint i = 0; i < loc->snps.size(); i++) {
-                uint col = loc->snps[i]->col;
-
-                if (t->nucs[col].allele_cnt != 2)
-                    include = false;
-            }
-
-            if (!include)
-                continue;
-
-            seq = new char[loc->len + 1];
-            strcpy(seq, loc->con);
-
-            for (int j = 0; j < pop_cnt; j++) {
-                for (uint i = 0; i < loc->snps.size(); i++) {
-                    uint col = loc->snps[i]->col;
-
-                    //
-                    // Encode SNPs that are variable within a population using IUPAC notation:
-                    //     http://en.wikipedia.org/wiki/Nucleic_acid_notation#IUPAC_notation
-                    //
-                    switch(s[j]->nucs[col].p_nuc) {
-                    case 0:
-                        nuc = 'N';
-                        break;
-                    case 'A':
-                        switch(s[j]->nucs[col].q_nuc) {
-                        case 'C':
-                            nuc = 'M';
-                            break;
-                        case 'G':
-                            nuc = 'R';
-                            break;
-                        case 'T':
-                            nuc = 'W';
-                            break;
-                        case 0:
-                            nuc = 'A';
-                            break;
-                        }
-                        break;
-                    case 'C':
-                        switch(s[j]->nucs[col].q_nuc) {
-                        case 'A':
-                            nuc = 'M';
-                            break;
-                        case 'G':
-                            nuc = 'S';
-                            break;
-                        case 'T':
-                            nuc = 'Y';
-                            break;
-                        case 0:
-                            nuc = 'C';
-                            break;
-                        }
-                        break;
-                    case 'G':
-                        switch(s[j]->nucs[col].q_nuc) {
-                        case 'A':
-                            nuc = 'R';
-                            break;
-                        case 'C':
-                            nuc = 'S';
-                            break;
-                        case 'T':
-                            nuc = 'K';
-                            break;
-                        case 0:
-                            nuc = 'G';
-                            break;
-                        }
-                        break;
-                    case 'T':
-                        switch(s[j]->nucs[col].q_nuc) {
-                        case 'A':
-                            nuc = 'W';
-                            break;
-                        case 'C':
-                            nuc = 'Y';
-                            break;
-                        case 'G':
-                            nuc = 'K';
-                            break;
-                        case 0:
-                            nuc = 'T';
-                            break;
-                        }
-                        break;
-                    }
-
-                    seq[col] = nuc;
-                }
-
-                outstrs[j] += string(seq);
-            }
-            delete [] seq;
-
-            log_fh << line << "\t" << loc->id;
-            if (loci_ordered) log_fh << "\t" << loc->loc.chr() << "\t" << loc->sort_bp() + 1;
-            log_fh << "\n";
-
-            for (size_t i_pop=0; i_pop<mpopi.pops().size(); ++i_pop) {
-                fh << outstrs[i_pop] << "\n";
-                outstrs[i_pop] = "";
-                line++;
-            }
-            fh << "\n";
-            line++;
-
-            par_fh << "DNA, p" << cnt << "=" << index << "-" << index + loc->len - 1 << "\n";
-            index += loc->len;
-            cnt++;
-        }
-    }
-
-    //
-    // Output the header.
-    //
-    fh << "# Stacks v" << VERSION << "; " << " Phylip interleaved; " << date << "\n";
-
-    fh.close();
-    par_fh.close();
-    log_fh.close();
 
     cout << "done.\n";
 
