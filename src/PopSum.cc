@@ -965,6 +965,8 @@ LocusDivergence::LocusDivergence(const MetaPopInfo *mpopi)
             this->_mean_phist_cnt.push_back(0.0);
             this->_mean_fstp.push_back(0.0);
             this->_mean_fstp_cnt.push_back(0.0);
+            this->_mean_dxy.push_back(0.0);
+            this->_mean_dxy_cnt.push_back(0.0);
         }
 }
 
@@ -1454,16 +1456,16 @@ LocusDivergence::haplotype_divergence_pairwise(const vector<LocBin *> &loci)
 
             this->_haplotypes.push_back(vector<HapStat *>(loci.size(), NULL));
 
-            double pmean = 0.0;
-            double pcnt  = 0.0;
-            double fmean = 0.0;
-            double fcnt  = 0.0;
-
+            double pmean   = 0.0;
+            double fmean   = 0.0;
+            double dxymean = 0.0;
+            double cnt     = 0.0;
+                
             #pragma omp parallel
             {
                 vector<HapStat *> *haps = &this->_haplotypes.back();
 
-                #pragma omp for schedule(dynamic, 1) reduction(+:pmean, pcnt, fmean, fcnt)
+                #pragma omp for schedule(dynamic, 1) reduction(+:pmean, fmean, cnt)
                 for (uint k = 0; k < loci.size(); k++) {
                     const CSLocus *loc = (const CSLocus *) loci[k]->cloc;
                     const LocSum **s   = loci[k]->s->all_pops();
@@ -1483,14 +1485,15 @@ LocusDivergence::haplotype_divergence_pairwise(const vector<LocBin *> &loci)
                         h->pop_1   = pop_1;
                         h->pop_2   = pop_2;
                         h->stat[4] = haplotype_d_est(d, s, subpop_ids);
+                        h->stat[5] = haplotype_dxy(d, loc->len, subpop_ids);
 
                         h->loc_id = loc->id;
                         h->bp     = loc->sort_bp();
 
-                        pmean += h->stat[0];
-                        pcnt++;
-                        fmean += h->stat[3];
-                        fcnt++;
+                        pmean   += h->stat[0];
+                        fmean   += h->stat[3];
+                        dxymean += h->stat[5];
+                        cnt++;
                     }
 
                     haps->at(k) = h;
@@ -1498,9 +1501,11 @@ LocusDivergence::haplotype_divergence_pairwise(const vector<LocBin *> &loci)
             }
 
             this->_mean_phist[i]     += pmean;
-            this->_mean_phist_cnt[i] += pcnt;
+            this->_mean_phist_cnt[i] += cnt;
             this->_mean_fstp[i]      += fmean;
-            this->_mean_fstp_cnt[i]  += fcnt;
+            this->_mean_fstp_cnt[i]  += cnt;
+            this->_mean_dxy[i]       += dxymean;
+            this->_mean_dxy_cnt[i]   += cnt;
             i++;
         }
     }
@@ -1541,7 +1546,7 @@ LocusDivergence::haplotype_divergence(const vector<LocBin *> &loci)
                 h = this->haplotype_amova(d, s, pop_ids);
 
             if (h != NULL) {
-                h->stat[4] = haplotype_d_est(d, s, pop_ids);
+                h->stat[4] = this->haplotype_d_est(d, s, pop_ids);
 
                 h->loc_id  = loc->id;
                 h->bp      = loc->sort_bp();
@@ -2104,6 +2109,83 @@ LocusDivergence::haplotype_d_est(const Datum **d, const LocSum **s, vector<int> 
     return d_est;
 }
 
+double
+LocusDivergence::haplotype_dxy(const Datum **d, size_t loc_len, vector<int> &pop_ids)
+{
+    //
+    // Calculate Dxy, fixation index, as described by
+    //   Nei, 1987, Molecular Evolutionary Genetics, Chapter 10
+    //     +-Equation 10.20 and Equation 5.3
+    // and
+    //   Cruickshank & Hahn, 2014, Reanalysis suggests that genomic islands of speciation are due
+    //   to reduced diversity, not reduced gene flow. Molecular Ecology
+    //     +- Box 1
+    //
+    map<string, double>            loc_haplotypes;
+    map<int, map<string, double> > pop_haplotypes;
+    map<int, double>               pop_totals;
+
+    map<string, double>::iterator it;
+
+    uint pop_cnt = pop_ids.size();
+
+    assert(pop_cnt == 2);
+    
+    //
+    // Tabulate the occurences of haplotypes at this locus.
+    //
+    for (int pop_id : pop_ids) {
+        const Pop& pop = this->_mpopi->pops()[pop_id];
+        for (size_t i = pop.first_sample; i <= pop.last_sample; i++) {
+            if (d[i] == NULL)
+                continue;
+
+            assert(d[i]->obshap.size() == 2);
+
+            for (uint j = 0; j < d[i]->obshap.size(); j++) {
+                loc_haplotypes[d[i]->obshap[j]]++;
+                pop_haplotypes[pop_id][d[i]->obshap[j]]++;
+            }
+        }
+
+        for (it = pop_haplotypes[pop_id].begin(); it != pop_haplotypes[pop_id].end(); it++)
+            pop_totals[pop_id] += it->second;
+    }
+
+    vector<string> haps;
+    for (it = loc_haplotypes.begin(); it != loc_haplotypes.end(); it++)
+        haps.push_back(it->first);
+
+    double popx_freq, popy_freq, nuc_diff;
+    const char *p, *q;
+    
+    double dxy  = 0.0;
+    uint   popx = pop_ids[0];
+    uint   popy = pop_ids[1];
+    for (uint i = 0; i < haps.size(); i++) {
+        popx_freq = pop_haplotypes[popx][haps[i]] / pop_totals[popx];
+
+        for (uint j = 0; j < haps.size(); j++) {
+            popy_freq = pop_haplotypes[popy][haps[j]] / pop_totals[popy];
+            
+            nuc_diff  = 0;
+            p = haps[i].c_str();
+            q = haps[j].c_str();
+            for (; *p != '\0'; p++, q++)
+                nuc_diff += *p != *q ? 1 : 0;
+            nuc_diff = nuc_diff / (double) loc_len;
+
+            // Nei 1987, Equation 5.3
+            nuc_diff = -1 * (3.0 / 4.0) * log(1 - ((4.0 / 3.0) * nuc_diff));
+
+            // Nei 1987, Equation 10.20
+            dxy += popx_freq * popy_freq * nuc_diff;
+        }
+    }
+
+    return dxy;
+}
+
 bool
 LocusDivergence::fixed_locus(const Datum **d, vector<int> &pop_ids)
 {
@@ -2295,6 +2377,29 @@ LocusDivergence::write_summary(string path)
         fh << "\n";
     }
 
+    fh << "\n"
+       << "# Dxy Means\n";
+    //
+    // Write out X-axis header.
+    //
+    for (auto& pop : this->_mpopi->pops())
+        fh << "\t" << pop.name;
+    fh << "\n";
+
+    n = 0;
+    for (uint i = 0; i < this->_mpopi->pops().size() - 1; i++) {
+        fh << this->_mpopi->pops()[i].name;
+
+        for (uint k = 0; k <= i; k++)
+            fh << "\t";
+
+        for (uint j = i + 1; j < this->_mpopi->pops().size(); j++) {
+            fh << "\t" << this->_mean_dxy[n] / this->_mean_dxy_cnt[n];
+            n++;
+        }
+        fh << "\n";
+    }
+
     fh.close();
 
     cout << "\nPopulation pair divergence statistics (more in populations.fst_summary.tsv and populations.phistats_summary.tsv):\n";
@@ -2306,7 +2411,9 @@ LocusDivergence::write_summary(string path)
                  << this->_mpopi->pops()[j].name
                  << ": mean Fst: "    << this->_mean_fst[n]   / this->_mean_fst_cnt[n]
                  << "; mean Phi_st: " << this->_mean_phist[n] / this->_mean_phist_cnt[n]
-                 << "; mean Fst': "   << this->_mean_fstp[n]  / this->_mean_fstp_cnt[n] << "\n";
+                 << "; mean Fst': "   << this->_mean_fstp[n]  / this->_mean_fstp_cnt[n]
+                 << "; mean Dxy: "    << this->_mean_dxy[n]   / this->_mean_dxy_cnt[n]
+                 << "\n";
             n++;
         }
     }

@@ -80,7 +80,7 @@ Seq *GzFastq::next_seq() {
     //
     uint len = strlen(this->line);
     if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
-    if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
+    if (len > 1 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
 
     //
     // Initialize the Seq structure and store the FASTQ ID
@@ -100,7 +100,7 @@ Seq *GzFastq::next_seq() {
 
     len = strlen(this->line);
     if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
-    if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
+    if (len > 1 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
 
     s->seq = new char[len + 1];
     strcpy(s->seq, this->line);
@@ -127,7 +127,7 @@ Seq *GzFastq::next_seq() {
 
     len = strlen(this->line);
     if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
-    if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
+    if (len > 1 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
 
     s->qual = new char[len + 1];
     strcpy(s->qual, this->line);
@@ -164,7 +164,7 @@ int GzFastq::next_seq(Seq &s) {
     //
     uint len = strlen(this->line);
     if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
-    if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
+    if (len > 1 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
 
     //
     // Store the FASTQ ID
@@ -183,7 +183,7 @@ int GzFastq::next_seq(Seq &s) {
 
     len = strlen(this->line);
     if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
-    if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
+    if (len > 1 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
 
     strcpy(s.seq, this->line);
 
@@ -209,7 +209,7 @@ int GzFastq::next_seq(Seq &s) {
 
     len = strlen(this->line);
     if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
-    if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
+    if (len > 1 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
 
     strcpy(s.qual, this->line);
 

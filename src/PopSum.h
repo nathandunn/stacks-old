@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2011-2018, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2011-2019, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -43,7 +43,7 @@ extern double    minor_allele_freq;
 extern corr_type fst_correction;
 extern double    p_value_cutoff;
 
-const uint PopStatSize = 5;
+const uint PopStatSize = 6;
 
 class PopStat {
 public:
@@ -92,6 +92,7 @@ class HapStat: public PopStat {
     // PopStat[2]: Phi_sc
     // PopStat[3]: Fst'
     // PopStat[4]: D_est
+    // PopStat[5]: Dxy
 public:
     uint    pop_1;
     uint    pop_2;
@@ -335,7 +336,7 @@ struct LocBin {
 };
 
 //
-// per-Locus class for calculating divergence values sucha s Fst.
+// per-Locus class for calculating divergence values such as Fst.
 //
 class LocusDivergence {
     const MetaPopInfo         *_mpopi;
@@ -349,6 +350,8 @@ class LocusDivergence {
     vector<double> _mean_phist_cnt;
     vector<double> _mean_fstp;
     vector<double> _mean_fstp_cnt;
+    vector<double> _mean_dxy;
+    vector<double> _mean_dxy_cnt;
 
 public:
     LocusDivergence(const MetaPopInfo *mpopi);
@@ -379,6 +382,11 @@ private:
     double   amova_ssd_wp(vector<int> &, map<int, vector<int>> &, map<string, int> &, map<int, vector<string>> &, double **);
     double   amova_ssd_ap_wg(vector<int> &, map<int, vector<int>> &, map<string, int> &, map<int, vector<string>> &, double **, double **);
     double   amova_ssd_ag(vector<int> &, map<int, vector<int>> &, map<string, int> &, map<int, vector<string>> &, double **, double);
+
+    //
+    // Haplotype-level Dxy
+    //
+    double   haplotype_dxy(const Datum **, size_t,  vector<int> &);
 
     bool     fixed_locus(const Datum **, vector<int> &);
     int      nuc_substitution_identity(map<string, int> &, double **);

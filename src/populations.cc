@@ -3762,7 +3762,7 @@ parse_command_line(int argc, char* argv[])
             {"min-mac",           required_argument, NULL, 1016}, {"min_mac",           required_argument, NULL, 1016},
             {"max-obs-het",       required_argument, NULL, 1013}, {"max_obs_het",       required_argument, NULL, 1013},
             {"merge-prune-lim",   required_argument, NULL, 'i'}, {"merge_prune_lim",   required_argument, NULL, 'i'},
-            {"fst-correction",    required_argument, NULL, 'f'}, {"fst_correction",    required_argument, NULL, 'f'},
+            {"fst-correction",    no_argument, NULL, 'f'}, {"fst_correction",    no_argument, NULL, 'f'},
             {"p-value-cutoff",    required_argument, NULL, 'u'}, {"p_value_cutoff",    required_argument, NULL, 'u'},
             {"debug-flags",       required_argument, NULL, 1000}, {"debug_flags",       required_argument, NULL, 1000},
             {"lnl-lim",           required_argument, NULL, 7000}, {"lnl_lim",           required_argument, NULL, 7000}, // (deprecated)
@@ -4039,16 +4039,17 @@ parse_command_line(int argc, char* argv[])
             }
             break;
         case 'f':
-            if (strcasecmp(optarg, "p_value") == 0)
-                fst_correction = p_value;
-            else if (strcasecmp(optarg, "bonferroni_win") == 0)
-                fst_correction = bonferroni_win;
-            else if (strcasecmp(optarg, "bonferroni_gen") == 0)
-                fst_correction = bonferroni_gen;
-            else {
-                cerr << "Error: Unknown Fst correction specified '" << optarg << "'\n";
-                help();
-            }
+            fst_correction = p_value;
+            // if (strcasecmp(optarg, "p_value") == 0)
+            //     fst_correction = p_value;
+            // else if (strcasecmp(optarg, "bonferroni_win") == 0)
+            //     fst_correction = bonferroni_win;
+            // else if (strcasecmp(optarg, "bonferroni_gen") == 0)
+            //     fst_correction = bonferroni_gen;
+            // else {
+            //     cerr << "Error: Unknown Fst correction specified '" << optarg << "'\n";
+            //     help();
+            // }
             break;
         case 'u':
             p_value_cutoff = atof(optarg);
@@ -4209,7 +4210,8 @@ void help() {
          << "\n"
          << "Fstats:\n"
          << "  --fstats: enable SNP and haplotype-based F statistics.\n"
-         << "  --fst-correction: specify a correction to be applied to Fst values: 'p_value', 'bonferroni_win', or 'bonferroni_gen'. Default: off.\n"
+        // << "  --fst-correction: specify a correction to be applied to Fst values: 'p_value', 'bonferroni_win', or 'bonferroni_gen'. Default: off.\n"
+         << "  --fst-correction: specify a p-value correction to be applied to Fst values based on a Fisher's exact test. Default: off.\n"
          << "  --p-value-cutoff [float]: maximum p-value to keep an Fst measurement. Default: 0.05. (Also used as base for Bonferroni correction.)\n"
          << "\n"
          << "Kernel-smoothing algorithm:\n"
