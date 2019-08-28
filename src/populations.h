@@ -130,7 +130,7 @@ public:
         this->_ord_ss = new OSumStat<SumStat>(log_fh);
         this->_ks_ls  = new KSmooth<LocStat>(2);
         this->_ord_ls = new OHaplotypes<LocStat>();
-        this->_ks_hs  = new KSmooth<HapStat>(5);
+        this->_ks_hs  = new KSmooth<HapStat>(6);
         this->_ord_hs = new OHaplotypes<HapStat>();
         this->_ks_pp  = new KSmooth<PopPair>(2);
         this->_ord_pp = new OPopPair<PopPair>(log_fh);

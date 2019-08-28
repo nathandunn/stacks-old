@@ -1,5 +1,7 @@
-Stacks 2.41 - July 5, 2019
+Stacks 2.41 - July 8, 2019
 --------------------------
+    Feature: populations: calculates haplotype-based Dxy (Nei, 1987) and provides for smoothing if a 
+             reference genome is available.
     Feature: populations: re-implemented full sequence export for phylip format, including partitioning information.
 
 Stacks 2.4 - May 9, 2019

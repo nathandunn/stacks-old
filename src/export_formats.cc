@@ -666,7 +666,10 @@ HapDivergenceExport::write_header()
                 << "Smoothed Fst' P-value"   << "\t"
                 << "D_est"          << "\t"
                 << "Smoothed D_est" << "\t"
-                << "Smoothed D_est P-value" << "\n";
+                << "Smoothed D_est P-value" << "\t"
+                << "Dxy"            << "\t"
+                << "Smoothed Dxy"   << "\t"
+                << "Smoothed Dxy P-value"   << "\n";
 
             i++;
         }
@@ -785,7 +788,10 @@ HapDivergenceExport::write_batch_pairwise(const vector<LocBin *> &loci,
                 << h->bs[3]       << "\t"
                 << h->stat[4]     << "\t"
                 << h->smoothed[4] << "\t"
-                << h->bs[4]       << "\n";
+                << h->bs[4]       << "\t"
+                << h->stat[5]     << "\t"
+                << h->smoothed[5] << "\t"
+                << h->bs[5]       << "\n";
         }
     }
 
